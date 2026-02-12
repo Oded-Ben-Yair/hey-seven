@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/*
+ * Hey Seven brand tokens.
+ * Casino-premium dark palette: deep navy background, red + gold accents.
+ */
+:root {
+  --hs-primary-dark: #1a1a2e;
+  --hs-accent-red: #e94560;
+  --hs-secondary-dark: #16213e;
+  --hs-accent-gold: #f5a623;
+  --hs-background: #0f3460;
+  --hs-surface: #1a1a2e;
+  --hs-surface-elevated: #222244;
+  --hs-text-primary: #ffffff;
+  --hs-text-secondary: #a0aec0;
+  --hs-text-muted: #64748b;
+  --hs-border: rgba(255, 255, 255, 0.08);
+  --hs-border-accent: rgba(233, 69, 96, 0.3);
+  --hs-glow-red: rgba(233, 69, 96, 0.15);
+  --hs-glow-gold: rgba(245, 166, 35, 0.12);
+}
+
+@theme inline {
+  --color-hs-dark: #1a1a2e;
+  --color-hs-red: #e94560;
+  --color-hs-blue: #16213e;
+  --color-hs-gold: #f5a623;
+  --color-hs-bg: #0f3460;
+  --color-hs-surface: #1a1a2e;
+  --color-hs-elevated: #222244;
+  --color-hs-border: rgba(255, 255, 255, 0.08);
+  --color-hs-text: #ffffff;
+  --color-hs-text-secondary: #a0aec0;
+  --color-hs-text-muted: #64748b;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--hs-background);
+  color: var(--hs-text-primary);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling for the chat area */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Subtle gradient for premium card surfaces */
+.card-surface {
+  background: linear-gradient(
+    135deg,
+    var(--hs-surface) 0%,
+    var(--hs-surface-elevated) 100%
+  );
+  border: 1px solid var(--hs-border);
+}
+
+/* Accent glow for important cards (comp offers, etc.) */
+.card-accent {
+  background: linear-gradient(
+    135deg,
+    var(--hs-surface) 0%,
+    var(--hs-surface-elevated) 100%
+  );
+  border: 1px solid var(--hs-border-accent);
+  box-shadow: 0 0 20px var(--hs-glow-red);
+}
+
+/* Gold accent variant */
+.card-gold {
+  background: linear-gradient(
+    135deg,
+    var(--hs-surface) 0%,
+    var(--hs-surface-elevated) 100%
+  );
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  box-shadow: 0 0 16px var(--hs-glow-gold);
+}
