@@ -56,7 +56,7 @@ export default function HomePage() {
 
       <main className="flex flex-1 overflow-hidden">
         {/* Player info sidebar */}
-        <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-r border-hs-border bg-hs-dark lg:block">
+        <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-r border-hs-border bg-white lg:block">
           <PlayerPanel player={player} />
         </aside>
 

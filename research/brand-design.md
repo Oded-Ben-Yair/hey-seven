@@ -69,30 +69,44 @@ The messaging follows a classic problem-solution structure:
 - **Company name styling**: "Hey Seven" (two words, title case)
 - **Website platform**: Wix (JS-rendered)
 
-### TBD -- Requires Browser-Control Extraction
+### Extracted via Playwright (2026-02-12)
 
-The following could not be extracted via WebFetch due to the JS-rendered nature of the site. These require Playwright browser-control to capture:
+**Primary Colors** (hex values extracted from computed styles):
 
-- [ ] Primary brand colors (hex values)
-- [ ] Secondary/accent colors
-- [ ] Typography (font family, weights)
-- [ ] Logo design (shape, color, icon)
-- [ ] Hero imagery style (illustrations, photos, abstract)
-- [ ] Icon system
-- [ ] Background patterns/textures
-- [ ] Button styles and hover states
-- [ ] Animation/motion design patterns
-- [ ] Mobile responsiveness
+| Role | Hex | RGB | Usage |
+|------|-----|-----|-------|
+| Gold (primary accent) | `#c5a467` | rgb(197, 164, 103) | CTA buttons, highlights, accent elements |
+| Gold Light (gradient start) | `#d4b872` | rgb(212, 184, 114) | CTA button gradient start |
+| Dark Brown | `#2c2926` | rgb(44, 41, 38) | Nav, footer, text, dark sections |
+| Cream | `#f5f3ef` | rgb(245, 243, 239) | Page background, light sections |
+| Warm Gray | `#e8e4de` | rgb(232, 228, 222) | Section dividers, subtle backgrounds |
+| Deep Black | `#0a0a0a` | rgb(10, 10, 10) | Deepest text |
 
-### Browser Extraction Command (for future use)
+**CTA Button**: `linear-gradient(to right, #d4b872, #c5a467)` with `border-radius: 6px`
 
-```
-/browser-control
-Navigate to heyseven.ai
-Wait for full JS render (5+ seconds)
-Take full-page screenshot at 1440x900
-Extract: CSS custom properties, computed styles on key elements, logo/image assets
-```
+**Gold usage at various opacities**:
+- `rgba(197, 164, 103, 0.06)` — subtle section tinting
+- `rgba(197, 164, 103, 0.10)` — badge/label backgrounds
+- `rgba(197, 164, 103, 0.30)` — medium emphasis borders
+- `rgba(197, 164, 103, 0.50)` — strong accent borders
+
+**Typography**:
+- Headings: `ui-serif, Georgia, Cambria, "Times New Roman", serif` — elegant, traditional
+- Body: `ui-sans-serif, system-ui, sans-serif` — clean, modern
+- H1: 72px, font-weight 400, normal letter-spacing
+- Nav links: sans-serif, small caps or regular
+
+**Design Language**:
+- Warm luxury feel (NOT dark/neon casino aesthetic)
+- Light theme with cream backgrounds
+- Dark brown for dark sections (nav, footer), NOT black
+- Gold as the singular accent color (no secondary colors like red/blue)
+- Serif headings for elegance + sans-serif body for readability
+- Subtle gold tinting on sections at 6-10% opacity
+- Photography: warm-toned casino interior shots with rich ambiance
+- Chat mockup widget showing SMS-style conversation
+
+**Logo**: Gold icon (likely dice or seven motif) on dark background in nav
 
 ---
 

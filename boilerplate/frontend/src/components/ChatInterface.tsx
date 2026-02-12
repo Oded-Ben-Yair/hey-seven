@@ -113,7 +113,7 @@ export function ChatInterface({ playerId, onStatusChange }: ChatInterfaceProps) 
 
           {isLoading && (
             <div className="flex items-center gap-2 text-xs text-hs-text-muted">
-              <Bot className="h-4 w-4 animate-pulse text-hs-red" />
+              <Bot className="h-4 w-4 animate-pulse text-hs-gold" />
               <span>Hey Seven is thinking...</span>
             </div>
           )}
@@ -123,7 +123,7 @@ export function ChatInterface({ playerId, onStatusChange }: ChatInterfaceProps) 
       </div>
 
       {/* Input */}
-      <div className="border-t border-hs-border bg-hs-dark px-6 py-4">
+      <div className="border-t border-hs-border bg-white px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-end gap-3">
           <textarea
             ref={inputRef}
@@ -135,8 +135,8 @@ export function ChatInterface({ playerId, onStatusChange }: ChatInterfaceProps) 
             disabled={isLoading}
             className={clsx(
               "flex-1 resize-none rounded-lg border border-hs-border bg-hs-elevated px-4 py-3",
-              "text-sm text-white placeholder:text-hs-text-muted",
-              "focus:border-hs-red/50 focus:outline-none focus:ring-1 focus:ring-hs-red/30",
+              "text-sm text-hs-dark placeholder:text-hs-text-muted",
+              "focus:border-hs-gold/50 focus:outline-none focus:ring-1 focus:ring-hs-gold/30",
               "disabled:opacity-50"
             )}
           />
@@ -145,8 +145,8 @@ export function ChatInterface({ playerId, onStatusChange }: ChatInterfaceProps) 
             disabled={isLoading || !input.trim()}
             className={clsx(
               "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg",
-              "bg-hs-red text-white transition-colors",
-              "hover:bg-hs-red/80 disabled:opacity-40 disabled:hover:bg-hs-red"
+              "bg-gradient-to-r from-hs-gold-light to-hs-gold text-white transition-colors",
+              "hover:opacity-90 disabled:opacity-40"
             )}
           >
             <Send className="h-4 w-4" />
@@ -170,13 +170,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       <div
         className={clsx(
           "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full",
-          isUser ? "bg-hs-blue" : "bg-hs-red/20"
+          isUser ? "bg-hs-dark/10" : "bg-hs-gold/15"
         )}
       >
         {isUser ? (
           <User className="h-4 w-4 text-hs-text-secondary" />
         ) : (
-          <Bot className="h-4 w-4 text-hs-red" />
+          <Bot className="h-4 w-4 text-hs-gold" />
         )}
       </div>
 
@@ -185,7 +185,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         className={clsx(
           "max-w-[75%] rounded-xl px-4 py-3",
           isUser
-            ? "bg-hs-blue text-white"
+            ? "bg-hs-dark text-white"
             : "card-surface text-hs-text-secondary"
         )}
       >

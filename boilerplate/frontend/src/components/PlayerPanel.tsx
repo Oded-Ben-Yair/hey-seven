@@ -33,9 +33,9 @@ const TIER_STYLES: Record<PlayerTier, { bg: string; text: string; border: string
     border: "border-cyan-400/30",
   },
   "Seven Star": {
-    bg: "bg-hs-red/10",
-    text: "text-hs-red",
-    border: "border-hs-red/30",
+    bg: "bg-hs-gold/10",
+    text: "text-hs-gold",
+    border: "border-hs-gold/30",
   },
 };
 
@@ -75,7 +75,7 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
           )}
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">{player.name}</p>
+          <p className="text-sm font-semibold text-hs-dark">{player.name}</p>
           <p className="text-xs text-hs-text-muted">ID: {player.id}</p>
         </div>
       </div>
@@ -104,7 +104,7 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
           value={formatCurrency(player.adt)}
         />
         <MetricCard
-          icon={<Star className="h-4 w-4 text-hs-red" />}
+          icon={<Star className="h-4 w-4 text-hs-gold" />}
           label="Comp Balance"
           value={formatCurrency(player.compBalance)}
         />
@@ -146,7 +146,7 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
               <div className="flex items-center gap-2">
                 <Gamepad2 className="h-3.5 w-3.5 text-hs-text-muted" />
                 <div>
-                  <p className="text-xs font-medium text-white">
+                  <p className="text-xs font-medium text-hs-dark">
                     {visit.primaryGame}
                   </p>
                   <p className="text-[11px] text-hs-text-muted">
@@ -182,7 +182,7 @@ function MetricCard({
         {icon}
         <span className="text-[11px] text-hs-text-muted">{label}</span>
       </div>
-      <span className="text-sm font-semibold text-white">{value}</span>
+      <span className="text-sm font-semibold text-hs-dark">{value}</span>
     </div>
   );
 }

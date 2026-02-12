@@ -2,49 +2,56 @@
 
 /*
  * Hey Seven brand tokens.
- * Casino-premium dark palette: deep navy background, red + gold accents.
+ * Extracted from heyseven.ai — warm luxury palette: cream backgrounds,
+ * gold accents, dark brown text. Serif headings, sans-serif body.
  */
 :root {
-  --hs-primary-dark: #1a1a2e;
-  --hs-accent-red: #e94560;
-  --hs-secondary-dark: #16213e;
-  --hs-accent-gold: #f5a623;
-  --hs-background: #0f3460;
-  --hs-surface: #1a1a2e;
-  --hs-surface-elevated: #222244;
-  --hs-text-primary: #ffffff;
-  --hs-text-secondary: #a0aec0;
-  --hs-text-muted: #64748b;
-  --hs-border: rgba(255, 255, 255, 0.08);
-  --hs-border-accent: rgba(233, 69, 96, 0.3);
-  --hs-glow-red: rgba(233, 69, 96, 0.15);
-  --hs-glow-gold: rgba(245, 166, 35, 0.12);
+  --hs-gold: #c5a467;
+  --hs-gold-light: #d4b872;
+  --hs-dark: #2c2926;
+  --hs-cream: #f5f3ef;
+  --hs-warm-gray: #e8e4de;
+  --hs-background: #f5f3ef;
+  --hs-surface: #ffffff;
+  --hs-surface-elevated: #faf9f7;
+  --hs-text-primary: #2c2926;
+  --hs-text-secondary: #5a5550;
+  --hs-text-muted: #8a847e;
+  --hs-border: rgba(44, 41, 38, 0.10);
+  --hs-border-accent: rgba(197, 164, 103, 0.35);
+  --hs-glow-gold: rgba(197, 164, 103, 0.15);
+  --hs-nav-bg: rgba(44, 41, 38, 0.95);
 }
 
 @theme inline {
-  --color-hs-dark: #1a1a2e;
-  --color-hs-red: #e94560;
-  --color-hs-blue: #16213e;
-  --color-hs-gold: #f5a623;
-  --color-hs-bg: #0f3460;
-  --color-hs-surface: #1a1a2e;
-  --color-hs-elevated: #222244;
-  --color-hs-border: rgba(255, 255, 255, 0.08);
-  --color-hs-text: #ffffff;
-  --color-hs-text-secondary: #a0aec0;
-  --color-hs-text-muted: #64748b;
+  --color-hs-dark: #2c2926;
+  --color-hs-gold: #c5a467;
+  --color-hs-gold-light: #d4b872;
+  --color-hs-cream: #f5f3ef;
+  --color-hs-warm-gray: #e8e4de;
+  --color-hs-bg: #f5f3ef;
+  --color-hs-surface: #ffffff;
+  --color-hs-elevated: #faf9f7;
+  --color-hs-border: rgba(44, 41, 38, 0.10);
+  --color-hs-text: #2c2926;
+  --color-hs-text-secondary: #5a5550;
+  --color-hs-text-muted: #8a847e;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   background: var(--hs-background);
   color: var(--hs-text-primary);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
 }
 
 /* Scrollbar styling for the chat area */
@@ -57,42 +64,33 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(44, 41, 38, 0.15);
   border-radius: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(44, 41, 38, 0.25);
 }
 
-/* Subtle gradient for premium card surfaces */
+/* Subtle surface for cards */
 .card-surface {
-  background: linear-gradient(
-    135deg,
-    var(--hs-surface) 0%,
-    var(--hs-surface-elevated) 100%
-  );
+  background: var(--hs-surface);
   border: 1px solid var(--hs-border);
 }
 
-/* Accent glow for important cards (comp offers, etc.) */
+/* Gold accent variant for comp offers */
 .card-accent {
-  background: linear-gradient(
-    135deg,
-    var(--hs-surface) 0%,
-    var(--hs-surface-elevated) 100%
-  );
+  background: var(--hs-surface);
   border: 1px solid var(--hs-border-accent);
-  box-shadow: 0 0 20px var(--hs-glow-red);
+  box-shadow: 0 0 16px var(--hs-glow-gold);
 }
 
-/* Gold accent variant */
+/* Gold highlight card */
 .card-gold {
   background: linear-gradient(
     135deg,
     var(--hs-surface) 0%,
-    var(--hs-surface-elevated) 100%
+    rgba(197, 164, 103, 0.06) 100%
   );
-  border: 1px solid rgba(245, 166, 35, 0.25);
-  box-shadow: 0 0 16px var(--hs-glow-gold);
+  border: 1px solid var(--hs-border-accent);
 }
