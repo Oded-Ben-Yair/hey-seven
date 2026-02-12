@@ -1,0 +1,8 @@
+[2026-02-12] DECISION: LangGraph as primary agent framework — CTO preference, production-grade state machine model
+[2026-02-12] DECISION: GCP Cloud Run for deployment — stack alignment with Hey Seven's infrastructure
+[2026-02-12] DECISION: Gemini 2.5 Flash as primary LLM — GCP alignment, cost-effective at $0.30/1M input tokens
+[2026-02-12] DECISION: Firestore + FirestoreSaver for state management — LangGraph native support, GCP-native
+[2026-02-12] DECISION: FastAPI for backend — LangGraph is Python, natural fit
+[2026-02-12] DECISION: Next.js + React for frontend — listed as nice-to-have in job posting, Oded's strength
+[2026-02-12] DECISION: GitHub (not Azure DevOps) for this project — private repo, interview context, isolation from work projects
+[2026-02-12] DECISION: Pre-build infrastructure before assignment arrives — speed of delivery is part of wow factor

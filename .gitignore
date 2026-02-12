@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+.vercel
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GCP
+.gcloud/
+service-account*.json
+
+# Claude Code
+.claude/tasks/
+.claude/telemetry/
+
+# Zone identifiers (Windows downloads)
+*:Zone.Identifier
+
+# Playwright
+.playwright-mcp/
