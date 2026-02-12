@@ -48,3 +48,4 @@ service-account*.json
 
 # Playwright
 .playwright-mcp/
+heyseven-full-page.png

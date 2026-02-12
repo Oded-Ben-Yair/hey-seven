@@ -19,7 +19,7 @@
 - Losing streaks paradoxically increase engagement (uncertainty activation)
 
 ### 2. Thrill-Seeking / Identity Performance
-- High-rollers view gambling as identity performance — "successful, sophisticated risk-taker"
+- High-rollers view gambling as identity performance -- "successful, sophisticated risk-taker"
 - The casino is a stage for demonstrating status and mastery over risk
 - Wagering large sums communicates social standing to peers and service providers
 
@@ -47,14 +47,14 @@
 
 ### 7. Loss Reframing
 - High-rollers frame losses as entertainment cost, learning, or strategic investment
-- Loss of $50K is "the price of the experience" — not financial catastrophe
+- Loss of $50K is "the price of the experience" -- not financial catastrophe
 - Kahneman/Tversky: losses weighted 2.25x more than gains, but high-rollers diverge from this
 
 ---
 
 ## Churn Signals (In Order of Detection)
 
-### Silent Churn — The Most Dangerous Pattern
+### Silent Churn -- The Most Dangerous Pattern
 VIP players disengage without warning. No complaints, no tickets, no obvious signals. They simply shift to competitors.
 
 ### Signal 1: Declining Visit Frequency
@@ -108,13 +108,13 @@ VIP players disengage without warning. No complaints, no tickets, no obvious sig
 ### Messaging Framework (Three Elements)
 
 **1. Genuine Acknowledgment**
-"I noticed you had a challenging session yesterday. That happens to all of us — sometimes the odds just don't break our way. I wanted to reach out personally to check in."
+"I noticed you had a challenging session yesterday. That happens to all of us -- sometimes the odds just don't break our way. I wanted to reach out personally to check in."
 
 **2. Non-Financial Value**
 Offer amenities unrelated to gambling: dinner, concert, spa, VIP event invitation. Demonstrates relationship investment beyond financial motivation.
 
 **3. Explicit Permission Not to Play**
-"Take whatever time you need if you'd like a break — no pressure to play. We value you as part of our community."
+"Take whatever time you need if you'd like a break -- no pressure to play. We value you as part of our community."
 Paradoxically increases retention compared to aggressive re-engagement.
 
 ### What NOT to Do
@@ -141,7 +141,7 @@ Personal phone call from assigned host > WhatsApp > personal email > automated m
 - Optimal target for personalized relationship-based retention
 - Balanced drivers: meaningful comps + relationship + experiential exclusivity
 - **Strategies**: Dedicated host friendship, luxury amenities, exclusive tournaments
-- **Economics**: $75K annual deposits × 5% reinvestment = $3,750 annual comps; 5-10 year LTV: $500K+
+- **Economics**: $75K annual deposits x 5% reinvestment = $3,750 annual comps; 5-10 year LTV: $500K+
 
 ### Mid-Tier: $5K-25K/trip
 - Gaming is their largest discretionary entertainment spend
@@ -154,7 +154,7 @@ Personal phone call from assigned host > WhatsApp > personal email > automated m
 
 ## The Host Relationship as Retention Variable
 
-**The personal relationship between a VIP player and their assigned host is the single most powerful retention variable** — often superseding financial incentives, game quality, and facility amenities.
+**The personal relationship between a VIP player and their assigned host is the single most powerful retention variable** -- often superseding financial incentives, game quality, and facility amenities.
 
 ### Why Relationships Matter
 1. **Social belonging**: Host provides consistent, unconditional status recognition

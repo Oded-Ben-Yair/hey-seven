@@ -10,10 +10,10 @@
 | Segment | Value | Growth |
 |---------|-------|--------|
 | Global Casino Market | +$34.2B growth by 2030 | 3.4% CAGR |
-| North America Casino Gambling | $103.2B (2026) → $142B (2031) | 6.59% CAGR |
+| North America Casino Gambling | $103.2B (2026) -> $142B (2031) | 6.59% CAGR |
 | Casino Management Systems | $9.46B (2024) | 14.9% CAGR through 2030 |
-| Gaming Software | $2.07B (2026) → $3.87B (2031) | 13.31% CAGR |
-| Casino Gaming Equipment | $12.11B (2024) → $15.4B (2034) | 2.52% CAGR |
+| Gaming Software | $2.07B (2026) -> $3.87B (2031) | 13.31% CAGR |
+| Casino Gaming Equipment | $12.11B (2024) -> $15.4B (2034) | 2.52% CAGR |
 
 **Key insight**: Management system/software growing 4-5x faster than the broader casino market, reflecting technology as the competitive battleground.
 
@@ -24,7 +24,7 @@
 ### 1. Gaming Analytics (gaminganalytics.ai)
 **Category**: Augmentation (host empowerment, not replacement)
 **Key Capabilities**:
-- "True Value" — ML-predicted lifetime value, more accurate than ADT
+- "True Value" -- ML-predicted lifetime value, more accurate than ADT
 - AI-powered daily action plans with host recommendations
 - One-click custom reports, 99.9% accuracy
 - Mobile app for real-time floor-based decisions
@@ -171,7 +171,7 @@ No current vendor fully addresses autonomous VIP host replacement:
 
 **Core thesis**: The Autonomous Casino Host That Never Sleeps
 **What makes it different**: Full host replacement vs. augmentation
-**Four-step flow**: Acquisition → Engagement → Retention → Reactivation
+**Four-step flow**: Acquisition -> Engagement -> Retention -> Reactivation
 **Claim**: Anytime, anywhere, in any language
 
 **Competitive advantage over augmentation tools**:
