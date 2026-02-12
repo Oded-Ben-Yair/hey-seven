@@ -18,9 +18,10 @@
 | Registered City | Ramat HaSharon |
 | Registered Address | 55 HaBanim Street, Ramat HaSharon |
 | Website | [heyseven.ai](https://heyseven.ai) |
-| Contact Email | tal@heyseven.ai |
+| Contact Email | hello@heyseven.ai (previously tal@heyseven.ai) |
 | Phone | 702 290-9051 (Las Vegas area code) |
-| Copyright | Hey Seven 2025 |
+| Copyright | © 2026 Hey Seven, Inc. (US-facing entity) |
+| Product Name | **Hey Seven Pulse** |
 
 Source: [KYC Israel](https://www.kycisrael.com/companies/517254561/hey-seven-ltd/)
 

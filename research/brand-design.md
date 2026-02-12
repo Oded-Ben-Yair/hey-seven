@@ -11,19 +11,54 @@
 - **Technology**: JavaScript-rendered (Wix-based platform)
 - **Demo page**: [heyseven.ai/requestademo/](https://heyseven.ai/requestademo/)
 - **Related domain**: heyseven.com (SSL certificate error; unclear if same entity)
-- **Copyright**: "Hey Seven 2025 -- Copyright | All Rights Reserved"
+- **Copyright**: "© 2026 Hey Seven, Inc." (US entity, Inc. — Israeli registry shows HEY SEVEN LTD)
+- **Contact**: hello@heyseven.ai (previously tal@heyseven.ai)
+- **Additional pages**: /Careers, /Insights
 
-**Note**: The website is JS-rendered, so full visual extraction (colors, fonts, imagery, layout) requires browser-control with Playwright. WebFetch returned only "Hey Seven" text content -- the site loads dynamically.
+**Note**: The website is JS-rendered (Wix-based). Full visual extraction requires Playwright. Successfully extracted 2026-02-12.
 
 ---
 
 ## Messaging & Copy
 
-### Primary Taglines
+### Primary Taglines (as of 2026-02-12)
 
-1. **Hero**: "The Autonomous Casino Host That Never Sleeps"
-   - Note: "Autonomos" appears in the meta title (likely a typo in the original)
-2. **Sub-hero**: "The Agentic AI Casino VIP Host Always On -- Anytime, Anywhere, in Any Language"
+1. **Hero**: "Every Guest Deserves a World-Class Host"
+2. **Sub-hero**: "Hey Seven is the casino industry's first autonomous AI host — powering personalized guest engagement, intelligent comp decisions, and real-time behavioral insights across the entire player journey."
+3. **Previous hero** (may still appear in meta/ads): "The Autonomous Casino Host That Never Sleeps"
+4. **Previous sub-hero**: "The Agentic AI Casino VIP Host Always On -- Anytime, Anywhere, in Any Language"
+
+### Product Name
+
+- **Official product**: "Hey Seven Pulse"
+- Four-step journey: **Observe → Evaluate → Engage → Learn**
+
+### Key Stats (from website hero section)
+
+| Stat | Figure | Context |
+|------|--------|---------|
+| Host task automation potential | **80%** | "80% of host tasks are routine and automatable" |
+| Revenue left unrealized | **$30M+** | "Annual THEO left unrealized per property" |
+| Comp budget waste | **15-20%** | "Comp budget lost to inefficient allocation" |
+
+### Capabilities (from website)
+
+1. **PVIP Identification Engine** — "3-5x more PVIPs identified"
+2. **Comp ROI Optimization** — "15-20% reduction in comp leakage"
+3. **Behavioral Feedback Loop** — Continuous learning from player interactions
+
+### Impact Claims
+
+- **8%+ incremental revenue uplift**
+- **80%+ host coordination automated**
+- **3x+ ROI**
+
+### Leadership Team (from website)
+
+Three unnamed leadership profiles shown:
+1. **Casino Domain Expertise** — 20+ years
+2. **Enterprise Technology** — 40+ years combined
+3. **Gaming Industry Strategy** — 25+ years (likely Rafi Ashkenazi)
 
 ### Problem Framing (from website)
 
