@@ -587,7 +587,17 @@ def escalate_to_human(player_id: str, reason: str, context: dict) -> dict:
 # Tool Registry
 # ---------------------------------------------------------------------------
 
-ALL_TOOLS = [
+# Import the RAG search tool so it's available to the agent.
+# In the Docker container, both langgraph_agent/ and rag/ are top-level
+# packages under /app. For local dev with symlinks, ensure boilerplate/
+# is on PYTHONPATH or use `pip install -e .`.
+try:
+    from rag.retriever import search_knowledge_base
+except ImportError:
+    # Fallback: try relative import if running as a sub-package
+    from ..rag.retriever import search_knowledge_base  # type: ignore[no-redef]
+
+ALL_TOOLS: list = [
     check_player_status,
     calculate_comp,
     make_reservation,
@@ -595,5 +605,11 @@ ALL_TOOLS = [
     check_compliance,
     lookup_regulations,
     escalate_to_human,
+    search_knowledge_base,
 ]
-"""Complete list of tools available to the Casino Host agent."""
+"""Complete list of tools available to the Casino Host agent.
+
+Includes all casino-domain tools plus the RAG knowledge base search tool
+for answering questions about casino operations, regulations, and player
+development best practices.
+"""

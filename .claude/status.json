@@ -1,45 +1,90 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "Phase 2 COMPLETE. All infrastructure ready for assignment. LangGraph agent (7 nodes, 7 tools), FastAPI backend (port 8080), Next.js frontend (brand-matched), RAG pipeline, GCP deployment configs, 11 research files, 4 knowledge-base files. Frontend-backend API integration verified. Frontend build passes (0 errors). Brand tokens from heyseven.ai applied.",
-    "lastModified": "2026-02-12T16:00:00Z",
+    "summary": "Phase 2 COMPLETE + Round 2 review (80/100) + top 3 fixes (~82-85) + deep research pass (LangGraph 1.0.8 latest, React 19.2/AI SDK 6 frontend, casino domain). Project fully prepped. WAITING FOR ASSIGNMENT.",
+    "lastModified": "2026-02-12T22:00:00Z",
     "branch": "main",
     "commitHash": "pending"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 1, "description": "Wait for assignment from Hey Seven, then execute Phase 3 (read, map to infra, gap analysis, architecture doc)" },
-    { "priority": 2, "description": "Phase 4: Implementation with agent team based on assignment requirements" },
-    { "priority": 3, "description": "Phase 5: Quality, GCP deployment, delivery" }
+    { "priority": 1, "description": "COMMIT all changes and push to GitHub" },
+    { "priority": 2, "description": "Wait for assignment from Hey Seven, then execute Phase 3 (ASSIGNMENT RECEPTION PROTOCOL in CLAUDE.md)" },
+    { "priority": 3, "description": "Phase 4: Implementation based on assignment requirements (agent team)" },
+    { "priority": 4, "description": "Phase 5: Quality, GCP deployment, delivery" }
   ],
   "phases": {
     "phase0": "complete",
     "phase1": "complete",
     "phase2": "complete",
+    "phase2_review": "round2_complete_plus_fixes",
+    "phase2_research": "deep_research_complete",
     "phase3": "blocked_on_assignment",
     "phase4": "blocked_on_assignment",
     "phase5": "blocked_on_assignment"
   },
   "infrastructure": {
     "backend": {
-      "framework": "LangGraph 1.0 + FastAPI",
+      "framework": "LangGraph (pinned 0.2.60, latest 1.0.8) + FastAPI",
       "llm": "Gemini 2.5 Flash (primary) + Pro (complex)",
       "port": 8080,
       "routes": ["/api/v1/chat", "/api/v1/player/{id}", "/api/v1/comp/calculate", "/api/v1/health"],
-      "tools": ["check_player_status", "calculate_comp", "make_reservation", "send_message", "check_compliance", "lookup_regulations", "escalate_to_human"]
+      "tools": ["check_player_status", "calculate_comp", "make_reservation", "send_message", "check_compliance", "lookup_regulations", "escalate_to_human", "search_knowledge_base"],
+      "patterns": ["create_react_agent (state_modifier= for 0.2.60)", "ToolNode", "MessagesState", "structured_output", "MemorySaver (dev)", "FirestoreSaver (prod, community)"]
     },
     "frontend": {
       "framework": "Next.js 15 + React 19 + Tailwind CSS 4",
       "brandColors": { "gold": "#c5a467", "dark": "#2c2926", "cream": "#f5f3ef" },
-      "components": ["Header", "ChatInterface", "PlayerPanel"]
+      "components": ["Header (Server)", "ChatInterface (Client)", "PlayerPanel (Server)", "HomeClient (Client)", "error.tsx", "loading.tsx"],
+      "fonts": "Playfair Display (serif headings) + system sans-serif (body)",
+      "latestTools": "AI SDK 6 (useChat), shadcn/ui + Prompt Kit, Motion, SSE streaming"
     },
     "deployment": {
-      "target": "GCP Cloud Run",
-      "configs": ["Dockerfile", "cloudbuild.yaml", "deploy.sh"]
+      "target": "GCP Cloud Run (IAM auth, not --allow-unauthenticated)",
+      "configs": ["Dockerfile (multi-stage, non-root)", "cloudbuild.yaml", "deploy.sh"]
     }
+  },
+  "researchFiles": {
+    "casino-domain.md": "Casino host ops, comp formulas, channels, churn signals",
+    "company-intel.md": "Hey Seven company, team, product, competitors",
+    "brand-design.md": "Visual identity (gold #c5a467, dark #2c2926, cream #f5f3ef)",
+    "langgraph-gcp.md": "Original LangGraph + GCP patterns, version notes",
+    "langgraph-latest.md": "LangGraph 1.0.8 latest (middleware, checkpointers, Gemini, HITL, deployment)",
+    "frontend-latest.md": "React 19.2, AI SDK 6, Next.js 15/16, Tailwind 4, chat UI libraries",
+    "perplexity-deep/casino-ai-market.md": "AI in casino market landscape",
+    "perplexity-deep/high-roller-psychology.md": "VIP psychology and retention",
+    "perplexity-deep/us-gaming-regulations.md": "State-by-state gaming regulations"
+  },
+  "reviewScores": {
+    "round1": {
+      "agent_and_rag": 62,
+      "api_and_deploy": 38,
+      "frontend_and_design": 58,
+      "research_and_intel": 74,
+      "overall": 58
+    },
+    "round2": {
+      "agent_and_rag": 79,
+      "api_and_deploy": 72,
+      "frontend_and_design": 79,
+      "research_and_intel": 88,
+      "overall": 80
+    },
+    "postFixes": "~82-85 estimated (state_modifier, hmac, chatStream, research syntax)"
   },
   "sessionNotes": {
     "lastSessionDate": "2026-02-12",
-    "lastSessionId": "phase2-completion"
+    "lastSessionId": "deep-research-pass",
+    "keyActions": [
+      "Deep research: LangGraph 1.0.8 latest (social + Perplexity)",
+      "Deep research: React 19.2, AI SDK 6, Tailwind 4, chat UI ecosystem",
+      "Deep research: LangGraph advanced patterns (subgraphs, functional API, Store, streaming)",
+      "Created research/langgraph-latest.md (comprehensive latest intel)",
+      "Created research/frontend-latest.md (comprehensive frontend tools)",
+      "Updated CLAUDE.md with new research references",
+      "bind_tools cached in nodes.py (get_llm_with_tools singleton)",
+      "Version compatibility notes added to langgraph-gcp.md",
+      "Project hygiene: PDFs moved, Zone.Identifier cleaned"
+    ]
   }
 }

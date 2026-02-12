@@ -211,6 +211,9 @@ def index_to_vertex(
 ) -> None:
     """Index document chunks into Vertex AI Vector Search.
 
+    Uses the ``IndexDatapoint`` proto objects required by
+    ``aiplatform >= 1.60.0``. Previous dict-based format is deprecated.
+
     Requires a pre-created Vector Search index and endpoint. See GCP
     documentation for index creation:
     https://cloud.google.com/vertex-ai/docs/vector-search/overview
@@ -223,6 +226,9 @@ def index_to_vertex(
             Read from VERTEX_DEPLOYED_INDEX_ID env var if None.
     """
     from google.cloud import aiplatform  # type: ignore[import-untyped]
+    from google.cloud.aiplatform.matching_engine import (  # type: ignore[import-untyped]
+        matching_engine_index_endpoint,
+    )
 
     from .embeddings import batch_embed
 
@@ -242,21 +248,21 @@ def index_to_vertex(
     embeddings_model = get_embeddings(use_vertex=True)
     vectors = batch_embed(texts, embeddings=embeddings_model)
 
-    # Vertex AI Vector Search expects (id, embedding, metadata) tuples
+    # Build IndexDatapoint proto objects (aiplatform >= 1.60.0 format, C9 fix)
     datapoints = []
     for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
-        datapoints.append(
-            {
-                "datapoint_id": f"chunk_{i}",
-                "feature_vector": vector,
-                "restricts": [
-                    {
-                        "namespace": "category",
-                        "allow_list": [chunk["metadata"].get("category", "general")],
-                    }
-                ],
-            }
+        restricts = [
+            matching_engine_index_endpoint.Namespace(
+                name="category",
+                allow_tokens=[chunk["metadata"].get("category", "general")],
+            )
+        ]
+        datapoint = matching_engine_index_endpoint.IndexDatapoint(
+            datapoint_id=f"chunk_{i}",
+            feature_vector=vector,
+            restricts=restricts,
         )
+        datapoints.append(datapoint)
 
     # Upsert to the index
     index_endpoint = aiplatform.MatchingEngineIndexEndpoint(

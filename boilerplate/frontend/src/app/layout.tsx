@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const playfair = Playfair_Display({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-playfair",
 });
 
 export const metadata: Metadata = {
-  title: "Hey Seven - AI Casino Host",
+  title: "Hey Seven Pulse - AI Casino Host",
   description:
     "The Autonomous Casino Host That Never Sleeps. AI-powered player relationship management for modern casinos.",
   icons: {
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} dark`}>
+    <html lang="en" className={playfair.variable}>
       <body className="min-h-screen bg-hs-bg font-sans antialiased">
         {children}
       </body>

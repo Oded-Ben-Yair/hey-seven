@@ -1,13 +1,25 @@
 """Conversation memory and checkpointing for the Casino Host Agent.
 
-Provides a Firestore-backed checkpoint saver that implements LangGraph's
-BaseCheckpointSaver interface. This enables conversation persistence,
-resumption, and multi-turn memory across sessions and Cloud Run instances.
+For local development, use ``langgraph.checkpoint.memory.MemorySaver`` --
+this is the official, fully-compatible checkpointer shipped with LangGraph.
 
-For local development, use langgraph.checkpoint.memory.MemorySaver instead.
+For production with Google Cloud Firestore, use the community package
+``langgraph-checkpoint-firestore``::
+
+    pip install langgraph-checkpoint-firestore
+    from langgraph_checkpoint_firestore import FirestoreSaver
+
+    db = firestore.Client(project="hey-seven-prod")
+    saver = FirestoreSaver(db=db)
+    graph = workflow.compile(checkpointer=saver)
+
+The ``FirestoreCheckpointSaver`` class below is a reference implementation
+that can be used if the community package is not available. It wraps all
+sync Firestore I/O in ``asyncio.to_thread()`` for the async methods (C4/C5
+fix), preventing event-loop blocking.
 """
 
-import json
+import asyncio
 import logging
 from collections.abc import AsyncIterator, Iterator, Sequence
 from typing import Any
@@ -25,31 +37,59 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 logger = logging.getLogger(__name__)
 
 
+def get_checkpointer(
+    use_firestore: bool = False,
+    firestore_db: Any = None,
+) -> BaseCheckpointSaver:
+    """Factory function to get the appropriate checkpointer.
+
+    Args:
+        use_firestore: If True, attempt to use the community Firestore
+            checkpointer, falling back to the reference implementation.
+        firestore_db: Optional pre-configured Firestore client.
+
+    Returns:
+        A BaseCheckpointSaver instance.
+    """
+    if not use_firestore:
+        from langgraph.checkpoint.memory import MemorySaver
+
+        return MemorySaver()
+
+    # Try the community package first (preferred for production)
+    try:
+        from langgraph_checkpoint_firestore import (  # type: ignore[import-untyped]
+            FirestoreSaver,
+        )
+
+        if firestore_db:
+            return FirestoreSaver(db=firestore_db)
+        return FirestoreSaver()
+    except ImportError:
+        logger.info(
+            "langgraph-checkpoint-firestore not installed. "
+            "Using reference FirestoreCheckpointSaver."
+        )
+        return FirestoreCheckpointSaver(db=firestore_db)
+
+
 class FirestoreCheckpointSaver(BaseCheckpointSaver):
-    """LangGraph checkpoint saver backed by Google Cloud Firestore.
+    """Reference LangGraph checkpoint saver backed by Google Cloud Firestore.
 
-    Stores checkpoint data in a Firestore collection, enabling conversation
-    persistence across Cloud Run instances and server restarts. Each
-    checkpoint is stored as a document with the thread_id as the parent
-    document and checkpoint_id as the child document.
+    This is a reference implementation. For production, prefer the community
+    package ``langgraph-checkpoint-firestore`` which handles edge cases,
+    batching, and the 1MB Firestore document limit.
 
-    Firestore collection structure:
+    All async methods use ``asyncio.to_thread()`` to wrap sync Firestore
+    calls, preventing event-loop blocking (C4/C5 fix).
+
+    Firestore collection structure::
+
         checkpoints/{thread_id}/versions/{checkpoint_id}
             - checkpoint: serialized checkpoint data
             - metadata: checkpoint metadata
             - parent_id: parent checkpoint ID (for branching)
             - writes: pending writes for this checkpoint
-
-    Usage:
-        from google.cloud import firestore
-
-        db = firestore.Client(project="hey-seven-prod")
-        saver = FirestoreCheckpointSaver(db=db, collection_name="checkpoints")
-        graph = workflow.compile(checkpointer=saver)
-
-    For local development:
-        from langgraph.checkpoint.memory import MemorySaver
-        graph = workflow.compile(checkpointer=MemorySaver())
     """
 
     def __init__(
@@ -95,6 +135,10 @@ class FirestoreCheckpointSaver(BaseCheckpointSaver):
             .document(checkpoint_id)
         )
 
+    # ------------------------------------------------------------------
+    # Sync interface
+    # ------------------------------------------------------------------
+
     def get_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
         """Retrieve a checkpoint tuple by config.
 
@@ -117,10 +161,8 @@ class FirestoreCheckpointSaver(BaseCheckpointSaver):
 
         try:
             if checkpoint_id:
-                # Fetch specific checkpoint
                 doc = self._get_checkpoint_ref(thread_id, checkpoint_id).get()
             else:
-                # Fetch the latest checkpoint
                 query = (
                     self._get_thread_ref(thread_id)
                     .collection("versions")
@@ -335,12 +377,13 @@ class FirestoreCheckpointSaver(BaseCheckpointSaver):
                 "Failed to list checkpoints for thread %s", thread_id
             )
 
-    # Async variants — delegate to sync for simplicity. In production,
-    # use async Firestore client for better performance.
+    # ------------------------------------------------------------------
+    # Async interface (C4/C5 fix: use asyncio.to_thread to avoid blocking)
+    # ------------------------------------------------------------------
 
     async def aget_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
-        """Async version of get_tuple."""
-        return self.get_tuple(config)
+        """Async version of get_tuple. Runs sync I/O in a thread pool."""
+        return await asyncio.to_thread(self.get_tuple, config)
 
     async def aput(
         self,
@@ -349,8 +392,26 @@ class FirestoreCheckpointSaver(BaseCheckpointSaver):
         metadata: CheckpointMetadata,
         new_versions: ChannelVersions,
     ) -> RunnableConfig:
-        """Async version of put."""
-        return self.put(config, checkpoint, metadata, new_versions)
+        """Async version of put. Runs sync I/O in a thread pool."""
+        return await asyncio.to_thread(
+            self.put, config, checkpoint, metadata, new_versions
+        )
+
+    async def aput_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
+    ) -> None:
+        """Async version of put_writes. Runs sync I/O in a thread pool.
+
+        This method was missing in the original implementation (C5 fix).
+        Required by LangGraph 1.0 GA for async graph execution.
+        """
+        await asyncio.to_thread(
+            self.put_writes, config, writes, task_id, task_path
+        )
 
     async def alist(
         self,
@@ -360,8 +421,16 @@ class FirestoreCheckpointSaver(BaseCheckpointSaver):
         before: RunnableConfig | None = None,
         limit: int | None = None,
     ) -> AsyncIterator[CheckpointTuple]:
-        """Async version of list."""
-        for item in self.list(config, filter=filter, before=before, limit=limit):
+        """Async version of list.
+
+        Collects sync results in a thread pool, then yields them.
+        """
+        items = await asyncio.to_thread(
+            lambda: list(
+                self.list(config, filter=filter, before=before, limit=limit)
+            )
+        )
+        for item in items:
             yield item
 
 
@@ -376,7 +445,8 @@ class PlayerContextManager:
     Stores and retrieves player profile data in Firestore so that returning
     players have their context immediately available without re-querying.
 
-    Collection structure:
+    Collection structure::
+
         player_contexts/{player_id}
             - profile: cached player profile
             - last_interaction: ISO timestamp
@@ -384,7 +454,11 @@ class PlayerContextManager:
             - preferences_overrides: host-set preference overrides
     """
 
-    def __init__(self, db: Any = None, collection_name: str = "player_contexts") -> None:
+    def __init__(
+        self,
+        db: Any = None,
+        collection_name: str = "player_contexts",
+    ) -> None:
         """Initialize the player context manager.
 
         Args:

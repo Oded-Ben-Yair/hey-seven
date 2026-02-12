@@ -1,4 +1,4 @@
-import type { ChatResponse, PlayerProfile, CompResult } from "./types";
+import type { ChatResponse, ChatMessage, MessageType, PlayerProfile, CompResult } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -9,6 +9,39 @@ interface BackendChatResponse {
   player_id: string | null;
   escalation: boolean;
   compliance_flags: string[];
+  /** Optional: backend may include a message type hint */
+  message_type?: string;
+}
+
+/**
+ * Detect the appropriate message type from the backend response.
+ * Prefers an explicit backend field, falls back to content heuristics.
+ */
+function detectMessageType(backend: BackendChatResponse): MessageType {
+  // Explicit backend type field takes priority
+  if (backend.message_type === "comp_offer") return "comp_offer";
+  if (backend.message_type === "reservation") return "reservation_confirmation";
+  if (backend.message_type === "escalation") return "escalation_notice";
+
+  // Escalation flag from backend
+  if (backend.escalation) return "escalation_notice";
+
+  // Content-based heuristics as fallback
+  const lower = backend.response.toLowerCase();
+  if (
+    lower.includes("comp") &&
+    (lower.includes("offer") || lower.includes("complimentary") || lower.includes("credit"))
+  ) {
+    return "comp_offer";
+  }
+  if (
+    lower.includes("reservation") &&
+    (lower.includes("confirmed") || lower.includes("booked"))
+  ) {
+    return "reservation_confirmation";
+  }
+
+  return "text";
 }
 
 /** Convert backend response into frontend ChatResponse */
@@ -18,7 +51,7 @@ function adaptChatResponse(backend: BackendChatResponse): ChatResponse {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       role: "assistant",
       content: backend.response,
-      type: "text",
+      type: detectMessageType(backend),
       timestamp: new Date(),
     },
   };
@@ -89,13 +122,15 @@ export async function calculateComp(
 export async function chatStream(
   message: string,
   playerId: string | undefined,
-  onChunk: (chunk: string) => void
-): Promise<ChatResponse> {
+  onChunk: (chunk: string) => void,
+  signal?: AbortSignal
+): Promise<ChatMessage> {
   const url = `${BASE_URL}/api/v1/chat/stream`;
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, thread_id: playerId }),
+    signal,
   });
 
   if (!response.ok || !response.body) {
@@ -106,22 +141,34 @@ export async function chatStream(
   const decoder = new TextDecoder();
   let fullContent = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    const text = decoder.decode(value, { stream: true });
-    fullContent += text;
-    onChunk(text);
+      const text = decoder.decode(value, { stream: true });
+      fullContent += text;
+      onChunk(text);
+    }
+  } finally {
+    reader.releaseLock();
   }
 
+  // Use detectMessageType instead of hardcoding "text" so streaming
+  // responses can still render as comp_offer / reservation / escalation cards.
+  const syntheticBackend: BackendChatResponse = {
+    response: fullContent,
+    thread_id: playerId ?? "",
+    player_id: null,
+    escalation: false,
+    compliance_flags: [],
+  };
+
   return {
-    message: {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: fullContent,
-      type: "text",
-      timestamp: new Date(),
-    },
+    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    role: "assistant",
+    content: fullContent,
+    type: detectMessageType(syntheticBackend),
+    timestamp: new Date(),
   };
 }

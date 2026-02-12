@@ -20,7 +20,7 @@
 - Written consent required before marketing SMS/calls
 - Opt-out must be honored within 5 minutes (effective April 2025)
 - Opt-out can be expressed informally (not just "STOP")
-- One-to-one consent required per entity (effective January 26, 2026)
+- One-to-one consent rule: **VACATED** by 11th Circuit (Jan 24, 2025, *Insurance Marketing Coalition v. FCC*). Never took effect. Bundled consent remains permissible.
 - Quiet hours: respect state-specific restrictions
 - Liability: $500-$1,500 per violation
 

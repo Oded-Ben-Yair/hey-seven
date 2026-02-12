@@ -1,5 +1,3 @@
-"use client";
-
 import {
   User,
   Crown,
@@ -16,21 +14,22 @@ interface PlayerPanelProps {
   player: PlayerProfile;
 }
 
+/** Brand-aligned tier styles: warm luxury palette, no neon colors */
 const TIER_STYLES: Record<PlayerTier, { bg: string; text: string; border: string }> = {
   Gold: {
-    bg: "bg-yellow-500/10",
-    text: "text-yellow-400",
-    border: "border-yellow-500/30",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
   },
   Platinum: {
-    bg: "bg-slate-300/10",
-    text: "text-slate-300",
-    border: "border-slate-300/30",
+    bg: "bg-hs-gold/10",
+    text: "text-hs-gold",
+    border: "border-hs-gold/30",
   },
   Diamond: {
-    bg: "bg-cyan-400/10",
-    text: "text-cyan-300",
-    border: "border-cyan-400/30",
+    bg: "bg-gray-50",
+    text: "text-gray-600",
+    border: "border-gray-200",
   },
   "Seven Star": {
     bg: "bg-hs-gold/10",
@@ -67,11 +66,11 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
           {player.photoUrl ? (
             <img
               src={player.photoUrl}
-              alt={player.name}
+              alt={`${player.name} profile photo`}
               className="h-12 w-12 rounded-full object-cover"
             />
           ) : (
-            <User className="h-6 w-6 text-hs-text-secondary" />
+            <User className="h-6 w-6 text-hs-text-secondary" aria-hidden="true" />
           )}
         </div>
         <div>
@@ -83,11 +82,12 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
       {/* Tier badge */}
       <div
         className={clsx(
-          "card-surface flex items-center gap-2 rounded-lg px-3 py-2",
+          "card-surface flex items-center gap-2 rounded-lg border px-3 py-2",
+          tierStyle.bg,
           tierStyle.border
         )}
       >
-        <Crown className={clsx("h-4 w-4", tierStyle.text)} />
+        <Crown className={clsx("h-4 w-4", tierStyle.text)} aria-hidden="true" />
         <span className={clsx("text-sm font-semibold", tierStyle.text)}>
           {player.tier}
         </span>
@@ -97,24 +97,24 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
       </div>
 
       {/* Key metrics */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3" role="group" aria-label="Player metrics">
         <MetricCard
-          icon={<DollarSign className="h-4 w-4 text-hs-gold" />}
+          icon={<DollarSign className="h-4 w-4 text-hs-gold" aria-hidden="true" />}
           label="ADT"
           value={formatCurrency(player.adt)}
         />
         <MetricCard
-          icon={<Star className="h-4 w-4 text-hs-gold" />}
+          icon={<Star className="h-4 w-4 text-hs-gold" aria-hidden="true" />}
           label="Comp Balance"
           value={formatCurrency(player.compBalance)}
         />
         <MetricCard
-          icon={<Calendar className="h-4 w-4 text-hs-text-secondary" />}
+          icon={<Calendar className="h-4 w-4 text-hs-text-secondary" aria-hidden="true" />}
           label="Last Visit"
           value={formatDate(player.lastVisit)}
         />
         <MetricCard
-          icon={<Clock className="h-4 w-4 text-hs-text-secondary" />}
+          icon={<Clock className="h-4 w-4 text-hs-text-secondary" aria-hidden="true" />}
           label="Total Visits"
           value={String(player.totalVisits)}
         />
@@ -122,13 +122,13 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
 
       {/* Preferences */}
       <Section title="Player Preferences">
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col gap-1.5" aria-label="Player preferences">
           {player.preferences.map((pref) => (
             <li
               key={pref}
               className="flex items-start gap-2 text-xs text-hs-text-secondary"
             >
-              <span className="mt-1 h-1 w-1 flex-shrink-0 rounded-full bg-hs-gold" />
+              <span className="mt-1 h-1 w-1 flex-shrink-0 rounded-full bg-hs-gold" aria-hidden="true" />
               {pref}
             </li>
           ))}
@@ -137,14 +137,15 @@ export function PlayerPanel({ player }: PlayerPanelProps) {
 
       {/* Recent visits */}
       <Section title="Recent Activity">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" role="list" aria-label="Recent player activity">
           {player.recentActivity.map((visit) => (
             <div
               key={visit.date}
+              role="listitem"
               className="card-surface flex items-center justify-between rounded-lg px-3 py-2"
             >
               <div className="flex items-center gap-2">
-                <Gamepad2 className="h-3.5 w-3.5 text-hs-text-muted" />
+                <Gamepad2 className="h-3.5 w-3.5 text-hs-text-muted" aria-hidden="true" />
                 <div>
                   <p className="text-xs font-medium text-hs-dark">
                     {visit.primaryGame}

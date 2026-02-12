@@ -144,10 +144,13 @@ Casinos with GAGR > $1M are classified as **financial institutions** under the B
 - Confirmation cannot contain promotional content
 - Liability: $500-$1,500 per violation
 
-**Effective January 26, 2026** (One-to-One Consent):
-- Each casino entity must obtain separate consent
-- Affiliate consent sharing prohibited
-- Consent cannot be bundled across multiple businesses
+**One-to-One Consent Rule: VACATED** (never took effect):
+- The FCC's one-to-one consent rule was **vacated** by the 11th Circuit Court of Appeals on January 24, 2025 (*Insurance Marketing Coalition Ltd v. FCC*)
+- The court held the FCC exceeded its statutory authority under the TCPA
+- The rule never took effect. The FCC formally repealed the vacated language and reinstated prior rules
+- As of February 2026, bundled consent from lead generators/affiliates remains permissible under existing TCPA frameworks
+- Previous requirements for prior express written consent remain in effect
+- Sources: Wiley.law (Jan 27, 2025), National Law Review (Jan 24, 2025), JD Supra (July 23, 2025 confirming FCC repeal)
 
 **Quiet Hours**:
 - Connecticut: 9 AM - 8 PM local time (stricter than federal)
@@ -155,6 +158,38 @@ Casinos with GAGR > $1M are classified as **financial institutions** under the B
 - Default to most restrictive zone if location uncertain
 
 **Liability**: Extends to any entity that "benefits from or directs" the communication (including AI platform providers)
+
+---
+
+## Federal AI-Gambling Legislation
+
+### SAFE Bet Act (H.R. 2087 / S.1033, 119th Congress)
+
+Reintroduced March 2025 by Sen. Blumenthal and Rep. Tonko. If enacted, would:
+- **Prohibit AI from tracking individual gambling habits**
+- **Prohibit AI from creating personalized offers/promotions**
+- **Prohibit AI from creating gambling products like microbets**
+- Require federal DOJ approval for state sports betting programs
+- Ban advertising 8am-10pm and during live events
+- Require affordability checks for wagers >$1,000/day
+
+**Relevance to Hey Seven**: The SAFE Bet Act's AI provisions would effectively prohibit core Hey Seven functionality if applied to casino VIP management. Currently the bill targets sports betting specifically, but the precedent is directly relevant. Status: introduced, not enacted.
+
+Sources: Congress.gov, gamblingharm.org AI Bill Tracker, Sen. Blumenthal press release (March 2025)
+
+### State-Level AI-Gambling Bills (2025-2026)
+
+Multiple states have introduced or are considering AI-gambling restrictions:
+
+| State | Bill(s) | Status | Key Provisions |
+|-------|---------|--------|----------------|
+| Illinois | SB 2398 / HB 1565 | Stalled 2025, likely reconsidered 2026 | Ban AI tracking, tailored offers, AI-generated bets |
+| New York | S5537 / A4279A / A8916 | Introduced 2025 | Ban AI-driven tracking, notifications, texts, ads |
+| Oklahoma | HB 1537 | Introduced 2025 | Ban AI tracking, tailored offers |
+| Massachusetts | — | Regulator concern expressed June 2025 | No bill yet, monitoring |
+| Minnesota | — | Policymaker concern | No bill yet, monitoring |
+
+Source: gamblingharm.org maintains comprehensive AI bill tracker
 
 ---
 

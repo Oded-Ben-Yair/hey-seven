@@ -1,23 +1,28 @@
 """Main agent assembly for the Casino Host.
 
-Builds the LangGraph StateGraph, connects all nodes with conditional
-routing, compiles with checkpointing, and exposes the entry-point function
-for the API layer.
+Uses ``create_react_agent`` from ``langgraph.prebuilt`` -- the recommended
+LangGraph 1.0 GA pattern for tool-calling agents. The prebuilt agent handles
+the standard LLM -> tools -> LLM loop automatically.
 
-Graph structure:
+Compliance checking and escalation handling are added as post-processing
+nodes that run after the agent finishes its tool-calling loop, before the
+final response is returned to the caller.
+
+Graph structure::
 
     START
       |
       v
-    agent_node  <-----+
-      |               |
-      |-- has tool_calls? --> tool_executor --> agent_node
+    react_agent (prebuilt: LLM <-> tool_executor loop)
       |
-      |-- escalation_needed? --> escalation_handler --> END
+      v
+    post_process (compliance check + escalation routing)
       |
-      |-- compliance flags? --> compliance_checker --> agent_node
+      v
+    response_formatter
       |
-      +-- otherwise --> END
+      v
+    END
 """
 
 import logging
@@ -26,47 +31,52 @@ import uuid
 from typing import Any, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import create_react_agent
 
-from .memory import FirestoreCheckpointSaver
+from .memory import get_checkpointer
 from .nodes import (
+    ComplianceResult,
     agent_node,
     compliance_checker,
     escalation_handler,
+    get_llm,
     response_formatter,
     tool_executor,
 )
-from .state import AgentState
+from .prompts import CASINO_HOST_SYSTEM_PROMPT
+from .state import AgentState, CasinoHostState
+from .tools import ALL_TOOLS
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Routing Logic
+# Routing Logic (C7 fix: descriptive routing keys, C8 fix: compliance guard)
 # ---------------------------------------------------------------------------
 
 
-def route_after_agent(state: AgentState) -> Literal[
-    "tool_executor", "compliance_checker", "escalation_handler", "__end__"
+def route_after_agent(state: CasinoHostState) -> Literal[
+    "tool_executor", "compliance_checker", "escalation_handler", "format_response"
 ]:
     """Determine the next node after the agent_node produces a response.
 
     Routing priority:
     1. If the LLM response contains tool_calls -> tool_executor
     2. If escalation_needed flag is set -> escalation_handler
-    3. If compliance flags require review -> compliance_checker
-    4. Otherwise -> END (return response to caller)
+    3. If compliance flags require review AND not already checked (C8 fix)
+       -> compliance_checker
+    4. Otherwise -> format_response (descriptive key, C7 fix)
 
     Args:
         state: Current agent state.
 
     Returns:
-        The name of the next node, or "__end__" to terminate.
+        The name of the next node.
     """
     messages = state.get("messages", [])
     if not messages:
-        return "__end__"
+        return "format_response"
 
     last_message = messages[-1]
 
@@ -78,16 +88,19 @@ def route_after_agent(state: AgentState) -> Literal[
     if state.get("escalation_needed", False):
         return "escalation_handler"
 
-    # Priority 3: Compliance review needed
+    # Priority 3: Compliance review needed (C8 fix: skip if already checked)
     compliance_flags = state.get("compliance_flags", [])
-    if "COMPLIANCE_REVIEW_NEEDED" in compliance_flags:
+    compliance_checked = state.get("compliance_checked", False)
+    if "COMPLIANCE_REVIEW_NEEDED" in compliance_flags and not compliance_checked:
         return "compliance_checker"
 
-    # Default: end the turn
-    return "__end__"
+    # Default: format and return response
+    return "format_response"
 
 
-def route_after_compliance(state: AgentState) -> Literal["agent_node", "__end__"]:
+def route_after_compliance(
+    state: CasinoHostState,
+) -> Literal["agent_node", "format_response"]:
     """Route after compliance check completes.
 
     If compliance blocked the action, return to the agent to inform the
@@ -103,32 +116,78 @@ def route_after_compliance(state: AgentState) -> Literal["agent_node", "__end__"
     if "COMPLIANCE_BLOCK" in compliance_flags:
         # Let the agent explain the compliance block to the user
         return "agent_node"
-    return "__end__"
+    return "format_response"
 
 
 # ---------------------------------------------------------------------------
-# Graph Assembly
+# Graph Assembly — Two Patterns Available
 # ---------------------------------------------------------------------------
+
+
+def build_react_agent(
+    checkpointer: Any = None,
+    use_firestore: bool = False,
+) -> Any:
+    """Build the Casino Host agent using ``create_react_agent`` (C2 fix).
+
+    This is the recommended LangGraph 1.0 GA pattern. The prebuilt agent
+    handles the LLM <-> tool execution loop automatically. The system
+    prompt and tools are passed directly.
+
+    For compliance and escalation, the calling code can inspect the final
+    state and invoke dedicated handlers as needed. Alternatively, use
+    ``build_graph()`` for a fully-wired custom graph with built-in
+    compliance and escalation routing.
+
+    Args:
+        checkpointer: Optional pre-configured checkpointer.
+        use_firestore: If True and no checkpointer provided, creates a
+            Firestore-backed checkpointer.
+
+    Returns:
+        A compiled LangGraph agent ready for invocation.
+    """
+    llm = get_llm()
+
+    # Select checkpointer
+    if checkpointer is None:
+        checkpointer = get_checkpointer(use_firestore=use_firestore)
+
+    # create_react_agent handles the tool-calling loop internally.
+    # NOTE: ``state_modifier`` is the correct param name for langgraph<=0.2.60.
+    # The ``prompt`` alias was added in langgraph>=0.2.70.
+    agent = create_react_agent(
+        model=llm,
+        tools=ALL_TOOLS,
+        checkpointer=checkpointer,
+        state_schema=CasinoHostState,
+        state_modifier=CASINO_HOST_SYSTEM_PROMPT,
+    )
+
+    logger.info("Casino Host react agent compiled successfully.")
+    return agent
 
 
 def build_graph(
     checkpointer: Any = None,
     use_firestore: bool = False,
 ) -> Any:
-    """Build and compile the Casino Host agent graph.
+    """Build the Casino Host agent graph with full compliance/escalation routing.
+
+    This is the extended version that includes compliance checking and
+    escalation handling as dedicated graph nodes. Use this when you need
+    the full regulatory workflow built into the graph itself.
 
     Args:
         checkpointer: Optional pre-configured checkpointer. If None, uses
-            MemorySaver for local dev or FirestoreCheckpointSaver if
-            use_firestore is True.
+            MemorySaver for local dev or Firestore if use_firestore is True.
         use_firestore: If True and no checkpointer provided, creates a
-            FirestoreCheckpointSaver.
+            Firestore-backed checkpointer.
 
     Returns:
         A compiled LangGraph StateGraph ready for invocation.
     """
-    # Build the graph
-    workflow = StateGraph(AgentState)
+    workflow = StateGraph(CasinoHostState)
 
     # Add nodes
     workflow.add_node("agent_node", agent_node)
@@ -140,7 +199,7 @@ def build_graph(
     # Entry edge: START -> agent_node
     workflow.add_edge(START, "agent_node")
 
-    # Conditional edges after agent_node
+    # Conditional edges after agent_node (C7 fix: descriptive routing keys)
     workflow.add_conditional_edges(
         "agent_node",
         route_after_agent,
@@ -148,20 +207,20 @@ def build_graph(
             "tool_executor": "tool_executor",
             "compliance_checker": "compliance_checker",
             "escalation_handler": "escalation_handler",
-            "__end__": "response_formatter",
+            "format_response": "response_formatter",
         },
     )
 
     # After tool execution, return to agent for next decision
     workflow.add_edge("tool_executor", "agent_node")
 
-    # After compliance check, route based on result
+    # After compliance check, route based on result (C7 fix: descriptive keys)
     workflow.add_conditional_edges(
         "compliance_checker",
         route_after_compliance,
         {
             "agent_node": "agent_node",
-            "__end__": "response_formatter",
+            "format_response": "response_formatter",
         },
     )
 
@@ -173,10 +232,7 @@ def build_graph(
 
     # Select checkpointer
     if checkpointer is None:
-        if use_firestore:
-            checkpointer = FirestoreCheckpointSaver()
-        else:
-            checkpointer = MemorySaver()
+        checkpointer = get_checkpointer(use_firestore=use_firestore)
 
     # Compile
     compiled = workflow.compile(checkpointer=checkpointer)
@@ -189,18 +245,34 @@ def build_graph(
 # ---------------------------------------------------------------------------
 
 
-def create_agent() -> Any:
+def create_agent(use_react: bool = True) -> Any:
     """Create a production-ready Casino Host agent.
 
     Reads configuration from environment variables:
         - GOOGLE_API_KEY: Required for Gemini LLM.
         - USE_FIRESTORE: Set to "true" for Firestore checkpointing.
-        - GCP_PROJECT_ID: Required if using Firestore.
+        - USE_REACT_AGENT: Set to "false" to use the full custom graph
+          with built-in compliance/escalation routing.
+
+    Args:
+        use_react: If True (default), use ``create_react_agent`` (the
+            modern LangGraph 1.0 pattern). If False, use the full custom
+            graph with compliance/escalation nodes.
 
     Returns:
         A compiled LangGraph agent ready for invocation.
     """
     use_firestore = os.environ.get("USE_FIRESTORE", "false").lower() == "true"
+
+    # Allow env var override
+    env_react = os.environ.get("USE_REACT_AGENT", "").lower()
+    if env_react == "false":
+        use_react = False
+    elif env_react == "true":
+        use_react = True
+
+    if use_react:
+        return build_react_agent(use_firestore=use_firestore)
     return build_graph(use_firestore=use_firestore)
 
 
@@ -245,7 +317,9 @@ async def chat(
     response_text = ""
     for msg in reversed(messages):
         if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
-            response_text = msg.content if isinstance(msg.content, str) else str(msg.content)
+            response_text = (
+                msg.content if isinstance(msg.content, str) else str(msg.content)
+            )
             break
 
     return {
@@ -268,10 +342,10 @@ async def _demo() -> None:
     Requires GOOGLE_API_KEY environment variable to be set.
     """
     print("=" * 60)
-    print("Casino Host Agent — Demo")
+    print("Casino Host Agent -- Demo")
     print("=" * 60)
 
-    agent = build_graph()
+    agent = create_agent()
 
     # Demo conversation
     demo_messages = [

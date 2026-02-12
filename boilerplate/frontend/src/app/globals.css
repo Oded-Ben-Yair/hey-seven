@@ -36,6 +36,7 @@
   --color-hs-text: #2c2926;
   --color-hs-text-secondary: #5a5550;
   --color-hs-text-muted: #8a847e;
+  --font-serif: var(--font-playfair);
 }
 
 html {
@@ -51,7 +52,7 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  font-family: var(--font-playfair, ui-serif), Georgia, Cambria, "Times New Roman", serif;
 }
 
 /* Scrollbar styling for the chat area */

@@ -1,13 +1,17 @@
 """API routes for the Casino Host Agent.
 
-Organized into versioned route groups. All routes are prefixed with
-/api/v1/ for API versioning.
+All routes are prefixed with ``/api/v1/`` for versioning. Authentication
+is enforced via a dependency on ``verify_api_key``.
 """
 
+import hmac
 import logging
-from typing import Any
+import os
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Security
+from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -16,8 +20,47 @@ router = APIRouter(prefix="/api/v1", tags=["Casino Host API v1"])
 
 
 # ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def verify_api_key(
+    api_key: str | None = Security(_api_key_header),
+) -> str:
+    """Validate the ``X-API-Key`` header against the configured secret.
+
+    If ``API_KEY`` env var is unset the service rejects ALL requests --
+    fail-closed, not fail-open.
+
+    Raises:
+        HTTPException: 401 if the key is missing or incorrect.
+    """
+    expected = os.getenv("API_KEY")
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="API key not configured on server.",
+        )
+    if not api_key or not hmac.compare_digest(api_key, expected):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key.",
+        )
+    return api_key
+
+
+# Alias for use as a route dependency
+ApiKey = Annotated[str, Depends(verify_api_key)]
+
+
+# ---------------------------------------------------------------------------
 # Request / Response Models
 # ---------------------------------------------------------------------------
+
+# Valid comp types (closed set)
+CompType = Literal["room", "dining", "entertainment", "freeplay", "cashback"]
 
 
 class ChatRequest(BaseModel):
@@ -26,12 +69,13 @@ class ChatRequest(BaseModel):
     message: str = Field(
         ...,
         min_length=1,
-        max_length=4000,
+        max_length=4096,
         description="The user message to send to the Casino Host agent.",
         examples=["Look up player PLY-482910"],
     )
     thread_id: str | None = Field(
         default=None,
+        pattern=r"^[a-zA-Z0-9_-]{1,128}$",
         description=(
             "Conversation thread ID for multi-turn conversations. "
             "If None, a new thread is created."
@@ -62,13 +106,27 @@ class CompRequest(BaseModel):
     """Request body for the comp calculation endpoint."""
 
     player_id: str = Field(
-        ..., description="The player tracking number.", examples=["PLY-482910"]
+        ...,
+        pattern=r"^[a-zA-Z0-9_-]{1,64}$",
+        description="The player tracking number.",
+        examples=["PLY-482910"],
     )
-    comp_type: str = Field(
+    comp_type: CompType = Field(
         ...,
         description="Type of comp to calculate.",
-        examples=["room", "dining", "show", "freeplay", "travel"],
+        examples=["room", "dining"],
     )
+
+
+class CompResponse(BaseModel):
+    """Response body for comp calculation."""
+
+    player_id: str
+    comp_type: str
+    eligible: bool = False
+    comp_value: float | None = None
+    currency: str = "USD"
+    details: str | None = None
 
 
 class PlayerResponse(BaseModel):
@@ -92,40 +150,14 @@ class HealthResponse(BaseModel):
 
     status: str
     version: str
-    llm_configured: bool
-    firestore_connected: bool
+    agent_ready: bool
 
 
-# ---------------------------------------------------------------------------
-# Agent instance (injected at startup)
-# ---------------------------------------------------------------------------
+class ErrorResponse(BaseModel):
+    """Standard error response body."""
 
-_agent: Any = None
-
-
-def set_agent(agent: Any) -> None:
-    """Inject the compiled LangGraph agent into the routes module.
-
-    Called during application startup in main.py.
-
-    Args:
-        agent: A compiled LangGraph StateGraph.
-    """
-    global _agent
-    _agent = agent
-
-
-def _get_agent() -> Any:
-    """Get the current agent instance.
-
-    Raises:
-        RuntimeError: If the agent has not been initialized.
-    """
-    if _agent is None:
-        raise RuntimeError(
-            "Agent not initialized. Ensure set_agent() is called at startup."
-        )
-    return _agent
+    error: str
+    message: str
 
 
 # ---------------------------------------------------------------------------
@@ -133,25 +165,35 @@ def _get_agent() -> Any:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest) -> ChatResponse:
+@router.post(
+    "/chat",
+    response_model=ChatResponse,
+    responses={401: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+)
+async def chat_endpoint(
+    body: ChatRequest,
+    request: Request,
+    _key: ApiKey,
+) -> ChatResponse:
     """Send a message to the Casino Host agent.
 
-    Supports multi-turn conversations via thread_id. If no thread_id is
+    Supports multi-turn conversations via ``thread_id``. If no thread_id is
     provided, a new conversation thread is created.
-
-    The agent will autonomously decide whether to use tools (player lookup,
-    comp calculation, etc.) based on the message content.
     """
-    from langgraph_agent.agent import chat
-
-    agent = _get_agent()
+    agent = getattr(request.app.state, "agent", None)
+    if agent is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Agent not initialized. Service is starting up.",
+        )
 
     try:
+        from langgraph_agent.agent import chat
+
         result = await chat(
             agent=agent,
-            message=request.message,
-            thread_id=request.thread_id,
+            message=body.message,
+            thread_id=body.thread_id,
         )
         return ChatResponse(**result)
     except Exception:
@@ -162,46 +204,73 @@ async def chat_endpoint(request: ChatRequest) -> ChatResponse:
         )
 
 
-@router.get("/player/{player_id}", response_model=PlayerResponse)
-async def get_player(player_id: str) -> PlayerResponse:
+@router.get(
+    "/player/{player_id}",
+    response_model=PlayerResponse,
+    responses={401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
+async def get_player(
+    player_id: str,
+    _key: ApiKey,
+) -> PlayerResponse:
     """Look up a player's profile by their tracking number.
 
     Returns the player's loyalty tier, ADT, visit history, preferences,
-    and current status. This is a direct lookup without going through
-    the conversational agent.
+    and current status.
     """
-    from langgraph_agent.tools import check_player_status
+    # Validate player_id format
+    import re
+
+    if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", player_id):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid player_id format. Alphanumeric, hyphens, and underscores only.",
+        )
 
     try:
+        from langgraph_agent.tools import check_player_status
+
         result = check_player_status.invoke({"player_id": player_id})
         return PlayerResponse(**result)
     except Exception:
         logger.exception("Player lookup error for %s", player_id)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to look up player {player_id}.",
+            detail="Failed to look up player.",
         )
 
 
-@router.post("/comp/calculate")
-async def calculate_comp(request: CompRequest) -> dict:
+@router.post(
+    "/comp/calculate",
+    response_model=CompResponse,
+    status_code=200,
+    responses={401: {"model": ErrorResponse}, 422: {"model": ErrorResponse}},
+)
+async def calculate_comp(
+    body: CompRequest,
+    _key: ApiKey,
+) -> CompResponse:
     """Calculate an eligible comp for a player.
 
     Uses the casino's reinvestment matrix to determine what comp value
     a player qualifies for based on their theoretical win and loyalty tier.
     """
-    from langgraph_agent.tools import calculate_comp as calc_comp_tool
-
     try:
+        from langgraph_agent.tools import calculate_comp as calc_comp_tool
+
         result = calc_comp_tool.invoke(
-            {"player_id": request.player_id, "comp_type": request.comp_type}
+            {"player_id": body.player_id, "comp_type": body.comp_type}
         )
-        return result
+        return CompResponse(
+            player_id=body.player_id,
+            comp_type=body.comp_type,
+            **result,
+        )
     except Exception:
         logger.exception(
             "Comp calculation error for %s/%s",
-            request.player_id,
-            request.comp_type,
+            body.player_id,
+            body.comp_type,
         )
         raise HTTPException(
             status_code=500,
@@ -209,30 +278,31 @@ async def calculate_comp(request: CompRequest) -> dict:
         )
 
 
-@router.get("/health", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+)
+async def health_check(request: Request) -> HealthResponse | JSONResponse:
     """Health check endpoint for Cloud Run and load balancers.
 
-    Returns the service status, version, and connectivity to external
-    dependencies (LLM, Firestore).
+    Returns 503 if the agent is not initialized (service is unhealthy).
+    No authentication required -- load balancers need unauthenticated access.
     """
-    import os
+    version = os.getenv("APP_VERSION", "0.1.0")
+    agent = getattr(request.app.state, "agent", None)
 
-    llm_configured = bool(os.environ.get("GOOGLE_API_KEY"))
-    firestore_connected = False
-
-    try:
-        from google.cloud import firestore  # type: ignore[import-untyped]
-
-        db = firestore.Client()
-        db.collection("_health").document("ping").get()
-        firestore_connected = True
-    except Exception:
-        pass
+    if agent is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "version": version,
+                "agent_ready": False,
+            },
+        )
 
     return HealthResponse(
         status="healthy",
-        version=os.environ.get("APP_VERSION", "0.1.0"),
-        llm_configured=llm_configured,
-        firestore_connected=firestore_connected,
+        version=version,
+        agent_ready=True,
     )

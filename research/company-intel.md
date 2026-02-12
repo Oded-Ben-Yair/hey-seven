@@ -67,8 +67,8 @@ Appointed January 2026. This is the highest-profile appointment.
 | Career Path | Playtech COO -> Rational Group COO -> Stars Group CEO -> Flutter NED -> Hard Rock Digital |
 
 **Key career achievements**:
-- Led The Stars Group acquisition of Sky Betting & Gaming ($5B)
-- Oversaw TSG's $12B merger with Flutter Entertainment (created world's largest online gambling company)
+- Led The Stars Group acquisition of Sky Betting & Gaming ($4.7B, April 2018)
+- Oversaw TSG's ~$6B acquisition by Flutter Entertainment (creating world's largest online gambling company with combined revenues of ~$4.7B)
 - Diversified PokerStars from poker-only into casino + sportsbook
 - Currently building Hard Rock's global digital gaming business (130M+ customer database, 250 properties in 76 countries)
 
@@ -110,7 +110,7 @@ Source: [Gaming Eminence](https://www.gamingeminence.com/post/agentic-ai-vip-sup
 
 - **Agent Framework**: LangGraph (GA 1.0)
 - **Cloud**: GCP (Google Cloud Platform)
-- **LLM**: Gemini (2.5 Flash for primary, 2.5 Pro for complex reasoning)
+- **LLM**: Gemini (2.5 Flash/Pro at job posting time, Dec 2025; Gemini 3 Pro released Nov 2025 and Gemini 3 Flash released Dec 2025 — Hey Seven may have migrated)
 - **State/Checkpoints**: Firestore
 - **Deployment**: Cloud Run
 - **Embeddings**: Vertex AI (text-embedding-005)
@@ -155,7 +155,7 @@ Source: [Gaming Eminence](https://www.gamingeminence.com/post/agentic-ai-vip-sup
 
 | Company | Focus | Scale | Key Differentiator |
 |---------|-------|-------|-------------------|
-| **QCI Host** (Quick Custom Intelligence) | Player development platform | 300+ casinos, $42B+ annual GGR managed | Established market leader. AGI56 platform. Host workflow management. Augments human hosts. |
+| **QCI Host** (Quick Custom Intelligence) | Player development platform | 350+ casinos, 1,000+ sites, $42B+ annual GGR managed | Established market leader. AGI56 platform. QCI Host Nimble Edition launched at ICE Barcelona 2026. Augments human hosts. |
 | **Gaming Analytics** | AI analytics for casino floor | Founded 2017, San Rafael CA | Graph database architecture. Floor optimization + fraud detection. Analytics-first, not host replacement. |
 | **Callers.ai** | AI voice agents for gaming | Growing | Voice/SMS/WhatsApp. 40% bonus activation, 60% cost reduction claims. Outbound calls, not full host replacement. |
 | **Voxia AI** | AI voice agents for casino support | Growing | 24/7 customer support. 87% query handling without humans. Support-focused, not VIP relationship management. |

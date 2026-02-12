@@ -1,16 +1,17 @@
 # Cloud Build CI/CD pipeline for the Casino Host Agent.
 #
 # Triggered on push to main branch. Builds the Docker image, pushes to
-# Artifact Registry, and deploys to Cloud Run.
+# Artifact Registry, and deploys to Cloud Run with IAM-based auth
+# (no --allow-unauthenticated).
 #
 # Required substitution variables:
 #   _REGION: GCP region (default: us-central1)
 #   _SERVICE_NAME: Cloud Run service name (default: casino-host-agent)
 #   _REPOSITORY: Artifact Registry repository name
 #
-# Required secrets (set in Cloud Run env vars or Secret Manager):
+# Required secrets (set via Secret Manager):
 #   GOOGLE_API_KEY: Gemini API key
-#   GCP_PROJECT_ID: GCP project ID
+#   API_KEY: Application-level API key for request auth
 
 steps:
   # Step 1: Build the Docker image
@@ -35,7 +36,7 @@ steps:
     id: 'push'
     waitFor: ['build']
 
-  # Step 3: Deploy to Cloud Run
+  # Step 3: Deploy to Cloud Run (IAM auth -- no --allow-unauthenticated)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -48,7 +49,7 @@ steps:
       - '${_REGION}'
       - '--platform'
       - 'managed'
-      - '--allow-unauthenticated'
+      - '--no-allow-unauthenticated'
       - '--memory'
       - '1Gi'
       - '--cpu'
@@ -62,9 +63,9 @@ steps:
       - '--concurrency'
       - '80'
       - '--set-env-vars'
-      - 'APP_VERSION=${SHORT_SHA},USE_FIRESTORE=true,GCP_PROJECT_ID=${PROJECT_ID}'
+      - 'APP_VERSION=${SHORT_SHA},USE_FIRESTORE=true,GCP_PROJECT_ID=${PROJECT_ID},ENVIRONMENT=production'
       - '--set-secrets'
-      - 'GOOGLE_API_KEY=google-api-key:latest'
+      - 'GOOGLE_API_KEY=google-api-key:latest,API_KEY=api-key:latest'
     id: 'deploy'
     waitFor: ['push']
 

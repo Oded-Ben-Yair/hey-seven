@@ -57,11 +57,11 @@ ADT = $100 × 80 × 5 × 0.0106 = $424
 
 ### Example 4: Roulette Player
 Average bet: $20
-Spins per hour: 30
+Spins per hour: 40
 Hours played: 4
 House edge: 5.26%
-Total wager = $20 × 30 × 4 = $2,400
-ADT = $2,400 × 0.0526 = $126.24
+Total wager = $20 × 40 × 4 = $3,200
+ADT = $3,200 × 0.0526 = $168.32
 
 ## Slot Points Conversion
 

@@ -1,20 +1,38 @@
-"""Middleware for the Casino Host API.
+"""Pure ASGI middleware for the Casino Host API.
 
-Configures CORS, request logging, error handling, and rate limiting
-for the FastAPI application.
+Uses raw ASGI middleware (not BaseHTTPMiddleware) to avoid breaking
+streaming responses. Provides request logging, request ID injection,
+timing headers, and structured error handling.
 """
 
+import json
 import logging
+import os
 import time
 import uuid
-from collections import defaultdict
-from typing import Any
+from typing import Any, Callable
 
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 logger = logging.getLogger(__name__)
+
+
+def _get_structured_logger() -> logging.Logger:
+    """Return a logger configured for structured JSON output.
+
+    Cloud Run / Cloud Logging parses JSON lines from stdout automatically.
+    """
+    log = logging.getLogger("hey_seven.access")
+    if not log.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+        log.propagate = False
+    return log
+
+
+_access_logger = _get_structured_logger()
 
 
 # ---------------------------------------------------------------------------
@@ -22,210 +40,159 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def configure_cors(app: FastAPI) -> None:
-    """Add CORS middleware with appropriate settings.
+def configure_cors(app: Any) -> None:
+    """Add CORS middleware with explicit origins.
 
-    In production, restrict origins to the frontend domain. During
-    development, allows all origins.
-
-    Args:
-        app: The FastAPI application instance.
-    """
-    import os
-
-    allowed_origins = os.environ.get(
-        "CORS_ORIGINS", "*"
-    ).split(",")
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-
-# ---------------------------------------------------------------------------
-# Request Logging
-# ---------------------------------------------------------------------------
-
-
-async def request_logging_middleware(request: Request, call_next: Any) -> Response:
-    """Log all incoming requests with timing information.
-
-    Assigns a unique request ID, logs the method/path/status, and records
-    the response time in milliseconds.
+    NEVER uses ``allow_origins=["*"]`` with ``allow_credentials=True`` --
+    that combination is invalid per the Fetch spec and browsers will reject
+    the response.
 
     Args:
-        request: The incoming HTTP request.
-        call_next: The next middleware or route handler.
-
-    Returns:
-        The HTTP response.
+        app: The FastAPI / Starlette application instance.
     """
-    request_id = str(uuid.uuid4())[:8]
-    start_time = time.monotonic()
+    from fastapi.middleware.cors import CORSMiddleware
 
-    # Inject request_id into request state for downstream use
-    request.state.request_id = request_id
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
 
-    logger.info(
-        "[%s] %s %s started",
-        request_id,
-        request.method,
-        request.url.path,
-    )
-
-    response = await call_next(request)
-
-    duration_ms = (time.monotonic() - start_time) * 1000
-    logger.info(
-        "[%s] %s %s -> %d (%.1fms)",
-        request_id,
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-    )
-
-    # Add timing header
-    response.headers["X-Request-ID"] = request_id
-    response.headers["X-Response-Time-Ms"] = f"{duration_ms:.1f}"
-
-    return response
-
-
-# ---------------------------------------------------------------------------
-# Error Handling
-# ---------------------------------------------------------------------------
-
-
-async def error_handling_middleware(request: Request, call_next: Any) -> Response:
-    """Catch unhandled exceptions and return structured error responses.
-
-    Prevents stack traces from leaking to clients in production. Logs
-    the full exception server-side.
-
-    Args:
-        request: The incoming HTTP request.
-        call_next: The next middleware or route handler.
-
-    Returns:
-        The HTTP response (500 error on unhandled exceptions).
-    """
-    try:
-        return await call_next(request)
-    except Exception:
-        request_id = getattr(request.state, "request_id", "unknown")
-        logger.exception(
-            "[%s] Unhandled exception on %s %s",
-            request_id,
-            request.method,
-            request.url.path,
+    # Credentials + wildcard is spec-invalid. If someone sets "*", treat it
+    # as dev-only without credentials.
+    if "*" in origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["X-API-Key", "Content-Type", "X-Request-ID"],
         )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "internal_server_error",
-                "message": "An unexpected error occurred. Please try again.",
-                "request_id": request_id,
-            },
+    else:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["X-API-Key", "Content-Type", "X-Request-ID"],
         )
 
 
 # ---------------------------------------------------------------------------
-# Rate Limiting (Simple In-Memory)
+# Pure ASGI Middleware: Request Logging + Timing + Request ID
 # ---------------------------------------------------------------------------
 
 
-class RateLimiter:
-    """Simple in-memory rate limiter for development and single-instance deploys.
+class RequestLoggingMiddleware:
+    """Pure ASGI middleware for structured request logging.
 
-    For production, use Redis-backed rate limiting (e.g., via Cloud Memorystore)
-    or GCP API Gateway rate limiting.
+    - Injects ``X-Request-ID`` (from the incoming header or a new UUID).
+    - Emits a structured JSON log line per request (Cloud Logging compatible).
+    - Adds ``X-Response-Time-Ms`` header to the response.
 
-    Limits requests per client IP with a sliding window.
+    Does NOT use ``BaseHTTPMiddleware`` so streaming responses are not broken.
     """
 
-    def __init__(
-        self,
-        requests_per_minute: int = 60,
-        burst_limit: int = 10,
-    ) -> None:
-        """Initialize the rate limiter.
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
-        Args:
-            requests_per_minute: Maximum sustained request rate per IP.
-            burst_limit: Maximum requests in a 1-second burst.
-        """
-        self.requests_per_minute = requests_per_minute
-        self.burst_limit = burst_limit
-        self._request_log: dict[str, list[float]] = defaultdict(list)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
 
-    def is_allowed(self, client_ip: str) -> bool:
-        """Check if a request from the given IP is allowed.
-
-        Args:
-            client_ip: The client's IP address.
-
-        Returns:
-            True if the request is allowed, False if rate-limited.
-        """
-        now = time.monotonic()
-        window_start = now - 60.0
-        burst_start = now - 1.0
-
-        # Clean old entries
-        self._request_log[client_ip] = [
-            t for t in self._request_log[client_ip] if t > window_start
-        ]
-
-        # Check minute window
-        if len(self._request_log[client_ip]) >= self.requests_per_minute:
-            return False
-
-        # Check burst window
-        burst_count = sum(
-            1 for t in self._request_log[client_ip] if t > burst_start
+        # Extract or generate request ID
+        headers = dict(scope.get("headers", []))
+        request_id = (
+            headers.get(b"x-request-id", b"").decode()
+            or str(uuid.uuid4())[:8]
         )
-        if burst_count >= self.burst_limit:
-            return False
+        start_time = time.monotonic()
 
-        self._request_log[client_ip].append(now)
-        return True
+        method = scope.get("method", "WS")
+        path = scope.get("path", "/")
+
+        # For HTTP requests, intercept the first response message to inject headers
+        status_code: int | None = None
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message.get("status", 0)
+                duration_ms = (time.monotonic() - start_time) * 1000
+                extra_headers = [
+                    (b"x-request-id", request_id.encode()),
+                    (b"x-response-time-ms", f"{duration_ms:.1f}".encode()),
+                ]
+                message["headers"] = list(message.get("headers", [])) + extra_headers
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            duration_ms = (time.monotonic() - start_time) * 1000
+            _access_logger.info(
+                json.dumps(
+                    {
+                        "severity": "INFO",
+                        "request_id": request_id,
+                        "method": method,
+                        "path": path,
+                        "status": status_code,
+                        "duration_ms": round(duration_ms, 1),
+                    }
+                )
+            )
 
 
-# Global rate limiter instance
-rate_limiter = RateLimiter()
+# ---------------------------------------------------------------------------
+# Pure ASGI Middleware: Unhandled Error Catch
+# ---------------------------------------------------------------------------
 
 
-async def rate_limiting_middleware(request: Request, call_next: Any) -> Response:
-    """Apply rate limiting based on client IP.
+class ErrorHandlingMiddleware:
+    """Catch unhandled exceptions and return a structured 500 JSON body.
 
-    Skips rate limiting for health check endpoints.
-
-    Args:
-        request: The incoming HTTP request.
-        call_next: The next middleware or route handler.
-
-    Returns:
-        The HTTP response (429 if rate-limited).
+    Prevents stack traces from leaking to clients. Logs full exception
+    server-side for debugging.
     """
-    # Skip rate limiting for health checks
-    if request.url.path in ("/health", "/api/v1/health"):
-        return await call_next(request)
 
-    client_ip = request.client.host if request.client else "unknown"
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
-    if not rate_limiter.is_allowed(client_ip):
-        logger.warning("Rate limit exceeded for IP: %s", client_ip)
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error": "rate_limit_exceeded",
-                "message": "Too many requests. Please try again later.",
-            },
-        )
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-    return await call_next(request)
+        response_started = False
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        except Exception:
+            logger.exception(
+                "Unhandled exception on %s %s",
+                scope.get("method", "?"),
+                scope.get("path", "/"),
+            )
+            if not response_started:
+                body = json.dumps(
+                    {
+                        "error": "internal_server_error",
+                        "message": "An unexpected error occurred.",
+                    }
+                ).encode()
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 500,
+                        "headers": [
+                            (b"content-type", b"application/json"),
+                            (b"content-length", str(len(body)).encode()),
+                        ],
+                    }
+                )
+                await send({"type": "http.response.body", "body": body})

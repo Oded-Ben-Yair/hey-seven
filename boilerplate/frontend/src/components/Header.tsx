@@ -1,5 +1,3 @@
-"use client";
-
 import { Dice5, Wifi, Loader2, WifiOff } from "lucide-react";
 import clsx from "clsx";
 import type { ConnectionStatus } from "@/lib/types";
@@ -22,24 +20,32 @@ export function Header({ status }: HeaderProps) {
   const StatusIcon = statusInfo.icon;
 
   return (
-    <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-hs-border bg-hs-dark px-6">
+    <nav
+      aria-label="Main navigation"
+      className="flex h-14 flex-shrink-0 items-center justify-between border-b border-hs-border bg-hs-dark px-6"
+    >
       {/* Logo + title */}
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-hs-gold/20">
-          <Dice5 className="h-5 w-5 text-hs-gold" />
+          <Dice5 className="h-5 w-5 text-hs-gold" aria-hidden="true" />
         </div>
         <div className="flex items-baseline gap-2">
-          <h1 className="text-lg font-semibold tracking-tight text-white">
+          <h1 className="font-serif text-lg font-semibold tracking-tight text-white">
             Hey Seven
           </h1>
           <span className="text-xs font-medium text-white/60">
-            AI Casino Host
+            Pulse
           </span>
         </div>
       </div>
 
       {/* Status indicator */}
-      <div className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5">
+      <div
+        className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5"
+        role="status"
+        aria-live="polite"
+        aria-label={`Connection status: ${statusInfo.label}`}
+      >
         <StatusIcon
           className={clsx(
             "h-3.5 w-3.5",
@@ -48,6 +54,7 @@ export function Header({ status }: HeaderProps) {
             status === "processing" && "text-hs-gold",
             status === "offline" && "text-red-400"
           )}
+          aria-hidden="true"
         />
         <span className="text-xs font-medium text-white/70">
           {statusInfo.label}
@@ -58,8 +65,9 @@ export function Header({ status }: HeaderProps) {
             statusInfo.color,
             status === "online" && "animate-pulse"
           )}
+          aria-hidden="true"
         />
       </div>
-    </header>
+    </nav>
   );
 }

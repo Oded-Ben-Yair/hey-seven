@@ -1,43 +1,110 @@
 """Processing nodes for the Casino Host agent graph.
 
 Each function is a node in the LangGraph StateGraph. Nodes receive the full
-AgentState and return a partial state dict with only the keys they modify.
+CasinoHostState and return a partial state dict with only the keys they modify.
 The StateGraph's reducers handle merging updates into the canonical state.
+
+The LLM is instantiated ONCE at module level (lazy singleton) and shared
+across all nodes. This avoids re-creating the client on every invocation.
 """
 
 import json
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import ToolNode
+from pydantic import BaseModel, Field
 
 from .prompts import (
     CASINO_HOST_SYSTEM_PROMPT,
     COMPLIANCE_CHECK_PROMPT,
     ESCALATION_ASSESSMENT_PROMPT,
 )
-from .state import AgentState
+from .state import CasinoHostState
 from .tools import ALL_TOOLS
 
 logger = logging.getLogger(__name__)
 
 
-def _get_llm(temperature: float = 0.3) -> ChatGoogleGenerativeAI:
-    """Create a configured Gemini 2.5 Flash instance with tools bound.
+# ---------------------------------------------------------------------------
+# LLM Singleton (C1 fix: instantiate ONCE, not per-node invocation)
+# ---------------------------------------------------------------------------
+
+_llm_instance: ChatGoogleGenerativeAI | None = None
+_llm_with_tools: Any = None
+
+
+def get_llm(temperature: float = 0.3) -> ChatGoogleGenerativeAI:
+    """Return the module-level LLM singleton, creating it on first call.
+
+    The LLM is created once and reused across all node invocations within
+    the same process. This avoids the overhead of instantiating the client
+    and setting up connections on every graph step.
 
     Args:
-        temperature: Sampling temperature. Lower for operational tasks,
-            higher for conversational responses.
+        temperature: Sampling temperature for the first initialization only.
+            Subsequent calls return the existing instance regardless of this
+            parameter. Use ``llm.with_config()`` for per-call overrides.
 
     Returns:
-        A ChatGoogleGenerativeAI instance. Requires GOOGLE_API_KEY env var.
+        A ChatGoogleGenerativeAI instance configured for Gemini 2.5 Flash.
     """
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=temperature,
-        max_output_tokens=4096,
+    global _llm_instance
+    if _llm_instance is None:
+        _llm_instance = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            temperature=temperature,
+            max_output_tokens=4096,
+        )
+    return _llm_instance
+
+
+def get_llm_with_tools() -> Any:
+    """Return the LLM with casino tools bound (cached singleton).
+
+    Avoids calling ``bind_tools(ALL_TOOLS)`` on every agent_node invocation.
+    The bound model is created once and reused.
+    """
+    global _llm_with_tools
+    if _llm_with_tools is None:
+        _llm_with_tools = get_llm().bind_tools(ALL_TOOLS)
+    return _llm_with_tools
+
+
+# ---------------------------------------------------------------------------
+# Structured Output Models (C3 fix: replace substring parsing)
+# ---------------------------------------------------------------------------
+
+
+class ComplianceResult(BaseModel):
+    """Structured compliance assessment result.
+
+    Used with ``.with_structured_output()`` to get reliable, parseable
+    compliance decisions instead of substring matching on free-text.
+    """
+
+    status: Literal["COMPLIANT", "NON_COMPLIANT", "NEEDS_REVIEW"] = Field(
+        description=(
+            "The compliance determination. COMPLIANT means the action may "
+            "proceed. NON_COMPLIANT means the action is blocked. "
+            "NEEDS_REVIEW means a human compliance officer should review."
+        )
+    )
+    flags: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Specific compliance flags raised. Examples: "
+            "'SELF_EXCLUSION_ACTIVE', 'EXCESSIVE_COMP_VALUE', "
+            "'RESPONSIBLE_GAMING_CONCERN', 'MARKETING_OPT_OUT'."
+        ),
+    )
+    reasoning: str = Field(
+        description=(
+            "Brief explanation of the compliance determination, including "
+            "which regulations or policies apply."
+        )
     )
 
 
@@ -46,7 +113,7 @@ def _get_llm(temperature: float = 0.3) -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 
 
-def agent_node(state: AgentState) -> dict[str, Any]:
+def agent_node(state: CasinoHostState) -> dict[str, Any]:
     """Main LLM reasoning node. Decides what to do next.
 
     Invokes Gemini 2.5 Flash with the full conversation history and the
@@ -63,14 +130,14 @@ def agent_node(state: AgentState) -> dict[str, Any]:
 
     Returns:
         Partial state with updated messages (containing the LLM response,
-        which may include tool_calls).
+        which may include tool_calls). Resets compliance_checked to False
+        for each new agent turn.
     """
-    llm = _get_llm(temperature=0.3)
-    llm_with_tools = llm.bind_tools(ALL_TOOLS)
+    llm_with_tools = get_llm_with_tools()
 
     # Build the message list: system prompt + conversation history
     system_msg = SystemMessage(content=CASINO_HOST_SYSTEM_PROMPT)
-    messages = [system_msg] + list(state["messages"])
+    messages: list = [system_msg] + list(state["messages"])
 
     # Inject player context if available
     if state.get("player_context"):
@@ -90,7 +157,13 @@ def agent_node(state: AgentState) -> dict[str, Any]:
         messages.append(SystemMessage(content=flags_note))
 
     response = llm_with_tools.invoke(messages)
-    return {"messages": [response]}
+
+    # Reset compliance_checked on each new agent turn so compliance can
+    # run again if needed (C8 fix: prevents stale flag from prior turns).
+    return {
+        "messages": [response],
+        "compliance_checked": False,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -104,25 +177,30 @@ tool_executor = ToolNode(ALL_TOOLS)
 
 
 # ---------------------------------------------------------------------------
-# Compliance Checker Node
+# Compliance Checker Node (C3 + C8 fix)
 # ---------------------------------------------------------------------------
 
 
-def compliance_checker(state: AgentState) -> dict[str, Any]:
+def compliance_checker(state: CasinoHostState) -> dict[str, Any]:
     """Validates pending actions against regulatory requirements.
 
     This node is invoked when the routing logic detects that a compliance-
-    sensitive action is being taken (comp issuance, freeplay, marker,
-    messaging). It reviews the action context and updates compliance_flags.
+    sensitive action is being taken. It uses structured output to get a
+    reliable ComplianceResult instead of substring matching on free-text.
+
+    After evaluation, it REPLACES the COMPLIANCE_REVIEW_NEEDED flag (rather
+    than appending to it) and sets compliance_checked=True to prevent
+    infinite re-entry.
 
     Args:
         state: Current agent state.
 
     Returns:
-        Partial state with updated compliance_flags and potentially
-        escalation_needed.
+        Partial state with updated compliance_flags, escalation_needed,
+        compliance_checked, and a compliance result message.
     """
-    llm = _get_llm(temperature=0.1)
+    llm = get_llm()
+    compliance_llm = llm.with_structured_output(ComplianceResult)
 
     # Build compliance review context
     messages = [
@@ -141,34 +219,53 @@ def compliance_checker(state: AgentState) -> dict[str, Any]:
         ),
     ]
 
-    response = llm.invoke(messages)
-    content = response.content if isinstance(response.content, str) else str(response.content)
+    result: ComplianceResult = compliance_llm.invoke(messages)
 
-    # Parse compliance result
-    new_flags = list(state.get("compliance_flags", []))
+    # Build new flags list: remove COMPLIANCE_REVIEW_NEEDED (C8 fix),
+    # add any new flags from the structured result.
+    new_flags = [
+        f for f in state.get("compliance_flags", [])
+        if f != "COMPLIANCE_REVIEW_NEEDED"
+    ]
     escalation = state.get("escalation_needed", False)
 
-    if "NON-COMPLIANT" in content.upper() or "NON_COMPLIANT" in content.upper():
+    if result.status == "NON_COMPLIANT":
         new_flags.append("COMPLIANCE_BLOCK")
+        new_flags.extend(result.flags)
         escalation = True
         logger.warning(
             "Compliance check FAILED for player %s: %s",
             state.get("player_id"),
-            content[:200],
+            result.reasoning[:200],
         )
-    elif "NEEDS_REVIEW" in content.upper():
-        new_flags.append("COMPLIANCE_REVIEW_NEEDED")
+    elif result.status == "NEEDS_REVIEW":
+        # Do NOT re-add COMPLIANCE_REVIEW_NEEDED (prevents infinite loop).
+        # Instead, mark for human review via escalation.
+        new_flags.extend(result.flags)
+        escalation = True
         logger.info(
-            "Compliance check needs review for player %s",
+            "Compliance check needs human review for player %s: %s",
             state.get("player_id"),
+            result.reasoning[:200],
         )
+    else:
+        # COMPLIANT: add any informational flags
+        new_flags.extend(result.flags)
+
+    # Deduplicate flags
+    new_flags = list(dict.fromkeys(new_flags))
 
     return {
         "compliance_flags": new_flags,
         "escalation_needed": escalation,
+        "compliance_checked": True,
         "messages": [
             AIMessage(
-                content=f"[Compliance Check Result]\n{content}",
+                content=(
+                    f"[Compliance Check Result: {result.status}]\n"
+                    f"Reasoning: {result.reasoning}\n"
+                    f"Flags: {', '.join(result.flags) if result.flags else 'None'}"
+                ),
                 name="compliance_checker",
             )
         ],
@@ -180,7 +277,7 @@ def compliance_checker(state: AgentState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def escalation_handler(state: AgentState) -> dict[str, Any]:
+def escalation_handler(state: CasinoHostState) -> dict[str, Any]:
     """Routes complex cases to a human casino host.
 
     Generates an escalation summary with full context, creates a handoff
@@ -192,7 +289,7 @@ def escalation_handler(state: AgentState) -> dict[str, Any]:
     Returns:
         Partial state with escalation message and reset flag.
     """
-    llm = _get_llm(temperature=0.2)
+    llm = get_llm()
 
     messages = [
         SystemMessage(content=ESCALATION_ASSESSMENT_PROMPT),
@@ -232,7 +329,7 @@ def escalation_handler(state: AgentState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def response_formatter(state: AgentState) -> dict[str, Any]:
+def response_formatter(state: CasinoHostState) -> dict[str, Any]:
     """Formats the final response for the host interface.
 
     Ensures the last message is clean, well-structured, and appropriate
@@ -243,10 +340,9 @@ def response_formatter(state: AgentState) -> dict[str, Any]:
         state: Current agent state.
 
     Returns:
-        Partial state — typically a pass-through since formatting happens
+        Partial state -- typically a pass-through since formatting happens
         in the agent_node. Can add metadata annotations.
     """
-    # Extract the last AI message for any final cleanup
     last_messages = state.get("messages", [])
     if not last_messages:
         return {}
@@ -286,7 +382,7 @@ def _format_recent_messages(messages: list, count: int = 5) -> str:
         A formatted string of recent messages.
     """
     recent = messages[-count:] if len(messages) > count else messages
-    lines = []
+    lines: list[str] = []
     for msg in recent:
         role = getattr(msg, "type", "unknown")
         content = getattr(msg, "content", "")

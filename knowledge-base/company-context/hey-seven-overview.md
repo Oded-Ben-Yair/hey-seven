@@ -13,7 +13,7 @@
 - **Location**: Ramat HaSharon, Israel (R&D in Tel Aviv)
 - **Website**: heyseven.ai
 - **Stage**: Seed-funded startup, 4-5 people
-- **Contact**: tal@heyseven.ai, 702-290-9051
+- **Contact**: hello@heyseven.ai (primary), tal@heyseven.ai (founder), 702-290-9051
 
 ---
 
@@ -50,8 +50,8 @@ The "agentic" designation is critical: the AI initiates actions (adjusting incen
 ### Rafi Ashkenazi -- Executive Chair
 - Currently Executive Chairman of Hard Rock Digital (active role)
 - Former CEO of The Stars Group (2016-2020)
-- Led $5B acquisition of Sky Betting & Gaming
-- Oversaw $12B merger with Flutter Entertainment
+- Led $4.7B acquisition of Sky Betting & Gaming (April 2018)
+- Oversaw ~$6B acquisition by Flutter Entertainment (creating world's largest online gambling company)
 - Shenkar College (Industrial Engineering)
 - Brings operator-side governance credibility to a supplier company
 
@@ -83,8 +83,8 @@ The "agentic" designation is critical: the AI initiates actions (adjusting incen
 |-------|-----------|
 | Agent Framework | LangGraph (1.0 GA) |
 | Cloud Platform | Google Cloud Platform (GCP) |
-| Primary LLM | Google Gemini 2.5 Flash |
-| Complex Reasoning LLM | Google Gemini 2.5 Pro |
+| Primary LLM | Google Gemini 2.5 Flash (at job posting time; Gemini 3 Flash available since Dec 2025) |
+| Complex Reasoning LLM | Google Gemini 2.5 Pro (at job posting time; Gemini 3 Pro available since Nov 2025) |
 | State Management | Firestore |
 | Deployment | Cloud Run |
 | Embeddings | Vertex AI (text-embedding-005) |
@@ -115,7 +115,7 @@ The "agentic" designation is critical: the AI initiates actions (adjusting incen
 ### Direct Competitors
 
 **QCI Host (Quick Custom Intelligence)** -- Market leader
-- 300+ casino resorts deployed
+- 350+ casino resorts, 1,000+ sites deployed
 - $42B+ annual GGR managed
 - AGI56 platform with generative AI
 - Player development, host workflows, VIP management
