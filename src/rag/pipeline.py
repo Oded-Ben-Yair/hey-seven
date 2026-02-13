@@ -7,12 +7,13 @@ and stores in ChromaDB for local vector search.
 import json
 import logging
 import os
-import threading
 from pathlib import Path
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from src.config import get_settings
 
 from .embeddings import get_embeddings
 
@@ -219,8 +220,8 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
 
 def _chunk_documents(
     documents: list[dict[str, Any]],
-    chunk_size: int = 800,
-    chunk_overlap: int = 100,
+    chunk_size: int | None = None,
+    chunk_overlap: int | None = None,
 ) -> list[dict[str, Any]]:
     """Split documents into chunks for embedding.
 
@@ -232,6 +233,10 @@ def _chunk_documents(
     Returns:
         List of chunk dicts with content and enriched metadata.
     """
+    settings = get_settings()
+    chunk_size = chunk_size or settings.RAG_CHUNK_SIZE
+    chunk_overlap = chunk_overlap or settings.RAG_CHUNK_OVERLAP
+
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -260,8 +265,8 @@ def _chunk_documents(
 
 
 def ingest_property(
-    data_path: str = "data/mohegan_sun.json",
-    persist_dir: str = "data/chroma",
+    data_path: str | None = None,
+    persist_dir: str | None = None,
 ) -> Any:
     """Load property JSON, chunk, embed, and store in ChromaDB.
 
@@ -273,6 +278,10 @@ def ingest_property(
         A Chroma vectorstore instance.
     """
     from langchain_community.vectorstores import Chroma
+
+    settings = get_settings()
+    data_path = data_path or settings.PROPERTY_DATA_PATH
+    persist_dir = persist_dir or settings.CHROMA_PERSIST_DIR
 
     documents = _load_property_json(data_path)
     if not documents:
@@ -349,14 +358,13 @@ class CasinoKnowledgeRetriever:
 # ---------------------------------------------------------------------------
 
 _retriever_instance: CasinoKnowledgeRetriever | None = None
-_retriever_lock = threading.Lock()
 
 
-def get_retriever(persist_dir: str = "data/chroma") -> CasinoKnowledgeRetriever:
+def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
     """Get or create the global retriever instance.
 
     Lazy-initializes the retriever with ChromaDB from the persist directory.
-    Thread-safe via lock to prevent concurrent initialization races.
+    Initialized during FastAPI lifespan (before requests), so no lock needed.
 
     Args:
         persist_dir: ChromaDB persistence directory.
@@ -369,29 +377,25 @@ def get_retriever(persist_dir: str = "data/chroma") -> CasinoKnowledgeRetriever:
     if _retriever_instance is not None:
         return _retriever_instance
 
-    with _retriever_lock:
-        # Double-check after acquiring lock
-        if _retriever_instance is not None:
-            return _retriever_instance
+    settings = get_settings()
+    chroma_dir = persist_dir or settings.CHROMA_PERSIST_DIR
 
-        chroma_dir = os.environ.get("CHROMA_PERSIST_DIR", persist_dir)
+    try:
+        from langchain_community.vectorstores import Chroma
 
-        try:
-            from langchain_community.vectorstores import Chroma
-
-            vectorstore = Chroma(
-                collection_name="property_knowledge",
-                embedding_function=get_embeddings(),
-                persist_directory=chroma_dir,
-            )
-            _retriever_instance = CasinoKnowledgeRetriever(vectorstore=vectorstore)
-            logger.info("Loaded ChromaDB retriever from %s", chroma_dir)
-        except Exception:
-            logger.warning(
-                "Could not load ChromaDB from %s. Retriever returns empty results.",
-                chroma_dir,
-                exc_info=True,
-            )
-            _retriever_instance = CasinoKnowledgeRetriever()
+        vectorstore = Chroma(
+            collection_name="property_knowledge",
+            embedding_function=get_embeddings(),
+            persist_directory=chroma_dir,
+        )
+        _retriever_instance = CasinoKnowledgeRetriever(vectorstore=vectorstore)
+        logger.info("Loaded ChromaDB retriever from %s", chroma_dir)
+    except Exception:
+        logger.warning(
+            "Could not load ChromaDB from %s. Retriever returns empty results.",
+            chroma_dir,
+            exc_info=True,
+        )
+        _retriever_instance = CasinoKnowledgeRetriever()
 
     return _retriever_instance

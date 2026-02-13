@@ -2,7 +2,7 @@
 
 An AI-powered property concierge for Mohegan Sun casino resort, built with LangGraph and Gemini 2.5 Flash.
 
-Guests ask natural language questions about dining, entertainment, rooms, amenities, gaming, and promotions. The agent retrieves answers from a curated knowledge base using RAG (Retrieval-Augmented Generation) and streams responses via Server-Sent Events.
+Guests ask natural language questions about dining, entertainment, rooms, amenities, gaming, and promotions. The agent retrieves answers from a curated knowledge base using RAG (Retrieval-Augmented Generation) and streams responses token-by-token via Server-Sent Events.
 
 ## Quick Start
 
@@ -26,26 +26,27 @@ The first boot takes ~30 seconds to embed property data into ChromaDB. Subsequen
 ```
 Browser (static/index.html)
     |
-    | POST /chat (SSE stream)
+    | POST /chat (SSE: metadata → token* → sources → done)
     v
-FastAPI (src/api/app.py)
+FastAPI + Security Headers + Rate Limiting + Logging
     |
     v
 LangGraph Agent (create_react_agent)
     |
-    |-- search_property tool --> ChromaDB (RAG)
-    |                               |
-    v                               v
-Gemini 2.5 Flash            Property Knowledge Base
-(generation)                 (data/mohegan_sun.json)
+    |-- search_property ---------> ChromaDB (general search)
+    |-- get_property_hours ------> ChromaDB (schedule lookup)
+    |                                  |
+    v                                  v
+Gemini 2.5 Flash               Property Knowledge Base
+(config-driven)                (data/mohegan_sun.json)
 ```
 
 1. User sends a message via the chat UI.
 2. FastAPI receives the request and invokes the LangGraph agent.
-3. The agent decides whether to call the `search_property` tool.
+3. The agent decides which tool(s) to call (`search_property` or `get_property_hours`).
 4. The tool queries ChromaDB for relevant property information.
 5. Gemini 2.5 Flash generates a grounded response using the retrieved context.
-6. The response streams back to the browser via SSE.
+6. Tokens stream back to the browser in real time via SSE.
 
 ## Key Design Decisions
 
@@ -54,42 +55,44 @@ Gemini 2.5 Flash            Property Knowledge Base
 | Agent framework | LangGraph `create_react_agent` | Production-grade state machine with checkpointing |
 | LLM | Gemini 2.5 Flash | GCP-aligned, cost-effective ($0.30/1M input tokens) |
 | Vector DB | ChromaDB (embedded) | Zero infrastructure for demo; Vertex AI Vector Search for production |
-| Streaming | SSE over WebSocket | Industry standard for LLM streaming (OpenAI, Anthropic use SSE) |
+| Streaming | Real token SSE via `astream_events` | True progressive rendering with timeout + error recovery |
 | Embeddings | Google `text-embedding-004` | GCP-native, free tier, 768 dimensions |
 | Frontend | Vanilla HTML/CSS/JS | No build step, minimal footprint, backend is 90% of evaluation |
-| Search tool | Single `search_property` | Unified retrieval; LLM reformulates queries naturally |
+| Tools | Two specialized tools | Demonstrates multi-tool orchestration and LLM tool selection |
+| Config | `pydantic-settings` BaseSettings | Zero hardcoded values; every constant overridable via env var |
 
 ## Project Structure
 
 ```
 hey-seven/
 ├── src/
+│   ├── config.py              # Centralized config (pydantic-settings)
 │   ├── agent/
-│   │   ├── graph.py          # LangGraph agent assembly + chat function
-│   │   ├── state.py          # PropertyQAState schema
-│   │   ├── prompts.py        # System prompt templates
-│   │   └── tools.py          # search_property RAG tool
+│   │   ├── graph.py           # Agent assembly + chat + chat_stream
+│   │   ├── state.py           # PropertyQAState schema
+│   │   ├── prompts.py         # System prompt with few-shot examples
+│   │   └── tools.py           # search_property + get_property_hours
 │   ├── rag/
-│   │   ├── pipeline.py       # Ingest, chunk, embed, retrieve (ChromaDB)
-│   │   └── embeddings.py     # Google text-embedding-004 config
+│   │   ├── pipeline.py        # Ingest, chunk, embed, retrieve (ChromaDB)
+│   │   └── embeddings.py      # Google text-embedding-004 config
 │   └── api/
-│       ├── app.py            # FastAPI app, lifespan, SSE streaming
-│       ├── models.py         # Pydantic request/response schemas
-│       └── middleware.py     # Pure ASGI logging + error handling
+│       ├── app.py             # FastAPI app, lifespan, SSE streaming
+│       ├── models.py          # Pydantic request/response + SSE event schemas
+│       └── middleware.py      # Logging + errors + security headers + rate limit
 ├── data/
-│   └── mohegan_sun.json      # Curated property data
+│   └── mohegan_sun.json       # Curated property data
 ├── static/
-│   └── index.html            # Branded chat UI (Hey Seven colors)
-├── tests/                    # Unit, integration, eval tests
-├── Dockerfile                # Multi-stage Python 3.12 build
-├── docker-compose.yml        # Single-service with health check
-└── requirements.txt          # Pinned production dependencies
+│   └── index.html             # Branded chat UI (Hey Seven colors)
+├── tests/                     # 49 tests (unit + integration)
+├── Dockerfile                 # Multi-stage Python 3.12 + HEALTHCHECK
+├── docker-compose.yml         # Single-service with health check
+└── requirements.txt           # Pinned production dependencies
 ```
 
 ## Running Tests
 
 ```bash
-# Unit + integration (no API key needed)
+# All 49 tests (no API key needed)
 pytest tests/ -v
 
 # With coverage
@@ -103,7 +106,7 @@ pytest tests/ -k "integration" -v
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/chat` | None (demo) | Send message, receive SSE stream |
+| `POST` | `/chat` | Rate limited | Send message, receive SSE token stream |
 | `GET` | `/health` | None | Health check (agent + ChromaDB status) |
 | `GET` | `/property` | None | Property metadata (name, categories, doc count) |
 | `GET` | `/` | None | Chat UI (static HTML) |
@@ -114,32 +117,65 @@ pytest tests/ -k "integration" -v
 ```json
 {
   "message": "What Italian restaurants do you have?",
-  "thread_id": "optional-for-multi-turn"
+  "thread_id": "optional-uuid-for-multi-turn"
 }
 ```
 
-**Response:** Server-Sent Events stream with `data` events containing:
-```json
-{
-  "response": "Mohegan Sun has excellent Italian dining...",
-  "thread_id": "abc-123",
-  "sources": ["restaurants"],
-  "done": true
-}
+**Response:** Server-Sent Events stream with typed events:
+
+```
+event: metadata
+data: {"thread_id": "abc-123"}
+
+event: token
+data: {"content": "Mohegan Sun has "}
+
+event: token
+data: {"content": "excellent Italian dining..."}
+
+event: sources
+data: {"sources": ["restaurants"]}
+
+event: done
+data: {"done": true}
 ```
 
-## Environment Variables
+**Error responses:**
+- `422` — Invalid request (empty message, non-UUID thread_id)
+- `429` — Rate limited (includes `Retry-After` header)
+- `503` — Agent not initialized (includes `Retry-After: 30` header)
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GOOGLE_API_KEY` | Yes | - | Google AI API key (for Gemini + embeddings) |
-| `PORT` | No | `8080` | Server port |
-| `ENVIRONMENT` | No | `development` | Environment name |
-| `CHROMA_PERSIST_DIR` | No | `data/chroma` | ChromaDB persistence directory |
+## Security
+
+- **Rate limiting**: Token-bucket per client IP, 20 requests/min on `/chat`
+- **Security headers**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, CSP, `Referrer-Policy`
+- **CORS**: Configurable allowed origins (default: `localhost:8080`)
+- **Input validation**: Message length limits, UUID pattern for thread_id
+- **SSE timeout**: Configurable timeout with clean error event on expiry
+
+## Configuration
+
+All settings are configurable via environment variables (powered by `pydantic-settings`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GOOGLE_API_KEY` | (required) | Google AI API key |
+| `MODEL_NAME` | `gemini-2.5-flash` | LLM model name |
+| `MODEL_TEMPERATURE` | `0.3` | LLM temperature |
+| `EMBEDDING_MODEL` | `models/text-embedding-004` | Embedding model |
+| `PROPERTY_NAME` | `Mohegan Sun` | Property name for prompts |
+| `PROPERTY_DATA_PATH` | `data/mohegan_sun.json` | Path to property JSON |
+| `CHROMA_PERSIST_DIR` | `data/chroma` | ChromaDB persistence directory |
+| `RAG_TOP_K` | `5` | Number of retrieval results |
+| `RAG_CHUNK_SIZE` | `800` | Chunk size for text splitting |
+| `ALLOWED_ORIGINS` | `["http://localhost:8080"]` | CORS allowed origins |
+| `RATE_LIMIT_CHAT` | `20` | Max chat requests per minute per IP |
+| `SSE_TIMEOUT_SECONDS` | `60` | Stream timeout |
+| `LOG_LEVEL` | `INFO` | Python logging level |
+| `ENVIRONMENT` | `development` | Environment name |
+| `VERSION` | `0.1.0` | Application version |
 
 ## Trade-offs and Production Considerations
-
-This is a demo implementation. Key differences for production:
 
 | Component | Demo | Production |
 |-----------|------|------------|
@@ -147,7 +183,7 @@ This is a demo implementation. Key differences for production:
 | Checkpointing | InMemorySaver (lost on restart) | PostgresSaver or FirestoreSaver |
 | LLM auth | API key in .env | Vertex AI IAM + GCP Secret Manager |
 | Deployment | Docker Compose (local) | Cloud Run |
-| Rate limiting | Not enforced | Per-IP sliding window via ASGI middleware |
+| Rate limiting | In-memory per-IP | Redis-backed distributed limiter |
 | Monitoring | Structured logging | LangSmith + Cloud Monitoring |
 | Frontend | Vanilla HTML served by FastAPI | Next.js with React 19 |
 
@@ -155,13 +191,14 @@ This is a demo implementation. Key differences for production:
 
 | Component | Technology |
 |-----------|-----------|
-| Agent Framework | LangGraph 1.0.x (`create_react_agent`) |
+| Agent Framework | LangGraph 1.0.8 (`create_react_agent`) |
 | LLM | Gemini 2.5 Flash via `langchain-google-genai` |
 | Embeddings | Google `text-embedding-004` (768 dim) |
 | Vector Store | ChromaDB (embedded, persistent) |
 | Backend | FastAPI + uvicorn |
+| Config | pydantic-settings |
 | Frontend | Vanilla HTML/CSS/JS with SSE |
-| Container | Docker (multi-stage, non-root) |
+| Container | Docker (multi-stage, non-root, HEALTHCHECK) |
 | Python | 3.12 |
 
 ## Data

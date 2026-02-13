@@ -16,7 +16,7 @@ def test_property_data():
                 "cuisine": "Steakhouse",
                 "price_range": "$$$",
                 "hours": "5-10 PM",
-                "location_in_resort": "Main Floor",
+                "location": "Main Floor",
                 "description": "A fine steakhouse",
             },
             {
@@ -24,7 +24,7 @@ def test_property_data():
                 "cuisine": "Buffet",
                 "price_range": "$$",
                 "hours": "11 AM-9 PM",
-                "location_in_resort": "Level 2",
+                "location": "Level 2",
                 "description": "All you can eat",
             },
         ],

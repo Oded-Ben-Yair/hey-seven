@@ -498,8 +498,8 @@
                                     botEl.innerHTML = formatMarkdown(accumulated);
                                     scrollToBottom();
                                 }
-                                else if (currentEvent === 'sources' && data.categories) {
-                                    sources = data.categories;
+                                else if (currentEvent === 'sources' && data.sources) {
+                                    sources = data.sources;
                                 }
                                 else if (currentEvent === 'error' || data.error) {
                                     accumulated = data.detail || data.error || data.message || 'Something went wrong.';

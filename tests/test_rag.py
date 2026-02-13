@@ -116,3 +116,52 @@ class TestCategoryMetadata:
         expected = {"restaurants", "entertainment", "hotel", "gaming", "faq", "property"}
         # All discovered categories should be a subset of expected
         assert categories.issubset(expected), f"Unexpected categories: {categories - expected}"
+
+
+class TestCategoryFilter:
+    def test_filter_by_category(self, test_property_file, tmp_path):
+        """Retrieval with filter_category only returns matching category."""
+        from src.rag.pipeline import CasinoKnowledgeRetriever, ingest_property
+
+        persist_dir = str(tmp_path / "chroma_filter")
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
+        docs = retriever.retrieve("food", filter_category="restaurants")
+        for doc in docs:
+            assert doc.metadata.get("category") == "restaurants"
+
+
+class TestNestedDictFlattening:
+    def test_hotel_nested_dict_produces_documents(self, test_property_file, tmp_path):
+        """Hotel data (nested dict with towers/room_types) produces indexed docs."""
+        from src.rag.pipeline import ingest_property
+
+        persist_dir = str(tmp_path / "chroma_nested")
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        results = vectorstore._collection.get(include=["metadatas"])
+        hotel_docs = [m for m in results["metadatas"] if m.get("category") == "hotel"]
+        assert len(hotel_docs) >= 2  # at least towers + room_types
+
+
+class TestMissingDataFile:
+    def test_missing_file_returns_empty(self, tmp_path):
+        """Ingest with non-existent file returns None (no crash)."""
+        from src.rag.pipeline import ingest_property
+
+        result = ingest_property(
+            str(tmp_path / "nonexistent.json"),
+            persist_dir=str(tmp_path / "chroma_missing"),
+        )
+        assert result is None
+
+
+class TestChunkCount:
+    def test_chunk_count_greater_or_equal_to_doc_count(self, test_property_file, tmp_path):
+        """Total chunks >= total input documents (chunking splits, never removes)."""
+        from src.rag.pipeline import ingest_property
+
+        persist_dir = str(tmp_path / "chroma_chunks")
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        collection = vectorstore._collection
+        # We have at least restaurants(2) + entertainment(1) + hotel + gaming + faq = 5+
+        assert collection.count() >= 5

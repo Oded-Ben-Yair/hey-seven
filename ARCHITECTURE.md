@@ -13,19 +13,20 @@ A conversational AI agent that answers guest questions about a specific casino p
 ```
 Browser (static/index.html)
     |
-    | POST /chat (SSE stream)
+    | POST /chat (SSE stream: metadata → token* → sources → done)
     v
-FastAPI (src/api/app.py)
+FastAPI (src/api/app.py)  ←  SecurityHeaders + RateLimit + Logging + ErrorHandler
     |
     | lifespan: init agent + ingest data
     v
 LangGraph create_react_agent
     |
-    |-- search_property tool ---> ChromaDB
+    |-- search_property tool -----> ChromaDB
+    |-- get_property_hours tool --> ChromaDB (schedule-focused)
     |                                 |
     v                                 v
 Gemini 2.5 Flash               Knowledge Base
-(temp=0.3, generation)          (mohegan_sun.json)
+(config-driven)                (config-driven path)
 ```
 
 ### Component Responsibilities
@@ -44,7 +45,7 @@ Gemini 2.5 Flash               Knowledge Base
 
 ## 2. Agent Design
 
-The agent uses LangGraph's `create_react_agent` -- a prebuilt ReAct loop that handles the LLM-to-tool-to-LLM cycle automatically. The agent has one tool: `search_property`.
+The agent uses LangGraph's `create_react_agent` -- a prebuilt ReAct loop that handles the LLM-to-tool-to-LLM cycle automatically. The agent has two tools: `search_property` (general knowledge base search) and `get_property_hours` (schedule-focused lookup).
 
 ### Why `create_react_agent`
 
@@ -62,19 +63,20 @@ User message
     v
 create_react_agent
     |
-    |--> LLM decides: answer directly or search?
+    |--> LLM decides: answer directly or use tools?
     |       |
     |       v (if search needed)
-    |   search_property(query)
+    |   search_property(query)       -- general knowledge base
+    |   get_property_hours(venue)    -- schedule-focused lookup
     |       |
     |       v
-    |   ChromaDB similarity_search (top-5)
+    |   ChromaDB similarity_search (top-k from config)
     |       |
     |       v
     |   Formatted results returned to LLM
     |       |
     |       v
-    |   LLM generates grounded response
+    |   LLM generates grounded response (streamed token-by-token)
     |
     v
 Final AI response
@@ -149,16 +151,28 @@ Metadata on every chunk: `category`, `item_name`, `source`, `chunk_index`.
 | `GET /property` | Property metadata | Name, categories, document count |
 | `GET /` | Chat UI | Static HTML served by FastAPI |
 
-### SSE Streaming
+### SSE Streaming (Real Token Streaming)
 
-The `/chat` endpoint returns an `EventSourceResponse` (via `sse-starlette`). Currently uses single-event mode: the agent collects the full response via `ainvoke()` before yielding one SSE event with the complete reply, thread ID, and source categories. The frontend handles both single-event and token-by-token streaming, so upgrading to `astream_events()` for real token streaming requires only a backend change.
+The `/chat` endpoint returns an `EventSourceResponse` (via `sse-starlette`) with typed events:
+
+| Event | Payload | When |
+|-------|---------|------|
+| `metadata` | `{thread_id}` | First, immediately |
+| `token` | `{content}` | Each LLM token as it arrives |
+| `sources` | `{sources: [...]}` | After all tools complete |
+| `done` | `{done: true}` | End of stream |
+| `error` | `{error: "..."}` | On timeout or mid-stream failure |
+
+Uses `agent.astream_events(version="v2")` for real token-by-token streaming. Wrapped in `asyncio.timeout()` (configurable via `SSE_TIMEOUT_SECONDS`). Mid-stream errors emit an `error` event rather than breaking the connection.
 
 ### Middleware Stack
 
 Pure ASGI middleware (not `BaseHTTPMiddleware`, which breaks SSE):
 
-1. **RequestLoggingMiddleware**: Structured JSON logs, `X-Request-ID`, response timing
-2. **ErrorHandlingMiddleware**: Catches unhandled exceptions, returns structured 500 JSON
+1. **RequestLoggingMiddleware**: Structured JSON logs (Cloud Logging compatible), `X-Request-ID`, `X-Response-Time-Ms`
+2. **SecurityHeadersMiddleware**: `X-Content-Type-Options`, `X-Frame-Options`, CSP, `Referrer-Policy`
+3. **RateLimitMiddleware**: Token-bucket per client IP (configurable via `RATE_LIMIT_CHAT`). 429 with `Retry-After`. Only applies to `/chat`; `/health` and static exempt.
+4. **ErrorHandlingMiddleware**: Catches unhandled exceptions → structured 500 JSON. `CancelledError` (SSE disconnect) logged at INFO, not ERROR.
 
 ### Lifespan
 
@@ -198,11 +212,12 @@ On startup:
 | # | Decision | Choice | Trade-off |
 |---|----------|--------|-----------|
 | 1 | Agent pattern | `create_react_agent` | Less graph-level control, but faster to ship with fewer bugs |
-| 2 | Search tool | Single unified tool | LLM decides when to search; every property question hits RAG |
+| 2 | Search tools | Two tools (general + schedule) | LLM picks the right tool; demonstrates multi-tool orchestration |
 | 3 | Vector DB | ChromaDB | No auth, no backup, in-process memory; perfect for demo |
 | 4 | LLM | Gemini 2.5 Flash | GCP-aligned; slightly less reliable structured output than GPT-4o |
 | 5 | Frontend | Vanilla HTML/CSS/JS | No build step; no TypeScript safety, no component library |
-| 6 | Streaming | SSE (not WebSocket) | Simpler, proxy-friendly, reconnection built-in |
+| 6 | Streaming | Real token SSE via `astream_events` | True progressive rendering; timeout + error recovery built in |
+| 7 | Config | `pydantic-settings` BaseSettings | Zero hardcoded values; env var override for everything |
 
 ---
 
@@ -216,19 +231,22 @@ On startup:
 | Integration | Full graph flow, API endpoints, RAG pipeline | Mocked LLM, real ChromaDB |
 | Eval | Answer quality, guardrails, hallucination detection | Real Gemini (temp=0) |
 
-### Key Test Areas
+### Test Suite (49 tests)
 
-- **Router accuracy**: Greetings, property questions, off-topic, gambling advice
-- **Retrieval quality**: Correct results for dining/entertainment queries
-- **Guardrails**: Gambling advice refusal, booking refusal, AI disclosure
-- **Hallucination prevention**: "I don't know" for unknown topics
-- **API behavior**: SSE streaming, health check, error responses
-- **Edge cases**: Prompt injection, unicode, max-length input
+| File | Tests | Covers |
+|------|-------|--------|
+| `test_agent.py` | 17 | Chat extraction, source dedup, streaming, graph compilation, guardrails |
+| `test_api.py` | 12 | SSE streaming, validation, 503/degraded, security headers |
+| `test_middleware.py` | 10 | Logging, error handling, security headers, rate limiting |
+| `test_rag.py` | 10 | Ingestion, retrieval, category filter, nested dict, missing data, chunks |
+| `test_config.py` | 4 | Defaults, env overrides, reusability, ALLOWED_ORIGINS |
+
+All tests run without `GOOGLE_API_KEY` (LLM and embeddings are mocked). Integration tests (4, marked `skipif`) require the API key.
 
 ### Running Tests
 
 ```bash
-pytest tests/ -v                              # All tests (mocked LLM)
+pytest tests/ -v                              # All 49 tests (mocked LLM)
 pytest tests/ --cov=src --cov-report=term     # With coverage
 pytest tests/ -k "integration" -v             # Integration only (needs GOOGLE_API_KEY)
 ```

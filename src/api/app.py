@@ -4,9 +4,9 @@ Uses lifespan context manager, SSE streaming via sse-starlette,
 and pure ASGI middleware (no BaseHTTPMiddleware).
 """
 
+import asyncio
 import json
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
@@ -16,11 +16,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
-from .middleware import ErrorHandlingMiddleware, RequestLoggingMiddleware
+from src.config import get_settings
+
+from .middleware import (
+    ErrorHandlingMiddleware,
+    RateLimitMiddleware,
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
+)
 from .models import ChatRequest, HealthResponse, PropertyInfoResponse
 
+settings = get_settings()
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -40,18 +49,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.agent = None
 
     # Run RAG ingestion if ChromaDB index doesn't exist yet
-    chroma_dir = Path("data/chroma")
+    chroma_dir = Path(settings.CHROMA_PERSIST_DIR)
     if not chroma_dir.exists():
         try:
             from src.rag.pipeline import ingest_property
 
-            ingest_property("data/mohegan_sun.json")
+            ingest_property()
             logger.info("Property data ingested into ChromaDB.")
         except Exception:
             logger.exception("Failed to ingest property data.")
 
     # Load property metadata for /property endpoint
-    property_path = Path("data/mohegan_sun.json")
+    property_path = Path(settings.PROPERTY_DATA_PATH)
     if property_path.exists():
         with open(property_path, encoding="utf-8") as f:
             app.state.property_data = json.load(f)
@@ -71,39 +80,62 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Hey Seven Property Q&A Agent",
-        version="0.1.0",
+        version=settings.VERSION,
         lifespan=lifespan,
     )
 
-    # CORS — wide open for demo
+    # CORS — configured per environment
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Request-ID"],
     )
 
     # Pure ASGI middleware (added in reverse execution order)
     app.add_middleware(ErrorHandlingMiddleware)
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
 
     # ------------------------------------------------------------------
-    # POST /chat — SSE streaming response
+    # POST /chat — SSE streaming response (real token streaming)
     # ------------------------------------------------------------------
     @app.post("/chat")
     async def chat_endpoint(request: Request, body: ChatRequest):
         agent = getattr(request.app.state, "agent", None)
         if agent is None:
-            return EventSourceResponse(
-                _error_event("Agent not initialized"), status_code=503
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Agent not initialized. Try again later."},
+                headers={"Retry-After": "30"},
             )
 
-        from src.agent.graph import chat
-
-        result = await chat(agent, body.message, body.thread_id)
+        from src.agent.graph import chat_stream
 
         async def event_generator():
-            yield {"data": json.dumps({**result, "done": True})}
+            try:
+                async with asyncio.timeout(settings.SSE_TIMEOUT_SECONDS):
+                    async for event in chat_stream(
+                        agent, body.message, body.thread_id
+                    ):
+                        yield event
+            except TimeoutError:
+                logger.warning("SSE stream timed out after %ds", settings.SSE_TIMEOUT_SECONDS)
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"error": "Response timed out. Please try again."}),
+                }
+                yield {"event": "done", "data": json.dumps({"done": True})}
+            except Exception:
+                logger.exception("Error during SSE stream")
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"error": "An error occurred while generating the response."}),
+                }
+                yield {"event": "done", "data": json.dumps({"done": True})}
 
         return EventSourceResponse(event_generator())
 
@@ -118,7 +150,7 @@ def create_app() -> FastAPI:
         all_healthy = ready and agent_ready and property_loaded
         return HealthResponse(
             status="healthy" if all_healthy else "degraded",
-            version="0.1.0",
+            version=settings.VERSION,
             agent_ready=agent_ready,
             property_loaded=property_loaded,
         )
@@ -153,14 +185,11 @@ def create_app() -> FastAPI:
     return app
 
 
-async def _error_event(message: str):
-    """Yield a single SSE error event."""
-    yield {"data": json.dumps({"error": message, "done": True})}
-
-
 app = create_app()
 
 if __name__ == "__main__":
+    import os
+
     import uvicorn
 
     uvicorn.run(
