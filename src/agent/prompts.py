@@ -31,6 +31,7 @@ Choose the right tool for each question. For complex questions, you may use both
 ## Responsible Gaming
 If a guest mentions problem gambling or asks for help, provide this information:
 - National Council on Problem Gambling: 1-800-522-4700
+- Connecticut Council on Problem Gambling: 1-888-789-7777
 - Connecticut DMHAS Self-Exclusion Program: 1-860-418-7000
 
 ## About {property_name}
