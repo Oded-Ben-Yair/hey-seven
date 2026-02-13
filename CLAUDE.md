@@ -15,11 +15,12 @@ Oded Ben-Yair is interviewing for Senior AI/Backend Engineer position.
 7. **Speed matters**: Fast delivery is part of the wow factor. Pre-built infrastructure enables this.
 8. **QUALITY BAR**: This assignment directly affects Oded's career. Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 
-## Current State (Updated 2026-02-12)
+## Current State (Updated 2026-02-13)
 
-- **Phase 0-2**: COMPLETE. Research, boilerplate, hostile reviews (2 rounds), fixes applied.
-- **Review Score**: 80/100 overall (Round 2) + top 3 fixes applied → ~82-85 estimated.
-- **Waiting for**: Assignment from Hey Seven (expected tonight/tomorrow morning).
+- **Phase 0-2**: COMPLETE. Research, boilerplate, 8 rounds of hostile review, ~165 fixes applied.
+- **Architecture Doc**: v9.0, 3539 lines, 10 dimensions scored. `assignment/architecture.md`
+- **Review Score**: 90-93/100 (Round 8). Trajectory: 58 → 80 → 85 → 90-93.
+- **Waiting for**: Assignment from Hey Seven.
 - **33+ files ready**: LangGraph agent, FastAPI API, Next.js frontend, RAG pipeline, GCP deployment, casino domain knowledge base.
 
 ## Tech Stack Decisions
@@ -87,8 +88,8 @@ boilerplate/                 - Pre-built code templates
   gcp/                       - Deployment configs (Dockerfile, cloudbuild.yaml, deploy.sh)
   frontend/                  - Next.js app (components, styles, API client)
   requirements.txt           - Python dependencies (pinned)
-reviews/                     - Hostile review results (round-1/, round-2/)
-assignment/                  - [EMPTY] Will hold assignment analysis when received
+reviews/                     - Hostile review results (8 rounds: round-1/ through round-8/)
+assignment/                  - Architecture doc v9.0 (3539 lines, 10 dimensions)
 deliverables/                - [EMPTY] Final submission artifacts
 ```
 
@@ -114,14 +115,14 @@ deliverables/                - [EMPTY] Final submission artifacts
 - Research files are append-only during active research phases
 - All research findings go into knowledge-base/ for RAG ingestion
 
-## Known Limitations (From Hostile Reviews)
+## Known Limitations (From 8 Rounds of Hostile Review)
 
 These are documented, accepted trade-offs — NOT bugs:
-- No tests yet (will add during assignment implementation)
-- No streaming endpoint (boilerplate has SSE client code; backend endpoint TBD per assignment)
+- No running tests yet (69 test specs in architecture doc, will implement during assignment)
 - No HITL interrupt wiring (LangGraph supports it; will wire based on assignment needs)
-- No LangSmith tracing configuration (env vars only, no code changes needed)
 - ChromaDB in requirements.txt (local dev only; prod uses Vertex AI Vector Search)
+- InMemorySaver for demo (MAX_ACTIVE_THREADS=1000 guard; prod uses FirestoreSaver)
+- LangSmith sampling requires app-level code (not just env var config)
 
 ---
 
@@ -215,3 +216,42 @@ These are documented, accepted trade-offs — NOT bugs:
 |-------|------|------|
 | code-judge | Hostile code review | reviews/ |
 | visual-verifier | Screenshot + Gemini vision validation | deliverables/screenshots/ |
+
+---
+
+## REVIEW ROUND PROTOCOL (CRITICAL — Prevents Context Overflow)
+
+**Problem**: Rounds 6-8 caused 3 context overflows. Review findings + fix edits consume too much main context.
+
+**Solution**: Use TeamCreate swarm. Main lead NEVER sees full findings.
+
+### Architecture Review Round (R9+)
+
+```
+STEP 1: Main lead creates team "review-round-N"
+STEP 2: Main lead creates tasks:
+  - Task A: "Review dimensions 1-5" (assigned to reviewer-alpha)
+  - Task B: "Review dimensions 6-10" (assigned to reviewer-beta)
+  - Task C: "Apply fixes from reviewer findings" (assigned to fixer, blocked by A+B)
+  - Task D: "Write round summary" (assigned to fixer, blocked by C)
+
+STEP 3: Teammates execute:
+  - reviewer-alpha: Reads doc, writes findings to reviews/round-N/alpha.md
+  - reviewer-beta: Reads doc, writes findings to reviews/round-N/beta.md
+  - fixer: Reads BOTH finding files, applies fixes, writes summary
+
+STEP 4: Main lead reads ONLY reviews/round-N/summary.md (5-10 lines)
+STEP 5: Main lead shuts down team, reports to user
+```
+
+### Key Rules:
+1. **Findings go to FILES, not parent context** — reviewers write to reviews/round-N/*.md
+2. **Fixer reads files, not messages** — no large finding payloads in team messages
+3. **Main lead reads only summary** — never the detailed findings
+4. **Max 4 teammates** — 2 reviewers + 1 fixer + 1 reserve
+5. **Each reviewer covers 5 dimensions** — parallel, no overlap
+6. **Fixer works bottom-up** in the doc to minimize line shift conflicts
+
+### Review Dimensions (10 total, split into 2 groups):
+- **Group A** (reviewer-alpha): Graph Architecture, RAG Pipeline, Data Model, API Design, Testing Strategy
+- **Group B** (reviewer-beta): Docker & DevOps, Prompts & Guardrails, Scalability & Production, Trade-off Documentation, Domain Intelligence

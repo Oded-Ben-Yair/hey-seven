@@ -20,3 +20,14 @@
 [2026-02-12] DECISION: MemorySaver/InMemorySaver is DEV ONLY — unbounded RAM growth in production. PostgresSaver or FirestoreSaver for prod
 [2026-02-12] DECISION: Zero casino/gaming LangGraph implementations found publicly — Hey Seven is first mover in this space
 [2026-02-12] DECISION: Cached bind_tools in nodes.py (get_llm_with_tools singleton) — avoid per-invocation overhead
+[2026-02-13] DECISION: 3-LLM-call pattern (router→generator→validator) chosen over simpler 2-call — defense-in-depth for regulated industry. Validator node can be disabled via single conditional edge change.
+[2026-02-13] DECISION: Template.safe_substitute() replaces .format() — prevents DoS via curly braces in user input
+[2026-02-13] DECISION: Pure ASGI middleware only — BaseHTTPMiddleware breaks SSE streaming
+[2026-02-13] DECISION: SecurityHeadersMiddleware added — X-Content-Type-Options: nosniff, X-Frame-Options: DENY, HSTS note for production
+[2026-02-13] DECISION: Router confidence field used for low-confidence rerouting (< 0.7 → safe RAG path)
+[2026-02-13] DECISION: request_id propagated through LangGraph config["configurable"] for end-to-end trace correlation
+[2026-02-13] DECISION: structlog.configure() with JSONRenderer + TimeStamper for Cloud Logging compatibility
+[2026-02-13] DECISION: MAX_ACTIVE_THREADS=1000 with LRU eviction for InMemorySaver OOM protection
+[2026-02-13] DECISION: Docker base images pinned to patch versions (python:3.12.8-slim, nginx:1.27-alpine) for reproducibility
+[2026-02-13] DECISION: Cloud Build pipeline includes pytest test gate before image build
+[2026-02-13] DECISION: Architecture doc review rounds use TEAM SWARM pattern to avoid context overflow — review-lead coordinates, findings go to files, main lead sees only summaries
