@@ -35,6 +35,9 @@ out/
 .DS_Store
 Thumbs.db
 
+# ChromaDB data (generated at runtime)
+data/chroma/
+
 # GCP
 .gcloud/
 service-account*.json

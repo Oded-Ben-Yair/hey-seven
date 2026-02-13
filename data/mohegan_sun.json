@@ -1,0 +1,483 @@
+{
+  "property": {
+    "name": "Mohegan Sun",
+    "location": "1 Mohegan Sun Boulevard, Uncasville, CT 06382",
+    "phone": "1-888-226-7711",
+    "website": "mohegansun.com",
+    "type": "Tribal Casino Resort",
+    "tribe": "Mohegan Tribe of Connecticut",
+    "description": "One of the largest and most impressive casino resorts in the Western Hemisphere. Mohegan Sun features three distinct casinos, over 40 restaurants, world-class entertainment, luxury hotel towers, and a full-service spa. Owned and operated by the Mohegan Tribe of Connecticut, the resort combines modern luxury with the rich cultural heritage of the Mohegan people.",
+    "opened": "October 12, 1996",
+    "total_area_sqft": 3300000
+  },
+  "restaurants": [
+    {
+      "name": "Todd English's Tuscany",
+      "cuisine": "Italian",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino of the Sky",
+      "description": "Celebrity chef Todd English's Italian restaurant featuring handmade pastas, wood-fired pizzas, and classic Italian dishes with a modern twist. Known for its open kitchen and warm Tuscan-inspired decor.",
+      "dress_code": "Business casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Bobby Flay's Bar Americain",
+      "cuisine": "American",
+      "price_range": "$$$",
+      "hours": "Sunday-Thursday 11:30 AM - 10:00 PM, Friday-Saturday 11:30 AM - 11:00 PM",
+      "location": "Casino of the Earth",
+      "description": "Celebrity chef Bobby Flay's American brasserie offering bold flavors inspired by regional American cuisines. Signature dishes include burgers, seafood, and grilled meats with Flay's signature Southwest influences.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended for dinner"
+    },
+    {
+      "name": "Michael Jordan's Steak House",
+      "cuisine": "Steakhouse",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino of the Sky",
+      "description": "Upscale steakhouse by Michael Jordan serving USDA Prime steaks, fresh seafood, and classic sides. Features an extensive wine list and sports memorabilia in an elegant setting.",
+      "dress_code": "Business casual",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "SolToro Taqueria & Tequila Bar",
+      "cuisine": "Mexican",
+      "price_range": "$$",
+      "hours": "Daily 11:30 AM - 10:00 PM, Friday-Saturday until 11:00 PM",
+      "location": "Casino of the Earth",
+      "description": "Modern Mexican restaurant offering authentic tacos, ceviches, and an extensive tequila and mezcal selection. Features a lively atmosphere with colorful decor.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Ballo Italian Restaurant",
+      "cuisine": "Italian",
+      "price_range": "$$$",
+      "hours": "Thursday-Monday 5:00 PM - 10:00 PM",
+      "location": "Casino of the Sky",
+      "description": "Contemporary Italian restaurant featuring traditional recipes with a modern presentation. Known for housemade pastas, risottos, and Italian wines.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Mohegan Sun Buffet (Seasons)",
+      "cuisine": "Buffet",
+      "price_range": "$$",
+      "hours": "Friday-Sunday 4:00 PM - 9:00 PM (hours vary seasonally)",
+      "location": "Casino of the Sky",
+      "description": "All-you-can-eat buffet with rotating international stations including seafood, Asian, Italian, American, and carving stations. Special holiday and themed buffet events throughout the year.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Mohegan Sun Bow & Arrow",
+      "cuisine": "Pub & Grill",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 2:00 AM",
+      "location": "Casino of the Earth",
+      "description": "Sports bar and grill with a large selection of beers, wings, burgers, and comfort food. Multiple large-screen TVs for watching live sports events.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Tao Asian Bistro & Lounge",
+      "cuisine": "Pan-Asian",
+      "price_range": "$$$",
+      "hours": "Thursday-Sunday 5:00 PM - 11:00 PM",
+      "location": "Casino of the Sky",
+      "description": "Pan-Asian dining experience featuring Chinese, Japanese, and Thai cuisine in a dramatic, stylish setting. Known for its sushi bar, dim sum, and signature cocktails.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Hash House A Go Go",
+      "cuisine": "American Comfort Food",
+      "price_range": "$$",
+      "hours": "Daily 8:00 AM - 2:00 PM",
+      "location": "Casino of the Earth",
+      "description": "Farm-to-table comfort food known for its enormous portions. Famous for twisted farm food including giant pancakes, stuffed burgers, and creative brunch dishes.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Mohegan Sun Caputo Trattoria",
+      "cuisine": "Italian",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 10:00 PM",
+      "location": "Casino of the Earth",
+      "description": "Casual Italian eatery serving brick-oven pizzas, calzones, pasta dishes, and Italian sandwiches. Family-friendly atmosphere with quick service.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Frank Pepe's Pizzeria Napoletana",
+      "cuisine": "Pizza",
+      "price_range": "$$",
+      "hours": "Sunday-Thursday 11:00 AM - 10:00 PM, Friday-Saturday 11:00 AM - 11:00 PM",
+      "location": "Casino of the Earth",
+      "description": "Legendary New Haven-style apizza (coal-fired thin crust pizza) since 1925. Famous for their white clam pie and classic tomato pies. A Connecticut institution.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Johnny Rockets",
+      "cuisine": "American Diner",
+      "price_range": "$",
+      "hours": "Daily 11:00 AM - 11:00 PM",
+      "location": "Casino of the Earth",
+      "description": "Classic 1950s-style diner serving burgers, shakes, fries, and other American diner favorites. Fun retro atmosphere.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Lantern Bar & Grill",
+      "cuisine": "American",
+      "price_range": "$$",
+      "hours": "Open 24 hours",
+      "location": "Casino of the Earth",
+      "description": "24-hour restaurant and bar serving a full menu of American favorites including steaks, burgers, salads, and late-night snacks. Perfect for after-show dining.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Sushi Palace",
+      "cuisine": "Japanese/Sushi",
+      "price_range": "$$$",
+      "hours": "Daily 12:00 PM - 10:00 PM, Friday-Saturday until 11:00 PM",
+      "location": "Casino of the Sky",
+      "description": "Fresh sushi, sashimi, and Japanese specialties prepared by skilled sushi chefs. Features an extensive sake menu and omakase options.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for parties of 6+"
+    },
+    {
+      "name": "Birdcage Bar",
+      "cuisine": "Cocktail Bar",
+      "price_range": "$$",
+      "hours": "Daily 4:00 PM - 2:00 AM",
+      "location": "Casino of the Sky",
+      "description": "Upscale cocktail lounge with craft cocktails, premium spirits, and light bar fare. Live DJ and entertainment on weekends.",
+      "dress_code": "Smart casual",
+      "reservations": "Not required"
+    }
+  ],
+  "entertainment": [
+    {
+      "name": "Mohegan Sun Arena",
+      "type": "Concert & Event Venue",
+      "capacity": "10,000 seats",
+      "location": "Connected to Casino of the Earth",
+      "description": "World-class arena hosting major concerts, comedy shows, boxing matches, WWE events, and other live entertainment. Has hosted artists including Elton John, Jay-Z, Adele, and many more. Named one of the top entertainment venues in the country.",
+      "schedule": "Events vary; check mohegansun.com/entertainment for schedule"
+    },
+    {
+      "name": "Wolf Den",
+      "type": "Free Live Music Venue",
+      "capacity": "350 seats",
+      "location": "Casino of the Earth",
+      "description": "Intimate free live music venue featuring performances from national touring acts, tribute bands, comedians, and local artists. No ticket required — shows are complimentary.",
+      "schedule": "Nightly shows, typically at 8:00 PM or 9:00 PM"
+    },
+    {
+      "name": "Comix Roadhouse",
+      "type": "Comedy Club & Restaurant",
+      "capacity": "400 seats",
+      "location": "Casino of the Earth",
+      "description": "Premier comedy club featuring nationally touring comedians and up-and-coming talent. Full dinner menu available during shows. Past performers include Kevin Hart, Jim Gaffigan, and Bill Burr.",
+      "schedule": "Shows Thursday-Sunday, times vary"
+    },
+    {
+      "name": "The Cabaret Theatre",
+      "type": "Theater",
+      "capacity": "400 seats",
+      "location": "Casino of the Sky",
+      "description": "Intimate theater venue hosting specialty acts, tribute shows, and smaller concerts. Features comfortable cabaret-style seating with cocktail service.",
+      "schedule": "Shows vary; check entertainment calendar"
+    },
+    {
+      "name": "Avalon Nightclub",
+      "type": "Nightclub",
+      "capacity": "1,500",
+      "location": "Casino of the Earth",
+      "description": "High-energy nightclub featuring top DJs, themed parties, and special events. State-of-the-art sound and lighting systems. Must be 21+ to enter.",
+      "schedule": "Friday and Saturday nights, 10:00 PM - 2:00 AM"
+    },
+    {
+      "name": "novelle",
+      "type": "Ultra Lounge",
+      "capacity": "500",
+      "location": "Casino of the Sky",
+      "description": "Upscale lounge and nightlife destination featuring craft cocktails, DJ entertainment, and a sophisticated atmosphere. Popular for pre- and post-show gatherings.",
+      "schedule": "Thursday-Saturday evenings"
+    },
+    {
+      "name": "Kids Quest & Cyber Quest",
+      "type": "Family Entertainment",
+      "capacity": "N/A",
+      "location": "Casino of the Sky",
+      "description": "Kids Quest provides supervised entertainment for children ages 6 weeks to 12 years while parents enjoy the resort. Cyber Quest arcade features the latest video games and attractions for teens and families.",
+      "schedule": "Daily, hours vary seasonally"
+    }
+  ],
+  "hotel": {
+    "overview": "Mohegan Sun offers two luxury hotel towers with a combined total of approximately 1,600 rooms and suites, providing guests with a full resort experience.",
+    "towers": [
+      {
+        "name": "Sky Tower",
+        "floors": 34,
+        "rooms": 1200,
+        "opened": "2002",
+        "description": "The original hotel tower featuring modern luxury rooms with panoramic views of the Thames River valley and surrounding Connecticut countryside."
+      },
+      {
+        "name": "Earth Tower",
+        "floors": 12,
+        "rooms": 400,
+        "opened": "November 2024",
+        "description": "The newest addition to Mohegan Sun, Earth Tower offers contemporary design with cutting-edge amenities and a fresh take on luxury hospitality."
+      }
+    ],
+    "room_types": [
+      {
+        "name": "Deluxe Room",
+        "description": "Spacious room with king or two queen beds, modern furnishings, and floor-to-ceiling windows. Includes flat-screen TV, mini-fridge, in-room safe, and complimentary Wi-Fi.",
+        "size": "450 sq ft",
+        "rate": "Starting from $169/night (varies by season)"
+      },
+      {
+        "name": "Superior Room",
+        "description": "Enhanced room with premium bedding, upgraded amenities, and preferred floor location. Features a sitting area and enhanced bathroom with marble finishes.",
+        "size": "500 sq ft",
+        "rate": "Starting from $219/night"
+      },
+      {
+        "name": "Junior Suite",
+        "description": "Spacious suite with separate living area, king bed, sofa bed, and expanded bathroom with soaking tub. Ideal for extended stays or families.",
+        "size": "650 sq ft",
+        "rate": "Starting from $299/night"
+      },
+      {
+        "name": "Executive Suite",
+        "description": "Premium suite with separate bedroom and living room, wet bar, dining area, and luxury bathroom with dual vanities and walk-in shower.",
+        "size": "900 sq ft",
+        "rate": "Starting from $449/night"
+      },
+      {
+        "name": "Presidential Suite",
+        "description": "The ultimate luxury experience with multiple bedrooms, full living and dining areas, private terrace, premium entertainment system, and personalized concierge service.",
+        "size": "1,800+ sq ft",
+        "rate": "Inquire for pricing"
+      }
+    ],
+    "amenities": [
+      "Complimentary Wi-Fi",
+      "24-hour room service",
+      "Flat-screen TVs",
+      "In-room safe",
+      "Mini-fridge",
+      "Premium bedding",
+      "Blackout curtains",
+      "Fitness center access",
+      "Valet parking available",
+      "Pet-friendly rooms available (select rooms)"
+    ]
+  },
+  "amenities": [
+    {
+      "name": "Mandara Spa",
+      "type": "Full-Service Spa",
+      "description": "Award-winning spa offering a wide range of treatments including massages, facials, body wraps, and aromatherapy. Features a tranquil relaxation lounge, steam room, and sauna. Treatments draw inspiration from Balinese healing traditions.",
+      "hours": "Daily 9:00 AM - 8:00 PM"
+    },
+    {
+      "name": "Elemis Spa at Earth Tower",
+      "type": "Luxury Spa",
+      "description": "Modern spa located in the new Earth Tower offering premium Elemis skincare treatments, couples experiences, and express services for guests on the go.",
+      "hours": "Daily 9:00 AM - 7:00 PM"
+    },
+    {
+      "name": "Indoor Pool",
+      "type": "Pool & Recreation",
+      "description": "Heated indoor pool with adjacent hot tub, available to hotel guests. Features poolside lounge chairs and towel service.",
+      "hours": "Daily 6:00 AM - 10:00 PM"
+    },
+    {
+      "name": "Fitness Center",
+      "type": "Gym",
+      "description": "State-of-the-art fitness center with cardio equipment, free weights, strength machines, and personal training available. Complimentary for hotel guests.",
+      "hours": "Open 24 hours"
+    },
+    {
+      "name": "The Shops at Mohegan Sun",
+      "type": "Shopping",
+      "description": "Over 40 retail shops offering fashion, jewelry, accessories, gifts, and specialty items. Features brand-name stores and unique boutiques.",
+      "hours": "Daily 10:00 AM - 9:00 PM (varies by store)"
+    },
+    {
+      "name": "Mohegan Sun Golf Club",
+      "type": "Golf Course",
+      "description": "Championship 18-hole golf course designed by Graham Cooke & Associates. Located nearby at 100 Golf Club Road, Baltic, CT. Features a pro shop, driving range, and golf instruction.",
+      "hours": "Seasonal (April-November), dawn to dusk"
+    },
+    {
+      "name": "Wombi Rock Climbing Wall",
+      "type": "Recreation",
+      "description": "Indoor rock climbing wall suitable for all skill levels. Located near Kids Quest. Equipment and instruction provided.",
+      "hours": "Hours vary; check front desk"
+    }
+  ],
+  "gaming": {
+    "casino_size_sqft": 364000,
+    "slot_machines": 6500,
+    "table_games": 370,
+    "poker_room": true,
+    "sportsbook": true,
+    "description": "Mohegan Sun features three distinct casino areas offering an unparalleled gaming experience. With over 364,000 square feet of gaming space, it is one of the largest casinos in the Western Hemisphere.",
+    "areas": [
+      {
+        "name": "Casino of the Earth",
+        "description": "The original casino with a warm, earth-toned design inspired by Mohegan tribal heritage. Features slot machines, table games, and the Bow & Arrow sports bar."
+      },
+      {
+        "name": "Casino of the Sky",
+        "description": "A soaring, light-filled space with a celestial theme. Home to many of the resort's upscale restaurants and the main high-limit gaming area."
+      },
+      {
+        "name": "Casino of the Wind",
+        "description": "Features additional slot machines and table games in a dynamic, wind-themed environment."
+      }
+    ],
+    "table_games_offered": [
+      "Blackjack",
+      "Roulette",
+      "Craps",
+      "Baccarat",
+      "Pai Gow Poker",
+      "Spanish 21",
+      "Three Card Poker",
+      "Let It Ride",
+      "Casino War"
+    ],
+    "poker_room_details": {
+      "name": "Mohegan Sun Poker Room",
+      "tables": 33,
+      "games": ["No-Limit Texas Hold'em", "Pot-Limit Omaha", "Limit Hold'em"],
+      "tournaments": "Daily tournaments with varying buy-ins",
+      "hours": "Open 24 hours, 7 days a week",
+      "description": "One of the premier poker rooms in the Northeast featuring 33 tables, daily tournaments, and cash games at all stakes. Regular special event series throughout the year."
+    },
+    "sportsbook_details": {
+      "name": "FanDuel Sportsbook at Mohegan Sun",
+      "description": "Full-service sportsbook powered by FanDuel featuring a massive LED video wall, individual betting stations, comfortable seating, and full bar service. Offers betting on professional and college sports.",
+      "hours": "Daily, hours vary by sport season"
+    },
+    "high_limit_areas": {
+      "description": "VIP high-limit gaming areas available for table games and slots with elevated minimum bets, premium drink service, and dedicated hosts.",
+      "minimum_bets": "Vary by game and time of day"
+    }
+  },
+  "promotions": [
+    {
+      "name": "Momentum Rewards",
+      "type": "loyalty_program",
+      "description": "Mohegan Sun's official loyalty rewards program. Earn Momentum Points and Tier Credits by playing slots, table games, and poker, as well as through hotel stays, dining, and entertainment purchases. Points can be redeemed for free play, dining, hotel stays, and retail purchases.",
+      "tiers": [
+        {
+          "name": "Core",
+          "description": "Entry level. Earn points on all gaming and resort spending."
+        },
+        {
+          "name": "Ignite",
+          "description": "Earned at 2,500 Tier Credits. Enhanced rewards and select invitations."
+        },
+        {
+          "name": "Leap",
+          "description": "Earned at 10,000 Tier Credits. Priority access, enhanced earning rates, and exclusive events."
+        },
+        {
+          "name": "Ascend",
+          "description": "Earned at 25,000 Tier Credits. Premium benefits including complimentary valet, room upgrades, and dedicated host."
+        },
+        {
+          "name": "Soar",
+          "description": "By invitation only. The highest tier with full VIP treatment, personalized service, and exclusive access to events and amenities."
+        }
+      ],
+      "how_to_join": "Free to join. Sign up at any Momentum Desk, online at mohegansun.com, or through the Mohegan Sun app."
+    },
+    {
+      "name": "Mohegan Sun App",
+      "type": "mobile_app",
+      "description": "Download the Mohegan Sun mobile app to manage your Momentum account, view promotions, check your points balance, book hotel rooms, browse restaurant menus, and see upcoming entertainment events. Available on iOS and Android."
+    },
+    {
+      "name": "Hotel Packages",
+      "type": "packages",
+      "description": "Various seasonal hotel packages combining room stays with dining credits, spa treatments, or entertainment tickets. Check mohegansun.com/hotel for current offers."
+    },
+    {
+      "name": "Dining Rewards",
+      "type": "dining",
+      "description": "Momentum members earn points on all dining purchases at participating Mohegan Sun restaurants. Special dining promotions and discounts available throughout the year."
+    }
+  ],
+  "faq": [
+    {
+      "question": "What are the casino hours?",
+      "answer": "Mohegan Sun's casino is open 24 hours a day, 7 days a week, 365 days a year."
+    },
+    {
+      "question": "What is the minimum gambling age?",
+      "answer": "You must be 21 years of age or older to gamble or consume alcohol at Mohegan Sun."
+    },
+    {
+      "question": "Is there free parking?",
+      "answer": "Yes, Mohegan Sun offers free self-parking in multiple garage locations. Valet parking is also available for a fee."
+    },
+    {
+      "question": "Is there a dress code?",
+      "answer": "The casino floor has no formal dress code. Upscale restaurants like Todd English's Tuscany and Michael Jordan's Steak House recommend business casual attire. Nightclubs may have specific dress codes."
+    },
+    {
+      "question": "How do I get to Mohegan Sun?",
+      "answer": "Mohegan Sun is located at 1 Mohegan Sun Boulevard, Uncasville, CT 06382. It is accessible by car via I-395 (Exit 79A). The resort also offers bus service from various cities in the Northeast through Mohegan Sun Express bus packages."
+    },
+    {
+      "question": "Does Mohegan Sun allow smoking?",
+      "answer": "Connecticut state law prohibits smoking inside public buildings. Mohegan Sun is entirely smoke-free indoors. Designated outdoor smoking areas are available."
+    },
+    {
+      "question": "Is Mohegan Sun pet-friendly?",
+      "answer": "Select rooms in the hotel towers are designated as pet-friendly. Contact the hotel directly for availability and pet policies, including size restrictions and fees."
+    },
+    {
+      "question": "How do I join the Momentum Rewards program?",
+      "answer": "Joining is free! Sign up at any Momentum Desk on the casino floor, online at mohegansun.com, or through the Mohegan Sun mobile app. You'll receive your Momentum card immediately."
+    },
+    {
+      "question": "What is the check-in and check-out time?",
+      "answer": "Standard check-in time is 4:00 PM and check-out time is 11:00 AM. Early check-in and late check-out may be available based on room availability. Momentum members at higher tiers may receive complimentary late check-out."
+    },
+    {
+      "question": "Does Mohegan Sun have a pool?",
+      "answer": "Yes, Mohegan Sun has a heated indoor pool and hot tub available to hotel guests. The pool area is open daily from 6:00 AM to 10:00 PM."
+    },
+    {
+      "question": "Are there ATMs at Mohegan Sun?",
+      "answer": "Yes, ATMs are located throughout the casino floor and near the hotel lobbies. Please note that transaction fees may apply."
+    },
+    {
+      "question": "Does Mohegan Sun have a responsible gaming program?",
+      "answer": "Yes, Mohegan Sun is committed to responsible gaming. The resort provides resources for guests who may need assistance, including self-exclusion options through the Connecticut Department of Mental Health and Addiction Services (DMHAS). For help, call the Connecticut Council on Problem Gambling at 1-888-789-7777 or the national helpline at 1-800-522-4700."
+    },
+    {
+      "question": "Can I host a private event at Mohegan Sun?",
+      "answer": "Yes, Mohegan Sun offers extensive event and convention space including the Uncas Ballroom, multiple meeting rooms, and the Earth Expo & Convention Center totaling over 275,000 square feet. Contact the events team at mohegansun.com/meetings-events for more information."
+    },
+    {
+      "question": "What other casinos are nearby?",
+      "answer": "Foxwoods Resort Casino is located approximately 10 miles from Mohegan Sun, also in southeastern Connecticut. Both are tribal casinos operated by different Native American tribes."
+    }
+  ]
+}

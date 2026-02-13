@@ -1,0 +1,23 @@
+# Property Q&A Agent -- Python Dependencies (pinned to tested versions)
+
+# --- API Framework ---
+fastapi==0.129.0
+uvicorn[standard]==0.40.0
+pydantic==2.12.5
+
+# --- LangGraph & LangChain ---
+langgraph==1.0.8
+langchain-core==1.2.12
+langchain-community==0.4.1
+langchain-text-splitters==1.1.0
+langchain-google-genai==4.2.0
+
+# --- Observability ---
+langsmith==0.7.1
+
+# --- Vector DB (local dev) ---
+chromadb==1.5.0
+
+# --- Utilities ---
+sse-starlette==3.2.0
+httpx==0.28.1

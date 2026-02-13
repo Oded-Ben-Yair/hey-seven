@@ -1,0 +1,19 @@
+[project]
+name = "hey-seven-agent"
+version = "0.1.0"
+description = "Property-aware conversational AI agent for casino resort Q&A"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:create_react_agent has been moved:DeprecationWarning",
+]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
