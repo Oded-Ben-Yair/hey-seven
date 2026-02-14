@@ -34,6 +34,35 @@ _INJECTION_PATTERNS = [
     re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
 ]
 
+#: Regex patterns for responsible gaming detection (pre-LLM safety net).
+_RESPONSIBLE_GAMING_PATTERNS = [
+    re.compile(r"gambling\s+problem", re.I),
+    re.compile(r"problem\s+gambl", re.I),
+    re.compile(r"addict(?:ed|ion)?\s+(?:to\s+)?gambl", re.I),
+    re.compile(r"self[- ]?exclu", re.I),
+    re.compile(r"can'?t\s+stop\s+gambl", re.I),
+    re.compile(r"help\s+(?:with|for)\s+gambl", re.I),
+]
+
+
+def detect_responsible_gaming(message: str) -> bool:
+    """Check if user message indicates a gambling problem or self-exclusion need.
+
+    Deterministic regex-based safety net that ensures responsible gaming
+    helplines are always provided, regardless of LLM routing.
+
+    Args:
+        message: The raw user input message.
+
+    Returns:
+        True if responsible gaming support is needed.
+    """
+    for pattern in _RESPONSIBLE_GAMING_PATTERNS:
+        if pattern.search(message):
+            logger.info("Responsible gaming query detected: %r", message[:200])
+            return True
+    return False
+
 
 def audit_input(message: str) -> bool:
     """Check user input for prompt injection patterns.
@@ -113,6 +142,13 @@ def router_node(state: PropertyQAState) -> dict:
     if not audit_input(user_message):
         return {
             "query_type": "off_topic",
+            "router_confidence": 1.0,
+        }
+
+    # Deterministic responsible gaming detection (pre-LLM safety net)
+    if detect_responsible_gaming(user_message):
+        return {
+            "query_type": "gambling_advice",
             "router_confidence": 1.0,
         }
 

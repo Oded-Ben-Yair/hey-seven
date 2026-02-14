@@ -501,6 +501,56 @@ class TestAuditInput:
         mock_get_llm.assert_not_called()
 
 
+class TestResponsibleGamingDetection:
+    """Tests for the deterministic responsible gaming safety net."""
+
+    def test_gambling_problem_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("I think I have a gambling problem") is True
+
+    def test_problem_gambling_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("Where can I get help for problem gambling?") is True
+
+    def test_addiction_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("I'm addicted to gambling") is True
+
+    def test_self_exclusion_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("How do I self-exclude from the casino?") is True
+
+    def test_cant_stop_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("I can't stop gambling") is True
+
+    def test_normal_query_not_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("What restaurants do you have?") is False
+
+    def test_gaming_area_not_detected(self):
+        from src.agent.nodes import detect_responsible_gaming
+
+        assert detect_responsible_gaming("Tell me about the gaming areas") is False
+
+    @patch("src.agent.nodes._get_llm")
+    def test_responsible_gaming_routes_to_gambling_advice(self, mock_get_llm):
+        """Responsible gaming query in router_node returns gambling_advice."""
+        from src.agent.nodes import router_node
+
+        state = _state(messages=[HumanMessage(content="I think I have a gambling problem")])
+        result = router_node(state)
+        assert result["query_type"] == "gambling_advice"
+        assert result["router_confidence"] == 1.0
+        mock_get_llm.assert_not_called()
+
+
 class TestRetrieveNodeHoursSchedule:
     """Tests for schedule-specific retrieval routing."""
 

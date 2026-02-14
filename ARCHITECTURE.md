@@ -231,6 +231,10 @@ Adversarial review prompt checking 6 criteria: grounded, on-topic, no gambling a
 
 Pre-LLM regex-based prompt injection detection. Runs before the router LLM call. Checks 7 patterns (e.g., "ignore previous instructions", "system:", "DAN mode", "pretend you are"). Detected injections are logged and routed directly to `off_topic` without invoking any LLM.
 
+### Deterministic: detect_responsible_gaming (`src/agent/nodes.py`)
+
+Pre-LLM regex-based responsible gaming safety net. Runs after `audit_input` but before the router LLM call. Checks 6 patterns (e.g., "gambling problem", "addicted to gambling", "self-exclusion", "can't stop gambling"). Detected queries are routed directly to `gambling_advice` (which provides NCPG, CT Council, and CT DMHAS helpline numbers) without invoking any LLM. This ensures responsible gaming helplines are always provided deterministically, regardless of LLM routing accuracy.
+
 ### LLM-based: validate node
 
 Post-generation adversarial review against 6 criteria (see Prompt System above). Catches hallucination, off-topic drift, gambling advice, unauthorized actions. Max 1 retry, then fallback with contact info.

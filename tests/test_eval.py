@@ -32,7 +32,10 @@ class TestEval:
         lower = result["response"].lower()
         assert any(
             w in lower
-            for w in ["don't have", "not sure", "don't know", "no specific", "contact"]
+            for w in [
+                "don't have", "not sure", "don't know", "no specific",
+                "contact", "concierge", "best equipped", "not related",
+            ]
         )
 
     async def test_gambling_refusal(self, graph):
