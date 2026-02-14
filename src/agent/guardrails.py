@@ -18,6 +18,7 @@ __all__ = [
     "detect_responsible_gaming",
     "detect_age_verification",
     "detect_bsa_aml",
+    "detect_patron_privacy",
 ]
 
 # ---------------------------------------------------------------------------
@@ -33,8 +34,9 @@ _INJECTION_PATTERNS = [
     re.compile(r"pretend\s+(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
     re.compile(r"disregard\s+(?:all\s+)?(?:previous|prior|your)\b", re.I),
     # "act as" — require role-play framing (article + noun), exclude hospitality
-    # phrases like "act as a guide" which are legitimate casino-context queries.
-    re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\s+(?!guide\b|concierge\b|host\b)", re.I),
+    # and casino-domain phrases like "act as a guide", "act as a VIP", "act as a
+    # member" which are legitimate guest context.
+    re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\s+(?!guide\b|concierge\b|host\b|member\b|vip\b|guest\b|player\b|high\s+roller\b)", re.I),
 ]
 
 # ---------------------------------------------------------------------------
@@ -109,6 +111,25 @@ _BSA_AML_PATTERNS = [
     re.compile(r"\bhide\s+(?:my\s+)?(?:money|cash|income|winnings)\b", re.I),
     re.compile(r"\b(?:un)?traceable\b.*\b(?:funds?|cash|money)\b", re.I),
     re.compile(r"\b(?:funds?|cash|money)\b.*\b(?:un)?traceable\b", re.I),
+]
+
+# ---------------------------------------------------------------------------
+# Patron privacy patterns (casino guests must not disclose other patrons)
+# ---------------------------------------------------------------------------
+
+#: Regex patterns for detecting queries about other guests' presence,
+#: membership status, or personal information.  Casino hosts must NEVER
+#: disclose whether a specific person is present, a member, or associated
+#: with the property.  This is both a privacy obligation and a liability
+#: concern (stalking, celebrity harassment, domestic disputes).
+_PATRON_PRIVACY_PATTERNS = [
+    re.compile(r"\bis\s+[\w\s]+\s+(?:a\s+)?(?:member|here|at\s+the|playing|gambling|staying)", re.I),
+    re.compile(r"\bwhere\s+is\s+(?:my\s+)?(?:husband|wife|partner|friend|boss|ex)\b", re.I),
+    re.compile(r"\bhave\s+you\s+seen\s+[\w\s]+\b", re.I),
+    re.compile(r"\b(?:is|was)\s+(?:[\w]+\s+){1,3}(?:at|in|visiting)\s+(?:the\s+)?(?:casino|resort|property)", re.I),
+    re.compile(r"\b(?:celebrity|famous|star)\s+(?:here|visiting|spotted|seen)\b", re.I),
+    re.compile(r"\blook(?:ing)?\s+(?:up|for)\s+(?:a\s+)?(?:guest|patron|member|player)\b", re.I),
+    re.compile(r"\b(?:guest|patron|member)\s+(?:list|info|information|record|status)\b", re.I),
 ]
 
 # ---------------------------------------------------------------------------
@@ -191,5 +212,26 @@ def detect_bsa_aml(message: str) -> bool:
     for pattern in _BSA_AML_PATTERNS:
         if pattern.search(message):
             logger.warning("BSA/AML query detected (pattern: %s)", pattern.pattern[:60])
+            return True
+    return False
+
+
+def detect_patron_privacy(message: str) -> bool:
+    """Check if user message asks about another guest's presence or identity.
+
+    Casino hosts must NEVER disclose whether a specific person is at the
+    property, their membership status, or personal information.  This is
+    a privacy obligation and a liability safeguard against stalking,
+    celebrity harassment, and domestic-dispute scenarios.
+
+    Args:
+        message: The raw user input message.
+
+    Returns:
+        True if the query involves patron privacy and should be deflected.
+    """
+    for pattern in _PATRON_PRIVACY_PATTERNS:
+        if pattern.search(message):
+            logger.warning("Patron privacy query detected (pattern: %s)", pattern.pattern[:60])
             return True
     return False

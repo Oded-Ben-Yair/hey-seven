@@ -36,6 +36,21 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["build_graph", "chat", "chat_stream"]
 
+# ---------------------------------------------------------------------------
+# Node name constants — shared between build_graph() and chat_stream()
+# to prevent silent breakage if a node is renamed.
+# ---------------------------------------------------------------------------
+NODE_ROUTER = "router"
+NODE_RETRIEVE = "retrieve"
+NODE_GENERATE = "generate"
+NODE_VALIDATE = "validate"
+NODE_RESPOND = "respond"
+NODE_FALLBACK = "fallback"
+NODE_GREETING = "greeting"
+NODE_OFF_TOPIC = "off_topic"
+
+_NON_STREAM_NODES = frozenset({NODE_GREETING, NODE_OFF_TOPIC, NODE_FALLBACK})
+
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     """Build the custom 8-node property Q&A graph.
@@ -47,42 +62,52 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     Returns:
         A compiled StateGraph ready for invoke/astream.
     """
+    settings = get_settings()
     graph = StateGraph(PropertyQAState)
 
     # Add all 8 nodes
-    graph.add_node("router", router_node)
-    graph.add_node("retrieve", retrieve_node)
-    graph.add_node("generate", generate_node)
-    graph.add_node("validate", validate_node)
-    graph.add_node("respond", respond_node)
-    graph.add_node("fallback", fallback_node)
-    graph.add_node("greeting", greeting_node)
-    graph.add_node("off_topic", off_topic_node)
+    graph.add_node(NODE_ROUTER, router_node)
+    graph.add_node(NODE_RETRIEVE, retrieve_node)
+    graph.add_node(NODE_GENERATE, generate_node)
+    graph.add_node(NODE_VALIDATE, validate_node)
+    graph.add_node(NODE_RESPOND, respond_node)
+    graph.add_node(NODE_FALLBACK, fallback_node)
+    graph.add_node(NODE_GREETING, greeting_node)
+    graph.add_node(NODE_OFF_TOPIC, off_topic_node)
 
     # Edge map
-    graph.add_edge(START, "router")
-    graph.add_conditional_edges("router", route_from_router, {
-        "retrieve": "retrieve",
-        "greeting": "greeting",
-        "off_topic": "off_topic",
+    graph.add_edge(START, NODE_ROUTER)
+    graph.add_conditional_edges(NODE_ROUTER, route_from_router, {
+        NODE_RETRIEVE: NODE_RETRIEVE,
+        NODE_GREETING: NODE_GREETING,
+        NODE_OFF_TOPIC: NODE_OFF_TOPIC,
     })
-    graph.add_edge("retrieve", "generate")
-    graph.add_edge("generate", "validate")
-    graph.add_conditional_edges("validate", route_after_validate, {
-        "respond": "respond",
-        "generate": "generate",
-        "fallback": "fallback",
+    graph.add_edge(NODE_RETRIEVE, NODE_GENERATE)
+    graph.add_edge(NODE_GENERATE, NODE_VALIDATE)
+    graph.add_conditional_edges(NODE_VALIDATE, route_after_validate, {
+        NODE_RESPOND: NODE_RESPOND,
+        NODE_GENERATE: NODE_GENERATE,
+        NODE_FALLBACK: NODE_FALLBACK,
     })
-    graph.add_edge("respond", END)
-    graph.add_edge("fallback", END)
-    graph.add_edge("greeting", END)
-    graph.add_edge("off_topic", END)
+    graph.add_edge(NODE_RESPOND, END)
+    graph.add_edge(NODE_FALLBACK, END)
+    graph.add_edge(NODE_GREETING, END)
+    graph.add_edge(NODE_OFF_TOPIC, END)
 
     if checkpointer is None:
         checkpointer = MemorySaver()
 
-    compiled = graph.compile(checkpointer=checkpointer)
-    compiled.recursion_limit = get_settings().GRAPH_RECURSION_LIMIT
+    # HITL interrupt: when enabled, the graph pauses before generate_node
+    # so a human operator can review/approve the retrieved context before
+    # the LLM generates a response.  This is the LangGraph-native pattern
+    # for regulated environments where certain responses need human oversight.
+    interrupt_before = [NODE_GENERATE] if settings.ENABLE_HITL_INTERRUPT else None
+
+    compiled = graph.compile(
+        checkpointer=checkpointer,
+        interrupt_before=interrupt_before,
+    )
+    compiled.recursion_limit = settings.GRAPH_RECURSION_LIMIT  # type: ignore[attr-defined]
     logger.info("Custom 8-node StateGraph compiled successfully.")
     return compiled
 
@@ -182,7 +207,6 @@ async def chat_stream(
     }
 
     sources: list[str] = []
-    non_stream_nodes = {"greeting", "off_topic", "fallback"}
 
     try:
         async for event in graph.astream_events(
@@ -194,7 +218,7 @@ async def chat_stream(
             langgraph_node = event.get("metadata", {}).get("langgraph_node", "")
 
             # Stream tokens from generate node only
-            if kind == "on_chat_model_stream" and langgraph_node == "generate":
+            if kind == "on_chat_model_stream" and langgraph_node == NODE_GENERATE:
                 chunk = event.get("data", {}).get("chunk")
                 if (
                     isinstance(chunk, AIMessageChunk)
@@ -212,7 +236,7 @@ async def chat_stream(
                     }
 
             # Capture non-streaming node outputs (greeting, off_topic, fallback)
-            elif kind == "on_chain_end" and langgraph_node in non_stream_nodes:
+            elif kind == "on_chain_end" and langgraph_node in _NON_STREAM_NODES:
                 output = event.get("data", {}).get("output", {})
                 if isinstance(output, dict):
                     msgs = output.get("messages", [])
@@ -231,7 +255,7 @@ async def chat_stream(
                             sources.append(s)
 
             # Capture sources from respond node
-            elif kind == "on_chain_end" and langgraph_node == "respond":
+            elif kind == "on_chain_end" and langgraph_node == NODE_RESPOND:
                 output = event.get("data", {}).get("output", {})
                 if isinstance(output, dict):
                     node_sources = output.get("sources_used", [])

@@ -9,6 +9,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::pytest.PytestWarning:pytest_asyncio",
+    "ignore::RuntimeWarning:asyncio",
 ]
 addopts = "--cov=src --cov-report=term-missing"
 

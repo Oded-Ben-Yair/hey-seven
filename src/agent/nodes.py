@@ -9,8 +9,10 @@ test imports.
 """
 
 import asyncio
+import json
 import logging
 from functools import lru_cache
+from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -22,6 +24,7 @@ from .guardrails import (  # noqa: F401
     audit_input,
     detect_age_verification,
     detect_bsa_aml,
+    detect_patron_privacy,
     detect_responsible_gaming,
 )
 from .prompts import (
@@ -51,6 +54,7 @@ __all__ = [
     "detect_responsible_gaming",
     "detect_age_verification",
     "detect_bsa_aml",
+    "detect_patron_privacy",
 ]
 
 
@@ -138,15 +142,15 @@ def _get_validator_llm() -> ChatGoogleGenerativeAI:
 async def router_node(state: PropertyQAState) -> dict:
     """Classify user intent into one of 7 categories.
 
-    Turn-limit check: exceeding MAX_TURN_LIMIT forces off_topic to end conversation.
+    Message-limit check: exceeding MAX_MESSAGE_LIMIT forces off_topic to end conversation.
     Uses structured output for reliable JSON parsing.
     """
     settings = get_settings()
     messages = state.get("messages", [])
 
     # Turn-limit guard
-    if len(messages) > settings.MAX_TURN_LIMIT:
-        logger.warning("Turn limit exceeded (%d messages), forcing off_topic", len(messages))
+    if len(messages) > settings.MAX_MESSAGE_LIMIT:
+        logger.warning("Message limit exceeded (%d messages), forcing off_topic", len(messages))
         return {
             "query_type": "off_topic",
             "router_confidence": 1.0,
@@ -186,6 +190,13 @@ async def router_node(state: PropertyQAState) -> dict:
     if detect_bsa_aml(user_message):
         return {
             "query_type": "off_topic",
+            "router_confidence": 1.0,
+        }
+
+    # Deterministic patron privacy detection (never disclose guest presence/info)
+    if detect_patron_privacy(user_message):
+        return {
+            "query_type": "patron_privacy",
             "router_confidence": 1.0,
         }
 
@@ -485,26 +496,59 @@ async def fallback_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-_GREETING_CATEGORIES: dict[str, str] = {
+_KNOWN_CATEGORY_LABELS: dict[str, str] = {
     "restaurants": "Restaurants & Dining — from casual to fine dining",
     "entertainment": "Entertainment & Shows — concerts, comedy, and events",
     "hotel": "Hotel & Accommodations — rooms, suites, and towers",
     "gaming": "Gaming — casino floor, table games, and poker",
     "amenities": "Amenities — spa, pool, shopping, and more",
     "promotions": "Promotions — current offers and loyalty programs",
+    "spa": "Spa & Wellness — treatments and relaxation",
+    "shopping": "Shopping — retail and boutiques",
 }
-"""Map of property-data JSON keys to guest-facing category descriptions.
+"""Curated labels for known property-data categories."""
 
-Each key corresponds to a top-level section in the property data file
-(e.g., ``data/mohegan_sun.json``).  Updating the data file categories
-only requires adding the new key here to surface it in the greeting.
-"""
+
+@lru_cache(maxsize=1)
+def _build_greeting_categories() -> dict[str, str]:
+    """Derive greeting categories from the actual property data file.
+
+    Reads the property JSON at startup (cached), so adding a new category
+    to the data file automatically surfaces it in the greeting.  Falls back
+    to ``_KNOWN_CATEGORY_LABELS`` if the file cannot be read.
+    """
+    settings = get_settings()
+    try:
+        path = Path(settings.PROPERTY_DATA_PATH)
+        if not path.exists():
+            return dict(_KNOWN_CATEGORY_LABELS)
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return dict(_KNOWN_CATEGORY_LABELS)
+        categories: dict[str, str] = {}
+        for key in data:
+            if key == "property":
+                continue
+            if key in _KNOWN_CATEGORY_LABELS:
+                categories[key] = _KNOWN_CATEGORY_LABELS[key]
+            else:
+                categories[key] = f"{key.replace('_', ' ').title()} — information and details"
+        return categories if categories else dict(_KNOWN_CATEGORY_LABELS)
+    except Exception:
+        logger.warning("Could not load property data for greeting categories, using defaults")
+        return dict(_KNOWN_CATEGORY_LABELS)
 
 
 async def greeting_node(state: PropertyQAState) -> dict:
-    """Template welcome listing available knowledge categories."""
+    """Template welcome listing available knowledge categories.
+
+    Categories are derived from the actual property data file (cached)
+    to stay in sync with available knowledge-base content.
+    """
     settings = get_settings()
-    bullets = "\n".join(f"- **{label}**" for label in _GREETING_CATEGORIES.values())
+    categories = _build_greeting_categories()
+    bullets = "\n".join(f"- **{label}**" for label in categories.values())
     return {
         "messages": [AIMessage(content=(
             f"Welcome to {settings.PROPERTY_NAME}! I'm your AI concierge, "
@@ -532,7 +576,16 @@ async def off_topic_node(state: PropertyQAState) -> dict:
     query_type = state.get("query_type", "off_topic")
     settings = get_settings()
 
-    if query_type == "gambling_advice":
+    if query_type == "patron_privacy":
+        content = (
+            "I'm not able to share information about other guests, including whether "
+            "someone is a member, their presence at the property, or any personal details. "
+            "Guest privacy is a top priority.\n\n"
+            f"If you need to reach someone, I'd suggest contacting them directly or calling "
+            f"{settings.PROPERTY_NAME} at {settings.PROPERTY_PHONE}.\n\n"
+            "Is there anything else about the resort I can help with?"
+        )
+    elif query_type == "gambling_advice":
         content = (
             "I appreciate your interest, but I'm not able to provide gambling advice, "
             "betting strategies, or information about odds. I can share general information "
@@ -607,7 +660,7 @@ def route_from_router(state: PropertyQAState) -> str:
     if query_type == "greeting":
         return "greeting"
 
-    if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification"):
+    if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification", "patron_privacy"):
         return "off_topic"
 
     if confidence < 0.3:

@@ -1,6 +1,7 @@
-"""Tests for the guardrails module (prompt injection + responsible gaming + age verification).
+"""Tests for the guardrails module (all 5 deterministic guardrail layers).
 
-Dedicated test file mirroring the src/agent/guardrails.py module structure.
+Dedicated test file mirroring the src/agent/guardrails.py module structure:
+prompt injection, responsible gaming, age verification, BSA/AML, patron privacy.
 """
 
 import pytest
@@ -160,3 +161,66 @@ class TestBsaAml:
         from src.agent.guardrails import detect_bsa_aml
 
         assert detect_bsa_aml(message) is False
+
+
+class TestPatronPrivacy:
+    """Patron privacy guardrail (never disclose guest presence/identity)."""
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Is John Smith a member here?",
+            "Where is my husband?",
+            "Have you seen my friend today?",
+            "Is my boss at the casino?",
+            "Was Tom visiting the resort yesterday?",
+            "Any celebrity here tonight?",
+            "Looking for a guest named Sarah",
+            "Can you check member status for someone?",
+            "Where is my ex?",
+            "Is a famous star visiting tonight?",
+            "Looking up a patron's information",
+            "Guest list for tonight",
+        ],
+    )
+    def test_patron_privacy_detected(self, message):
+        from src.agent.guardrails import detect_patron_privacy
+
+        assert detect_patron_privacy(message) is True
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "What time does the steakhouse open?",
+            "Tell me about entertainment tonight",
+            "I want to play blackjack",
+            "What are the hotel rates?",
+            "How do I become a member?",
+            "What member benefits do you offer?",
+        ],
+    )
+    def test_normal_query_not_flagged(self, message):
+        from src.agent.guardrails import detect_patron_privacy
+
+        assert detect_patron_privacy(message) is False
+
+
+class TestInjectionFalsePositives:
+    """Injection guardrail must NOT flag legitimate casino-domain phrases."""
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Can you act as a guide for the casino?",
+            "Act as a concierge and help me plan my visit",
+            "Please act as a host for my group",
+            "I want to act as a VIP member",
+            "Can I act as a guest speaker at the event?",
+            "Act as a player advocate for me",
+            "I want to act as a high roller",
+        ],
+    )
+    def test_casino_domain_phrases_pass(self, message):
+        from src.agent.guardrails import audit_input
+
+        assert audit_input(message) is True

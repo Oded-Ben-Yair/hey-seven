@@ -395,13 +395,13 @@ class TestGreetingNode:
         assert result["sources_used"] == []
 
     async def test_all_categories_present(self):
-        """Greeting lists all categories from _GREETING_CATEGORIES constant."""
-        from src.agent.nodes import _GREETING_CATEGORIES, greeting_node
+        """Greeting lists all categories from _build_greeting_categories()."""
+        from src.agent.nodes import _build_greeting_categories, greeting_node
 
         state = _state()
         result = await greeting_node(state)
         content = result["messages"][0].content
-        for label in _GREETING_CATEGORIES.values():
+        for label in _build_greeting_categories().values():
             assert label in content, f"Missing category: {label}"
 
 

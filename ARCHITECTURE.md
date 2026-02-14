@@ -78,11 +78,11 @@ Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a c
 **Input**: `messages` (conversation history).
 **Output**: `query_type` (str), `router_confidence` (float 0-1).
 
-Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`.
+Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `age_verification`, `patron_privacy`, `ambiguous`.
 
-Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 22 patterns (17 English + 5 Spanish + 3 Mandarin) and routes to `gambling_advice` deterministically. `detect_age_verification()` checks 6 patterns for underage-related queries and routes to `age_verification` with the 21+ requirement. `detect_bsa_aml()` checks 10 patterns for money laundering, structuring, and CTR/SAR evasion queries and routes to `off_topic` — casinos are Money Services Businesses under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
+Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 22 patterns (17 English + 5 Spanish + 3 Mandarin) and routes to `gambling_advice` deterministically. `detect_age_verification()` checks 6 patterns for underage-related queries and routes to `age_verification` with the 21+ requirement. `detect_bsa_aml()` checks 10 patterns for money laundering, structuring, and CTR/SAR evasion queries and routes to `off_topic` — casinos are Money Services Businesses under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime. `detect_patron_privacy()` checks 7 patterns for queries about other guests' presence, identity, or membership status — casinos must never disclose whether a specific person is at the property (privacy obligation and liability safeguard against stalking, celebrity harassment, and domestic disputes).
 
-Turn-limit guard: if `messages` exceeds `MAX_TURN_LIMIT` (default 40, configurable), forces `off_topic` to end the conversation. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing via `ainvoke()` (fully async). On LLM error, defaults to `property_qa` with confidence 0.5.
+Message-limit guard: if `messages` exceeds `MAX_MESSAGE_LIMIT` (default 40, configurable), forces `off_topic` to end the conversation. The limit counts all messages (human + AI), not just human turns. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing via `ainvoke()` (fully async). On LLM error, defaults to `property_qa` with confidence 0.5.
 
 All 8 node functions are `async def`, using `ainvoke()` for LLM calls. This ensures proper async execution throughout the LangGraph pipeline without blocking the event loop. The `retrieve` node wraps sync ChromaDB calls in `asyncio.to_thread()` since ChromaDB's LangChain wrapper only offers synchronous methods — the production path (Vertex AI Vector Search) has native async APIs.
 
@@ -165,10 +165,12 @@ Logs the validation failure reason for observability.
 **Input**: `query_type`.
 **Output**: `messages` (appends appropriate redirect AIMessage), `sources_used` cleared.
 
-Three sub-cases based on `query_type`:
+Five sub-cases based on `query_type`:
 - `off_topic`: General redirect to property topics.
 - `gambling_advice`: Redirect with responsible gaming helplines (NCPG 1-800-MY-RESET / 1-800-699-7378, CT Council 1-888-789-7777, CT Self-Exclusion ct.gov/selfexclusion via DCP).
 - `action_request`: Explain read-only limitations, provide contact info.
+- `age_verification`: Provide 21+ age requirement per CT gaming law with property contact info.
+- `patron_privacy`: Decline to disclose guest presence/identity/membership with privacy explanation.
 
 ---
 
@@ -179,7 +181,7 @@ Three sub-cases based on `query_type`:
 | Field | Type | Description |
 |-------|------|-------------|
 | `messages` | `Annotated[list, add_messages]` | Conversation history (LangGraph message reducer) |
-| `query_type` | `str \| None` | Router classification (7 categories) |
+| `query_type` | `str \| None` | Router classification (9 categories) |
 | `router_confidence` | `float` | Router confidence score (0.0-1.0) |
 | `retrieved_context` | `list[dict]` | Retrieved documents: `{content, metadata, score}` |
 | `validation_result` | `str \| None` | Validation outcome: PASS, FAIL, or RETRY |
@@ -204,7 +206,7 @@ Called after the `router` node. Returns the next node name:
 | Condition | Next Node |
 |-----------|-----------|
 | `query_type == "greeting"` | `greeting` |
-| `query_type in ("off_topic", "gambling_advice", "action_request")` | `off_topic` |
+| `query_type in ("off_topic", "gambling_advice", "action_request", "age_verification", "patron_privacy")` | `off_topic` |
 | `router_confidence < 0.3` | `off_topic` (low-confidence catch-all) |
 | Everything else (`property_qa`, `hours_schedule`, `ambiguous`) | `retrieve` |
 
@@ -457,7 +459,7 @@ The `_FixtureReplayLLM` class in `tests/test_eval_deterministic.py` replays pre-
 | Validation loop | Built-in: generate -> validate -> retry/fallback | Not available without wrapping |
 | Routing control | Explicit 7-category router with confidence threshold | LLM decides tool calls implicitly |
 | Time awareness | `current_time` injected into state at entry | Must be added to system prompt manually |
-| Domain guardrails | Dedicated off_topic, gambling_advice, action_request, age_verification paths | Single system prompt, no structured routing |
+| Domain guardrails | Dedicated off_topic, gambling_advice, action_request, age_verification, patron_privacy paths | Single system prompt, no structured routing |
 | Observability | Each node is individually traceable in LangSmith | Tool calls are traceable but routing is opaque |
 | Code complexity | More code (8 nodes, 2 routing functions) | ~10 lines to set up |
 | Flexibility | Full control over retry logic, validation criteria | Simpler but less control |
@@ -532,7 +534,8 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `RATE_LIMIT_MAX_CLIENTS` | `10000` | Max tracked client IPs (memory bound) |
 | `SSE_TIMEOUT_SECONDS` | `60` | Stream timeout (seconds) |
 | `MAX_REQUEST_BODY_SIZE` | `65536` | Max request body in bytes (64 KB) |
-| `MAX_TURN_LIMIT` | `40` | Max messages before forcing conversation end |
+| `MAX_MESSAGE_LIMIT` | `40` | Max total messages (human + AI) before forcing conversation end |
+| `ENABLE_HITL_INTERRUPT` | `false` | When true, pauses before generate node for human-in-the-loop review |
 | `CB_FAILURE_THRESHOLD` | `5` | Consecutive LLM failures before circuit opens |
 | `CB_COOLDOWN_SECONDS` | `60` | Seconds before circuit transitions to half-open |
 | `GRAPH_RECURSION_LIMIT` | `10` | LangGraph recursion limit (bounds validate→retry loop) |
@@ -641,10 +644,10 @@ The following features from the initial architecture specification (`assignment/
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns, BSA/AML 10 patterns) | ~186 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns, BSA/AML 10 patterns, patron privacy 7 patterns) | ~238 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~87 |
-| `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons + `_GREETING_CATEGORIES` constant | ~530 |
-| `graph.py` | StateGraph compilation, `chat()`, `chat_stream()`, `_initial_state()` DRY helper | ~255 |
+| `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~580 |
+| `graph.py` | StateGraph compilation + node name constants + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper | ~285 |
 | `state.py` | TypedDict state schema (`PropertyQAState`, `RetrievedChunk`) + Pydantic structured output models | ~71 |
 | `prompts.py` | 3 prompt templates + helpline constant | ~161 |
 | `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~188 |

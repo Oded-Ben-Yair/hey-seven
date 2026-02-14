@@ -330,3 +330,73 @@ class TestChatStream:
         sources_data = json.loads(sources_events[0]["data"])
         assert "restaurants" in sources_data["sources"]
         assert "entertainment" in sources_data["sources"]
+
+
+class TestNodeConstants:
+    """Node name constants prevent silent breakage from string typos."""
+
+    def test_constants_exported(self):
+        """All 8 node constants are importable from graph module."""
+        from src.agent.graph import (
+            NODE_FALLBACK,
+            NODE_GENERATE,
+            NODE_GREETING,
+            NODE_OFF_TOPIC,
+            NODE_RESPOND,
+            NODE_RETRIEVE,
+            NODE_ROUTER,
+            NODE_VALIDATE,
+        )
+
+        assert NODE_ROUTER == "router"
+        assert NODE_RETRIEVE == "retrieve"
+        assert NODE_GENERATE == "generate"
+        assert NODE_VALIDATE == "validate"
+        assert NODE_RESPOND == "respond"
+        assert NODE_FALLBACK == "fallback"
+        assert NODE_GREETING == "greeting"
+        assert NODE_OFF_TOPIC == "off_topic"
+
+    def test_graph_nodes_match_constants(self):
+        """Graph node names match the defined constants."""
+        from src.agent.graph import (
+            NODE_FALLBACK,
+            NODE_GENERATE,
+            NODE_GREETING,
+            NODE_OFF_TOPIC,
+            NODE_RESPOND,
+            NODE_RETRIEVE,
+            NODE_ROUTER,
+            NODE_VALIDATE,
+            build_graph,
+        )
+
+        graph = build_graph()
+        all_nodes = set(graph.get_graph().nodes) - {"__start__", "__end__"}
+        expected = {
+            NODE_ROUTER, NODE_RETRIEVE, NODE_GENERATE, NODE_VALIDATE,
+            NODE_RESPOND, NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
+        }
+        assert all_nodes == expected
+
+
+class TestHitlInterrupt:
+    """HITL interrupt support via ENABLE_HITL_INTERRUPT setting."""
+
+    def test_hitl_disabled_by_default(self):
+        """HITL interrupt is disabled by default."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.ENABLE_HITL_INTERRUPT is False
+
+    def test_hitl_graph_compiles_with_interrupt(self):
+        """Graph compiles with ENABLE_HITL_INTERRUPT=True."""
+        import os
+        from unittest.mock import patch as mock_patch
+
+        from src.agent.graph import build_graph
+
+        with mock_patch.dict(os.environ, {"ENABLE_HITL_INTERRUPT": "true"}):
+            graph = build_graph()
+            assert graph is not None

@@ -48,8 +48,9 @@ class Settings(BaseSettings):
     MAX_REQUEST_BODY_SIZE: int = 65536  # 64 KB max request body
 
     # --- Agent ---
-    MAX_TURN_LIMIT: int = 40  # max messages before forcing conversation end
+    MAX_MESSAGE_LIMIT: int = 40  # max total messages (human + AI) before forcing conversation end
     MAX_HISTORY_MESSAGES: int = 20  # sliding window: only last N messages sent to LLM
+    ENABLE_HITL_INTERRUPT: bool = False  # When True, adds interrupt_before=["generate"] for human-in-the-loop
     GRAPH_RECURSION_LIMIT: int = 10  # LangGraph recursion limit (validate->retry loop bound)
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe

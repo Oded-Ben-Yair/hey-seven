@@ -78,7 +78,7 @@ class TestSettings:
         assert s.RAG_MIN_RELEVANCE_SCORE == 0.3
         assert s.RATE_LIMIT_MAX_CLIENTS == 10000
         assert s.MAX_REQUEST_BODY_SIZE == 65536
-        assert s.MAX_TURN_LIMIT == 40
+        assert s.MAX_MESSAGE_LIMIT == 40
 
     def test_graph_recursion_limit_default(self):
         """GRAPH_RECURSION_LIMIT has sensible default of 10."""

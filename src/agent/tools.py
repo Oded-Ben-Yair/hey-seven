@@ -65,7 +65,7 @@ def _rerank_by_rrf(
 
     for results in result_lists:
         for rank, (doc, score) in enumerate(results):
-            doc_id = hashlib.md5(
+            doc_id = hashlib.sha256(
                 (doc.page_content + str(doc.metadata.get("source", ""))).encode()
             ).hexdigest()
             if doc_id not in doc_map or score > doc_map[doc_id][1]:

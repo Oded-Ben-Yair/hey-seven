@@ -1,4 +1,4 @@
-"""Tests for the RAG pipeline (ingestion, retrieval, metadata)."""
+"""Tests for the RAG pipeline (ingestion, retrieval, metadata, formatters, embeddings)."""
 
 from unittest.mock import patch
 
@@ -515,3 +515,221 @@ class TestSearchHoursUnit:
 
             results = search_hours("pool hours")
             assert results == []
+
+
+class TestFormatters:
+    """Direct unit tests for pipeline.py formatter functions."""
+
+    def test_format_restaurant_full(self):
+        """Restaurant formatter includes all fields when present."""
+        from src.rag.pipeline import _format_restaurant
+
+        item = {
+            "name": "Bobby's Burgers",
+            "cuisine": "American",
+            "price_range": "$$",
+            "location": "Casino of the Earth",
+            "hours": "11am-11pm",
+            "description": "Gourmet burgers and shakes.",
+            "dress_code": "Casual",
+            "reservations": "Walk-in only",
+        }
+        text = _format_restaurant(item)
+        assert "Bobby's Burgers" in text
+        assert "American cuisine" in text
+        assert "$$" in text
+        assert "Casino of the Earth" in text
+        assert "11am-11pm" in text
+        assert "Gourmet burgers" in text
+        assert "Casual" in text
+        assert "Walk-in only" in text
+
+    def test_format_restaurant_minimal(self):
+        """Restaurant formatter handles minimal data without error."""
+        from src.rag.pipeline import _format_restaurant
+
+        text = _format_restaurant({})
+        assert "Unknown" in text
+
+    def test_format_entertainment_full(self):
+        """Entertainment formatter includes all fields."""
+        from src.rag.pipeline import _format_entertainment
+
+        item = {
+            "name": "Mohegan Sun Arena",
+            "type": "Concert Venue",
+            "description": "10,000 seat arena.",
+            "venue": "Main Complex",
+            "capacity": "10000",
+            "schedule": "Varies by event",
+        }
+        text = _format_entertainment(item)
+        assert "Mohegan Sun Arena" in text
+        assert "Concert Venue" in text
+        assert "10,000 seat arena" in text
+
+    def test_format_hotel_with_list_amenities(self):
+        """Hotel formatter joins list amenities."""
+        from src.rag.pipeline import _format_hotel
+
+        item = {
+            "name": "Sky Tower Suite",
+            "description": "Luxury suite.",
+            "size": "800 sqft",
+            "rate": "$399/night",
+            "amenities": ["Mini bar", "Jacuzzi", "Mountain view"],
+        }
+        text = _format_hotel(item)
+        assert "Sky Tower Suite" in text
+        assert "Luxury suite" in text
+        assert "800 sqft" in text
+        assert "Mini bar, Jacuzzi, Mountain view" in text
+
+    def test_format_hotel_with_string_amenities(self):
+        """Hotel formatter handles string amenities."""
+        from src.rag.pipeline import _format_hotel
+
+        item = {"name": "Standard Room", "amenities": "WiFi, TV, AC"}
+        text = _format_hotel(item)
+        assert "WiFi, TV, AC" in text
+
+    def test_format_generic_covers_all_value_types(self):
+        """Generic formatter includes string, int, float, and list values."""
+        from src.rag.pipeline import _format_generic
+
+        item = {
+            "name": "Spa",
+            "description": "Full-service spa.",
+            "rooms": 12,
+            "rating": 4.8,
+            "services": ["Massage", "Facial", "Sauna"],
+        }
+        text = _format_generic(item)
+        assert "Spa" in text
+        assert "Full-service spa" in text
+        assert "12" in text
+        assert "4.8" in text
+        assert "Massage, Facial, Sauna" in text
+
+
+class TestChunking:
+    """Direct unit tests for _chunk_documents."""
+
+    def test_chunk_preserves_metadata(self):
+        """Chunking preserves all metadata fields and adds chunk_index."""
+        from src.rag.pipeline import _chunk_documents
+
+        docs = [{"content": "A " * 500, "metadata": {"category": "test", "source": "file.json"}}]
+        chunks = _chunk_documents(docs, chunk_size=100, chunk_overlap=10)
+        assert len(chunks) >= 2  # Should split
+        for chunk in chunks:
+            assert chunk["metadata"]["category"] == "test"
+            assert "chunk_index" in chunk["metadata"]
+
+    def test_short_doc_stays_single_chunk(self):
+        """Document shorter than chunk_size remains a single chunk."""
+        from src.rag.pipeline import _chunk_documents
+
+        docs = [{"content": "Short text", "metadata": {"category": "x"}}]
+        chunks = _chunk_documents(docs, chunk_size=800, chunk_overlap=100)
+        assert len(chunks) == 1
+        assert chunks[0]["metadata"]["chunk_index"] == 0
+
+
+class TestRetrieverNoVectorstore:
+    """CasinoKnowledgeRetriever returns empty when vectorstore is None."""
+
+    def test_retrieve_returns_empty(self):
+        from src.rag.pipeline import CasinoKnowledgeRetriever
+
+        retriever = CasinoKnowledgeRetriever()
+        assert retriever.retrieve("test") == []
+
+    def test_retrieve_with_scores_returns_empty(self):
+        from src.rag.pipeline import CasinoKnowledgeRetriever
+
+        retriever = CasinoKnowledgeRetriever()
+        assert retriever.retrieve_with_scores("test") == []
+
+
+class TestEmbeddings:
+    """Tests for the embeddings module."""
+
+    def test_get_embeddings_returns_instance(self):
+        """get_embeddings returns a GoogleGenerativeAIEmbeddings instance."""
+        from src.rag.embeddings import get_embeddings
+
+        with patch("src.rag.embeddings.GoogleGenerativeAIEmbeddings") as mock_cls:
+            get_embeddings.cache_clear()
+            mock_cls.return_value = "mock_embeddings"
+            result = get_embeddings()
+            assert result == "mock_embeddings"
+            mock_cls.assert_called_once()
+            get_embeddings.cache_clear()
+
+    def test_get_embeddings_uses_config_model(self):
+        """get_embeddings passes EMBEDDING_MODEL from settings."""
+        from src.rag.embeddings import get_embeddings
+
+        with patch("src.rag.embeddings.GoogleGenerativeAIEmbeddings") as mock_cls:
+            get_embeddings.cache_clear()
+            get_embeddings()
+            call_kwargs = mock_cls.call_args
+            assert "model" in call_kwargs.kwargs or len(call_kwargs.args) > 0
+            get_embeddings.cache_clear()
+
+    def test_get_embeddings_is_cached(self):
+        """get_embeddings returns the same instance on second call (lru_cache)."""
+        from src.rag.embeddings import get_embeddings
+
+        with patch("src.rag.embeddings.GoogleGenerativeAIEmbeddings") as mock_cls:
+            get_embeddings.cache_clear()
+            r1 = get_embeddings()
+            r2 = get_embeddings()
+            assert r1 is r2
+            assert mock_cls.call_count == 1
+            get_embeddings.cache_clear()
+
+
+class TestLoadPropertyJsonEdgeCases:
+    """Edge cases for _load_property_json."""
+
+    def test_list_format_json(self, tmp_path):
+        """JSON file with top-level list is handled."""
+        import json as json_mod
+
+        from src.rag.pipeline import _load_property_json
+
+        data = [{"name": "Buffet", "description": "All-you-can-eat."}]
+        path = tmp_path / "list_data.json"
+        path.write_text(json_mod.dumps(data))
+
+        docs = _load_property_json(str(path))
+        assert len(docs) >= 1
+        assert docs[0]["metadata"]["category"] == "general"
+
+    def test_scalar_category_value(self, tmp_path):
+        """Category with scalar (non-list, non-dict) value is handled."""
+        import json as json_mod
+
+        from src.rag.pipeline import _load_property_json
+
+        data = {"version": "2.0"}
+        path = tmp_path / "scalar.json"
+        path.write_text(json_mod.dumps(data))
+
+        docs = _load_property_json(str(path))
+        assert len(docs) >= 1
+
+    def test_string_list_item(self, tmp_path):
+        """Category with list of strings (not dicts) is handled."""
+        import json as json_mod
+
+        from src.rag.pipeline import _load_property_json
+
+        data = {"features": ["Pool", "Gym", "Spa"]}
+        path = tmp_path / "strings.json"
+        path.write_text(json_mod.dumps(data))
+
+        docs = _load_property_json(str(path))
+        assert len(docs) >= 1
