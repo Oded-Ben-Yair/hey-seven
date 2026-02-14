@@ -50,9 +50,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.exception("Failed to initialize agent. /chat will return 503.")
         app.state.agent = None
 
-    # Run RAG ingestion if ChromaDB index doesn't exist yet
-    chroma_dir = Path(settings.CHROMA_PERSIST_DIR)
-    if not chroma_dir.exists():
+    # Run RAG ingestion if ChromaDB collection is empty or missing.
+    # Checking the chroma.sqlite3 file is more reliable than directory existence
+    # because the directory may exist but contain no data (e.g., after a failed run).
+    chroma_db_file = Path(settings.CHROMA_PERSIST_DIR) / "chroma.sqlite3"
+    if not chroma_db_file.exists():
         try:
             from src.rag.pipeline import ingest_property
 

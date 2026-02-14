@@ -10,7 +10,7 @@ steps:
         mypy src/ --ignore-missing-imports
         python -m pytest tests/ -v --tb=short -x \
           --ignore=tests/test_eval.py \
-          --cov=src --cov-fail-under=85
+          --cov=src --cov-fail-under=90
 
   # Step 2: Build Docker image (Artifact Registry, not deprecated gcr.io)
   - name: 'gcr.io/cloud-builders/docker'

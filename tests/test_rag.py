@@ -300,6 +300,70 @@ class TestFilterByRelevance:
         assert len(filtered) == 3
 
 
+class TestReciprocalRankFusion:
+    """Tests for the RRF reranking function in tools.py."""
+
+    def test_single_list_preserves_order(self):
+        """Single result list is returned in original order (top_k)."""
+        from langchain_core.documents import Document
+
+        from src.agent.tools import _rerank_by_rrf
+
+        results = [
+            (Document(page_content="first"), 0.9),
+            (Document(page_content="second"), 0.7),
+            (Document(page_content="third"), 0.5),
+        ]
+        fused = _rerank_by_rrf([results], top_k=3)
+        assert len(fused) == 3
+        assert fused[0][0].page_content == "first"
+
+    def test_duplicate_across_lists_gets_boosted(self):
+        """Document appearing in both lists gets higher RRF score."""
+        from langchain_core.documents import Document
+
+        from src.agent.tools import _rerank_by_rrf
+
+        list_a = [
+            (Document(page_content="shared"), 0.8),
+            (Document(page_content="only_a"), 0.9),
+        ]
+        list_b = [
+            (Document(page_content="only_b"), 0.85),
+            (Document(page_content="shared"), 0.7),
+        ]
+        fused = _rerank_by_rrf([list_a, list_b], top_k=3)
+        # "shared" appears in both lists and should rank first
+        assert fused[0][0].page_content == "shared"
+
+    def test_respects_top_k(self):
+        """RRF returns at most top_k results."""
+        from langchain_core.documents import Document
+
+        from src.agent.tools import _rerank_by_rrf
+
+        results = [(Document(page_content=f"doc{i}"), 0.5) for i in range(10)]
+        fused = _rerank_by_rrf([results], top_k=3)
+        assert len(fused) == 3
+
+    def test_empty_input(self):
+        """Empty result lists returns empty."""
+        from src.agent.tools import _rerank_by_rrf
+
+        assert _rerank_by_rrf([], top_k=5) == []
+
+    def test_keeps_best_score_for_duplicates(self):
+        """When a doc appears in multiple lists, keeps the highest original score."""
+        from langchain_core.documents import Document
+
+        from src.agent.tools import _rerank_by_rrf
+
+        list_a = [(Document(page_content="doc"), 0.6)]
+        list_b = [(Document(page_content="doc"), 0.9)]
+        fused = _rerank_by_rrf([list_a, list_b], top_k=1)
+        assert fused[0][1] == 0.9  # Higher score kept
+
+
 class TestChunkCount:
     def test_chunk_count_greater_or_equal_to_doc_count(self, test_property_file, tmp_path):
         """Total chunks >= total input documents (chunking splits, never removes)."""
@@ -344,3 +408,97 @@ class TestPropertyIdIsolation:
             mock_settings.return_value.PROPERTY_NAME = "Rival Casino"
             results = retriever.retrieve_with_scores("steakhouse")
             assert len(results) == 0, "Cross-property query should return empty"
+
+
+class TestSearchKnowledgeBaseUnit:
+    """Unit tests for search_knowledge_base with mocked retriever."""
+
+    def test_returns_results_with_rrf(self):
+        """search_knowledge_base returns fused results from RRF."""
+        from unittest.mock import MagicMock
+
+        from langchain_core.documents import Document
+
+        mock_retriever = MagicMock()
+        doc = Document(page_content="Steakhouse info", metadata={"category": "restaurants"})
+        mock_retriever.retrieve_with_scores.return_value = [(doc, 0.9)]
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_knowledge_base
+
+            results = search_knowledge_base("steakhouse")
+            assert len(results) >= 1
+            assert results[0]["content"] == "Steakhouse info"
+
+    def test_returns_empty_on_value_error(self):
+        """search_knowledge_base returns empty on ValueError."""
+        from unittest.mock import MagicMock
+
+        mock_retriever = MagicMock()
+        mock_retriever.retrieve_with_scores.side_effect = ValueError("bad value")
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_knowledge_base
+
+            results = search_knowledge_base("test")
+            assert results == []
+
+    def test_returns_empty_on_generic_exception(self):
+        """search_knowledge_base returns empty on generic exception."""
+        from unittest.mock import MagicMock
+
+        mock_retriever = MagicMock()
+        mock_retriever.retrieve_with_scores.side_effect = RuntimeError("connection failed")
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_knowledge_base
+
+            results = search_knowledge_base("test")
+            assert results == []
+
+
+class TestSearchHoursUnit:
+    """Unit tests for search_hours with mocked retriever."""
+
+    def test_returns_results_with_rrf(self):
+        """search_hours returns fused results from RRF."""
+        from unittest.mock import MagicMock
+
+        from langchain_core.documents import Document
+
+        mock_retriever = MagicMock()
+        doc = Document(page_content="Pool open 9am-9pm", metadata={"category": "amenities"})
+        mock_retriever.retrieve_with_scores.return_value = [(doc, 0.85)]
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_hours
+
+            results = search_hours("pool hours")
+            assert len(results) >= 1
+            assert "9am-9pm" in results[0]["content"]
+
+    def test_returns_empty_on_type_error(self):
+        """search_hours returns empty on TypeError."""
+        from unittest.mock import MagicMock
+
+        mock_retriever = MagicMock()
+        mock_retriever.retrieve_with_scores.side_effect = TypeError("type issue")
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_hours
+
+            results = search_hours("pool hours")
+            assert results == []
+
+    def test_returns_empty_on_generic_exception(self):
+        """search_hours returns empty on generic exception."""
+        from unittest.mock import MagicMock
+
+        mock_retriever = MagicMock()
+        mock_retriever.retrieve_with_scores.side_effect = RuntimeError("network error")
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_hours
+
+            results = search_hours("pool hours")
+            assert results == []

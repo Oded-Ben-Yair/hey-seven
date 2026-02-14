@@ -80,7 +80,7 @@ Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a c
 
 Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`.
 
-Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 22 patterns (17 English + 5 Spanish + 3 Mandarin) and routes to `gambling_advice` deterministically. `detect_age_verification()` checks 6 patterns for underage-related queries and routes to `age_verification` with the 21+ requirement.
+Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 22 patterns (17 English + 5 Spanish + 3 Mandarin) and routes to `gambling_advice` deterministically. `detect_age_verification()` checks 6 patterns for underage-related queries and routes to `age_verification` with the 21+ requirement. `detect_bsa_aml()` checks 10 patterns for money laundering, structuring, and CTR/SAR evasion queries and routes to `off_topic` — casinos are Money Services Businesses under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
 
 Turn-limit guard: if `messages` exceeds `MAX_TURN_LIMIT` (default 40, configurable), forces `off_topic` to end the conversation. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing via `ainvoke()` (fully async). On LLM error, defaults to `property_qa` with confidence 0.5.
 
@@ -93,9 +93,15 @@ All 8 node functions are `async def`, using `ainvoke()` for LLM calls. This ensu
 **Input**: `messages` (extracts last `HumanMessage`).
 **Output**: `retrieved_context` (list of `{content, metadata, score}` dicts).
 
-Routes to `search_hours()` for `hours_schedule` queries (appends schedule-focused keywords), otherwise calls `search_knowledge_base()`. Both delegate to `CasinoKnowledgeRetriever.retrieve_with_scores()` with configurable `RAG_TOP_K` (default 5) from settings.
+Routes to `search_hours()` for `hours_schedule` queries, otherwise calls `search_knowledge_base()`. Both use **multi-strategy retrieval with Reciprocal Rank Fusion (RRF)**:
 
-Results are filtered by `RAG_MIN_RELEVANCE_SCORE` (default 0.3) — chunks below this similarity threshold are discarded before being passed to the generate node.
+- `search_knowledge_base()`: Combines (1) direct semantic search with (2) entity-augmented search (`{query} name location details`) for improved proper noun matching
+- `search_hours()`: Combines (1) schedule-augmented search (`{query} hours schedule open close`) with (2) direct semantic search for broader venue context
+- RRF fusion score: `sum(1/(k + rank))` across rankings, with standard `k=60` dampening. Documents appearing in multiple lists receive a boost.
+
+The ChromaDB collection uses **cosine similarity** (`hnsw:space=cosine`) instead of the default L2 distance, producing normalized scores in [0, 1] where 1.0 = exact match.
+
+Results are filtered by `RAG_MIN_RELEVANCE_SCORE` (default 0.3) — chunks below this cosine similarity threshold are discarded before being passed to the generate node.
 
 ### 3. generate (`src/agent/nodes.py`)
 
@@ -299,12 +305,14 @@ Ingestion runs at FastAPI startup (lifespan) if the ChromaDB directory does not 
 
 ### Retrieval
 
-Two plain functions in `src/agent/tools.py` (no `@tool` decorators):
+Two plain functions in `src/agent/tools.py` (no `@tool` decorators), both using **multi-strategy retrieval with Reciprocal Rank Fusion (RRF)**:
 
-- **`search_knowledge_base(query, top_k=5)`**: General semantic search. Returns `list[dict]` with keys: `content`, `metadata` (category, item_name, source), `score`.
-- **`search_hours(venue_name, top_k=5)`**: Appends "hours schedule open close" to the query for schedule-specific retrieval.
+- **`search_knowledge_base(query)`**: Combines semantic search + entity-augmented query (`{query} name location details`) via RRF. Returns `list[dict]` with keys: `content`, `metadata` (category, item_name, source), `score`.
+- **`search_hours(query)`**: Combines schedule-augmented query (`{query} hours schedule open close`) + direct semantic search via RRF.
 
-Both use the global `CasinoKnowledgeRetriever` singleton which wraps ChromaDB `similarity_search_with_relevance_scores()`. This normalizes the underlying distance metric (L2 by default) to a [0, 1] relevance range via `1 / (1 + distance)`, ensuring that the `>= RAG_MIN_RELEVANCE_SCORE` filter correctly keeps the most relevant documents regardless of the distance function.
+RRF fusion merges multiple ranked lists using `score = sum(1/(k + rank))` with standard `k=60` dampening. Documents appearing in multiple strategies get boosted, improving recall for entity-heavy queries (e.g., "Todd English's") where different strategies surface different relevant docs.
+
+Both use the global `CasinoKnowledgeRetriever` singleton which wraps ChromaDB `similarity_search_with_relevance_scores()`. The collection is configured with `hnsw:space=cosine`, producing cosine similarity scores in [0, 1] where 1.0 = exact match. The `>= RAG_MIN_RELEVANCE_SCORE` (default 0.3) filter discards low-relevance chunks after RRF fusion.
 
 ### Data Model
 
@@ -549,7 +557,7 @@ Single-service setup with:
 ### Cloud Build
 
 `cloudbuild.yaml` defines a 4-step CI/CD pipeline:
-1. Install dev dependencies (`requirements-dev.txt`), lint (`ruff`), and run tests with coverage (`pytest --cov --cov-fail-under=85`).
+1. Install dev dependencies (`requirements-dev.txt`), lint (`ruff`), and run tests with coverage (`pytest --cov --cov-fail-under=90`).
 2. Build Docker image tagged with commit SHA.
 3. Push to Artifact Registry (`us-central1-docker.pkg.dev`).
 4. Deploy to Cloud Run (us-central1, 2Gi memory, 90s timeout, `--allow-unauthenticated` for demo — API key auth is enforced at the app layer via `ApiKeyMiddleware`).
@@ -625,13 +633,13 @@ The following features from the initial architecture specification (`assignment/
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns) | ~144 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns, BSA/AML 10 patterns) | ~186 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~87 |
 | `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons | ~522 |
 | `graph.py` | StateGraph compilation, `chat()`, `chat_stream()`, `_initial_state()` DRY helper | ~255 |
 | `state.py` | TypedDict state schema (`PropertyQAState`, `RetrievedChunk`) + Pydantic structured output models | ~71 |
 | `prompts.py` | 3 prompt templates + helpline constant | ~161 |
-| `tools.py` | RAG retrieval functions (plain functions, no @tool decorators) | ~106 |
+| `tools.py` | RAG retrieval with RRF reranking (multi-strategy fusion, no @tool decorators) | ~180 |
 
 All deferred features have clear production paths documented in the Trade-offs section above.
 

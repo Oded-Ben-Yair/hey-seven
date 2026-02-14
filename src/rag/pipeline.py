@@ -309,6 +309,7 @@ def ingest_property(
         collection_name="property_knowledge",
         embedding=embeddings,
         persist_directory=persist_dir,
+        collection_metadata={"hnsw:space": "cosine"},
     )
 
     logger.info(
@@ -368,10 +369,10 @@ class CasinoKnowledgeRetriever:
         """Retrieve documents with normalized relevance scores (0-1, higher = more relevant).
 
         Uses ``similarity_search_with_relevance_scores`` which normalizes the
-        underlying distance metric (L2 by default in ChromaDB) to a [0, 1]
-        relevance range via ``1 / (1 + distance)``.  This ensures that
-        downstream filtering with ``score >= threshold`` is always correct
-        regardless of the distance function used.
+        underlying distance metric to a [0, 1] relevance range.  The collection
+        is configured with ``hnsw:space=cosine`` (set during ingestion), so
+        scores represent cosine similarity directly.  This ensures that
+        downstream filtering with ``score >= threshold`` is always correct.
 
         Structural grounding: results are filtered by ``property_id`` metadata
         to ensure only documents from the configured property are returned.
@@ -427,6 +428,7 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
             collection_name="property_knowledge",
             embedding_function=get_embeddings(),
             persist_directory=chroma_dir,
+            collection_metadata={"hnsw:space": "cosine"},
         )
         retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
         logger.info("Loaded ChromaDB retriever from %s", chroma_dir)

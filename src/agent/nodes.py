@@ -18,7 +18,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from src.config import get_settings
 
 from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401
-from .guardrails import audit_input, detect_age_verification, detect_responsible_gaming  # noqa: F401
+from .guardrails import (  # noqa: F401
+    audit_input,
+    detect_age_verification,
+    detect_bsa_aml,
+    detect_responsible_gaming,
+)
 from .prompts import (
     CONCIERGE_SYSTEM_PROMPT,
     RESPONSIBLE_GAMING_HELPLINES,
@@ -29,6 +34,30 @@ from .state import PropertyQAState, RouterOutput, ValidationResult
 from .tools import search_hours, search_knowledge_base
 
 logger = logging.getLogger(__name__)
+
+
+def _format_context_block(retrieved: list[dict], separator: str = "\n---\n") -> str:
+    """Format retrieved context as numbered sources for LLM consumption.
+
+    Used by both ``generate_node`` (appended to system prompt) and
+    ``validate_node`` (included in validation prompt) to ensure consistent
+    context presentation across the pipeline.
+
+    Args:
+        retrieved: List of RetrievedChunk dicts with content and metadata.
+        separator: String to join numbered source entries.
+
+    Returns:
+        Formatted context string, or "No context retrieved." if empty.
+    """
+    if not retrieved:
+        return "No context retrieved."
+    parts = []
+    for i, doc in enumerate(retrieved, 1):
+        category = doc.get("metadata", {}).get("category", "general")
+        content = doc.get("content", "")
+        parts.append(f"[{i}] ({category}) {content}")
+    return separator.join(parts)
 
 
 def _get_last_human_message(messages: list) -> str:
@@ -140,6 +169,13 @@ async def router_node(state: PropertyQAState) -> dict:
             "router_confidence": 1.0,
         }
 
+    # Deterministic BSA/AML detection (financial crime prevention)
+    if detect_bsa_aml(user_message):
+        return {
+            "query_type": "off_topic",
+            "router_confidence": 1.0,
+        }
+
     llm = _get_llm()
     router_llm = llm.with_structured_output(RouterOutput)
 
@@ -151,7 +187,17 @@ async def router_node(state: PropertyQAState) -> dict:
             "query_type": result.query_type,
             "router_confidence": result.confidence,
         }
+    except (ValueError, TypeError) as exc:
+        # Structured output parsing failure (invalid JSON from LLM)
+        logger.warning("Router structured output parsing failed: %s", exc)
+        return {
+            "query_type": "property_qa",
+            "router_confidence": 0.5,
+        }
     except Exception:
+        # Network errors, API failures, timeouts — broad catch is intentional
+        # because google-genai raises various exception types across versions.
+        # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
         logger.exception("Router LLM call failed, defaulting to property_qa")
         return {
             "query_type": "property_qa",
@@ -225,12 +271,7 @@ async def generate_node(state: PropertyQAState) -> dict:
 
     # Format retrieved context as numbered sources
     if retrieved:
-        context_parts = []
-        for i, doc in enumerate(retrieved, 1):
-            category = doc.get("metadata", {}).get("category", "general")
-            content = doc.get("content", "")
-            context_parts.append(f"[{i}] ({category}) {content}")
-        context_block = "\n---\n".join(context_parts)
+        context_block = _format_context_block(retrieved)
         system_prompt += f"\n\n## Retrieved Knowledge Base Context\n{context_block}"
     else:
         # No context found — signal to skip validation
@@ -266,7 +307,12 @@ async def generate_node(state: PropertyQAState) -> dict:
         await _get_circuit_breaker().record_success()
         content = response.content if isinstance(response.content, str) else str(response.content)
         return {"messages": [AIMessage(content=content)]}
+    except (ValueError, TypeError) as exc:
+        await _get_circuit_breaker().record_failure()
+        logger.warning("Generate LLM response parsing failed: %s", exc)
     except Exception:
+        # Broad catch: google-genai can raise GoogleAPICallError, DeadlineExceeded,
+        # ResourceExhausted, etc. across SDK versions.
         await _get_circuit_breaker().record_failure()
         logger.exception("Generate LLM call failed")
         return {
@@ -306,14 +352,9 @@ async def validate_node(state: PropertyQAState) -> dict:
             generated_response = msg.content if isinstance(msg.content, str) else str(msg.content)
             break
 
-    # Format retrieved context
+    # Format retrieved context (shared helper with generate_node for consistency)
     retrieved = state.get("retrieved_context", [])
-    context_parts = []
-    for i, doc in enumerate(retrieved, 1):
-        category = doc.get("metadata", {}).get("category", "general")
-        content = doc.get("content", "")
-        context_parts.append(f"[{i}] ({category}) {content}")
-    context_text = "\n".join(context_parts) if context_parts else "No context retrieved."
+    context_text = _format_context_block(retrieved, separator="\n")
 
     prompt_text = VALIDATION_PROMPT.safe_substitute(
         user_question=user_question,
@@ -343,6 +384,16 @@ async def validate_node(state: PropertyQAState) -> dict:
             "retry_feedback": result.reason,
         }
 
+    except (ValueError, TypeError) as exc:
+        logger.warning("Validation structured output parsing failed: %s", exc)
+        # Treat parsing failure same as LLM failure — degraded-pass or fail-closed
+        if retry_count == 0:
+            logger.warning("Degraded-pass: validation parsing failed, passing generated response")
+            return {"validation_result": "PASS"}
+        return {
+            "validation_result": "FAIL",
+            "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
+        }
     except Exception:
         logger.exception("Validation LLM call failed")
         # Degraded-pass: if this is the first attempt and generate already produced
@@ -466,7 +517,7 @@ async def off_topic_node(state: PropertyQAState) -> dict:
             "**What minors CAN do:**\n"
             "- Walk through designated non-gaming areas\n"
             "- Dine at select restaurants (with an adult)\n"
-            "- Visit the shops at Mohegan Sun\n\n"
+            f"- Visit the shops at {settings.PROPERTY_NAME}\n\n"
             "**What requires 21+:**\n"
             "- Casino gaming floor\n"
             "- Table games, slots, and poker\n"

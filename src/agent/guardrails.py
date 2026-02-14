@@ -81,6 +81,28 @@ _AGE_VERIFICATION_PATTERNS = [
 ]
 
 # ---------------------------------------------------------------------------
+# BSA/AML financial crime patterns (Bank Secrecy Act compliance)
+# ---------------------------------------------------------------------------
+
+#: Regex patterns for detecting queries related to financial crime, money
+#: laundering, or structuring.  Casinos are MSBs under BSA and must report
+#: CTRs (>$10 000 cash) and SARs.  The agent must never provide advice that
+#: could facilitate structuring or help circumvent reporting requirements.
+_BSA_AML_PATTERNS = [
+    re.compile(r"\b(?:money\s+)?launder", re.I),
+    re.compile(r"\bstructur(?:e|ing)\s+(?:cash|transaction|deposit|chip)", re.I),
+    re.compile(r"\bavoid\s+(?:report|ctr|sar|detection|tax)", re.I),
+    re.compile(r"\bcurrency\s+transaction\s+report", re.I),
+    re.compile(r"\bsuspicious\s+activity\s+report", re.I),
+    re.compile(r"\b(?:under|below)\s+\$?\s*10[\s,]?000\b", re.I),
+    re.compile(r"\bsmur(?:f|fing)\b", re.I),
+    re.compile(r"\bcash\s+out\s+(?:without|no)\s+(?:id|report|track)", re.I),
+    re.compile(r"\bhide\s+(?:my\s+)?(?:money|cash|income|winnings)\b", re.I),
+    re.compile(r"\b(?:un)?traceable\b.*\b(?:funds?|cash|money)\b", re.I),
+    re.compile(r"\b(?:funds?|cash|money)\b.*\b(?:un)?traceable\b", re.I),
+]
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -139,5 +161,26 @@ def detect_age_verification(message: str) -> bool:
     for pattern in _AGE_VERIFICATION_PATTERNS:
         if pattern.search(message):
             logger.info("Age verification query detected (pattern: %s)", pattern.pattern[:60])
+            return True
+    return False
+
+
+def detect_bsa_aml(message: str) -> bool:
+    """Check if user message relates to money laundering or BSA/AML evasion.
+
+    Casinos are Money Services Businesses (MSBs) under the Bank Secrecy Act.
+    They must file Currency Transaction Reports (CTRs) for cash transactions
+    over $10,000 and Suspicious Activity Reports (SARs) for structuring.
+    The agent must never provide guidance that could facilitate financial crime.
+
+    Args:
+        message: The raw user input message.
+
+    Returns:
+        True if BSA/AML compliance response should be triggered.
+    """
+    for pattern in _BSA_AML_PATTERNS:
+        if pattern.search(message):
+            logger.warning("BSA/AML query detected (pattern: %s)", pattern.pattern[:60])
             return True
     return False

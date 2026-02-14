@@ -64,7 +64,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full details: node descriptions, stat
 | Frontend | Vanilla HTML/CSS/JS | No build step, minimal footprint, backend is 90% of evaluation |
 | Validation | Adversarial LLM review (6 criteria) | Catches hallucination, off-topic drift, gambling advice leaks |
 | Config | `pydantic-settings` BaseSettings | Zero hardcoded values; every constant overridable via env var |
-| Guardrails | Deterministic regex + LLM validation | Pre-LLM `audit_input()` (7 patterns) + `detect_responsible_gaming()` (22 patterns) + `detect_age_verification()` (6 patterns) |
+| Retrieval | Multi-strategy RRF reranking | Reciprocal Rank Fusion of semantic + augmented queries, cosine similarity |
+| Guardrails | Deterministic regex + LLM validation | Pre-LLM `audit_input()` (7 patterns) + `detect_responsible_gaming()` (22 patterns) + `detect_age_verification()` (6 patterns) + `detect_bsa_aml()` (10 patterns) |
 
 ## Project Structure
 
@@ -89,7 +90,7 @@ hey-seven/
 │   └── mohegan_sun.json       # Curated property data (30 items, 7 categories)
 ├── static/
 │   └── index.html             # Branded chat UI (Hey Seven gold/dark/cream)
-├── tests/                     # 277 tests across 11 files
+├── tests/                     # 291 tests across 11 files
 ├── Dockerfile                 # Multi-stage Python 3.12, non-root, HEALTHCHECK
 ├── docker-compose.yml         # Single service, health check, named volume, 2GB limit
 ├── requirements.txt           # Pinned production dependencies
@@ -103,7 +104,7 @@ hey-seven/
 ## Running Tests
 
 ```bash
-# Unit + integration tests (no API key needed, 265 tests)
+# Unit + integration tests (no API key needed, 279 tests)
 make test-ci
 
 # Deterministic eval tests (no API key, VCR fixtures, 12 tests)
@@ -119,7 +120,7 @@ pytest tests/ --cov=src --cov-report=term-missing --ignore=tests/test_eval.py
 make lint   # 0 errors
 ```
 
-**Test pyramid**: 277 tests pass without API key (unit + integration + deterministic eval) + 14 live eval = **291 total tests** (90%+ coverage).
+**Test pyramid**: 291 tests pass without API key (unit + integration + deterministic eval) + 14 live eval = **305 total tests** (90%+ coverage).
 
 Tests run without `GOOGLE_API_KEY` except `test_eval.py` (live LLM). Deterministic eval tests use VCR-style fixtures with pre-recorded LLM responses.
 
@@ -184,6 +185,7 @@ Additional safety:
 - **Input auditing**: `audit_input()` regex detects 7 prompt injection patterns pre-LLM
 - **Responsible gaming**: `detect_responsible_gaming()` regex detects 22 gambling concern patterns (English, Spanish, Mandarin) deterministically
 - **Age verification**: `detect_age_verification()` regex detects 6 underage-related patterns, ensures 21+ requirement is always communicated
+- **BSA/AML compliance**: `detect_bsa_aml()` regex detects 10 financial crime patterns (money laundering, structuring, CTR/SAR evasion)
 - **CORS**: Configurable allowed origins
 - **SSE timeout**: Configurable timeout with clean error event on expiry
 - **Request cancellation**: SSE stream cancels on client disconnect

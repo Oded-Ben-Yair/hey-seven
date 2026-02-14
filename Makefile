@@ -1,7 +1,7 @@
 .PHONY: test-ci test-eval lint run docker-up smoke-test ingest
 
 test-ci:
-	python3 -m pytest tests/ -v --tb=short -x --ignore=tests/test_eval.py --cov=src --cov-fail-under=85
+	python3 -m pytest tests/ -v --tb=short -x --ignore=tests/test_eval.py --cov=src --cov-fail-under=90
 
 test-eval:
 	python3 -m pytest tests/test_eval.py -v --tb=short

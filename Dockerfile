@@ -1,5 +1,5 @@
 # Stage 1: Build dependencies
-FROM python:3.12-slim AS builder
+FROM python:3.12.8-slim-bookworm AS builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --target=/build/deps -r requirements.txt
 
 # Stage 2: Production
-FROM python:3.12-slim
+FROM python:3.12.8-slim-bookworm
 
 # Security: non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
@@ -31,7 +31,8 @@ RUN mkdir -p /app/data/chroma && chown -R appuser:appuser /app/data
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
-    CHROMA_PERSIST_DIR=/app/data/chroma
+    CHROMA_PERSIST_DIR=/app/data/chroma \
+    WEB_CONCURRENCY=1
 
 EXPOSE 8080
 
@@ -44,6 +45,6 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-CMD ["python", "-m", "uvicorn", "src.api.app:app", \
-     "--host", "0.0.0.0", "--port", "8080", "--workers", "1", \
-     "--timeout-graceful-shutdown", "10"]
+CMD python -m uvicorn src.api.app:app \
+    --host 0.0.0.0 --port 8080 --workers ${WEB_CONCURRENCY} \
+    --timeout-graceful-shutdown 10

@@ -1078,6 +1078,70 @@ class TestAgeVerificationRouting:
         assert result["query_type"] != "age_verification"
 
 
+class TestFormatContextBlock:
+    """Tests for the _format_context_block DRY helper."""
+
+    def test_formats_numbered_list(self):
+        """Context documents are formatted with numbered labels and categories."""
+        from src.agent.nodes import _format_context_block
+
+        docs = [
+            {"content": "Steakhouse info", "metadata": {"category": "restaurants"}, "score": 0.9},
+            {"content": "Pool hours", "metadata": {"category": "amenities"}, "score": 0.8},
+        ]
+        result = _format_context_block(docs)
+        assert "[1] (restaurants) Steakhouse info" in result
+        assert "[2] (amenities) Pool hours" in result
+
+    def test_empty_returns_fallback(self):
+        """Empty context returns 'No context retrieved.' sentinel."""
+        from src.agent.nodes import _format_context_block
+
+        assert _format_context_block([]) == "No context retrieved."
+
+    def test_missing_metadata_defaults_to_general(self):
+        """Document without metadata.category defaults to 'general'."""
+        from src.agent.nodes import _format_context_block
+
+        docs = [{"content": "Some content", "metadata": {}, "score": 0.7}]
+        result = _format_context_block(docs)
+        assert "(general)" in result
+
+    def test_custom_separator(self):
+        """Custom separator is used between documents."""
+        from src.agent.nodes import _format_context_block
+
+        docs = [
+            {"content": "A", "metadata": {"category": "x"}, "score": 0.9},
+            {"content": "B", "metadata": {"category": "y"}, "score": 0.8},
+        ]
+        result = _format_context_block(docs, separator="\n")
+        assert "\n---\n" not in result
+        assert "\n" in result
+
+
+class TestBsaAmlRouting:
+    """Tests that BSA/AML detection routes to off_topic in the router."""
+
+    async def test_money_laundering_routes_to_off_topic(self):
+        """BSA/AML query is routed to off_topic without calling LLM."""
+        from src.agent.nodes import router_node
+
+        state = _state(messages=[HumanMessage(content="How do I launder money?")])
+        result = await router_node(state)
+        assert result["query_type"] == "off_topic"
+        assert result["router_confidence"] == 1.0
+
+    async def test_structuring_routes_to_off_topic(self):
+        """Structuring query is routed to off_topic."""
+        from src.agent.nodes import router_node
+
+        state = _state(messages=[HumanMessage(content="Can I structure cash deposits under $10,000?")])
+        result = await router_node(state)
+        assert result["query_type"] == "off_topic"
+        assert result["router_confidence"] == 1.0
+
+
 class TestGetLastHumanMessage:
     """Tests for the _get_last_human_message helper function."""
 
