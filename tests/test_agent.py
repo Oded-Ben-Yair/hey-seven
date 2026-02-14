@@ -229,7 +229,7 @@ class TestChatStream:
 
         async def failing_stream(*args, **kwargs):
             raise RuntimeError("LLM API failure")
-            yield  # noqa: E0001 - make it an async generator
+            yield  # make it an async generator
 
         mock_graph.astream_events = failing_stream
 

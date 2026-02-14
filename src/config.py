@@ -12,6 +12,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
+    # --- Google API ---
+    GOOGLE_API_KEY: str = ""  # Required for production; langchain auto-detects from env
+
     # --- Property ---
     PROPERTY_NAME: str = "Mohegan Sun"
     PROPERTY_DATA_PATH: str = "data/mohegan_sun.json"
@@ -19,6 +22,9 @@ class Settings(BaseSettings):
     # --- LLM ---
     MODEL_NAME: str = "gemini-2.5-flash"
     MODEL_TEMPERATURE: float = 0.3
+    MODEL_TIMEOUT: int = 30  # LLM call timeout in seconds
+    MODEL_MAX_RETRIES: int = 2  # LLM call retry count
+    MODEL_MAX_OUTPUT_TOKENS: int = 2048  # Max response tokens
 
     # --- Embeddings ---
     EMBEDDING_MODEL: str = "models/text-embedding-004"

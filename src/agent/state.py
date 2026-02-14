@@ -4,7 +4,7 @@ Defines PropertyQAState as a TypedDict with 9 fields for the 8-node graph,
 plus Pydantic models for structured LLM outputs (router + validation).
 """
 
-from typing import Annotated, TypedDict
+from typing import Annotated, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
@@ -24,7 +24,10 @@ class PropertyQAState(TypedDict):
 
 class RouterOutput(BaseModel):
     """Structured output from the router node."""
-    query_type: str = Field(
+    query_type: Literal[
+        "property_qa", "hours_schedule", "greeting", "off_topic",
+        "gambling_advice", "action_request", "ambiguous",
+    ] = Field(
         description="One of: property_qa, hours_schedule, greeting, off_topic, gambling_advice, action_request, ambiguous"
     )
     confidence: float = Field(
@@ -35,8 +38,8 @@ class RouterOutput(BaseModel):
 
 class ValidationResult(BaseModel):
     """Structured output from the validation node."""
-    status: str = Field(
-        description="PASS, FAIL, or RETRY"
+    status: Literal["PASS", "FAIL"] = Field(
+        description="PASS if the response meets all 6 criteria, FAIL otherwise"
     )
     reason: str = Field(
         description="Why the response passed or failed validation"

@@ -43,3 +43,27 @@ class TestSettings:
         s = Settings()
         assert isinstance(s.ALLOWED_ORIGINS, list)
         assert "http://localhost:8080" in s.ALLOWED_ORIGINS
+
+    def test_google_api_key_field_exists(self):
+        """GOOGLE_API_KEY is declared in Settings."""
+        from src.config import Settings
+
+        s = Settings()
+        assert hasattr(s, "GOOGLE_API_KEY")
+
+    def test_google_api_key_from_env(self):
+        """GOOGLE_API_KEY can be set via environment variable."""
+        from src.config import Settings
+
+        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key-123"}):
+            s = Settings()
+            assert s.GOOGLE_API_KEY == "test-key-123"
+
+    def test_llm_safety_params_exist(self):
+        """LLM safety parameters exist with correct defaults."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.MODEL_TIMEOUT == 30
+        assert s.MODEL_MAX_RETRIES == 2
+        assert s.MODEL_MAX_OUTPUT_TOKENS == 2048

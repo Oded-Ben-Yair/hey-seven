@@ -63,6 +63,8 @@ Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a c
 
 Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`.
 
+Pre-LLM guardrails: `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM.
+
 Turn-limit guard: if `messages` exceeds 40 entries, forces `off_topic` to end the conversation. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing. On LLM error, defaults to `property_qa` with confidence 0.5.
 
 ### 2. retrieve (`src/agent/nodes.py:97`)
@@ -72,7 +74,7 @@ Turn-limit guard: if `messages` exceeds 40 entries, forces `off_topic` to end th
 **Input**: `messages` (extracts last `HumanMessage`).
 **Output**: `retrieved_context` (list of `{content, metadata, score}` dicts).
 
-Calls `search_knowledge_base()` which delegates to `CasinoKnowledgeRetriever.retrieve_with_scores()` with configurable `top_k` (default 5).
+Routes to `search_hours()` for `hours_schedule` queries (appends schedule-focused keywords), otherwise calls `search_knowledge_base()`. Both delegate to `CasinoKnowledgeRetriever.retrieve_with_scores()` with configurable `top_k` (default 5).
 
 ### 3. generate (`src/agent/nodes.py:123`)
 
@@ -157,8 +159,8 @@ Three sub-cases based on `query_type`:
 
 Two Pydantic models for structured LLM output:
 
-- **`RouterOutput`** (`state.py:25`): `query_type` (str, one of 7 categories) + `confidence` (float, 0.0-1.0).
-- **`ValidationResult`** (`state.py:36`): `status` (PASS/FAIL/RETRY) + `reason` (str).
+- **`RouterOutput`** (`state.py:25`): `query_type` (`Literal` constrained to 7 valid categories) + `confidence` (float, 0.0-1.0).
+- **`ValidationResult`** (`state.py:36`): `status` (`Literal["PASS", "FAIL"]`) + `reason` (str). The node logic handles RETRY semantics based on `retry_count`.
 
 ---
 
@@ -223,6 +225,18 @@ Adversarial review prompt checking 6 criteria: grounded, on-topic, no gambling a
 
 ---
 
+## Guardrails
+
+### Deterministic: audit_input (`src/agent/nodes.py`)
+
+Pre-LLM regex-based prompt injection detection. Runs before the router LLM call. Checks 7 patterns (e.g., "ignore previous instructions", "system:", "DAN mode", "pretend you are"). Detected injections are logged and routed directly to `off_topic` without invoking any LLM.
+
+### LLM-based: validate node
+
+Post-generation adversarial review against 6 criteria (see Prompt System above). Catches hallucination, off-topic drift, gambling advice, unauthorized actions. Max 1 retry, then fallback with contact info.
+
+---
+
 ## RAG Pipeline
 
 `src/rag/pipeline.py` handles ingestion and retrieval.
@@ -265,7 +279,7 @@ Property data is a single JSON file with category sections:
 | promotions | Loyalty program, tiers, benefits |
 | faq | Common questions with answers |
 
-Metadata on every chunk: `category`, `item_name`, `source`, `chunk_index`.
+Metadata on every chunk: `category`, `item_name`, `source`, `property_id`, `last_updated`, `chunk_index`.
 
 ---
 
@@ -404,11 +418,14 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GOOGLE_API_KEY` | (required) | Google AI API key |
+| `GOOGLE_API_KEY` | (required) | Google AI API key (declared in Settings) |
 | `PROPERTY_NAME` | `Mohegan Sun` | Property name used in prompts |
 | `PROPERTY_DATA_PATH` | `data/mohegan_sun.json` | Path to property JSON |
 | `MODEL_NAME` | `gemini-2.5-flash` | LLM model |
 | `MODEL_TEMPERATURE` | `0.3` | LLM temperature |
+| `MODEL_TIMEOUT` | `30` | LLM call timeout (seconds) |
+| `MODEL_MAX_RETRIES` | `2` | LLM retry count on failure |
+| `MODEL_MAX_OUTPUT_TOKENS` | `2048` | Max response tokens |
 | `EMBEDDING_MODEL` | `models/text-embedding-004` | Embedding model (768 dim) |
 | `CHROMA_PERSIST_DIR` | `data/chroma` | ChromaDB persistence directory |
 | `RAG_TOP_K` | `5` | Number of retrieval results |
@@ -433,7 +450,7 @@ Multi-stage build (`Dockerfile`):
 
 RAG ingestion runs at FastAPI startup (lifespan), not build time, so `GOOGLE_API_KEY` is not baked into the image.
 
-HEALTHCHECK pings `http://localhost:8080/health` every 30 seconds.
+HEALTHCHECK is defined in `docker-compose.yml` (single source of truth), not in the Dockerfile, to allow per-environment tuning.
 
 ### Docker Compose
 
@@ -449,6 +466,24 @@ Single-service setup with:
 2. Build Docker image tagged with commit SHA.
 3. Push to Google Container Registry.
 4. Deploy to Cloud Run (us-central1, 512Mi memory, 60s timeout).
+
+---
+
+## Scope Decisions
+
+The following features from the initial architecture specification (`assignment/architecture.md`) were consciously deferred. Each is a production-readiness enhancement, not a demo requirement.
+
+| Feature | Status | Rationale |
+|---------|--------|-----------|
+| API key authentication (`X-API-Key` + `hmac.compare_digest`) | Deferred | Adds complexity for a demo; rate limiting provides sufficient protection |
+| Circuit breaker pattern | Deferred | Requires external state (Redis); overkill for single-instance demo |
+| Per-category data files (8 JSON files) | Single JSON | Simpler ingestion; per-category files are a multi-property scaling concern |
+| Pydantic validation of data files | Deferred | Runtime validation at ingestion is sufficient; schema enforcement adds maintenance burden |
+| `structlog` structured logging | Standard `logging` | Cloud Logging compatible JSON emitted by middleware; `structlog` is a luxury, not a necessity |
+| nginx frontend container | Deferred | FastAPI serves static files directly; nginx adds container orchestration complexity |
+| Multi-property system (`get_property_config()`) | Single property | Demo targets one property; the config externalization enables multi-property with zero code changes |
+
+All deferred features have clear production paths documented in the Trade-offs section above.
 
 ---
 

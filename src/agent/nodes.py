@@ -2,9 +2,11 @@
 
 Each node takes PropertyQAState and returns a partial dict update.
 Two routing functions determine conditional edges.
+Includes audit_input for deterministic prompt-injection detection.
 """
 
 import logging
+import re
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -13,9 +15,43 @@ from src.config import get_settings
 
 from .prompts import CONCIERGE_SYSTEM_PROMPT, ROUTER_PROMPT, VALIDATION_PROMPT
 from .state import PropertyQAState, RouterOutput, ValidationResult
-from .tools import search_knowledge_base
+from .tools import search_hours, search_knowledge_base
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Deterministic input guardrails (pre-LLM)
+# ---------------------------------------------------------------------------
+
+#: Regex patterns for prompt injection detection.
+_INJECTION_PATTERNS = [
+    re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)", re.I),
+    re.compile(r"you\s+are\s+now\s+(?:a|an|the)\b", re.I),
+    re.compile(r"system\s*:\s*", re.I),
+    re.compile(r"\bDAN\b.*\bmode\b", re.I),
+    re.compile(r"pretend\s+(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
+    re.compile(r"disregard\s+(?:all\s+)?(?:previous|prior|your)\b", re.I),
+    re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
+]
+
+
+def audit_input(message: str) -> bool:
+    """Check user input for prompt injection patterns.
+
+    Deterministic regex-based guardrail that runs before any LLM call.
+    Logs a warning if injection patterns are detected.
+
+    Args:
+        message: The raw user input message.
+
+    Returns:
+        True if the input looks safe, False if injection detected.
+    """
+    for pattern in _INJECTION_PATTERNS:
+        if pattern.search(message):
+            logger.warning("Prompt injection detected: %r", message[:200])
+            return False
+    return True
 
 # ---------------------------------------------------------------------------
 # LLM singleton
@@ -32,6 +68,9 @@ def _get_llm() -> ChatGoogleGenerativeAI:
         _llm_instance = ChatGoogleGenerativeAI(
             model=settings.MODEL_NAME,
             temperature=settings.MODEL_TEMPERATURE,
+            timeout=settings.MODEL_TIMEOUT,
+            max_retries=settings.MODEL_MAX_RETRIES,
+            max_output_tokens=settings.MODEL_MAX_OUTPUT_TOKENS,
         )
     return _llm_instance
 
@@ -70,6 +109,13 @@ def router_node(state: PropertyQAState) -> dict:
             "router_confidence": 1.0,
         }
 
+    # Deterministic prompt injection check (pre-LLM)
+    if not audit_input(user_message):
+        return {
+            "query_type": "off_topic",
+            "router_confidence": 1.0,
+        }
+
     llm = _get_llm()
     router_llm = llm.with_structured_output(RouterOutput)
 
@@ -98,8 +144,10 @@ def retrieve_node(state: PropertyQAState) -> dict:
     """Retrieve relevant documents from the knowledge base.
 
     Extracts the latest user message and searches for matching content.
+    Uses schedule-focused search for hours_schedule queries.
     """
     messages = state.get("messages", [])
+    query_type = state.get("query_type", "property_qa")
 
     query = ""
     for msg in reversed(messages):
@@ -110,7 +158,11 @@ def retrieve_node(state: PropertyQAState) -> dict:
     if not query:
         return {"retrieved_context": []}
 
-    results = search_knowledge_base(query)
+    # Use schedule-focused search for hours/schedule queries
+    if query_type == "hours_schedule":
+        results = search_hours(query)
+    else:
+        results = search_knowledge_base(query)
 
     return {"retrieved_context": results}
 

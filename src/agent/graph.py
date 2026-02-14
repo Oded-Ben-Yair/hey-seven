@@ -84,6 +84,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         checkpointer = MemorySaver()
 
     compiled = graph.compile(checkpointer=checkpointer)
+    compiled.recursion_limit = 10
     logger.info("Custom 8-node StateGraph compiled successfully.")
     return compiled
 
@@ -106,7 +107,7 @@ async def chat(
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 10}
+    config = {"configurable": {"thread_id": thread_id}}
 
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y %I:%M %p UTC")
 
@@ -165,7 +166,7 @@ async def chat_stream(
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 10}
+    config = {"configurable": {"thread_id": thread_id}}
 
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y %I:%M %p UTC")
 

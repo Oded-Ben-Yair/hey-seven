@@ -6,6 +6,7 @@ and stores in ChromaDB for local vector search.
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -152,6 +153,7 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
     Returns:
         List of dicts with keys: content (str), metadata (dict).
     """
+    settings = get_settings()
     path = Path(data_path)
     if not path.exists():
         logger.warning("Property data file not found: %s", path)
@@ -192,6 +194,8 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                             "category": category,
                             "item_name": item_name,
                             "source": path.name,
+                            "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
+                            "last_updated": datetime.now(tz=timezone.utc).isoformat(),
                         },
                     })
 
@@ -205,6 +209,8 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                         "category": "general",
                         "item_name": item.get("name", "unknown") if isinstance(item, dict) else "unknown",
                         "source": path.name,
+                        "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
+                        "last_updated": datetime.now(tz=timezone.utc).isoformat(),
                     },
                 })
 

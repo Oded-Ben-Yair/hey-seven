@@ -40,9 +40,7 @@ USER appuser
 
 # Data ingestion happens at STARTUP (FastAPI lifespan), not build time.
 # Build-time ingestion would require GOOGLE_API_KEY baked into the image.
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
+# HEALTHCHECK defined in docker-compose.yml (single source of truth).
 
 CMD ["python", "-m", "uvicorn", "src.api.app:app", \
      "--host", "0.0.0.0", "--port", "8080", "--workers", "1", \
