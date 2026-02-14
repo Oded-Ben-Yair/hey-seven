@@ -16,11 +16,21 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA', '.']
 
-  # Step 3: Push to Artifact Registry
+  # Step 3: Trivy container vulnerability scan (critical/high only, non-blocking)
+  - name: 'aquasec/trivy:latest'
+    args:
+      - 'image'
+      - '--severity=CRITICAL,HIGH'
+      - '--exit-code=1'
+      - '--ignore-unfixed'
+      - '--no-progress'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'
+
+  # Step 4: Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
 
-  # Step 4: Deploy to Cloud Run
+  # Step 5: Deploy to Cloud Run
   # --allow-unauthenticated is defense-in-depth: Cloud Run allows public access,
   # while the app layer enforces API key auth via ApiKeyMiddleware. This avoids
   # requiring IAM tokens for the demo while maintaining app-level access control.

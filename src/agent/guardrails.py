@@ -13,6 +13,13 @@ import re
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "audit_input",
+    "detect_responsible_gaming",
+    "detect_age_verification",
+    "detect_bsa_aml",
+]
+
 # ---------------------------------------------------------------------------
 # Prompt injection patterns
 # ---------------------------------------------------------------------------
@@ -25,7 +32,9 @@ _INJECTION_PATTERNS = [
     re.compile(r"\bDAN\b.*\bmode\b", re.I),
     re.compile(r"pretend\s+(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
     re.compile(r"disregard\s+(?:all\s+)?(?:previous|prior|your)\b", re.I),
-    re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
+    # "act as" — require role-play framing (article + noun), exclude hospitality
+    # phrases like "act as a guide" which are legitimate casino-context queries.
+    re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\s+(?!guide\b|concierge\b|host\b)", re.I),
 ]
 
 # ---------------------------------------------------------------------------

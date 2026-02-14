@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import ValidationError
 
-from src.agent.nodes import SKIP_VALIDATION
 from src.agent.state import RouterOutput, ValidationResult
 
 
@@ -18,6 +17,7 @@ def _state(**overrides):
         "retrieved_context": [],
         "validation_result": None,
         "retry_count": 0,
+        "skip_validation": False,
         "retry_feedback": None,
         "current_time": "Monday 3 PM",
         "sources_used": [],
@@ -143,8 +143,8 @@ class TestGenerateNode:
         assert len(result["messages"]) == 1
         assert isinstance(result["messages"][0], AIMessage)
 
-    async def test_empty_context_sets_retry_99(self):
-        """Empty retrieved_context sets retry_count=SKIP_VALIDATION to skip validation."""
+    async def test_empty_context_sets_skip_validation(self):
+        """Empty retrieved_context sets skip_validation=True to bypass validator."""
         from src.agent.nodes import generate_node
 
         state = _state(
@@ -152,13 +152,13 @@ class TestGenerateNode:
             retrieved_context=[],
         )
         result = await generate_node(state)
-        assert result["retry_count"] == SKIP_VALIDATION
+        assert result["skip_validation"] is True
         assert len(result["messages"]) == 1
         assert "don't have specific information" in result["messages"][0].content
 
     @patch("src.agent.nodes._get_llm")
     async def test_llm_failure_returns_fallback_message(self, mock_get_llm):
-        """LLM error produces a fallback message and retry_count=SKIP_VALIDATION."""
+        """LLM error produces a fallback message with skip_validation=True."""
         from src.agent.nodes import generate_node
 
         mock_llm = MagicMock()
@@ -172,7 +172,7 @@ class TestGenerateNode:
             ],
         )
         result = await generate_node(state)
-        assert result["retry_count"] == SKIP_VALIDATION
+        assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
 
     @patch("src.agent.nodes._get_llm")
@@ -192,7 +192,7 @@ class TestGenerateNode:
         )
         result = await generate_node(state)
         assert result is not None, "generate_node must not return None on ValueError"
-        assert result["retry_count"] == SKIP_VALIDATION
+        assert result["skip_validation"] is True
         assert "trouble processing" in result["messages"][0].content.lower()
 
     @patch("src.agent.nodes._get_llm")
@@ -212,7 +212,7 @@ class TestGenerateNode:
         )
         result = await generate_node(state)
         assert result is not None, "generate_node must not return None on TypeError"
-        assert result["retry_count"] == SKIP_VALIDATION
+        assert result["skip_validation"] is True
         assert "trouble processing" in result["messages"][0].content.lower()
 
 
@@ -286,11 +286,11 @@ class TestValidateNode:
         result = await validate_node(state)
         assert result["validation_result"] == "FAIL"
 
-    async def test_auto_pass_when_retry_99(self):
-        """retry_count >= SKIP_VALIDATION auto-passes validation (empty context path)."""
+    async def test_auto_pass_when_skip_validation(self):
+        """skip_validation=True auto-passes validation (empty context / error path)."""
         from src.agent.nodes import validate_node
 
-        state = _state(retry_count=SKIP_VALIDATION)
+        state = _state(skip_validation=True)
         result = await validate_node(state)
         assert result["validation_result"] == "PASS"
 
@@ -750,7 +750,7 @@ class TestCircuitBreaker:
             retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
         )
         result = await generate_node(state)
-        assert result["retry_count"] == SKIP_VALIDATION
+        assert result["skip_validation"] is True
         assert "technical difficulties" in result["messages"][0].content
         mock_get_llm.assert_not_called()
 

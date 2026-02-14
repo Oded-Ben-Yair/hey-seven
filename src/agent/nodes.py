@@ -35,6 +35,24 @@ from .tools import search_hours, search_knowledge_base
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "router_node",
+    "retrieve_node",
+    "generate_node",
+    "validate_node",
+    "respond_node",
+    "fallback_node",
+    "greeting_node",
+    "off_topic_node",
+    "route_from_router",
+    "route_after_validate",
+    # Re-exported from guardrails for backward compatibility
+    "audit_input",
+    "detect_responsible_gaming",
+    "detect_age_verification",
+    "detect_bsa_aml",
+]
+
 
 def _format_context_block(retrieved: list[dict], separator: str = "\n---\n") -> str:
     """Format retrieved context as numbered sources for LLM consumption.
@@ -72,11 +90,6 @@ def _get_last_human_message(messages: list) -> str:
     return ""
 
 
-#: Sentinel value to signal that validation should be skipped (empty context or error path).
-#: When ``retry_count`` is set to this value, ``route_after_validate`` routes directly
-#: to ``respond`` without running the validator LLM. Used by ``generate_node`` when
-#: the context is empty or the circuit breaker is open.
-SKIP_VALIDATION: int = 99
 
 # ---------------------------------------------------------------------------
 # LLM singleton
@@ -243,7 +256,7 @@ async def retrieve_node(state: PropertyQAState) -> dict:
 async def generate_node(state: PropertyQAState) -> dict:
     """Generate a response using the concierge system prompt and retrieved context.
 
-    If no context was retrieved, sets retry_count=SKIP_VALIDATION to skip validation.
+    If no context was retrieved, sets skip_validation=True to bypass the validator.
     On retry, prepends validation feedback as a SystemMessage.
     """
     settings = get_settings()
@@ -260,7 +273,7 @@ async def generate_node(state: PropertyQAState) -> dict:
                 "I'm experiencing temporary technical difficulties. "
                 f"Please try again in a minute, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
             ))],
-            "retry_count": SKIP_VALIDATION,
+            "skip_validation": True,
         }
 
     system_prompt = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
@@ -282,7 +295,7 @@ async def generate_node(state: PropertyQAState) -> dict:
                 f"I'd recommend contacting {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE} or visiting "
                 f"{settings.PROPERTY_WEBSITE}."
             ))],
-            "retry_count": SKIP_VALIDATION,
+            "skip_validation": True,
         }
 
     # Build message list
@@ -295,10 +308,11 @@ async def generate_node(state: PropertyQAState) -> dict:
             "Please generate a corrected response that addresses this issue."
         ))
 
-    # Add conversation history (only HumanMessage and AIMessage, skip tool messages)
-    for msg in state.get("messages", []):
-        if isinstance(msg, (HumanMessage, AIMessage)):
-            llm_messages.append(msg)
+    # Add conversation history (only HumanMessage and AIMessage, skip tool messages).
+    # Sliding window: keep only the last MAX_HISTORY_MESSAGES to bound context size.
+    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    window = history[-settings.MAX_HISTORY_MESSAGES:]
+    llm_messages.extend(window)
 
     llm = _get_llm()
 
@@ -315,7 +329,7 @@ async def generate_node(state: PropertyQAState) -> dict:
                 "I apologize, but I had trouble processing that response. "
                 f"Please try again, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
             ))],
-            "retry_count": SKIP_VALIDATION,
+            "skip_validation": True,
         }
     except Exception:
         # Broad catch: google-genai can raise GoogleAPICallError, DeadlineExceeded,
@@ -327,7 +341,7 @@ async def generate_node(state: PropertyQAState) -> dict:
                 "I apologize, but I'm having trouble generating a response right now. "
                 f"Please try again, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
             ))],
-            "retry_count": SKIP_VALIDATION,
+            "skip_validation": True,
         }
 
 
@@ -339,15 +353,15 @@ async def generate_node(state: PropertyQAState) -> dict:
 async def validate_node(state: PropertyQAState) -> dict:
     """Adversarial review of the generated response against 6 criteria.
 
-    If retry_count >= SKIP_VALIDATION (empty context or error), auto-PASS.
+    If ``skip_validation`` is True (empty context or error), auto-PASS.
     If validation fails and retry_count < 1, returns RETRY.
     If retry_count >= 1, returns FAIL (max 1 retry).
     """
-    retry_count = state.get("retry_count", 0)
-
-    # Skip validation for empty-context responses
-    if retry_count >= SKIP_VALIDATION:
+    # Skip validation for deterministic fallback responses
+    if state.get("skip_validation", False):
         return {"validation_result": "PASS"}
+
+    retry_count = state.get("retry_count", 0)
 
     # Get the user question
     user_question = _get_last_human_message(state.get("messages", []))

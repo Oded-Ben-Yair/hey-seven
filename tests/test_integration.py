@@ -247,7 +247,7 @@ class TestGuardrailIntegration:
 
         from langchain_core.messages import HumanMessage
 
-        from src.agent.nodes import SKIP_VALIDATION, generate_node
+        from src.agent.nodes import generate_node
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
@@ -261,6 +261,7 @@ class TestGuardrailIntegration:
             ],
             "validation_result": None,
             "retry_count": 0,
+            "skip_validation": False,
             "retry_feedback": None,
             "current_time": "Monday 3 PM",
             "sources_used": [],
@@ -269,5 +270,5 @@ class TestGuardrailIntegration:
         with patch("src.agent.nodes._get_circuit_breaker", return_value=mock_cb):
             result = await generate_node(state)
 
-        assert result["retry_count"] == SKIP_VALIDATION
+        assert result["skip_validation"] is True
         assert "technical difficulties" in result["messages"][0].content

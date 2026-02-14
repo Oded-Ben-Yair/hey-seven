@@ -49,6 +49,7 @@ class Settings(BaseSettings):
 
     # --- Agent ---
     MAX_TURN_LIMIT: int = 40  # max messages before forcing conversation end
+    MAX_HISTORY_MESSAGES: int = 20  # sliding window: only last N messages sent to LLM
     GRAPH_RECURSION_LIMIT: int = 10  # LangGraph recursion limit (validate->retry loop bound)
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe

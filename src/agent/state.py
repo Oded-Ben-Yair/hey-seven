@@ -31,9 +31,9 @@ class PropertyQAState(TypedDict):
     call. This ensures clean routing and validation state per turn while the
     checkpointer maintains conversation history.
 
-    ``retry_count`` may be set to ``SKIP_VALIDATION`` (99) by ``generate_node``
-    to bypass the validator LLM when context is empty or the circuit breaker
-    is open.
+    ``skip_validation`` is set to ``True`` by ``generate_node`` when the
+    response is a deterministic fallback (empty context, LLM error, circuit
+    breaker open) that does not need adversarial validation.
     """
 
     messages: Annotated[list, add_messages]
@@ -42,6 +42,7 @@ class PropertyQAState(TypedDict):
     retrieved_context: list[RetrievedChunk]  # chunks from RAG retriever
     validation_result: str | None   # PASS / FAIL / RETRY
     retry_count: int                # max 1 retry before fallback
+    skip_validation: bool           # True to bypass validator (safe fallback paths)
     retry_feedback: str | None      # why validation failed
     current_time: str               # injected at graph entry
     sources_used: list[str]         # knowledge-base categories cited

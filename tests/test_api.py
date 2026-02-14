@@ -335,3 +335,47 @@ class TestSecurityHeaders:
         with TestClient(app) as client:
             resp = client.post("/chat", json={"message": "test"})
             assert resp.headers.get("x-content-type-options") == "nosniff"
+
+
+class TestLifespanIntegration:
+    """Tests exercising the real lifespan function with mocked dependencies."""
+
+    def test_lifespan_initializes_agent_and_sets_ready(self):
+        """Real lifespan sets app.state.agent, property_data, and ready=True."""
+        import src.api.app  # noqa: F401
+        app_module = sys.modules["src.api.app"]
+
+        mock_graph = MagicMock()
+        test_data = {"property": {"name": "Test", "location": "CT"}, "restaurants": []}
+
+        with (
+            patch("src.agent.graph.build_graph", return_value=mock_graph),
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", MagicMock(
+                return_value=MagicMock(
+                    __enter__=MagicMock(return_value=MagicMock(
+                        read=MagicMock(return_value=json.dumps(test_data))
+                    )),
+                    __exit__=MagicMock(return_value=False),
+                )
+            )),
+            patch("json.load", return_value=test_data),
+        ):
+            test_app = app_module.create_app()
+            with TestClient(test_app):
+                assert test_app.state.ready is True
+                assert test_app.state.agent is mock_graph
+
+    def test_lifespan_agent_failure_sets_none(self):
+        """When build_graph() raises, agent is None but app still starts."""
+        import src.api.app  # noqa: F401
+        app_module = sys.modules["src.api.app"]
+
+        with (
+            patch("src.agent.graph.build_graph", side_effect=RuntimeError("init failed")),
+            patch("pathlib.Path.exists", return_value=False),
+        ):
+            test_app = app_module.create_app()
+            with TestClient(test_app):
+                assert test_app.state.agent is None
+                assert test_app.state.ready is True

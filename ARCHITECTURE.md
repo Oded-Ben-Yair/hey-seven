@@ -108,20 +108,21 @@ Results are filtered by `RAG_MIN_RELEVANCE_SCORE` (default 0.3) — chunks below
 **Purpose**: Produce a concierge response grounded in retrieved context.
 
 **Input**: `messages`, `retrieved_context`, `current_time`, `retry_count`, `retry_feedback`.
-**Output**: `messages` (appends `AIMessage`), optionally `retry_count`.
+**Output**: `messages` (appends `AIMessage`), optionally `skip_validation`.
 
 Behavior:
 - **Circuit breaker**: Checks `CircuitBreaker.is_open` before building prompts (early exit to avoid wasted work). If open (configurable `CB_FAILURE_THRESHOLD`, default 5 failures within `CB_COOLDOWN_SECONDS`, default 60s), returns a static fallback immediately without invoking the LLM. On success, resets the breaker; on failure, increments the counter. Thread-safe via `asyncio.Lock` to protect concurrent coroutine access to mutable state (`_failure_count`, `_last_failure_time`).
 - Formats retrieved context as numbered sources and appends to the system prompt.
-- If no context was retrieved, returns a static fallback message and sets `retry_count=SKIP_VALIDATION` (named constant, value 99) to skip validation.
+- If no context was retrieved, returns a static fallback message and sets `skip_validation=True` to bypass the validator.
 - On retry (`retry_count > 0`), injects validation feedback as a `SystemMessage` before conversation history.
-- On LLM error, returns a static error message and sets `retry_count=SKIP_VALIDATION`.
+- **Message windowing**: Only the last `MAX_HISTORY_MESSAGES` (default 20) human and AI messages are sent to the LLM, bounding context size for long conversations while preserving recent context.
+- On LLM error, returns a static error message and sets `skip_validation=True`.
 
 ### 4. validate (`src/agent/nodes.py`)
 
 **Purpose**: Adversarial review of the generated response against 6 criteria.
 
-**Input**: `messages` (user question + generated response), `retrieved_context`, `retry_count`.
+**Input**: `messages` (user question + generated response), `retrieved_context`, `retry_count`, `skip_validation`.
 **Output**: `validation_result` (PASS/RETRY/FAIL), optionally `retry_count`, `retry_feedback`.
 
 6 criteria: grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming.
@@ -129,7 +130,7 @@ Behavior:
 Uses a **separate validator LLM** (`_get_validator_llm()`) with `temperature=0.0` for deterministic binary classification (PASS/RETRY/FAIL). This is distinct from the `_get_llm()` singleton (temperature 0.3) used for creative response generation. Both are `@lru_cache` singletons.
 
 Behavior:
-- If `retry_count >= SKIP_VALIDATION` (empty context or generate error), auto-PASS (these paths produce deterministic safe responses, not LLM-generated content).
+- If `skip_validation` is True (empty context, circuit breaker open, or generate error), auto-PASS (these paths produce deterministic safe responses, not LLM-generated content).
 - If validation fails and `retry_count < 1`, returns RETRY with feedback.
 - If `retry_count >= 1`, returns FAIL (max 1 retry).
 - On validation LLM error: **degraded-pass on first attempt** (retry_count == 0) — if `generate_node` produced a response successfully but the validation LLM is unavailable, the generated response is passed through with a warning log. On retry attempts (retry_count > 0), **fail-closed** (returns FAIL, routes to fallback). This balances availability (generate already succeeded) with safety (retries indicate prior issues).
@@ -562,11 +563,12 @@ Single-service setup with:
 
 ### Cloud Build
 
-`cloudbuild.yaml` defines a 4-step CI/CD pipeline:
-1. Install dev dependencies (`requirements-dev.txt`), lint (`ruff`), and run tests with coverage (`pytest --cov --cov-fail-under=90`).
+`cloudbuild.yaml` defines a 5-step CI/CD pipeline:
+1. Install dev dependencies (`requirements-dev.txt`), lint (`ruff`), type-check (`mypy`), and run tests with coverage (`pytest --cov --cov-fail-under=90`).
 2. Build Docker image tagged with commit SHA.
-3. Push to Artifact Registry (`us-central1-docker.pkg.dev`).
-4. Deploy to Cloud Run (us-central1, 2Gi memory, 90s timeout, `--allow-unauthenticated` for demo — API key auth is enforced at the app layer via `ApiKeyMiddleware`).
+3. **Trivy container vulnerability scan** — scans for CRITICAL and HIGH severity CVEs (`--exit-code=1` fails the build on findings, `--ignore-unfixed` skips unpatched OS-level CVEs).
+4. Push to Artifact Registry (`us-central1-docker.pkg.dev`).
+5. Deploy to Cloud Run (us-central1, 2Gi memory, 90s timeout, `--allow-unauthenticated` for demo — API key auth is enforced at the app layer via `ApiKeyMiddleware`).
 
 ---
 

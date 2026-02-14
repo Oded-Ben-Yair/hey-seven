@@ -34,6 +34,8 @@ from .state import PropertyQAState
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["build_graph", "chat", "chat_stream"]
+
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     """Build the custom 8-node property Q&A graph.
@@ -101,6 +103,7 @@ def _initial_state(message: str) -> dict[str, Any]:
         "retrieved_context": [],
         "validation_result": None,
         "retry_count": 0,
+        "skip_validation": False,
         "retry_feedback": None,
         "sources_used": [],
     }
