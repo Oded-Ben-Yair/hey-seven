@@ -301,7 +301,7 @@ mohegan_sun.json --> Parse by category --> Format --> Chunk (800/120) --> Embed 
 5. **Embed**: Google `text-embedding-004` (768 dimensions).
 6. **Store**: ChromaDB collection `property_knowledge`, persistent to disk.
 
-Ingestion runs at FastAPI startup (lifespan) if the ChromaDB directory does not exist. First boot takes ~30 seconds.
+Ingestion runs at FastAPI startup (lifespan) if the ChromaDB `chroma.sqlite3` file does not exist. First boot takes ~30 seconds. Chunks are stored with **deterministic SHA-256 IDs** (hash of content + source metadata), so re-ingestion is idempotent — restarting the application without clearing ChromaDB will not create duplicate chunks.
 
 ### Retrieval
 
@@ -310,9 +310,9 @@ Two plain functions in `src/agent/tools.py` (no `@tool` decorators), both using 
 - **`search_knowledge_base(query)`**: Combines semantic search + entity-augmented query (`{query} name location details`) via RRF. Returns `list[dict]` with keys: `content`, `metadata` (category, item_name, source), `score`.
 - **`search_hours(query)`**: Combines schedule-augmented query (`{query} hours schedule open close`) + direct semantic search via RRF.
 
-RRF fusion merges multiple ranked lists using `score = sum(1/(k + rank))` with standard `k=60` dampening. Documents appearing in multiple strategies get boosted, improving recall for entity-heavy queries (e.g., "Todd English's") where different strategies surface different relevant docs.
+RRF fusion merges multiple ranked lists using `score = sum(1/(k + rank))` with standard `k=60` dampening. Documents appearing in multiple strategies get boosted, improving recall for entity-heavy queries (e.g., "Todd English's") where different strategies surface different relevant docs. Document deduplication uses a hash of `page_content + source` metadata (MD5) to prevent collision when identical text appears in different categories.
 
-Both use the global `CasinoKnowledgeRetriever` singleton which wraps ChromaDB `similarity_search_with_relevance_scores()`. The collection is configured with `hnsw:space=cosine`, producing cosine similarity scores in [0, 1] where 1.0 = exact match. The `>= RAG_MIN_RELEVANCE_SCORE` (default 0.3) filter discards low-relevance chunks after RRF fusion.
+Both use the global `CasinoKnowledgeRetriever` singleton which wraps ChromaDB `similarity_search_with_relevance_scores()`. The collection is configured with `hnsw:space=cosine`, producing cosine similarity scores in [0, 1] where 1.0 = exact match. The `>= RAG_MIN_RELEVANCE_SCORE` (default 0.3) filter applies **after** RRF fusion using the original cosine similarity scores (not RRF rank scores), ensuring absolute semantic relevance regardless of fusion rank.
 
 ### Data Model
 
@@ -484,6 +484,12 @@ Several in-memory data structures (rate limiter, circuit breaker, retriever sing
 | `CircuitBreaker` singleton | Per-worker circuit state (failures not shared) | Redis or shared-memory state |
 | `get_retriever()` singleton | Multiple ChromaDB instances (memory waste, no data conflict) | Vertex AI Vector Search (stateless client) |
 
+### CSP ``unsafe-inline``
+
+The security headers middleware uses ``script-src 'self' 'unsafe-inline'`` and ``style-src 'self' 'unsafe-inline'`` because the demo serves a single-file chat UI (``static/index.html``) with embedded ``<style>`` and ``<script>`` blocks. No user-generated content is rendered as HTML, so the XSS attack surface is minimal.
+
+**Production path**: Externalize CSS/JS into separate static files and replace ``'unsafe-inline'`` with nonce-based CSP — generate a per-request nonce in middleware and inject it into ``<script nonce="...">`` tags.
+
 ### Demo vs Production
 
 | Component | Demo | Production |
@@ -635,11 +641,11 @@ The following features from the initial architecture specification (`assignment/
 |--------|---------------|-------|
 | `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns, BSA/AML 10 patterns) | ~186 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~87 |
-| `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons | ~522 |
+| `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons + `_GREETING_CATEGORIES` constant | ~530 |
 | `graph.py` | StateGraph compilation, `chat()`, `chat_stream()`, `_initial_state()` DRY helper | ~255 |
 | `state.py` | TypedDict state schema (`PropertyQAState`, `RetrievedChunk`) + Pydantic structured output models | ~71 |
 | `prompts.py` | 3 prompt templates + helpline constant | ~161 |
-| `tools.py` | RAG retrieval with RRF reranking (multi-strategy fusion, no @tool decorators) | ~180 |
+| `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~188 |
 
 All deferred features have clear production paths documented in the Trade-offs section above.
 

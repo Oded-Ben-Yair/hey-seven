@@ -363,6 +363,19 @@ class TestReciprocalRankFusion:
         fused = _rerank_by_rrf([list_a, list_b], top_k=1)
         assert fused[0][1] == 0.9  # Higher score kept
 
+    def test_different_source_not_merged(self):
+        """Same content from different sources stays separate (hash includes source)."""
+        from langchain_core.documents import Document
+
+        from src.agent.tools import _rerank_by_rrf
+
+        doc_a = Document(page_content="same text", metadata={"source": "restaurants"})
+        doc_b = Document(page_content="same text", metadata={"source": "entertainment"})
+        list_a = [(doc_a, 0.8)]
+        list_b = [(doc_b, 0.7)]
+        fused = _rerank_by_rrf([list_a, list_b], top_k=5)
+        assert len(fused) == 2, "Same content from different sources must not merge"
+
 
 class TestChunkCount:
     def test_chunk_count_greater_or_equal_to_doc_count(self, test_property_file, tmp_path):

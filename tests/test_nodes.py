@@ -8,8 +8,6 @@ from pydantic import ValidationError
 from src.agent.nodes import SKIP_VALIDATION
 from src.agent.state import RouterOutput, ValidationResult
 
-pytestmark = pytest.mark.asyncio
-
 
 def _state(**overrides):
     """Create a minimal PropertyQAState dict with defaults."""
@@ -176,6 +174,46 @@ class TestGenerateNode:
         result = await generate_node(state)
         assert result["retry_count"] == SKIP_VALIDATION
         assert "trouble generating" in result["messages"][0].content.lower()
+
+    @patch("src.agent.nodes._get_llm")
+    async def test_value_error_returns_fallback(self, mock_get_llm):
+        """ValueError from LLM parsing returns fallback (not None)."""
+        from src.agent.nodes import generate_node
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad response format"))
+        mock_get_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[HumanMessage(content="Question")],
+            retrieved_context=[
+                {"content": "data", "metadata": {"category": "faq"}, "score": 1.0}
+            ],
+        )
+        result = await generate_node(state)
+        assert result is not None, "generate_node must not return None on ValueError"
+        assert result["retry_count"] == SKIP_VALIDATION
+        assert "trouble processing" in result["messages"][0].content.lower()
+
+    @patch("src.agent.nodes._get_llm")
+    async def test_type_error_returns_fallback(self, mock_get_llm):
+        """TypeError from LLM SDK returns fallback (not None)."""
+        from src.agent.nodes import generate_node
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=TypeError("unexpected type"))
+        mock_get_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[HumanMessage(content="Question")],
+            retrieved_context=[
+                {"content": "data", "metadata": {"category": "faq"}, "score": 1.0}
+            ],
+        )
+        result = await generate_node(state)
+        assert result is not None, "generate_node must not return None on TypeError"
+        assert result["retry_count"] == SKIP_VALIDATION
+        assert "trouble processing" in result["messages"][0].content.lower()
 
 
 class TestValidateNode:
@@ -355,6 +393,16 @@ class TestGreetingNode:
         state = _state()
         result = await greeting_node(state)
         assert result["sources_used"] == []
+
+    async def test_all_categories_present(self):
+        """Greeting lists all categories from _GREETING_CATEGORIES constant."""
+        from src.agent.nodes import _GREETING_CATEGORIES, greeting_node
+
+        state = _state()
+        result = await greeting_node(state)
+        content = result["messages"][0].content
+        for label in _GREETING_CATEGORIES.values():
+            assert label in content, f"Missing category: {label}"
 
 
 class TestOffTopicNode:

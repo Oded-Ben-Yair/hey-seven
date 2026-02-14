@@ -310,6 +310,13 @@ async def generate_node(state: PropertyQAState) -> dict:
     except (ValueError, TypeError) as exc:
         await _get_circuit_breaker().record_failure()
         logger.warning("Generate LLM response parsing failed: %s", exc)
+        return {
+            "messages": [AIMessage(content=(
+                "I apologize, but I had trouble processing that response. "
+                f"Please try again, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
+            ))],
+            "retry_count": SKIP_VALIDATION,
+        }
     except Exception:
         # Broad catch: google-genai can raise GoogleAPICallError, DeadlineExceeded,
         # ResourceExhausted, etc. across SDK versions.
@@ -464,20 +471,31 @@ async def fallback_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
+_GREETING_CATEGORIES: dict[str, str] = {
+    "restaurants": "Restaurants & Dining — from casual to fine dining",
+    "entertainment": "Entertainment & Shows — concerts, comedy, and events",
+    "hotel": "Hotel & Accommodations — rooms, suites, and towers",
+    "gaming": "Gaming — casino floor, table games, and poker",
+    "amenities": "Amenities — spa, pool, shopping, and more",
+    "promotions": "Promotions — current offers and loyalty programs",
+}
+"""Map of property-data JSON keys to guest-facing category descriptions.
+
+Each key corresponds to a top-level section in the property data file
+(e.g., ``data/mohegan_sun.json``).  Updating the data file categories
+only requires adding the new key here to surface it in the greeting.
+"""
+
+
 async def greeting_node(state: PropertyQAState) -> dict:
     """Template welcome listing available knowledge categories."""
     settings = get_settings()
+    bullets = "\n".join(f"- **{label}**" for label in _GREETING_CATEGORIES.values())
     return {
         "messages": [AIMessage(content=(
             f"Welcome to {settings.PROPERTY_NAME}! I'm your AI concierge, "
             "here to help you explore everything the resort has to offer.\n\n"
-            "I can help with:\n"
-            "- **Restaurants & Dining** — from casual to fine dining\n"
-            "- **Entertainment & Shows** — concerts, comedy, and events\n"
-            "- **Hotel & Accommodations** — rooms, suites, and towers\n"
-            "- **Gaming** — casino floor, table games, and poker\n"
-            "- **Amenities** — spa, pool, shopping, and more\n"
-            "- **Promotions** — current offers and loyalty programs\n\n"
+            f"I can help with:\n{bullets}\n\n"
             "What would you like to know about?"
         ))],
         "sources_used": [],

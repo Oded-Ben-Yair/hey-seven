@@ -4,6 +4,7 @@ Loads a property JSON file, chunks the content, embeds with Google GenAI,
 and stores in ChromaDB for local vector search.
 """
 
+import hashlib
 import json
 import logging
 from datetime import datetime, timezone
@@ -300,12 +301,22 @@ def ingest_property(
 
     texts = [c["content"] for c in chunks]
     metadatas = [c["metadata"] for c in chunks]
+    # Deterministic IDs prevent duplicate chunks on re-ingestion.
+    # Each ID is a SHA-256 hash of content + source metadata, so
+    # the same chunk always maps to the same ID regardless of run.
+    ids = [
+        hashlib.sha256(
+            (text + str(meta.get("source", ""))).encode()
+        ).hexdigest()
+        for text, meta in zip(texts, metadatas)
+    ]
 
     embeddings = get_embeddings()
 
     vectorstore = Chroma.from_texts(
         texts=texts,
         metadatas=metadatas,
+        ids=ids,
         collection_name="property_knowledge",
         embedding=embeddings,
         persist_directory=persist_dir,

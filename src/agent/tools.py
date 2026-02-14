@@ -9,6 +9,7 @@ strategies for improved recall, especially for proper noun queries
 (e.g., "Todd English's") where augmented search ranks differently.
 """
 
+import hashlib
 import logging
 
 from src.agent.state import RetrievedChunk
@@ -64,7 +65,9 @@ def _rerank_by_rrf(
 
     for results in result_lists:
         for rank, (doc, score) in enumerate(results):
-            doc_id = doc.page_content
+            doc_id = hashlib.md5(
+                (doc.page_content + str(doc.metadata.get("source", ""))).encode()
+            ).hexdigest()
             if doc_id not in doc_map or score > doc_map[doc_id][1]:
                 doc_map[doc_id] = (doc, score)
             rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
@@ -116,6 +119,10 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
     if not fused:
         return []
 
+    # Filter by original cosine similarity (not RRF rank score).
+    # A doc may rank high via RRF fusion but still be below the
+    # absolute relevance threshold — cosine score is the right
+    # quality gate for grounding.
     fused = _filter_by_relevance(fused, settings.RAG_MIN_RELEVANCE_SCORE)
 
     return [

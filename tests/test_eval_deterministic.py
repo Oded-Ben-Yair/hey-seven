@@ -9,13 +9,10 @@ validation result. Tests verify the full graph flow produces correct output.
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from langchain_core.messages import AIMessage
 
 from src.agent.graph import build_graph, chat, chat_stream
 from src.agent.state import RouterOutput, ValidationResult
-
-pytestmark = pytest.mark.asyncio
 
 
 # ---------------------------------------------------------------------------

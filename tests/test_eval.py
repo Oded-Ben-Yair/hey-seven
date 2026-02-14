@@ -9,12 +9,9 @@ import pytest
 
 from src.agent.graph import build_graph, chat
 
-pytestmark = [
-    pytest.mark.skipif(
-        not os.environ.get("GOOGLE_API_KEY"), reason="Requires GOOGLE_API_KEY"
-    ),
-    pytest.mark.asyncio,
-]
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("GOOGLE_API_KEY"), reason="Requires GOOGLE_API_KEY"
+)
 
 
 @pytest.fixture(scope="module")

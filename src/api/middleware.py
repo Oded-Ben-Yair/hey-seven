@@ -149,6 +149,13 @@ class ErrorHandlingMiddleware:
 class SecurityHeadersMiddleware:
     """Add security headers to every HTTP response."""
 
+    # Trade-off: ``'unsafe-inline'`` is required because the demo serves a
+    # single-file chat UI (``static/index.html``) with embedded ``<style>``
+    # and ``<script>`` blocks.  No user-generated content is rendered as HTML,
+    # so the XSS attack surface is minimal.
+    # Production path: externalize CSS/JS into separate static files and
+    # replace ``'unsafe-inline'`` with nonce-based CSP (generate per-request
+    # nonce in middleware, inject into ``<script nonce="...">`` tags).
     HEADERS = [
         (b"x-content-type-options", b"nosniff"),
         (b"x-frame-options", b"DENY"),

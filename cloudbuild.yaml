@@ -1,6 +1,6 @@
 steps:
   # Step 1: Install dependencies and run tests + lint
-  - name: 'python:3.12-slim'
+  - name: 'python:3.12.8-slim-bookworm'
     entrypoint: 'bash'
     args:
       - '-c'
