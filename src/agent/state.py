@@ -1,24 +1,43 @@
-"""Agent state schema for the Property Q&A agent.
+"""State schema for the Property Q&A custom StateGraph.
 
-Extends LangGraph's MessagesState with property-specific fields.
-
-Note: ``create_react_agent`` uses its own internal ``AgentState``.
-This class documents the expected state shape and is available for
-custom graph builds (e.g., adding compliance or escalation nodes).
+Defines PropertyQAState as a TypedDict with 9 fields for the 8-node graph,
+plus Pydantic models for structured LLM outputs (router + validation).
 """
 
-from langgraph.graph import MessagesState
+from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
+from pydantic import BaseModel, Field
 
 
-class PropertyQAState(MessagesState):
-    """State for property Q&A conversations.
+class PropertyQAState(TypedDict):
+    """Typed state flowing through the 8-node property Q&A graph."""
+    messages: Annotated[list, add_messages]
+    query_type: str | None          # router classification (7 categories)
+    router_confidence: float        # 0.0-1.0 from router LLM
+    retrieved_context: list[dict]   # [{content, metadata, score}]
+    validation_result: str | None   # PASS / FAIL / RETRY
+    retry_count: int                # max 1 retry before fallback
+    retry_feedback: str | None      # why validation failed
+    current_time: str               # injected at graph entry
+    sources_used: list[str]         # knowledge-base categories cited
 
-    Inherits ``messages: Annotated[list[AnyMessage], add_messages]`` from
-    MessagesState, which handles message appending and deduplication.
 
-    Currently used for type documentation. For a custom ``StateGraph``
-    (e.g., with compliance or escalation nodes), pass this class as
-    ``StateGraph(PropertyQAState)`` instead of using ``create_react_agent``.
-    """
+class RouterOutput(BaseModel):
+    """Structured output from the router node."""
+    query_type: str = Field(
+        description="One of: property_qa, hours_schedule, greeting, off_topic, gambling_advice, action_request, ambiguous"
+    )
+    confidence: float = Field(
+        ge=0.0, le=1.0,
+        description="Confidence in the classification (0.0 to 1.0)"
+    )
 
-    property_name: str = "Mohegan Sun"
+
+class ValidationResult(BaseModel):
+    """Structured output from the validation node."""
+    status: str = Field(
+        description="PASS, FAIL, or RETRY"
+    )
+    reason: str = Field(
+        description="Why the response passed or failed validation"
+    )

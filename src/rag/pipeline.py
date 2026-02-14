@@ -352,6 +352,26 @@ class CasinoKnowledgeRetriever:
 
         return self.vectorstore.similarity_search(query, **search_kwargs)
 
+    def retrieve_with_scores(
+        self,
+        query: str,
+        top_k: int = 5,
+    ) -> list[tuple[Document, float]]:
+        """Retrieve documents with similarity scores.
+
+        Args:
+            query: The search query.
+            top_k: Number of results to return.
+
+        Returns:
+            List of (Document, score) tuples, sorted by relevance.
+        """
+        if self.vectorstore is None:
+            logger.warning("No vectorstore configured.")
+            return []
+
+        return self.vectorstore.similarity_search_with_score(query, k=top_k)
+
 
 # ---------------------------------------------------------------------------
 # Global Retriever Instance

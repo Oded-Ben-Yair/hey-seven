@@ -1,0 +1,37 @@
+steps:
+  # Step 1: Install dependencies and run tests
+  - name: 'python:3.12-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir -r requirements.txt
+        python -m pytest tests/ -v --tb=short -x --ignore=tests/test_eval.py
+
+  # Step 2: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA', '.']
+
+  # Step 3: Push to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA']
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'hey-seven'
+      - '--image=gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--timeout=60s'
+
+images:
+  - 'gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

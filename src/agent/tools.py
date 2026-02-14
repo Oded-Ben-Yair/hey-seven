@@ -1,80 +1,76 @@
-"""Tool definitions for the Property Q&A agent.
+"""Tool functions for the Property Q&A agent.
 
-Two RAG search tools: general search and schedule-focused lookup.
+Plain functions (no @tool decorators) called directly by graph nodes.
+Each returns list[dict] with keys: content, metadata, score.
 """
 
 import logging
 
-from langchain_core.tools import tool
-
-from src.config import get_settings
 from src.rag.pipeline import get_retriever
 
 logger = logging.getLogger(__name__)
 
 
-@tool
-def search_property(query: str) -> str:
-    """Search the property knowledge base for information about restaurants,
-    entertainment, rooms, amenities, gaming, and promotions.
+def search_knowledge_base(query: str, top_k: int = 5) -> list[dict]:
+    """Search the property knowledge base for information.
 
     Args:
         query: Natural language search query about the property.
+        top_k: Number of results to return.
 
     Returns:
-        Relevant information from the property knowledge base.
+        List of dicts with keys: content, metadata, score.
+        Empty list on error or no results.
     """
-    settings = get_settings()
     try:
         retriever = get_retriever()
-        results = retriever.retrieve(query, top_k=settings.RAG_TOP_K)
+        results = retriever.retrieve_with_scores(query, top_k=top_k)
     except Exception:
-        logger.exception("Error searching property knowledge base")
-        return "I'm having trouble searching the knowledge base right now. Please try again."
+        logger.exception("Error searching knowledge base for: %s", query)
+        return []
 
     if not results:
-        return "No relevant information found in the knowledge base."
+        return []
 
-    parts = []
-    for i, doc in enumerate(results, 1):
-        source = doc.metadata.get("category", "general")
-        parts.append(f"[{i}] ({source}) {doc.page_content}")
+    return [
+        {
+            "content": doc.page_content,
+            "metadata": doc.metadata,
+            "score": score,
+        }
+        for doc, score in results
+    ]
 
-    return "\n---\n".join(parts)
 
-
-@tool
-def get_property_hours(venue_name: str) -> str:
-    """Look up hours, schedules, and operating times for a specific venue
-    such as a restaurant, show, or amenity.
-
-    Use this tool when a guest asks about hours, opening times, or schedules
-    for a specific venue. For general questions, use search_property instead.
+def search_hours(venue_name: str, top_k: int = 5) -> list[dict]:
+    """Search for hours and schedule information for a specific venue.
 
     Args:
         venue_name: Name of the restaurant, show, or venue to look up.
+        top_k: Number of results to return.
 
     Returns:
-        Hours and schedule information for the venue.
+        List of dicts with keys: content, metadata, score.
+        Empty list on error or no results.
     """
-    settings = get_settings()
     try:
         retriever = get_retriever()
-        # Search with targeted query combining venue name and schedule keywords
-        results = retriever.retrieve(
+        results = retriever.retrieve_with_scores(
             f"{venue_name} hours schedule open close",
-            top_k=settings.RAG_TOP_K,
+            top_k=top_k,
         )
     except Exception:
-        logger.exception("Error looking up hours for %s", venue_name)
-        return "I'm having trouble looking up schedule information right now."
+        logger.exception("Error looking up hours for: %s", venue_name)
+        return []
 
     if not results:
-        return f"No schedule information found for {venue_name}."
+        return []
 
-    parts = []
-    for i, doc in enumerate(results, 1):
-        source = doc.metadata.get("category", "general")
-        parts.append(f"[{i}] ({source}) {doc.page_content}")
-
-    return "\n---\n".join(parts)
+    return [
+        {
+            "content": doc.page_content,
+            "metadata": doc.metadata,
+            "score": score,
+        }
+        for doc, score in results
+    ]
