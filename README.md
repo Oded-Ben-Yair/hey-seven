@@ -24,41 +24,36 @@ The first boot takes ~30 seconds to embed property data into ChromaDB. Subsequen
 ## Architecture
 
 ```
-Browser (static/index.html)
-    |
-    | POST /chat (SSE: metadata → token* → sources → done)
-    v
-FastAPI + Security Headers + Rate Limiting + Logging
-    |
-    v
-LangGraph Agent (create_react_agent)
-    |
-    |-- search_property ---------> ChromaDB (general search)
-    |-- get_property_hours ------> ChromaDB (schedule lookup)
-    |                                  |
-    v                                  v
-Gemini 2.5 Flash               Property Knowledge Base
-(config-driven)                (data/mohegan_sun.json)
+START --> router --+--> greeting --> END
+                   +--> off_topic --> END
+                   +--> retrieve --> generate --> validate --+--> respond --> END
+                                       ^                     +--> generate (retry)
+                                       +---------------------+--> fallback --> END
 ```
 
-1. User sends a message via the chat UI.
-2. FastAPI receives the request and invokes the LangGraph agent.
-3. The agent decides which tool(s) to call (`search_property` or `get_property_hours`).
-4. The tool queries ChromaDB for relevant property information.
-5. Gemini 2.5 Flash generates a grounded response using the retrieved context.
-6. Tokens stream back to the browser in real time via SSE.
+A custom 8-node LangGraph `StateGraph` with two conditional routing points:
+
+1. **Router** classifies user intent (7 categories) using structured LLM output.
+2. **Retrieve** searches ChromaDB for relevant property knowledge.
+3. **Generate** produces a grounded response using the concierge system prompt.
+4. **Validate** performs adversarial review against 6 criteria (grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming).
+5. On validation failure, the graph retries once, then falls back to a safe contact-info response.
+
+Tokens stream to the browser in real time via SSE (`astream_events` v2).
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full details: node descriptions, state schema, routing logic, prompt system, and deployment.
 
 ## Key Design Decisions
 
 | Decision | Choice | Why |
 |----------|--------|-----|
-| Agent framework | LangGraph `create_react_agent` | Production-grade state machine with checkpointing |
+| Agent framework | LangGraph custom `StateGraph` (8 nodes) | Validation loop, structured routing, domain guardrails |
 | LLM | Gemini 2.5 Flash | GCP-aligned, cost-effective ($0.30/1M input tokens) |
 | Vector DB | ChromaDB (embedded) | Zero infrastructure for demo; Vertex AI Vector Search for production |
-| Streaming | Real token SSE via `astream_events` | True progressive rendering with timeout + error recovery |
+| Streaming | Real token SSE via `astream_events` v2 | True progressive rendering with timeout + error recovery |
 | Embeddings | Google `text-embedding-004` | GCP-native, free tier, 768 dimensions |
 | Frontend | Vanilla HTML/CSS/JS | No build step, minimal footprint, backend is 90% of evaluation |
-| Tools | Two specialized tools | Demonstrates multi-tool orchestration and LLM tool selection |
+| Validation | Adversarial LLM review (6 criteria) | Catches hallucination, off-topic drift, gambling advice leaks |
 | Config | `pydantic-settings` BaseSettings | Zero hardcoded values; every constant overridable via env var |
 
 ## Project Structure
@@ -68,10 +63,11 @@ hey-seven/
 ├── src/
 │   ├── config.py              # Centralized config (pydantic-settings)
 │   ├── agent/
-│   │   ├── graph.py           # Agent assembly + chat + chat_stream
-│   │   ├── state.py           # PropertyQAState schema
-│   │   ├── prompts.py         # System prompt with few-shot examples
-│   │   └── tools.py           # search_property + get_property_hours
+│   │   ├── graph.py           # 8-node StateGraph + chat + chat_stream (SSE)
+│   │   ├── nodes.py           # 8 node functions + 2 routing functions
+│   │   ├── state.py           # PropertyQAState (9 fields) + Pydantic models
+│   │   ├── prompts.py         # 3 prompt templates (concierge, router, validation)
+│   │   └── tools.py           # search_knowledge_base + search_hours (plain functions)
 │   ├── rag/
 │   │   ├── pipeline.py        # Ingest, chunk, embed, retrieve (ChromaDB)
 │   │   └── embeddings.py      # Google text-embedding-004 config
@@ -83,7 +79,7 @@ hey-seven/
 │   └── mohegan_sun.json       # Curated property data
 ├── static/
 │   └── index.html             # Branded chat UI (Hey Seven colors)
-├── tests/                     # 49 tests (unit + integration)
+├── tests/                     # Unit + integration + eval tests
 ├── Dockerfile                 # Multi-stage Python 3.12 + HEALTHCHECK
 ├── docker-compose.yml         # Single-service with health check
 └── requirements.txt           # Pinned production dependencies
@@ -92,14 +88,17 @@ hey-seven/
 ## Running Tests
 
 ```bash
-# All 49 tests (no API key needed)
-pytest tests/ -v
+# Unit + integration tests (no API key needed, LLM is mocked)
+make test-ci
+
+# Eval tests (requires GOOGLE_API_KEY, uses real Gemini)
+make test-eval
 
 # With coverage
-pytest tests/ --cov=src --cov-report=term-missing
+pytest tests/ --cov=src --cov-report=term-missing --ignore=tests/test_eval.py
 
-# Integration tests only (requires GOOGLE_API_KEY)
-pytest tests/ -k "integration" -v
+# Lint
+make lint
 ```
 
 ## API Endpoints
@@ -191,7 +190,7 @@ All settings are configurable via environment variables (powered by `pydantic-se
 
 | Component | Technology |
 |-----------|-----------|
-| Agent Framework | LangGraph 1.0.8 (`create_react_agent`) |
+| Agent Framework | LangGraph custom `StateGraph` (8 nodes, 2 conditional edges) |
 | LLM | Gemini 2.5 Flash via `langchain-google-genai` |
 | Embeddings | Google `text-embedding-004` (768 dim) |
 | Vector Store | ChromaDB (embedded, persistent) |

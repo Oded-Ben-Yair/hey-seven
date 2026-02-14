@@ -4,6 +4,8 @@ import json
 
 import pytest
 
+from src.agent.state import RouterOutput, ValidationResult
+
 
 @pytest.fixture
 def test_property_data():
@@ -68,3 +70,31 @@ def test_property_file(tmp_path, test_property_data):
     p = tmp_path / "test_property.json"
     p.write_text(json.dumps(test_property_data))
     return str(p)
+
+
+@pytest.fixture
+def mock_state() -> dict:
+    """Return a PropertyQAState dict with sensible defaults."""
+    return {
+        "messages": [],
+        "query_type": None,
+        "router_confidence": 0.0,
+        "retrieved_context": [],
+        "validation_result": None,
+        "retry_count": 0,
+        "retry_feedback": None,
+        "current_time": "Monday 3:00 PM",
+        "sources_used": [],
+    }
+
+
+@pytest.fixture
+def mock_router_output() -> RouterOutput:
+    """Return a RouterOutput with sensible defaults."""
+    return RouterOutput(query_type="property_qa", confidence=0.9)
+
+
+@pytest.fixture
+def mock_validation_result() -> ValidationResult:
+    """Return a ValidationResult with sensible defaults."""
+    return ValidationResult(status="PASS", reason="All criteria met")

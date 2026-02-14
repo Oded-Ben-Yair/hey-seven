@@ -3,14 +3,10 @@
 Tests each middleware in isolation using Starlette test utilities.
 """
 
-import asyncio
-import json
-import time
 
-import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 

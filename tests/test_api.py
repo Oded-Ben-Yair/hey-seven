@@ -4,9 +4,8 @@ import asyncio
 import json
 import sys
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -33,7 +32,7 @@ def _make_test_app(property_data=None):
 
     # Access the actual module via sys.modules (src.api.__init__ re-exports
     # 'app' which shadows the module name on attribute access).
-    import src.api.app  # noqa: ensure module is loaded
+    __import__("src.api.app")
     app_module = sys.modules["src.api.app"]
 
     original_lifespan = app_module.lifespan
@@ -204,7 +203,7 @@ def _make_test_app_no_agent():
         yield
         app.state.ready = False
 
-    import src.api.app  # noqa
+    import src.api.app  # noqa: F401
     app_module = sys.modules["src.api.app"]
     original = app_module.lifespan
     app_module.lifespan = no_agent_lifespan
@@ -278,7 +277,7 @@ class TestChatSSEErrors:
         app, _ = _make_test_app()
 
         # Patch the module-level settings to use a 1-second timeout
-        import src.api.app  # noqa
+        import src.api.app  # noqa: F401
         app_mod = sys.modules["src.api.app"]
 
         original_timeout = app_mod.settings.SSE_TIMEOUT_SECONDS
@@ -295,6 +294,28 @@ class TestChatSSEErrors:
                 assert "timed out" in error_event["data"]["error"].lower()
         finally:
             app_mod.settings.SSE_TIMEOUT_SECONDS = original_timeout
+
+
+class TestChatReplaceEvent:
+    @patch("src.agent.graph.chat_stream")
+    def test_replace_event_in_sse_stream(self, mock_stream):
+        """POST /chat can include 'replace' SSE events (from greeting/off_topic/fallback)."""
+
+        async def replace_stream(agent, message, tid=None):
+            yield {"event": "metadata", "data": json.dumps({"thread_id": "replace-test"})}
+            yield {"event": "replace", "data": json.dumps({"content": "Welcome to Mohegan Sun!"})}
+            yield {"event": "done", "data": json.dumps({"done": True})}
+
+        mock_stream.side_effect = replace_stream
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post("/chat", json={"message": "Hello"})
+            assert resp.status_code == 200
+            events = _parse_sse_events(resp.text)
+            event_types = [e["event"] for e in events]
+            assert "replace" in event_types
+            replace_event = next(e for e in events if e["event"] == "replace")
+            assert replace_event["data"]["content"] == "Welcome to Mohegan Sun!"
 
 
 class TestSecurityHeaders:

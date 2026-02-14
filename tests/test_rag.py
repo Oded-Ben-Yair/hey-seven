@@ -1,6 +1,5 @@
 """Tests for the RAG pipeline (ingestion, retrieval, metadata)."""
 
-import os
 import sys
 from unittest.mock import patch
 

@@ -1,126 +1,255 @@
-# Architecture Document
+# Architecture
 
-**Property Q&A Agent for Mohegan Sun Casino Resort**
+## System Overview
 
----
+Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 8-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
 
-## 1. System Overview
+The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB.
 
-A conversational AI agent that answers guest questions about a specific casino property. Built with LangGraph for agent orchestration, ChromaDB for vector retrieval, Gemini 2.5 Flash for generation, and FastAPI for the API layer.
-
-**Design philosophy:** Build for one property, design for N. Every configuration choice (property ID, data paths, prompts) is externalized so adding a second property requires zero code changes.
+**Design philosophy:** Build for one property, design for N. Every configuration choice (property name, data paths, model name, prompts) is externalized via `pydantic-settings` so adding a second property requires zero code changes.
 
 ```
 Browser (static/index.html)
     |
-    | POST /chat (SSE stream: metadata → token* → sources → done)
+    | POST /chat (SSE: metadata -> token* -> sources -> done)
     v
-FastAPI (src/api/app.py)  ←  SecurityHeaders + RateLimit + Logging + ErrorHandler
+FastAPI (src/api/app.py)  <-  SecurityHeaders + RateLimit + Logging + ErrorHandler
     |
-    | lifespan: init agent + ingest data
+    | lifespan: build_graph() + ingest data
     v
-LangGraph create_react_agent
+Custom 8-node StateGraph (src/agent/graph.py)
     |
-    |-- search_property tool -----> ChromaDB
-    |-- get_property_hours tool --> ChromaDB (schedule-focused)
-    |                                 |
-    v                                 v
+    |-- router (structured LLM output) -----> greeting / off_topic / retrieve
+    |-- retrieve -----> ChromaDB
+    |-- generate -----> Gemini 2.5 Flash (grounded response)
+    |-- validate -----> Gemini 2.5 Flash (adversarial review)
+    |-- respond / fallback / greeting / off_topic -----> END
+    |
+    v
 Gemini 2.5 Flash               Knowledge Base
-(config-driven)                (config-driven path)
+(config-driven)                (data/mohegan_sun.json -> ChromaDB)
 ```
-
-### Component Responsibilities
-
-| Component | Role | Technology |
-|-----------|------|-----------|
-| Graph Engine | Agent loop (LLM -> tools -> LLM) | LangGraph `create_react_agent` |
-| LLM | Answer generation | Gemini 2.5 Flash (`langchain-google-genai`) |
-| Vector Store | Semantic search over property data | ChromaDB (embedded, persistent) |
-| Embeddings | Text to vector conversion | Google `text-embedding-004` (768 dim) |
-| API Server | HTTP endpoints, SSE streaming | FastAPI + uvicorn |
-| Frontend | Chat UI with brand styling | Vanilla HTML/CSS/JS + SSE |
-| Container | Isolation, one-command startup | Docker Compose |
 
 ---
 
-## 2. Agent Design
+## Custom StateGraph
 
-The agent uses LangGraph's `create_react_agent` -- a prebuilt ReAct loop that handles the LLM-to-tool-to-LLM cycle automatically. The agent has two tools: `search_property` (general knowledge base search) and `get_property_hours` (schedule-focused lookup).
-
-### Why `create_react_agent`
-
-The prebuilt agent provides:
-- Automatic tool calling loop (LLM decides when to search)
-- Built-in conversation memory via `MemorySaver` checkpointer
-- Structured tool result handling
-- Clean separation between agent logic and application code
-
-### Agent Flow
+The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 8 nodes with two conditional routing points.
 
 ```
-User message
-    |
-    v
-create_react_agent
-    |
-    |--> LLM decides: answer directly or use tools?
-    |       |
-    |       v (if search needed)
-    |   search_property(query)       -- general knowledge base
-    |   get_property_hours(venue)    -- schedule-focused lookup
-    |       |
-    |       v
-    |   ChromaDB similarity_search (top-k from config)
-    |       |
-    |       v
-    |   Formatted results returned to LLM
-    |       |
-    |       v
-    |   LLM generates grounded response (streamed token-by-token)
-    |
-    v
-Final AI response
+START --> router --+--> greeting ----------------------> END
+                   |
+                   +--> off_topic --------------------> END
+                   |
+                   +--> retrieve --> generate --> validate --+--> respond --> END
+                                       ^                     |
+                                       |                     +--> generate  (retry, max 1)
+                                       +---------------------+
+                                                             +--> fallback --> END
 ```
 
-### System Prompt
-
-The concierge prompt establishes:
-- **Identity**: Property concierge for Mohegan Sun
-- **Scope**: Dining, entertainment, hotel, amenities, gaming, promotions
-- **Rules**: Only answer from knowledge base, never fabricate, never provide gambling advice, never claim to make bookings
-- **Tone**: Warm luxury hospitality (VIP treatment for every guest)
-- **Safety**: Responsible gaming helpline (1-800-522-4700, CT DMHAS 1-860-418-7000), AI disclosure, no betting advice
-
-### Agent State
-
-```python
-class PropertyQAState(MessagesState):
-    property_name: str = "Mohegan Sun"
-```
-
-Inherits `messages: Annotated[list[AnyMessage], add_messages]` from `MessagesState`, which handles message appending and deduplication. The `create_react_agent` prebuilt uses its own internal `AgentState`; `PropertyQAState` documents the expected shape and is available for custom graph builds (e.g., adding compliance or escalation nodes via `StateGraph(PropertyQAState)`).
+Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a checkpointer (defaults to `MemorySaver` for local development).
 
 ---
 
-## 3. RAG Pipeline
+## Node Descriptions
 
-### Ingestion Flow
+### 1. router (`src/agent/nodes.py:44`)
+
+**Purpose**: Classify user intent into one of 7 categories using structured LLM output.
+
+**Input**: `messages` (conversation history).
+**Output**: `query_type` (str), `router_confidence` (float 0-1).
+
+Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`.
+
+Turn-limit guard: if `messages` exceeds 40 entries, forces `off_topic` to end the conversation. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing. On LLM error, defaults to `property_qa` with confidence 0.5.
+
+### 2. retrieve (`src/agent/nodes.py:97`)
+
+**Purpose**: Search the ChromaDB knowledge base for documents relevant to the user query.
+
+**Input**: `messages` (extracts last `HumanMessage`).
+**Output**: `retrieved_context` (list of `{content, metadata, score}` dicts).
+
+Calls `search_knowledge_base()` which delegates to `CasinoKnowledgeRetriever.retrieve_with_scores()` with configurable `top_k` (default 5).
+
+### 3. generate (`src/agent/nodes.py:123`)
+
+**Purpose**: Produce a concierge response grounded in retrieved context.
+
+**Input**: `messages`, `retrieved_context`, `current_time`, `retry_count`, `retry_feedback`.
+**Output**: `messages` (appends `AIMessage`), optionally `retry_count`.
+
+Behavior:
+- Formats retrieved context as numbered sources and appends to the system prompt.
+- If no context was retrieved, returns a static fallback message and sets `retry_count=99` to skip validation.
+- On retry (`retry_count > 0`), injects validation feedback as a `SystemMessage` before conversation history.
+- On LLM error, returns a static error message and sets `retry_count=99`.
+
+### 4. validate (`src/agent/nodes.py:202`)
+
+**Purpose**: Adversarial review of the generated response against 6 criteria.
+
+**Input**: `messages` (user question + generated response), `retrieved_context`, `retry_count`.
+**Output**: `validation_result` (PASS/RETRY/FAIL), optionally `retry_count`, `retry_feedback`.
+
+6 criteria: grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming.
+
+Behavior:
+- If `retry_count >= 99` (empty context or generate error), auto-PASS.
+- If validation fails and `retry_count < 1`, returns RETRY with feedback.
+- If `retry_count >= 1`, returns FAIL (max 1 retry).
+- On validation LLM error, auto-PASS.
+
+### 5. respond (`src/agent/nodes.py:277`)
+
+**Purpose**: Extract source categories from retrieved context and prepare final response.
+
+**Input**: `retrieved_context`.
+**Output**: `sources_used` (deduplicated list of category strings), `retry_feedback` cleared to `None`.
+
+### 6. fallback (`src/agent/nodes.py:300`)
+
+**Purpose**: Safe fallback when validation fails after retry.
+
+**Input**: `retry_feedback`.
+**Output**: `messages` (appends static AIMessage with contact info), `sources_used` cleared, `retry_feedback` cleared.
+
+Logs the validation failure reason for observability.
+
+### 7. greeting (`src/agent/nodes.py:326`)
+
+**Purpose**: Return a template welcome message listing available knowledge categories.
+
+**Input**: None (uses `PROPERTY_NAME` from settings).
+**Output**: `messages` (appends welcome AIMessage), `sources_used` cleared.
+
+### 8. off_topic (`src/agent/nodes.py:351`)
+
+**Purpose**: Handle off-topic queries, gambling advice requests, and action requests.
+
+**Input**: `query_type`.
+**Output**: `messages` (appends appropriate redirect AIMessage), `sources_used` cleared.
+
+Three sub-cases based on `query_type`:
+- `off_topic`: General redirect to property topics.
+- `gambling_advice`: Redirect with responsible gaming helplines (NCPG 1-800-522-4700, CT Council 1-888-789-7777, CT DMHAS 1-860-418-7000).
+- `action_request`: Explain read-only limitations, provide contact info.
+
+---
+
+## State Schema
+
+`PropertyQAState` is a `TypedDict` with 9 fields (`src/agent/state.py:12`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `messages` | `Annotated[list, add_messages]` | Conversation history (LangGraph message reducer) |
+| `query_type` | `str \| None` | Router classification (7 categories) |
+| `router_confidence` | `float` | Router confidence score (0.0-1.0) |
+| `retrieved_context` | `list[dict]` | Retrieved documents: `{content, metadata, score}` |
+| `validation_result` | `str \| None` | Validation outcome: PASS, FAIL, or RETRY |
+| `retry_count` | `int` | Current retry count (max 1 before fallback) |
+| `retry_feedback` | `str \| None` | Reason validation failed |
+| `current_time` | `str` | UTC timestamp injected at graph entry |
+| `sources_used` | `list[str]` | Knowledge-base categories cited in the response |
+
+Two Pydantic models for structured LLM output:
+
+- **`RouterOutput`** (`state.py:25`): `query_type` (str, one of 7 categories) + `confidence` (float, 0.0-1.0).
+- **`ValidationResult`** (`state.py:36`): `status` (PASS/FAIL/RETRY) + `reason` (str).
+
+---
+
+## Routing Logic
+
+### route_from_router (`src/agent/nodes.py:403`)
+
+Called after the `router` node. Returns the next node name:
+
+| Condition | Next Node |
+|-----------|-----------|
+| `query_type == "greeting"` | `greeting` |
+| `query_type in ("off_topic", "gambling_advice", "action_request")` | `off_topic` |
+| `router_confidence < 0.3` | `off_topic` (low-confidence catch-all) |
+| Everything else (`property_qa`, `hours_schedule`, `ambiguous`) | `retrieve` |
+
+### route_after_validate (`src/agent/nodes.py:424`)
+
+Called after the `validate` node. Returns the next node name:
+
+| Condition | Next Node |
+|-----------|-----------|
+| `validation_result == "PASS"` | `respond` |
+| `validation_result == "RETRY"` | `generate` (loops back for re-generation) |
+| `validation_result == "FAIL"` | `fallback` |
+
+---
+
+## Prompt System
+
+Three `string.Template` prompts in `src/agent/prompts.py`:
+
+### CONCIERGE_SYSTEM_PROMPT
+
+Variables: `$property_name`, `$current_time`.
+
+The main system prompt defining the concierge persona. Contains 10 rules:
+1. Only answer about the property
+2. Information-only (no bookings/reservations)
+3. Always search knowledge base first
+4. Warm luxury hospitality tone
+5. Be honest about gaps
+6. Disclaim hours/prices may vary
+7. No gambling advice
+8. Transparent about being AI
+9. Responsible gaming helplines
+10. Time-aware answers using injected `$current_time`
+
+Includes prompt injection defense and responsible gaming helpline information.
+
+### ROUTER_PROMPT
+
+Variables: `$user_message`.
+
+Classifies the user message into one of 7 categories with a confidence score. Requests structured JSON output: `{"query_type": "<category>", "confidence": <float>}`.
+
+### VALIDATION_PROMPT
+
+Variables: `$user_question`, `$retrieved_context`, `$generated_response`.
+
+Adversarial review prompt checking 6 criteria: grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming. Includes PASS and FAIL examples for calibration. Returns `{"status": "<PASS|FAIL|RETRY>", "reason": "<explanation>"}`.
+
+---
+
+## RAG Pipeline
+
+`src/rag/pipeline.py` handles ingestion and retrieval.
+
+### Ingestion
 
 ```
-Property JSON --> Load & Parse --> Chunk (800 chars) --> Embed --> ChromaDB
+mohegan_sun.json --> Parse by category --> Format --> Chunk (800/100) --> Embed --> ChromaDB
 ```
 
-1. **Load**: Read `mohegan_sun.json`, extract items by category (restaurants, entertainment, hotel, etc.)
-2. **Format**: Category-specific formatters convert structured data to readable text
-3. **Chunk**: `RecursiveCharacterTextSplitter` (800 chars, 100 overlap) for embedding quality
-4. **Embed**: Google `text-embedding-004` (768 dimensions, free tier)
-5. **Store**: ChromaDB with cosine similarity, persistent to disk
+1. **Load**: Read `data/mohegan_sun.json` (configurable path).
+2. **Parse**: Extract items by category. Flatten nested dicts (hotel towers, gaming sub-areas).
+3. **Format**: Category-specific formatters for restaurants, entertainment, hotel rooms; generic formatter for others.
+4. **Chunk**: `RecursiveCharacterTextSplitter` (800 chars, 100 overlap, separators: `\n\n`, `\n`, `. `, ` `).
+5. **Embed**: Google `text-embedding-004` (768 dimensions).
+6. **Store**: ChromaDB collection `property_knowledge`, persistent to disk.
+
+Ingestion runs at FastAPI startup (lifespan) if the ChromaDB directory does not exist. First boot takes ~30 seconds.
 
 ### Retrieval
 
-`search_property` tool queries ChromaDB with `similarity_search(query, k=5)`. Returns formatted results with source category metadata for transparency.
+Two plain functions in `src/agent/tools.py` (no `@tool` decorators):
 
-**Why pure vector search (no hybrid):** Sufficient for <500 chunks where entity names appear prominently. For production with thousands of chunks, hybrid search (BM25 + vector) via Vertex AI Vector Search would improve exact name matching.
+- **`search_knowledge_base(query, top_k=5)`**: General semantic search. Returns `list[dict]` with keys: `content`, `metadata` (category, item_name, source), `score`.
+- **`search_hours(venue_name, top_k=5)`**: Appends "hours schedule open close" to the query for schedule-specific retrieval.
+
+Both use the global `CasinoKnowledgeRetriever` singleton which wraps ChromaDB `similarity_search_with_score()`.
 
 ### Data Model
 
@@ -130,7 +259,7 @@ Property data is a single JSON file with category sections:
 |----------|---------|
 | restaurants | Name, cuisine, hours, price range, location, dress code |
 | entertainment | Venues, shows, capacity, schedule |
-| hotel_rooms | Room types, tower, features, rate |
+| hotel | Room types, towers, amenities, rates |
 | amenities | Spa, pool, golf, shopping, fitness |
 | gaming | Casino areas, games offered (no odds/strategy) |
 | promotions | Loyalty program, tiers, benefits |
@@ -140,172 +269,186 @@ Metadata on every chunk: `category`, `item_name`, `source`, `chunk_index`.
 
 ---
 
-## 4. API Design
+## SSE Streaming
 
-### Endpoints
+`chat_stream()` in `src/agent/graph.py:147` uses `graph.astream_events(version="v2")`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST /chat` | Send message, receive SSE stream | Main conversation endpoint |
-| `GET /health` | Agent + ChromaDB status | Docker healthcheck target |
-| `GET /property` | Property metadata | Name, categories, document count |
-| `GET /` | Chat UI | Static HTML served by FastAPI |
+### Event Types
 
-### SSE Streaming (Real Token Streaming)
+| Event | When | Payload |
+|-------|------|---------|
+| `metadata` | First event | `{"thread_id": "uuid"}` |
+| `token` | During `generate` node | `{"content": "..."}` (incremental text chunk) |
+| `replace` | After `greeting`, `off_topic`, or `fallback` node | `{"content": "..."}` (full response) |
+| `sources` | After stream completes (if any) | `{"sources": ["restaurants", ...]}` |
+| `done` | Always last | `{"done": true}` |
+| `error` | On exception | `{"error": "message"}` |
 
-The `/chat` endpoint returns an `EventSourceResponse` (via `sse-starlette`) with typed events:
+Token streaming uses `on_chat_model_stream` events filtered to the `generate` node only. Non-streaming nodes (`greeting`, `off_topic`, `fallback`) emit `replace` events with the full response via `on_chain_end`.
 
-| Event | Payload | When |
-|-------|---------|------|
-| `metadata` | `{thread_id}` | First, immediately |
-| `token` | `{content}` | Each LLM token as it arrives |
-| `sources` | `{sources: [...]}` | After all tools complete |
-| `done` | `{done: true}` | End of stream |
-| `error` | `{error: "..."}` | On timeout or mid-stream failure |
-
-Uses `agent.astream_events(version="v2")` for real token-by-token streaming. Wrapped in `asyncio.timeout()` (configurable via `SSE_TIMEOUT_SECONDS`). Mid-stream errors emit an `error` event rather than breaking the connection.
-
-### Middleware Stack
-
-Pure ASGI middleware (not `BaseHTTPMiddleware`, which breaks SSE):
-
-1. **RequestLoggingMiddleware**: Structured JSON logs (Cloud Logging compatible), `X-Request-ID`, `X-Response-Time-Ms`
-2. **SecurityHeadersMiddleware**: `X-Content-Type-Options`, `X-Frame-Options`, CSP, `Referrer-Policy`
-3. **RateLimitMiddleware**: Token-bucket per client IP (configurable via `RATE_LIMIT_CHAT`). 429 with `Retry-After`. Only applies to `/chat`; `/health` and static exempt.
-4. **ErrorHandlingMiddleware**: Catches unhandled exceptions → structured 500 JSON. `CancelledError` (SSE disconnect) logged at INFO, not ERROR.
-
-### Lifespan
-
-On startup:
-1. Initialize LangGraph agent (compile graph + checkpointer)
-2. Check ChromaDB for existing data; ingest if empty (~30s first boot)
-3. Load property metadata for `/property` endpoint
+The `/chat` endpoint wraps `chat_stream()` in an `EventSourceResponse` with a configurable timeout (default 60s via `SSE_TIMEOUT_SECONDS`).
 
 ---
 
-## 5. Data: Mohegan Sun
+## API Endpoints
 
-**Why a real property:** Authenticity demonstrates domain understanding. Mohegan Sun provides depth (40+ restaurants, 10K-seat arena, two casinos, spa, golf) and an industry connection (Gaming Analytics is a Hey Seven client).
+Defined in `src/api/app.py`.
 
-**Regulatory awareness:** Casino data describes areas factually but excludes odds, house edges, betting strategies, and bet amounts. The FAQ references Connecticut DMHAS self-exclusion (tribal casino jurisdiction) rather than generic Nevada/NJ programs.
+### POST /chat
 
-**Data provenance:** All data curated from mohegansun.com public pages, February 2026. `source` field on every chunk enables auditing.
+Send a message, receive an SSE token stream.
+
+**Request body** (Pydantic-validated in `src/api/models.py`):
+- `message` (str, 1-4096 chars, required)
+- `thread_id` (UUID string, optional -- auto-generated if omitted)
+
+**Response**: `EventSourceResponse` with typed SSE events.
+
+**Error responses**: 422 (validation), 429 (rate limited), 503 (agent not initialized).
+
+### GET /health
+
+```json
+{
+  "status": "healthy | degraded",
+  "version": "0.1.0",
+  "agent_ready": true,
+  "property_loaded": true
+}
+```
+
+### GET /property
+
+```json
+{
+  "name": "Mohegan Sun",
+  "location": "Uncasville, CT",
+  "categories": ["restaurants", "entertainment", ...],
+  "document_count": 42
+}
+```
+
+### GET /
+
+Static file serving (chat UI from `static/` directory).
 
 ---
 
-## 6. Trade-off Tables
+## Middleware Stack
 
-### Demo vs. Production
+Four pure ASGI middleware classes in `src/api/middleware.py` (no `BaseHTTPMiddleware`, which breaks SSE streaming):
 
-| Component | Demo Choice | Production Upgrade | Migration Cost |
-|-----------|-------------|-------------------|----------------|
-| Vector DB | ChromaDB (embedded) | Vertex AI Vector Search | Different API, hosting, ingestion |
-| Checkpointer | InMemorySaver | PostgresSaver / FirestoreSaver | Swap in `create_agent()` |
-| Embeddings | text-embedding-004 (API key) | text-embedding-005 (Vertex AI) | Change model string |
-| LLM | Gemini 2.5 Flash (API key) | Gemini via Vertex AI (IAM) | Auth change only |
-| Deployment | Docker Compose | Cloud Run | Add `cloudbuild.yaml` |
-| Auth | None (demo) | API key + GCP Secret Manager | Add middleware |
-| Monitoring | Structured logging | LangSmith + Cloud Monitoring | Add env vars |
-
-### Key Architecture Decisions
-
-| # | Decision | Choice | Trade-off |
-|---|----------|--------|-----------|
-| 1 | Agent pattern | `create_react_agent` | Less graph-level control, but faster to ship with fewer bugs |
-| 2 | Search tools | Two tools (general + schedule) | LLM picks the right tool; demonstrates multi-tool orchestration |
-| 3 | Vector DB | ChromaDB | No auth, no backup, in-process memory; perfect for demo |
-| 4 | LLM | Gemini 2.5 Flash | GCP-aligned; slightly less reliable structured output than GPT-4o |
-| 5 | Frontend | Vanilla HTML/CSS/JS | No build step; no TypeScript safety, no component library |
-| 6 | Streaming | Real token SSE via `astream_events` | True progressive rendering; timeout + error recovery built in |
-| 7 | Config | `pydantic-settings` BaseSettings | Zero hardcoded values; env var override for everything |
+| Middleware | Purpose |
+|------------|---------|
+| `RequestLoggingMiddleware` | Structured JSON access logs (Cloud Logging compatible), `X-Request-ID` injection, `X-Response-Time-Ms` header |
+| `SecurityHeadersMiddleware` | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, CSP, `Referrer-Policy` |
+| `RateLimitMiddleware` | Token-bucket per client IP on `/chat` only (default: 20 req/min). Returns 429 with `Retry-After`. `/health` and static files exempt |
+| `ErrorHandlingMiddleware` | Catches unhandled exceptions, returns structured 500 JSON. `CancelledError` (SSE client disconnect) logged at INFO, not ERROR |
 
 ---
 
-## 7. Testing Strategy
+## Testing Strategy
 
 ### Test Pyramid
 
-| Layer | Scope | LLM |
-|-------|-------|-----|
-| Unit | Individual functions, data integrity, config | Mocked |
-| Integration | Full graph flow, API endpoints, RAG pipeline | Mocked LLM, real ChromaDB |
-| Eval | Answer quality, guardrails, hallucination detection | Real Gemini (temp=0) |
+| Layer | Scope | LLM | Command |
+|-------|-------|-----|---------|
+| Unit | Individual functions, state, config, middleware | Mocked | `make test-ci` |
+| Integration | Full graph flow, API endpoints, RAG pipeline | Mocked LLM, real ChromaDB | `make test-ci` |
+| Eval | Answer quality, guardrails, hallucination detection | Real Gemini (temp=0) | `make test-eval` |
 
-### Test Suite (49 tests)
+### Makefile Targets
 
-| File | Tests | Covers |
-|------|-------|--------|
-| `test_agent.py` | 17 | Chat extraction, source dedup, streaming, graph compilation, guardrails |
-| `test_api.py` | 12 | SSE streaming, validation, 503/degraded, security headers |
-| `test_middleware.py` | 10 | Logging, error handling, security headers, rate limiting |
-| `test_rag.py` | 10 | Ingestion, retrieval, category filter, nested dict, missing data, chunks |
-| `test_config.py` | 4 | Defaults, env overrides, reusability, ALLOWED_ORIGINS |
-
-All tests run without `GOOGLE_API_KEY` (LLM and embeddings are mocked). Integration tests (4, marked `skipif`) require the API key.
-
-### Running Tests
-
-```bash
-pytest tests/ -v                              # All 49 tests (mocked LLM)
-pytest tests/ --cov=src --cov-report=term     # With coverage
-pytest tests/ -k "integration" -v             # Integration only (needs GOOGLE_API_KEY)
-```
+| Target | Command |
+|--------|---------|
+| `make test-ci` | `pytest tests/ -v --tb=short -x --ignore=tests/test_eval.py` |
+| `make test-eval` | `pytest tests/test_eval.py -v --tb=short` |
+| `make lint` | `ruff check src/ tests/` |
+| `make run` | `uvicorn src.api.app:app --host 0.0.0.0 --port 8080 --reload` |
+| `make docker-up` | `docker compose up --build` |
+| `make smoke-test` | `curl /health` |
+| `make ingest` | Run RAG ingestion manually |
 
 ---
 
-## 8. Deployment
+## Trade-offs
+
+### Why Custom StateGraph vs create_react_agent
+
+| Aspect | Custom StateGraph (chosen) | create_react_agent |
+|--------|---------------------------|-------------------|
+| Validation loop | Built-in: generate -> validate -> retry/fallback | Not available without wrapping |
+| Routing control | Explicit 7-category router with confidence threshold | LLM decides tool calls implicitly |
+| Time awareness | `current_time` injected into state at entry | Must be added to system prompt manually |
+| Domain guardrails | Dedicated off_topic, gambling_advice, action_request paths | Single system prompt, no structured routing |
+| Observability | Each node is individually traceable in LangSmith | Tool calls are traceable but routing is opaque |
+| Code complexity | More code (8 nodes, 2 routing functions) | ~10 lines to set up |
+| Flexibility | Full control over retry logic, validation criteria | Simpler but less control |
+
+### Demo vs Production
+
+| Component | Demo | Production |
+|-----------|------|------------|
+| Vector DB | ChromaDB (in-process, persistent) | Vertex AI Vector Search |
+| Checkpointing | MemorySaver (lost on restart) | FirestoreSaver |
+| LLM auth | API key in `.env` | Vertex AI IAM + GCP Secret Manager |
+| Deployment | Docker Compose (local) | Cloud Run |
+| Rate limiting | In-memory per-IP dict | Redis-backed distributed limiter |
+| Monitoring | Structured logging | LangSmith + Cloud Monitoring |
+
+---
+
+## Configuration
+
+All settings in `src/config.py` using `pydantic-settings`. Every value is overridable via environment variable.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GOOGLE_API_KEY` | (required) | Google AI API key |
+| `PROPERTY_NAME` | `Mohegan Sun` | Property name used in prompts |
+| `PROPERTY_DATA_PATH` | `data/mohegan_sun.json` | Path to property JSON |
+| `MODEL_NAME` | `gemini-2.5-flash` | LLM model |
+| `MODEL_TEMPERATURE` | `0.3` | LLM temperature |
+| `EMBEDDING_MODEL` | `models/text-embedding-004` | Embedding model (768 dim) |
+| `CHROMA_PERSIST_DIR` | `data/chroma` | ChromaDB persistence directory |
+| `RAG_TOP_K` | `5` | Number of retrieval results |
+| `RAG_CHUNK_SIZE` | `800` | Text chunk size (characters) |
+| `RAG_CHUNK_OVERLAP` | `100` | Chunk overlap (characters) |
+| `ALLOWED_ORIGINS` | `["http://localhost:8080"]` | CORS allowed origins |
+| `RATE_LIMIT_CHAT` | `20` | Max chat requests per minute per IP |
+| `SSE_TIMEOUT_SECONDS` | `60` | Stream timeout (seconds) |
+| `LOG_LEVEL` | `INFO` | Python logging level |
+| `ENVIRONMENT` | `development` | Environment name |
+| `VERSION` | `0.1.0` | Application version |
+
+---
+
+## Deployment
 
 ### Docker
 
-Multi-stage build (`python:3.12-slim`):
-- **Stage 1** (builder): Install dependencies with `build-essential`
-- **Stage 2** (production): Copy deps + app code, non-root `appuser`, expose 8080
+Multi-stage build (`Dockerfile`):
+1. **Builder stage**: Python 3.12-slim, installs dependencies to `/build/deps`.
+2. **Production stage**: Python 3.12-slim, non-root `appuser`, copies deps and application code.
 
-Data ingestion happens at **startup** (FastAPI lifespan), not build time. This avoids baking `GOOGLE_API_KEY` into the image.
+RAG ingestion runs at FastAPI startup (lifespan), not build time, so `GOOGLE_API_KEY` is not baked into the image.
 
-### docker-compose.yml
+HEALTHCHECK pings `http://localhost:8080/health` every 30 seconds.
 
-Single service with:
-- Health check (60s start period for first-boot ingestion)
-- ChromaDB data persisted in a Docker volume
-- 2GB memory limit
-- Graceful shutdown (10s timeout for in-flight SSE streams)
+### Docker Compose
 
-### Startup Sequence
+Single-service setup with:
+- `.env` file for secrets (`GOOGLE_API_KEY`).
+- Named volume `chroma_data` for ChromaDB persistence across restarts.
+- 2GB memory limit, 60s start period for initial embedding.
 
-```
-1. docker compose up --build
-2. uvicorn starts FastAPI
-3. Lifespan: validate env vars (GOOGLE_API_KEY)
-4. Lifespan: check ChromaDB for existing data
-5. If empty -> ingest property data (~30s)
-6. Lifespan: initialize LangGraph agent
-7. Health returns 200 -> Docker healthcheck passes
-8. System ready at http://localhost:8080
-```
+### Cloud Build
 
-### Cloud Run (Production Path)
-
-```
-Cloud Build: Test -> Docker Build -> Push to GCR -> Deploy to Cloud Run
-```
-
-- `min-instances=1` to avoid cold start latency
-- `concurrency=1` (synchronous graph execution)
-- Scale via instances, not concurrency
-- Secrets via GCP Secret Manager (not env vars)
-
----
-
-## 9. Cost Model
-
-| Component | Demo | Production (100K queries/month) |
-|-----------|------|-------------------------------|
-| Gemini 2.5 Flash | Free tier | ~$150/month |
-| Embeddings | Free tier | ~$30/month |
-| ChromaDB | $0 (embedded) | N/A (Vertex AI: ~$200/mo) |
-| Cloud Run | $0 (local) | ~$150/month |
-| **Total** | **$0** | **~$530/month** |
+`cloudbuild.yaml` defines a 4-step CI/CD pipeline:
+1. Install dependencies and run tests (`pytest`, ignoring eval tests).
+2. Build Docker image tagged with commit SHA.
+3. Push to Google Container Registry.
+4. Deploy to Cloud Run (us-central1, 512Mi memory, 60s timeout).
 
 ---
 
