@@ -35,6 +35,14 @@ out/
 .DS_Store
 Thumbs.db
 
+# Testing/linting caches
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
 # ChromaDB data (generated at runtime)
 data/chroma/
 

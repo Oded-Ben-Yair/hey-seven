@@ -19,8 +19,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.config import get_settings
 
-from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401
-from .guardrails import (  # noqa: F401
+from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401 (CircuitBreaker re-exported for tests)
+from .guardrails import (
     audit_input,
     detect_age_verification,
     detect_bsa_aml,

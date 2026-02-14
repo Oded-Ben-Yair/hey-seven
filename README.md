@@ -214,6 +214,20 @@ All settings are configurable via environment variables (powered by `pydantic-se
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `ENVIRONMENT` | `development` | Environment name |
 | `VERSION` | `0.1.0` | Application version |
+| `PROPERTY_WEBSITE` | `mohegansun.com` | Property website URL |
+| `PROPERTY_PHONE` | `1-888-226-7711` | Property phone number |
+| `MODEL_TIMEOUT` | `30` | LLM call timeout (seconds) |
+| `MODEL_MAX_RETRIES` | `2` | LLM call retry count |
+| `MODEL_MAX_OUTPUT_TOKENS` | `2048` | Max response tokens |
+| `RAG_MIN_RELEVANCE_SCORE` | `0.3` | Min cosine similarity (0-1) |
+| `RATE_LIMIT_MAX_CLIENTS` | `10000` | Max tracked client IPs |
+| `MAX_REQUEST_BODY_SIZE` | `65536` | Max request body (bytes) |
+| `MAX_MESSAGE_LIMIT` | `40` | Max messages before conversation end |
+| `MAX_HISTORY_MESSAGES` | `20` | Sliding window for LLM context |
+| `ENABLE_HITL_INTERRUPT` | `false` | Human-in-the-loop before generate |
+| `GRAPH_RECURSION_LIMIT` | `10` | LangGraph recursion limit |
+| `CB_FAILURE_THRESHOLD` | `5` | Circuit breaker failure count |
+| `CB_COOLDOWN_SECONDS` | `60` | Circuit breaker cooldown |
 
 ## Cost Model
 
@@ -247,7 +261,7 @@ Per-request: ~$0.0014 (router + generate + validate + embedding).
 | Embeddings | Google `text-embedding-004` (768 dim) |
 | Vector Store | ChromaDB (embedded, persistent) |
 | Backend | FastAPI + uvicorn |
-| Config | pydantic-settings (20 env-overridable parameters) |
+| Config | pydantic-settings (31 env-overridable parameters) |
 | Frontend | Vanilla HTML/CSS/JS with SSE |
 | Container | Docker (multi-stage, non-root, HEALTHCHECK) |
 | CI/CD | GCP Cloud Build (4-step: test, build, push, deploy) |
