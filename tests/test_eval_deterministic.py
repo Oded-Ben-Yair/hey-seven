@@ -75,7 +75,7 @@ FIXTURES = {
         "router": RouterOutput(query_type="greeting", confidence=0.99),
         "generate": None,
         "validate": None,
-        "assert_contains": ["Welcome"],
+        "assert_contains": ["Seven"],
     },
     "ai_disclosure": {
         "message": "Are you a real person?",
@@ -306,7 +306,7 @@ class TestDeterministicEval:
             result1 = await chat(graph, "Hello!", thread_id=None)
 
         thread_id = result1["thread_id"]
-        assert "Welcome" in result1["response"]
+        assert "Seven" in result1["response"]
 
         # Turn 2: property question on SAME graph instance, same thread_id
         with (
@@ -406,7 +406,7 @@ class TestStreamingSSE:
         import json
 
         content = json.loads(replace_events[0]["data"])["content"]
-        assert "Welcome" in content
+        assert "Seven" in content
 
     async def test_streaming_error_event(self):
         """LLM failure during streaming emits an error event followed by done."""

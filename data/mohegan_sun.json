@@ -478,6 +478,18 @@
     {
       "question": "What other casinos are nearby?",
       "answer": "Mohegan Sun is the premier destination in southeastern Connecticut with world-class dining, entertainment, and gaming. We focus on providing the best experience right here. Is there something specific about our resort I can help you with?"
+    },
+    {
+      "question": "Is there a shuttle service to Mohegan Sun?",
+      "answer": "Mohegan Sun offers bus service from various cities in the Northeast through Mohegan Sun Express bus packages. Routes operate from New York City, Boston, Hartford, Providence, and other major cities. Contact 1-888-226-7711 or visit mohegansun.com for current schedules and pricing."
+    },
+    {
+      "question": "Is Wi-Fi available at Mohegan Sun?",
+      "answer": "Yes, complimentary Wi-Fi is available throughout the resort for hotel guests. Casino floor and public areas also have Wi-Fi access. Hotel guests can connect via the in-room network for high-speed internet."
+    },
+    {
+      "question": "Is there a coat check at Mohegan Sun?",
+      "answer": "Coat check services are available at select entertainment venues including the Mohegan Sun Arena and Comix Roadhouse during events. The hotel bell desk can also assist with luggage and coat storage for guests."
     }
   ]
 }

@@ -1,56 +1,72 @@
 # Hey Seven Property Q&A Agent
 
-An AI-powered property concierge for Mohegan Sun casino resort, built with LangGraph and Gemini 2.5 Flash.
+An AI concierge for Mohegan Sun casino resort, built with a custom 8-node LangGraph StateGraph.
 
-Guests ask natural language questions about dining, entertainment, rooms, amenities, gaming, and promotions. The agent retrieves answers from a curated knowledge base using RAG (Retrieval-Augmented Generation) and streams responses token-by-token via Server-Sent Events.
+![Screenshot](docs/screenshot-desktop.png)
 
 ## Quick Start
 
 ```bash
-# 1. Clone and configure
 git clone https://github.com/Oded-Ben-Yair/hey-seven.git
 cd hey-seven
 cp .env.example .env   # Add your GOOGLE_API_KEY
-
-# 2. Run with Docker (recommended)
 docker compose up --build
-
-# 3. Open browser
-open http://localhost:8080
+# Open http://localhost:8080
 ```
 
-The first boot takes ~30 seconds to embed property data into ChromaDB. Subsequent restarts are fast (data persists in a Docker volume).
+## What I Built & Why
 
-### Local Development
+Casino guests need quick, reliable answers about dining, entertainment, rooms, and amenities. This agent retrieves answers from a curated knowledge base using RAG and streams responses token-by-token via Server-Sent Events.
 
-```bash
-pip install -r requirements.txt
-make run
-```
+I chose to build a **custom 8-node StateGraph** rather than using `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The graph-native validation loop (generate → validate → retry/fallback) gives me control that a generic ReAct loop cannot.
+
+The frontend includes a **real-time graph trace panel** that visualizes LangGraph node execution with timing — every query shows which nodes fired, how long each took, and what metadata they produced.
 
 ## Architecture
 
 ```
-START --> router --+--> greeting --> END
-                   +--> off_topic --> END
-                   +--> retrieve --> generate --> validate --+--> respond --> END
-                                      ^                      +--> generate (retry)
-                                      +----------------------+--> fallback --> END
+START ──> router ──┬──> greeting ──────────────────────────> END
+                   ├──> off_topic ─────────────────────────> END
+                   └──> retrieve ──> generate ──> validate ─┬──> respond ──> END
+                                        ^                   ├──> generate (retry, max 1)
+                                        └───────────────────┘
+                                                            └──> fallback ──> END
 ```
 
-A custom 8-node LangGraph `StateGraph` with two conditional routing points:
+**8 nodes, 2 conditional routing points:**
 
-1. **Router** classifies user intent (7 categories) using structured LLM output.
-2. **Retrieve** searches ChromaDB for relevant property knowledge.
-3. **Generate** produces a grounded response using the 11-rule concierge system prompt (VIP interaction style, competitor deflection, responsible gaming).
-4. **Validate** performs adversarial review against 6 criteria (grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming).
-5. On validation failure, the graph retries once, then falls back to a safe contact-info response.
+1. **Router** — Classifies user intent (7 categories) using `.with_structured_output(RouterOutput)`.
+2. **Retrieve** — Searches ChromaDB with multi-strategy RRF reranking (semantic + augmented queries).
+3. **Generate** — Produces a grounded response using the 11-rule concierge system prompt.
+4. **Validate** — Adversarial LLM review against 6 criteria (grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming).
+5. **Respond** — Extracts sources, packages final response.
+6. **Greeting** — Returns "Seven" persona welcome with property categories.
+7. **Off-Topic** — Deterministic guardrail responses (no LLM call).
+8. **Fallback** — Safe contact-info response when validation exhausts retries.
 
-Tokens stream to the browser in real time via SSE (`astream_events` v2). The stream checks `request.is_disconnected()` to cancel on client disconnect.
+## LangGraph Patterns Used
 
-**Circuit breaker**: The generate node is protected by an in-memory circuit breaker (5 failures -> 60s cooldown -> half-open probe) to prevent cascading LLM failures.
+| Pattern | Where | Why |
+|---------|-------|-----|
+| Custom 8-node StateGraph | `graph.py` | Full control vs `create_react_agent` — validation loops, deterministic guardrails |
+| Structured output routing | `router_node` | `.with_structured_output(RouterOutput)` — no string parsing |
+| Conditional edges with functions | `route_from_router`, `route_after_validate` | Explicit, testable routing logic |
+| Graph-native retry loop | validate → generate | Not Python retry — graph-level state loop with counter |
+| State schema with reducers | `Annotated[list, add_messages]` | Proper LangGraph state management |
+| `astream_events` v2 | `chat_stream()` | Most advanced streaming API with per-node event filtering |
+| Dual LLM strategy | Generator (0.3) vs Validator (0.0) | Different temperatures for creativity vs strictness |
+| HITL interrupt support | `interrupt_before` config | Production pattern for regulated environments |
+| Real-time graph visualization | SSE `graph_node` events | Live node execution visible in UI with timing |
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for full details: node descriptions, state schema, routing logic, prompt system, cost model, and deployment.
+## Real-Time Graph Trace
+
+Every chat request emits `graph_node` SSE events alongside content tokens. The frontend graph trace panel shows:
+
+- Which nodes are **active** (gold pulse), **complete** (solid gold + timing), or **skipped**
+- Per-node metadata: router classification + confidence, doc count, validation result, sources
+- Total pipeline timing from router to respond
+
+This is visible via the "Graph Trace" button in the bottom-right corner.
 
 ## Key Design Decisions
 
@@ -61,113 +77,68 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full details: node descriptions, stat
 | Vector DB | ChromaDB (embedded) | Zero infrastructure for demo; Vertex AI Vector Search for production |
 | Streaming | Real token SSE via `astream_events` v2 | True progressive rendering with timeout + disconnect detection |
 | Embeddings | Google `text-embedding-004` | GCP-native, free tier, 768 dimensions |
-| Frontend | Vanilla HTML/CSS/JS | No build step, minimal footprint, backend is 90% of evaluation |
+| Frontend | Single-file HTML/CSS/JS | No build step, minimal footprint, ships with FastAPI |
 | Validation | Adversarial LLM review (6 criteria) | Catches hallucination, off-topic drift, gambling advice leaks |
-| Config | `pydantic-settings` BaseSettings | Zero hardcoded values; every constant overridable via env var |
-| Retrieval | Multi-strategy RRF reranking | Reciprocal Rank Fusion of semantic + augmented queries, hash-based dedup, cosine similarity |
+| Config | `pydantic-settings` BaseSettings | 31 env-overridable settings, zero hardcoded values |
+| Retrieval | Multi-strategy RRF reranking | Reciprocal Rank Fusion of semantic + augmented queries, hash-based dedup |
 | Ingestion | Idempotent with deterministic IDs | SHA-256 content+source hash prevents duplicates on re-ingestion |
-| Guardrails | Deterministic regex + LLM validation | Pre-LLM `audit_input()` (7 patterns) + `detect_responsible_gaming()` (22 patterns) + `detect_age_verification()` (6 patterns) + `detect_bsa_aml()` (10 patterns) |
+| Guardrails | Deterministic regex + LLM validation | Pre-LLM `audit_input()` blocks injection; 5 guardrails, 56 patterns, 3 languages |
 
-## Project Structure
+## Safety & Guardrails
 
-```
-hey-seven/
-├── src/
-│   ├── config.py              # Centralized config (pydantic-settings, 20 env vars)
-│   ├── agent/
-│   │   ├── graph.py           # 8-node StateGraph + chat + chat_stream (SSE)
-│   │   ├── nodes.py           # 8 nodes + 2 routers + CircuitBreaker + guardrails
-│   │   ├── state.py           # PropertyQAState (9 fields) + Pydantic models
-│   │   ├── prompts.py         # 3 prompt templates (11-rule concierge, VIP tone)
-│   │   └── tools.py           # search_knowledge_base + search_hours
-│   ├── rag/
-│   │   ├── pipeline.py        # Ingest, chunk (800/120), embed, retrieve (ChromaDB)
-│   │   └── embeddings.py      # Google text-embedding-004 config
-│   └── api/
-│       ├── app.py             # FastAPI app, lifespan, SSE streaming, disconnect detection
-│       ├── models.py          # Pydantic request/response + SSE event schemas
-│       └── middleware.py      # 6 pure ASGI middleware (logging, errors, security, auth, rate limit, body limit)
-├── data/
-│   └── mohegan_sun.json       # Curated property data (30 items, 7 categories)
-├── static/
-│   └── index.html             # Branded chat UI (Hey Seven gold/dark/cream)
-├── tests/                     # 313 tests across 11 files
-├── Dockerfile                 # Multi-stage Python 3.12, non-root, HEALTHCHECK
-├── docker-compose.yml         # Single service, health check, named volume, 2GB limit
-├── requirements.txt           # Pinned production dependencies
-├── requirements-dev.txt       # Test/dev deps (pytest, ruff, black, coverage)
-├── .env.example               # All 20 env vars with inline documentation
-├── Makefile                   # test-ci, test-eval, lint, run, docker-up
-├── cloudbuild.yaml            # GCP Cloud Build CI/CD (4-step pipeline)
-└── pyproject.toml             # Project config, pytest, ruff settings
-```
+5 deterministic pre-LLM guardrails with 56 regex patterns across 3 languages (English, Spanish, Mandarin):
 
-## Running Tests
+| Guardrail | Patterns | Trigger |
+|-----------|----------|---------|
+| Prompt Injection | 7 | Jailbreak attempts, system prompt extraction |
+| Responsible Gaming | 22 | Problem gambling concerns, self-exclusion requests |
+| Age Verification | 6 | Underage access, minimum age questions |
+| BSA/AML Compliance | 10 | Money laundering, structuring, CTR/SAR evasion |
+| Patron Privacy | 11 | PII requests about other guests, player tracking queries |
+
+All guardrails fire **before** any LLM call and return deterministic responses with appropriate helpline numbers.
+
+## Testing
 
 ```bash
-# Unit + integration tests (no API key needed, 299 tests)
-make test-ci
-
-# Deterministic eval tests (no API key, VCR fixtures, 12 tests)
-pytest tests/test_eval_deterministic.py -v
-
-# Live eval tests (requires GOOGLE_API_KEY, 14 tests)
-make test-eval
-
-# All tests with coverage
-pytest tests/ --cov=src --cov-report=term-missing --ignore=tests/test_eval.py
-
-# Lint
-make lint   # 0 errors
+make test-ci       # 368 tests, no API key needed
+make test-eval     # 14 live eval tests (requires GOOGLE_API_KEY)
+make lint          # ruff + mypy
 ```
 
-**Test pyramid**: 313 tests pass without API key (unit + integration + deterministic eval) + 14 live eval = **327 total tests** (90%+ coverage).
+**368 tests** across 4 layers:
 
-Tests run without `GOOGLE_API_KEY` except `test_eval.py` (live LLM). Deterministic eval tests use VCR-style fixtures with pre-recorded LLM responses.
+| Layer | Tests | Description |
+|-------|-------|-------------|
+| Unit | ~200 | Nodes, guardrails, config, middleware, models |
+| Integration | ~100 | Graph execution, API endpoints, SSE streaming |
+| Deterministic Eval | 12 | Pre-recorded LLM fixtures, assertion-based |
+| Live Eval | 14 | Real Gemini API calls, quality scoring |
+
+**95%+ coverage**, lint clean.
 
 ## API Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/chat` | API key + rate limit | Send message, receive SSE token stream |
-| `GET` | `/health` | None | Health check — 200 healthy, 503 degraded (Cloud Run routing) |
+| `GET` | `/health` | None | Health check (200 healthy, 503 degraded) |
 | `GET` | `/property` | None | Property metadata (name, categories, doc count) |
-| `GET` | `/` | None | Chat UI (static HTML) |
+| `GET` | `/graph` | None | Graph structure (nodes and edges for visualization) |
+| `GET` | `/` | None | Chat UI |
 
-### POST /chat
-
-**Request:**
-```json
-{
-  "message": "What Italian restaurants do you have?",
-  "thread_id": "optional-uuid-for-multi-turn"
-}
-```
-
-**Response:** Server-Sent Events stream with typed events:
+### SSE Event Types
 
 ```
-event: metadata
-data: {"thread_id": "abc-123"}
-
-event: token
-data: {"content": "Mohegan Sun has "}
-
-event: token
-data: {"content": "excellent Italian dining..."}
-
-event: sources
-data: {"sources": ["restaurants"]}
-
-event: done
-data: {"done": true}
+event: metadata     — {"thread_id": "..."}
+event: graph_node   — {"node": "router", "status": "start"}
+event: graph_node   — {"node": "router", "status": "complete", "duration_ms": 450, "metadata": {"query_type": "property_qa", "confidence": 0.95}}
+event: token        — {"content": "Mohegan Sun has "}
+event: sources      — {"sources": ["restaurants"]}
+event: replace      — {"content": "..."} (greeting/off_topic — replaces streaming)
+event: error        — {"error": "..."} (mid-stream failures)
+event: done         — {"done": true}
 ```
-
-**Error responses:**
-- `401` — Missing or invalid API key (when `API_KEY` is configured)
-- `422` — Invalid request (empty message, non-UUID thread_id)
-- `429` — Rate limited (includes `Retry-After` header)
-- `503` — Agent not initialized (includes `Retry-After: 30` header)
 
 ## Security & Middleware
 
@@ -175,59 +146,16 @@ data: {"done": true}
 
 | Middleware | Description |
 |-----------|-------------|
-| **RequestLogging** | Cloud Logging JSON format, `X-Request-ID`, `X-Response-Time-Ms` |
-| **SecurityHeaders** | `nosniff`, `DENY`, CSP, `Referrer-Policy` |
-| **ApiKeyAuth** | `X-API-Key` with `hmac.compare_digest` (disabled when `API_KEY` empty) |
-| **RequestBodyLimit** | 64 KB max request body to prevent abuse |
-| **RateLimit** | Token-bucket per IP, 20 req/min on `/chat` |
-| **ErrorHandling** | `CancelledError` at INFO, structured 500 JSON for unhandled errors |
-
-Additional safety:
-- **Input auditing**: `audit_input()` regex detects 7 prompt injection patterns pre-LLM
-- **Responsible gaming**: `detect_responsible_gaming()` regex detects 22 gambling concern patterns (English, Spanish, Mandarin) deterministically
-- **Age verification**: `detect_age_verification()` regex detects 6 underage-related patterns, ensures 21+ requirement is always communicated
-- **BSA/AML compliance**: `detect_bsa_aml()` regex detects 10 financial crime patterns (money laundering, structuring, CTR/SAR evasion)
-- **CORS**: Configurable allowed origins
-- **SSE timeout**: Configurable timeout with clean error event on expiry
-- **Request cancellation**: SSE stream cancels on client disconnect
+| RequestLogging | Cloud Logging JSON format, `X-Request-ID`, `X-Response-Time-Ms` |
+| SecurityHeaders | `nosniff`, `DENY`, CSP, `Referrer-Policy` |
+| ApiKeyAuth | `X-API-Key` with `hmac.compare_digest` (disabled when empty) |
+| RequestBodyLimit | 64 KB max request body |
+| RateLimit | Token-bucket per IP, 20 req/min on `/chat` |
+| ErrorHandling | `CancelledError` at INFO, structured 500 JSON |
 
 ## Configuration
 
-All settings are configurable via environment variables (powered by `pydantic-settings`). See `.env.example` for full documentation.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GOOGLE_API_KEY` | (required) | Google AI API key |
-| `API_KEY` | (empty) | API key for `/chat` authentication (disabled when empty) |
-| `MODEL_NAME` | `gemini-2.5-flash` | LLM model name |
-| `MODEL_TEMPERATURE` | `0.3` | LLM temperature |
-| `EMBEDDING_MODEL` | `models/text-embedding-004` | Embedding model |
-| `PROPERTY_NAME` | `Mohegan Sun` | Property name for prompts |
-| `PROPERTY_DATA_PATH` | `data/mohegan_sun.json` | Path to property JSON |
-| `CHROMA_PERSIST_DIR` | `data/chroma` | ChromaDB persistence directory |
-| `RAG_TOP_K` | `5` | Number of retrieval results |
-| `RAG_CHUNK_SIZE` | `800` | Chunk size for text splitting |
-| `RAG_CHUNK_OVERLAP` | `120` | Chunk overlap (15% of chunk size) |
-| `ALLOWED_ORIGINS` | `["http://localhost:8080"]` | CORS allowed origins |
-| `RATE_LIMIT_CHAT` | `20` | Max chat requests per minute per IP |
-| `SSE_TIMEOUT_SECONDS` | `60` | Stream timeout |
-| `LOG_LEVEL` | `INFO` | Python logging level |
-| `ENVIRONMENT` | `development` | Environment name |
-| `VERSION` | `0.1.0` | Application version |
-| `PROPERTY_WEBSITE` | `mohegansun.com` | Property website URL |
-| `PROPERTY_PHONE` | `1-888-226-7711` | Property phone number |
-| `MODEL_TIMEOUT` | `30` | LLM call timeout (seconds) |
-| `MODEL_MAX_RETRIES` | `2` | LLM call retry count |
-| `MODEL_MAX_OUTPUT_TOKENS` | `2048` | Max response tokens |
-| `RAG_MIN_RELEVANCE_SCORE` | `0.3` | Min cosine similarity (0-1) |
-| `RATE_LIMIT_MAX_CLIENTS` | `10000` | Max tracked client IPs |
-| `MAX_REQUEST_BODY_SIZE` | `65536` | Max request body (bytes) |
-| `MAX_MESSAGE_LIMIT` | `40` | Max messages before conversation end |
-| `MAX_HISTORY_MESSAGES` | `20` | Sliding window for LLM context |
-| `ENABLE_HITL_INTERRUPT` | `false` | Human-in-the-loop before generate |
-| `GRAPH_RECURSION_LIMIT` | `10` | LangGraph recursion limit |
-| `CB_FAILURE_THRESHOLD` | `5` | Circuit breaker failure count |
-| `CB_COOLDOWN_SECONDS` | `60` | Circuit breaker cooldown |
+All 31 settings configurable via environment variables (`pydantic-settings`). See [.env.example](.env.example) for full documentation.
 
 ## Cost Model
 
@@ -239,38 +167,48 @@ All settings are configurable via environment variables (powered by `pydantic-se
 
 Per-request: ~$0.0014 (router + generate + validate + embedding).
 
-## Trade-offs and Production Considerations
+## Trade-offs I'd Revisit
 
-| Component | Demo | Production |
-|-----------|------|------------|
+| Component | Current | Production Alternative |
+|-----------|---------|----------------------|
 | Vector DB | ChromaDB (in-process) | Vertex AI Vector Search |
 | Checkpointing | MemorySaver (lost on restart) | PostgresSaver or FirestoreSaver |
-| LLM auth | API key in .env | Vertex AI IAM + GCP Secret Manager |
-| Deployment | Docker Compose (local) | Cloud Run |
 | Rate limiting | In-memory per-IP | Redis-backed distributed limiter |
 | Monitoring | Structured logging | LangSmith + Cloud Monitoring |
-| Frontend | Vanilla HTML served by FastAPI | Next.js with React 19 |
+| Frontend | Single HTML file | Next.js with React 19 |
 | Circuit breaker | In-memory (reset on restart) | Redis-backed with persistence |
 
-## Tech Stack
+## Project Structure
 
-| Component | Technology |
-|-----------|-----------|
-| Agent Framework | LangGraph custom `StateGraph` (8 nodes, 2 conditional edges) |
-| LLM | Gemini 2.5 Flash via `langchain-google-genai` |
-| Embeddings | Google `text-embedding-004` (768 dim) |
-| Vector Store | ChromaDB (embedded, persistent) |
-| Backend | FastAPI + uvicorn |
-| Config | pydantic-settings (31 env-overridable parameters) |
-| Frontend | Vanilla HTML/CSS/JS with SSE |
-| Container | Docker (multi-stage, non-root, HEALTHCHECK) |
-| CI/CD | GCP Cloud Build (4-step: test, build, push, deploy) |
-| Python | 3.12 |
-
-## Data
-
-Property data curated February 2026 from public sources (mohegansun.com). Covers 30 items across 7 categories: restaurants, entertainment, hotel rooms, amenities, casino areas, promotions, and FAQ. Mohegan Sun is a tribal casino operated by the Mohegan Tribe of Connecticut. Contact the property directly for current hours and availability.
+```
+hey-seven/
+├── src/
+│   ├── config.py              # 31 env-overridable settings (pydantic-settings)
+│   ├── agent/
+│   │   ├── graph.py           # 8-node StateGraph + chat + chat_stream (SSE)
+│   │   ├── nodes.py           # 8 nodes + 2 routers + guardrails + circuit breaker
+│   │   ├── state.py           # PropertyQAState (9 fields) + Pydantic models
+│   │   ├── prompts.py         # 3 prompt templates (11-rule concierge, VIP tone)
+│   │   ├── guardrails.py      # 5 deterministic guardrails (56 patterns, 3 languages)
+│   │   └── tools.py           # search_knowledge_base + search_hours
+│   ├── rag/
+│   │   ├── pipeline.py        # Ingest, chunk (800/120), embed, retrieve (ChromaDB)
+│   │   └── embeddings.py      # Google text-embedding-004
+│   └── api/
+│       ├── app.py             # FastAPI app, lifespan, SSE streaming
+│       ├── models.py          # Pydantic schemas + SSE event models
+│       └── middleware.py      # 6 pure ASGI middleware
+├── data/mohegan_sun.json      # 79 items, 7 categories
+├── static/
+│   ├── index.html             # Branded chat UI (gold/dark/cream)
+│   └── assets/                # Custom logo assets
+├── tests/                     # 368 tests across 11 files
+├── Dockerfile                 # Multi-stage Python 3.12, non-root, HEALTHCHECK
+├── docker-compose.yml         # Health check, named volume, 2GB limit
+├── cloudbuild.yaml            # GCP Cloud Build CI/CD (4-step pipeline)
+└── .env.example               # All 31 env vars documented
+```
 
 ---
 
-Built by Oded Ben-Yair
+Built by Oded Ben-Yair | February 2026

@@ -66,6 +66,28 @@ class HealthResponse(BaseModel):
     property_loaded: bool
 
 
+class SSEGraphNodeEvent(BaseModel):
+    """``event: graph_node`` — node lifecycle event for graph trace panel."""
+
+    node: str
+    status: str  # "start" or "complete"
+    duration_ms: int | None = None
+    metadata: dict | None = None
+
+
+class SSEReplaceEvent(BaseModel):
+    """``event: replace`` — full response from non-streaming nodes."""
+
+    content: str
+
+
+class GraphStructureResponse(BaseModel):
+    """Response model for GET /graph endpoint."""
+
+    nodes: list[str]
+    edges: list[dict]
+
+
 class PropertyInfoResponse(BaseModel):
     name: str
     location: str

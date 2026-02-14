@@ -6,6 +6,7 @@ Branches: greeting, off_topic, fallback
 
 import json
 import logging
+import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
@@ -50,6 +51,30 @@ NODE_GREETING = "greeting"
 NODE_OFF_TOPIC = "off_topic"
 
 _NON_STREAM_NODES = frozenset({NODE_GREETING, NODE_OFF_TOPIC, NODE_FALLBACK})
+
+_KNOWN_NODES = frozenset({
+    NODE_ROUTER, NODE_RETRIEVE, NODE_GENERATE, NODE_VALIDATE,
+    NODE_RESPOND, NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
+})
+
+
+def _extract_node_metadata(node: str, output: Any) -> dict:
+    """Extract per-node metadata for graph trace SSE events."""
+    if not isinstance(output, dict):
+        return {}
+    if node == NODE_ROUTER:
+        return {
+            "query_type": output.get("query_type"),
+            "confidence": output.get("router_confidence"),
+        }
+    if node == NODE_RETRIEVE:
+        ctx = output.get("retrieved_context", [])
+        return {"doc_count": len(ctx)}
+    if node == NODE_VALIDATE:
+        return {"result": output.get("validation_result")}
+    if node == NODE_RESPOND:
+        return {"sources": output.get("sources_used", [])}
+    return {}
 
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
@@ -207,6 +232,7 @@ async def chat_stream(
     }
 
     sources: list[str] = []
+    node_start_times: dict[str, float] = {}
 
     try:
         async for event in graph.astream_events(
@@ -216,6 +242,18 @@ async def chat_stream(
         ):
             kind = event.get("event")
             langgraph_node = event.get("metadata", {}).get("langgraph_node", "")
+
+            # --- Graph node lifecycle: start ---
+            if (
+                kind == "on_chain_start"
+                and langgraph_node in _KNOWN_NODES
+                and langgraph_node not in node_start_times
+            ):
+                node_start_times[langgraph_node] = time.monotonic()
+                yield {
+                    "event": "graph_node",
+                    "data": json.dumps({"node": langgraph_node, "status": "start"}),
+                }
 
             # Stream tokens from generate node only
             if kind == "on_chat_model_stream" and langgraph_node == NODE_GENERATE:
@@ -262,6 +300,23 @@ async def chat_stream(
                     for s in node_sources:
                         if s not in sources:
                             sources.append(s)
+
+            # --- Graph node lifecycle: complete ---
+            if kind == "on_chain_end" and langgraph_node in node_start_times:
+                duration_ms = int(
+                    (time.monotonic() - node_start_times.pop(langgraph_node)) * 1000
+                )
+                output = event.get("data", {}).get("output", {})
+                meta = _extract_node_metadata(langgraph_node, output)
+                yield {
+                    "event": "graph_node",
+                    "data": json.dumps({
+                        "node": langgraph_node,
+                        "status": "complete",
+                        "duration_ms": duration_ms,
+                        "metadata": meta,
+                    }),
+                }
 
     except Exception:
         logger.exception("Error during SSE stream")

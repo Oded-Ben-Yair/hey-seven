@@ -26,7 +26,7 @@ from .middleware import (
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
 )
-from .models import ChatRequest, HealthResponse, PropertyInfoResponse
+from .models import ChatRequest, GraphStructureResponse, HealthResponse, PropertyInfoResponse
 
 settings = get_settings()
 
@@ -189,6 +189,34 @@ def create_app() -> FastAPI:
             categories=categories,
             document_count=doc_count,
         )
+
+    # ------------------------------------------------------------------
+    # GET /graph — Graph structure for visualization
+    # ------------------------------------------------------------------
+    @app.get("/graph", response_model=GraphStructureResponse)
+    async def graph_structure():
+        """Return the StateGraph structure for visualization."""
+        return {
+            "nodes": [
+                "router", "retrieve", "generate", "validate",
+                "respond", "fallback", "greeting", "off_topic",
+            ],
+            "edges": [
+                {"from": "__start__", "to": "router"},
+                {"from": "router", "to": "retrieve", "condition": "property_qa | hours_schedule | ambiguous"},
+                {"from": "router", "to": "greeting", "condition": "greeting"},
+                {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request | age_verification | patron_privacy"},
+                {"from": "retrieve", "to": "generate"},
+                {"from": "generate", "to": "validate"},
+                {"from": "validate", "to": "respond", "condition": "PASS"},
+                {"from": "validate", "to": "generate", "condition": "RETRY (max 1)"},
+                {"from": "validate", "to": "fallback", "condition": "FAIL"},
+                {"from": "respond", "to": "__end__"},
+                {"from": "fallback", "to": "__end__"},
+                {"from": "greeting", "to": "__end__"},
+                {"from": "off_topic", "to": "__end__"},
+            ],
+        }
 
     # ------------------------------------------------------------------
     # Static files for frontend (MUST be last)

@@ -551,10 +551,10 @@ async def greeting_node(state: PropertyQAState) -> dict:
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
     return {
         "messages": [AIMessage(content=(
-            f"Welcome to {settings.PROPERTY_NAME}! I'm your AI concierge, "
-            "here to help you explore everything the resort has to offer.\n\n"
+            f"Hi! I'm **Seven**, your AI concierge for {settings.PROPERTY_NAME}. "
+            "I'm here to help you explore everything the resort has to offer.\n\n"
             f"I can help with:\n{bullets}\n\n"
-            "What would you like to know about?"
+            "What would you like to know?"
         ))],
         "sources_used": [],
     }

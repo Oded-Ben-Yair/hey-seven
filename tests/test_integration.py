@@ -177,7 +177,7 @@ class TestGuardrailIntegration:
 
         state.update(result)
         greeting_result = await greeting_node(state)
-        assert "Welcome" in greeting_result["messages"][0].content
+        assert "Seven" in greeting_result["messages"][0].content
 
     @pytest.mark.asyncio
     async def test_injection_flow(self):

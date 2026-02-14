@@ -400,3 +400,54 @@ class TestHitlInterrupt:
         with mock_patch.dict(os.environ, {"ENABLE_HITL_INTERRUPT": "true"}):
             graph = build_graph()
             assert graph is not None
+
+
+class TestExtractNodeMetadata:
+    """Unit tests for _extract_node_metadata() helper."""
+
+    def test_router_metadata(self):
+        """Router node extracts query_type and confidence."""
+        from src.agent.graph import _extract_node_metadata
+
+        output = {"query_type": "property_qa", "router_confidence": 0.95}
+        meta = _extract_node_metadata("router", output)
+        assert meta["query_type"] == "property_qa"
+        assert meta["confidence"] == 0.95
+
+    def test_retrieve_metadata(self):
+        """Retrieve node extracts doc_count."""
+        from src.agent.graph import _extract_node_metadata
+
+        output = {"retrieved_context": [{"text": "a"}, {"text": "b"}, {"text": "c"}]}
+        meta = _extract_node_metadata("retrieve", output)
+        assert meta["doc_count"] == 3
+
+    def test_validate_metadata(self):
+        """Validate node extracts result."""
+        from src.agent.graph import _extract_node_metadata
+
+        output = {"validation_result": "PASS"}
+        meta = _extract_node_metadata("validate", output)
+        assert meta["result"] == "PASS"
+
+    def test_respond_metadata(self):
+        """Respond node extracts sources."""
+        from src.agent.graph import _extract_node_metadata
+
+        output = {"sources_used": ["restaurants", "entertainment"]}
+        meta = _extract_node_metadata("respond", output)
+        assert meta["sources"] == ["restaurants", "entertainment"]
+
+    def test_unknown_node_returns_empty(self):
+        """Unknown or unhandled nodes return empty dict."""
+        from src.agent.graph import _extract_node_metadata
+
+        assert _extract_node_metadata("generate", {"some": "data"}) == {}
+        assert _extract_node_metadata("fallback", {}) == {}
+
+    def test_non_dict_output_returns_empty(self):
+        """Non-dict output returns empty dict."""
+        from src.agent.graph import _extract_node_metadata
+
+        assert _extract_node_metadata("router", "not a dict") == {}
+        assert _extract_node_metadata("router", None) == {}

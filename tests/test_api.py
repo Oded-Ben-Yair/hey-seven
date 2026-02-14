@@ -318,6 +318,38 @@ class TestChatReplaceEvent:
             assert replace_event["data"]["content"] == "Welcome to Mohegan Sun!"
 
 
+class TestGraphEndpoint:
+    def test_graph_returns_structure(self):
+        """GET /graph returns expected nodes and edges."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/graph")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert "nodes" in data
+            assert "edges" in data
+            assert "router" in data["nodes"]
+            assert "retrieve" in data["nodes"]
+            assert "generate" in data["nodes"]
+            assert "validate" in data["nodes"]
+            assert "respond" in data["nodes"]
+            assert len(data["nodes"]) == 8
+            assert len(data["edges"]) > 0
+            # Verify start edge exists
+            start_edges = [e for e in data["edges"] if e["from"] == "__start__"]
+            assert len(start_edges) == 1
+            assert start_edges[0]["to"] == "router"
+
+    def test_graph_includes_all_conditional_edges(self):
+        """GET /graph includes conditional edges with condition labels."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/graph")
+            data = resp.json()
+            conditional = [e for e in data["edges"] if "condition" in e]
+            assert len(conditional) >= 5  # router(3) + validate(3)
+
+
 class TestSecurityHeaders:
     def test_security_headers_on_health(self):
         """GET /health includes security headers."""

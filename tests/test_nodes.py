@@ -377,13 +377,13 @@ class TestFallbackNode:
 
 class TestGreetingNode:
     async def test_welcome_message(self):
-        """Greeting node returns welcome message with topic categories."""
+        """Greeting node returns welcome message with Seven persona."""
         from src.agent.nodes import greeting_node
 
         state = _state()
         result = await greeting_node(state)
         content = result["messages"][0].content
-        assert "Welcome" in content or "welcome" in content
+        assert "Seven" in content
         assert "Restaurants" in content or "restaurants" in content or "Dining" in content
 
     async def test_sources_empty(self):

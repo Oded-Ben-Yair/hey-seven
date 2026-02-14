@@ -173,8 +173,9 @@ class SecurityHeadersMiddleware:
         (
             b"content-security-policy",
             b"default-src 'self'; script-src 'self' 'unsafe-inline'; "
-            b"style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-            b"connect-src 'self'",
+            b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            b"font-src 'self' https://fonts.gstatic.com; "
+            b"img-src 'self' data:; connect-src 'self'",
         ),
     ]
 
