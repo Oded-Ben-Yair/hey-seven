@@ -52,3 +52,7 @@ service-account*.json
 # Playwright
 .playwright-mcp/
 heyseven-full-page.png
+
+# Session artifacts
+former session hey seven.txt
+docs/
