@@ -7,6 +7,7 @@ and stores in ChromaDB for local vector search.
 import json
 import logging
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -239,8 +240,8 @@ def _chunk_documents(
         List of chunk dicts with content and enriched metadata.
     """
     settings = get_settings()
-    chunk_size = chunk_size or settings.RAG_CHUNK_SIZE
-    chunk_overlap = chunk_overlap or settings.RAG_CHUNK_OVERLAP
+    chunk_size = chunk_size if chunk_size is not None else settings.RAG_CHUNK_SIZE
+    chunk_overlap = chunk_overlap if chunk_overlap is not None else settings.RAG_CHUNK_OVERLAP
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -282,6 +283,8 @@ def ingest_property(
     Returns:
         A Chroma vectorstore instance.
     """
+    # Lazy import: chromadb is a heavy dependency (~200MB). Importing at module
+    # level would slow down test collection and any code that imports src.rag.
     from langchain_community.vectorstores import Chroma
 
     settings = get_settings()
@@ -362,34 +365,50 @@ class CasinoKnowledgeRetriever:
         query: str,
         top_k: int = 5,
     ) -> list[tuple[Document, float]]:
-        """Retrieve documents with similarity scores.
+        """Retrieve documents with normalized relevance scores (0-1, higher = more relevant).
+
+        Uses ``similarity_search_with_relevance_scores`` which normalizes the
+        underlying distance metric (L2 by default in ChromaDB) to a [0, 1]
+        relevance range via ``1 / (1 + distance)``.  This ensures that
+        downstream filtering with ``score >= threshold`` is always correct
+        regardless of the distance function used.
+
+        Structural grounding: results are filtered by ``property_id`` metadata
+        to ensure only documents from the configured property are returned.
+        This prevents cross-property leakage if multiple properties share a
+        ChromaDB collection.
 
         Args:
             query: The search query.
             top_k: Number of results to return.
 
         Returns:
-            List of (Document, score) tuples, sorted by relevance.
+            List of (Document, relevance_score) tuples where 1.0 = exact match.
         """
         if self.vectorstore is None:
             logger.warning("No vectorstore configured.")
             return []
 
-        return self.vectorstore.similarity_search_with_score(query, k=top_k)
+        # Structural grounding: only return documents for the configured property
+        property_id = get_settings().PROPERTY_NAME.lower().replace(" ", "_")
+        return self.vectorstore.similarity_search_with_relevance_scores(
+            query, k=top_k, filter={"property_id": property_id},
+        )
 
 
 # ---------------------------------------------------------------------------
-# Global Retriever Instance
+# Global Retriever Instance (lazy singleton via @lru_cache)
 # ---------------------------------------------------------------------------
 
-_retriever_instance: CasinoKnowledgeRetriever | None = None
 
-
+@lru_cache(maxsize=1)
 def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
-    """Get or create the global retriever instance.
+    """Get or create the global retriever singleton.
 
-    Lazy-initializes the retriever with ChromaDB from the persist directory.
-    Initialized during FastAPI lifespan (before requests), so no lock needed.
+    Uses ``@lru_cache`` for consistency with other singletons in the codebase
+    (``get_settings``, ``_get_llm``, ``_get_circuit_breaker``, ``get_embeddings``).
+
+    Initialized during FastAPI lifespan (before requests arrive).
 
     Args:
         persist_dir: ChromaDB persistence directory.
@@ -397,15 +416,11 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
     Returns:
         The CasinoKnowledgeRetriever instance.
     """
-    global _retriever_instance
-
-    if _retriever_instance is not None:
-        return _retriever_instance
-
     settings = get_settings()
     chroma_dir = persist_dir or settings.CHROMA_PERSIST_DIR
 
     try:
+        # Lazy import: see ingest_property() for rationale.
         from langchain_community.vectorstores import Chroma
 
         vectorstore = Chroma(
@@ -413,7 +428,7 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
             embedding_function=get_embeddings(),
             persist_directory=chroma_dir,
         )
-        _retriever_instance = CasinoKnowledgeRetriever(vectorstore=vectorstore)
+        retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
         logger.info("Loaded ChromaDB retriever from %s", chroma_dir)
     except Exception:
         logger.warning(
@@ -421,6 +436,6 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
             chroma_dir,
             exc_info=True,
         )
-        _retriever_instance = CasinoKnowledgeRetriever()
+        retriever = CasinoKnowledgeRetriever()
 
-    return _retriever_instance
+    return retriever

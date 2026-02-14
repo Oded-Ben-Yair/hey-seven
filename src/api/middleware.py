@@ -6,6 +6,7 @@ Provides request logging, error handling, security headers, and rate limiting.
 
 import asyncio
 import collections
+import hmac
 import json
 import logging
 import time
@@ -152,6 +153,7 @@ class SecurityHeadersMiddleware:
         (b"x-content-type-options", b"nosniff"),
         (b"x-frame-options", b"DENY"),
         (b"referrer-policy", b"strict-origin-when-cross-origin"),
+        (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
         (
             b"content-security-policy",
             b"default-src 'self'; script-src 'self' 'unsafe-inline'; "
@@ -178,20 +180,80 @@ class SecurityHeadersMiddleware:
         await self.app(scope, receive, send_wrapper)
 
 
+class ApiKeyMiddleware:
+    """Validate ``X-API-Key`` header on protected endpoints.
+
+    When ``API_KEY`` is empty (default), authentication is disabled and all
+    requests pass through.  When set, ``/chat`` requires a matching key.
+    Uses ``hmac.compare_digest`` to prevent timing attacks.
+    """
+
+    _PROTECTED_PATHS = {"/chat"}
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self._api_key = get_settings().API_KEY.get_secret_value()
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not self._api_key:
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "/")
+        if path not in self._PROTECTED_PATHS:
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        provided = headers.get(b"x-api-key", b"").decode()
+
+        if not provided or not hmac.compare_digest(provided, self._api_key):
+            body = json.dumps(
+                {"error": "unauthorized", "message": "Invalid or missing API key."}
+            ).encode()
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 401,
+                    "headers": [
+                        (b"content-type", b"application/json"),
+                        (b"content-length", str(len(body)).encode()),
+                    ],
+                }
+            )
+            await send({"type": "http.response.body", "body": body})
+            return
+
+        await self.app(scope, receive, send)
+
+
 class RateLimitMiddleware:
-    """Token-bucket rate limiter per client IP.
+    """Sliding-window rate limiter per client IP.
 
     Only applies to ``/chat`` endpoint. ``/health`` and static files are exempt.
     Returns 429 with ``Retry-After`` header when the limit is exceeded.
+    Respects ``X-Forwarded-For`` behind reverse proxies (Cloud Run, nginx).
+    Caps tracked clients to ``RATE_LIMIT_MAX_CLIENTS`` to bound memory.
     """
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
         settings = get_settings()
         self.max_tokens = settings.RATE_LIMIT_CHAT
+        self.max_clients = settings.RATE_LIMIT_MAX_CLIENTS
         self.window_seconds = 60.0
         # {ip: deque of request timestamps}
         self._requests: dict[str, collections.deque] = {}
+
+    def _get_client_ip(self, scope: Scope) -> str:
+        """Extract client IP, preferring X-Forwarded-For behind proxies."""
+        headers = dict(scope.get("headers", []))
+        forwarded = headers.get(b"x-forwarded-for", b"").decode()
+        if forwarded:
+            # X-Forwarded-For: client, proxy1, proxy2 — take the first (client) IP
+            return forwarded.split(",")[0].strip()
+        client = scope.get("client")
+        return client[0] if client else "unknown"
 
     def _is_allowed(self, client_ip: str) -> bool:
         """Check if a request from client_ip is within the rate limit."""
@@ -199,6 +261,10 @@ class RateLimitMiddleware:
         window_start = now - self.window_seconds
 
         if client_ip not in self._requests:
+            # Memory guard: evict oldest client if at capacity
+            if len(self._requests) >= self.max_clients:
+                oldest_ip = next(iter(self._requests))
+                del self._requests[oldest_ip]
             self._requests[client_ip] = collections.deque()
 
         bucket = self._requests[client_ip]
@@ -206,14 +272,6 @@ class RateLimitMiddleware:
         # Evict expired entries
         while bucket and bucket[0] < window_start:
             bucket.popleft()
-
-        # Clean up empty buckets to prevent unbounded dict growth
-        if not bucket:
-            del self._requests[client_ip]
-
-        if client_ip not in self._requests:
-            self._requests[client_ip] = collections.deque()
-            bucket = self._requests[client_ip]
 
         if len(bucket) >= self.max_tokens:
             return False
@@ -233,9 +291,7 @@ class RateLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Extract client IP
-        client = scope.get("client")
-        client_ip = client[0] if client else "unknown"
+        client_ip = self._get_client_ip(scope)
 
         if self._is_allowed(client_ip):
             await self.app(scope, receive, send)
@@ -253,6 +309,78 @@ class RateLimitMiddleware:
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode()),
                     (b"retry-after", b"60"),
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
+
+
+class RequestBodyLimitMiddleware:
+    """Reject HTTP requests whose body exceeds a configurable limit.
+
+    Prevents resource exhaustion from oversized payloads. Two layers:
+    1. Fast-path: checks ``Content-Length`` header when present.
+    2. Streaming enforcement: counts actual bytes received via ``receive()``
+       to catch chunked transfers or missing ``Content-Length``.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self._max_size = get_settings().MAX_REQUEST_BODY_SIZE
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        content_length = headers.get(b"content-length", b"0")
+
+        try:
+            size = int(content_length)
+        except (ValueError, TypeError):
+            size = 0
+
+        if size > self._max_size:
+            await self._send_413(send)
+            return
+
+        # Streaming enforcement: count actual bytes for chunked/missing Content-Length
+        bytes_received = 0
+        exceeded = False
+
+        async def receive_wrapper() -> Message:
+            nonlocal bytes_received, exceeded
+            message = await receive()
+            if message.get("type") == "http.request":
+                body = message.get("body", b"")
+                bytes_received += len(body)
+                if bytes_received > self._max_size:
+                    exceeded = True
+            return message
+
+        async def send_wrapper(message: Message) -> None:
+            if exceeded and message.get("type") == "http.response.start":
+                await self._send_413(send)
+                return
+            await send(message)
+
+        await self.app(scope, receive_wrapper, send_wrapper)
+
+    async def _send_413(self, send: Send) -> None:
+        body = json.dumps(
+            {
+                "error": "payload_too_large",
+                "message": f"Request body exceeds {self._max_size} bytes.",
+            }
+        ).encode()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 413,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
                 ],
             }
         )

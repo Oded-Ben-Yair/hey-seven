@@ -1,37 +1,46 @@
 steps:
-  # Step 1: Install dependencies and run tests
+  # Step 1: Install dependencies and run tests + lint
   - name: 'python:3.12-slim'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        pip install --no-cache-dir -r requirements.txt
-        python -m pytest tests/ -v --tb=short -x --ignore=tests/test_eval.py
+        pip install --no-cache-dir -r requirements-dev.txt
+        ruff check src/ tests/
+        mypy src/ --ignore-missing-imports
+        python -m pytest tests/ -v --tb=short -x \
+          --ignore=tests/test_eval.py \
+          --cov=src --cov-fail-under=85
 
-  # Step 2: Build Docker image
+  # Step 2: Build Docker image (Artifact Registry, not deprecated gcr.io)
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA', '.']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA', '.']
 
-  # Step 3: Push to GCR
+  # Step 3: Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA']
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
 
   # Step 4: Deploy to Cloud Run
+  # --allow-unauthenticated is defense-in-depth: Cloud Run allows public access,
+  # while the app layer enforces API key auth via ApiKeyMiddleware. This avoids
+  # requiring IAM tokens for the demo while maintaining app-level access control.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
       - 'hey-seven'
-      - '--image=gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'
       - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--memory=512Mi'
-      - '--timeout=60s'
+      - '--memory=2Gi'
+      - '--timeout=90s'  # SSE_TIMEOUT(60s) + graceful_shutdown(10s) + buffer(20s)
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest'
+      - '--set-env-vars=ENVIRONMENT=production,LOG_LEVEL=WARNING'
 
 images:
-  - 'gcr.io/$PROJECT_ID/hey-seven:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY

@@ -4,7 +4,48 @@ import json
 
 import pytest
 
-from src.agent.state import RouterOutput, ValidationResult
+
+@pytest.fixture(autouse=True)
+def _clear_singleton_caches():
+    """Reset all @lru_cache singletons between tests.
+
+    Prevents test pollution from cached Settings, LLM instances, and
+    CircuitBreaker singletons leaking state across test modules.
+    """
+    yield
+    # Clear all singleton caches after each test
+    from src.config import get_settings
+
+    get_settings.cache_clear()
+
+    try:
+        from src.agent.nodes import _get_llm, _get_validator_llm
+
+        _get_llm.cache_clear()
+        _get_validator_llm.cache_clear()
+    except ImportError:
+        pass
+
+    try:
+        from src.agent.circuit_breaker import _get_circuit_breaker
+
+        _get_circuit_breaker.cache_clear()
+    except ImportError:
+        pass
+
+    try:
+        from src.rag.embeddings import get_embeddings
+
+        get_embeddings.cache_clear()
+    except ImportError:
+        pass
+
+    try:
+        from src.rag.pipeline import get_retriever
+
+        get_retriever.cache_clear()
+    except ImportError:
+        pass
 
 
 @pytest.fixture
@@ -72,29 +113,3 @@ def test_property_file(tmp_path, test_property_data):
     return str(p)
 
 
-@pytest.fixture
-def mock_state() -> dict:
-    """Return a PropertyQAState dict with sensible defaults."""
-    return {
-        "messages": [],
-        "query_type": None,
-        "router_confidence": 0.0,
-        "retrieved_context": [],
-        "validation_result": None,
-        "retry_count": 0,
-        "retry_feedback": None,
-        "current_time": "Monday 3:00 PM",
-        "sources_used": [],
-    }
-
-
-@pytest.fixture
-def mock_router_output() -> RouterOutput:
-    """Return a RouterOutput with sensible defaults."""
-    return RouterOutput(query_type="property_qa", confidence=0.9)
-
-
-@pytest.fixture
-def mock_validation_result() -> ValidationResult:
-    """Return a ValidationResult with sensible defaults."""
-    return ValidationResult(status="PASS", reason="All criteria met")

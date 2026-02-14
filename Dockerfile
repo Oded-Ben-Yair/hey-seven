@@ -19,10 +19,10 @@ WORKDIR /app
 # Copy dependencies from builder
 COPY --from=builder /build/deps /usr/local/lib/python3.12/site-packages/
 
-# Copy application code
-COPY src/ ./src/
+# Copy application code (least-frequently-changed first for Docker cache)
 COPY data/ ./data/
 COPY static/ ./static/
+COPY src/ ./src/
 
 # Create ChromaDB directory owned by appuser BEFORE switching user
 RUN mkdir -p /app/data/chroma && chown -R appuser:appuser /app/data
@@ -40,7 +40,9 @@ USER appuser
 
 # Data ingestion happens at STARTUP (FastAPI lifespan), not build time.
 # Build-time ingestion would require GOOGLE_API_KEY baked into the image.
-# HEALTHCHECK defined in docker-compose.yml (single source of truth).
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
 CMD ["python", "-m", "uvicorn", "src.api.app:app", \
      "--host", "0.0.0.0", "--port", "8080", "--workers", "1", \

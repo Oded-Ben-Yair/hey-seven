@@ -16,6 +16,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from src.config import get_settings
+
 from .nodes import (
     fallback_node,
     generate_node,
@@ -31,12 +33,6 @@ from .nodes import (
 from .state import PropertyQAState
 
 logger = logging.getLogger(__name__)
-
-#: Categories in the property knowledge base (used for source extraction).
-KNOWN_CATEGORIES = frozenset({
-    "restaurants", "entertainment", "hotel", "amenities",
-    "gaming", "promotions", "faq", "property",
-})
 
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
@@ -84,9 +80,30 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         checkpointer = MemorySaver()
 
     compiled = graph.compile(checkpointer=checkpointer)
-    compiled.recursion_limit = 10
+    compiled.recursion_limit = get_settings().GRAPH_RECURSION_LIMIT
     logger.info("Custom 8-node StateGraph compiled successfully.")
     return compiled
+
+
+def _initial_state(message: str) -> dict[str, Any]:
+    """Build a fresh per-turn state dict (DRY helper for chat/chat_stream).
+
+    Non-message fields are reset every turn. Only ``messages`` persists across
+    turns via the checkpointer's ``add_messages`` reducer — see
+    ``PropertyQAState`` docstring for details.
+    """
+    now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y %I:%M %p UTC")
+    return {
+        "messages": [HumanMessage(content=message)],
+        "current_time": now,
+        "query_type": None,
+        "router_confidence": 0.0,
+        "retrieved_context": [],
+        "validation_result": None,
+        "retry_count": 0,
+        "retry_feedback": None,
+        "sources_used": [],
+    }
 
 
 async def chat(
@@ -109,20 +126,8 @@ async def chat(
 
     config = {"configurable": {"thread_id": thread_id}}
 
-    now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y %I:%M %p UTC")
-
     result = await graph.ainvoke(
-        {
-            "messages": [HumanMessage(content=message)],
-            "current_time": now,
-            "query_type": None,
-            "router_confidence": 0.0,
-            "retrieved_context": [],
-            "validation_result": None,
-            "retry_count": 0,
-            "retry_feedback": None,
-            "sources_used": [],
-        },
+        _initial_state(message),
         config=config,
     )
 
@@ -168,8 +173,6 @@ async def chat_stream(
 
     config = {"configurable": {"thread_id": thread_id}}
 
-    now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y %I:%M %p UTC")
-
     yield {
         "event": "metadata",
         "data": json.dumps({"thread_id": thread_id}),
@@ -180,17 +183,7 @@ async def chat_stream(
 
     try:
         async for event in graph.astream_events(
-            {
-                "messages": [HumanMessage(content=message)],
-                "current_time": now,
-                "query_type": None,
-                "router_confidence": 0.0,
-                "retrieved_context": [],
-                "validation_result": None,
-                "retry_count": 0,
-                "retry_feedback": None,
-                "sources_used": [],
-            },
+            _initial_state(message),
             config=config,
             version="v2",
         ):

@@ -19,8 +19,10 @@ from sse_starlette.sse import EventSourceResponse
 from src.config import get_settings
 
 from .middleware import (
+    ApiKeyMiddleware,
     ErrorHandlingMiddleware,
     RateLimitMiddleware,
+    RequestBodyLimitMiddleware,
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
 )
@@ -89,12 +91,14 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type", "X-Request-ID"],
+        allow_headers=["Content-Type", "X-Request-ID", "X-API-Key"],
     )
 
     # Pure ASGI middleware (added in reverse execution order)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(RequestBodyLimitMiddleware)
+    app.add_middleware(ApiKeyMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
 
@@ -121,6 +125,9 @@ def create_app() -> FastAPI:
                     async for event in chat_stream(
                         agent, body.message, body.thread_id
                     ):
+                        if await request.is_disconnected():
+                            logger.info("Client disconnected, cancelling stream")
+                            return
                         yield event
             except TimeoutError:
                 logger.warning("SSE stream timed out after %ds", settings.SSE_TIMEOUT_SECONDS)

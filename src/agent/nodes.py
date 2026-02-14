@@ -2,106 +2,77 @@
 
 Each node takes PropertyQAState and returns a partial dict update.
 Two routing functions determine conditional edges.
-Includes audit_input for deterministic prompt-injection detection.
+
+Guardrail functions (``audit_input``, ``detect_responsible_gaming``) live in
+``guardrails.py`` and are re-exported here for backward compatibility with
+test imports.
 """
 
+import asyncio
 import logging
-import re
+from functools import lru_cache
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.config import get_settings
 
-from .prompts import CONCIERGE_SYSTEM_PROMPT, ROUTER_PROMPT, VALIDATION_PROMPT
+from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401
+from .guardrails import audit_input, detect_responsible_gaming  # noqa: F401
+from .prompts import (
+    CONCIERGE_SYSTEM_PROMPT,
+    RESPONSIBLE_GAMING_HELPLINES,
+    ROUTER_PROMPT,
+    VALIDATION_PROMPT,
+)
 from .state import PropertyQAState, RouterOutput, ValidationResult
 from .tools import search_hours, search_knowledge_base
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Deterministic input guardrails (pre-LLM)
-# ---------------------------------------------------------------------------
-
-#: Regex patterns for prompt injection detection.
-_INJECTION_PATTERNS = [
-    re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)", re.I),
-    re.compile(r"you\s+are\s+now\s+(?:a|an|the)\b", re.I),
-    re.compile(r"system\s*:\s*", re.I),
-    re.compile(r"\bDAN\b.*\bmode\b", re.I),
-    re.compile(r"pretend\s+(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
-    re.compile(r"disregard\s+(?:all\s+)?(?:previous|prior|your)\b", re.I),
-    re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
-]
-
-#: Regex patterns for responsible gaming detection (pre-LLM safety net).
-_RESPONSIBLE_GAMING_PATTERNS = [
-    re.compile(r"gambling\s+problem", re.I),
-    re.compile(r"problem\s+gambl", re.I),
-    re.compile(r"addict(?:ed|ion)?\s+(?:to\s+)?gambl", re.I),
-    re.compile(r"self[- ]?exclu", re.I),
-    re.compile(r"can'?t\s+stop\s+gambl", re.I),
-    re.compile(r"help\s+(?:with|for)\s+gambl", re.I),
-]
-
-
-def detect_responsible_gaming(message: str) -> bool:
-    """Check if user message indicates a gambling problem or self-exclusion need.
-
-    Deterministic regex-based safety net that ensures responsible gaming
-    helplines are always provided, regardless of LLM routing.
-
-    Args:
-        message: The raw user input message.
-
-    Returns:
-        True if responsible gaming support is needed.
-    """
-    for pattern in _RESPONSIBLE_GAMING_PATTERNS:
-        if pattern.search(message):
-            logger.info("Responsible gaming query detected: %r", message[:200])
-            return True
-    return False
-
-
-def audit_input(message: str) -> bool:
-    """Check user input for prompt injection patterns.
-
-    Deterministic regex-based guardrail that runs before any LLM call.
-    Logs a warning if injection patterns are detected.
-
-    Args:
-        message: The raw user input message.
-
-    Returns:
-        True if the input looks safe, False if injection detected.
-    """
-    for pattern in _INJECTION_PATTERNS:
-        if pattern.search(message):
-            logger.warning("Prompt injection detected: %r", message[:200])
-            return False
-    return True
+#: Sentinel value to signal that validation should be skipped (empty context or error path).
+#: When ``retry_count`` is set to this value, ``route_after_validate`` routes directly
+#: to ``respond`` without running the validator LLM. Used by ``generate_node`` when
+#: the context is empty or the circuit breaker is open.
+SKIP_VALIDATION: int = 99
 
 # ---------------------------------------------------------------------------
 # LLM singleton
 # ---------------------------------------------------------------------------
 
-_llm_instance: ChatGoogleGenerativeAI | None = None
-
-
+@lru_cache(maxsize=1)
 def _get_llm() -> ChatGoogleGenerativeAI:
-    """Get or create the shared LLM instance."""
-    global _llm_instance
-    if _llm_instance is None:
-        settings = get_settings()
-        _llm_instance = ChatGoogleGenerativeAI(
-            model=settings.MODEL_NAME,
-            temperature=settings.MODEL_TEMPERATURE,
-            timeout=settings.MODEL_TIMEOUT,
-            max_retries=settings.MODEL_MAX_RETRIES,
-            max_output_tokens=settings.MODEL_MAX_OUTPUT_TOKENS,
-        )
-    return _llm_instance
+    """Get or create the shared LLM instance (cached singleton).
+
+    Uses ``@lru_cache`` consistent with ``get_settings()`` pattern.
+    Cache is transparent to tests that ``patch("src.agent.nodes._get_llm")``.
+    """
+    settings = get_settings()
+    return ChatGoogleGenerativeAI(
+        model=settings.MODEL_NAME,
+        temperature=settings.MODEL_TEMPERATURE,
+        timeout=settings.MODEL_TIMEOUT,
+        max_retries=settings.MODEL_MAX_RETRIES,
+        max_output_tokens=settings.MODEL_MAX_OUTPUT_TOKENS,
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_validator_llm() -> ChatGoogleGenerativeAI:
+    """Get or create the validation LLM instance (cached singleton).
+
+    Uses temperature=0.0 for deterministic binary classification
+    (PASS/RETRY/FAIL). Separate from ``_get_llm()`` which uses the
+    configured temperature for creative response generation.
+    """
+    settings = get_settings()
+    return ChatGoogleGenerativeAI(
+        model=settings.MODEL_NAME,
+        temperature=0.0,
+        timeout=settings.MODEL_TIMEOUT,
+        max_retries=settings.MODEL_MAX_RETRIES,
+        max_output_tokens=512,  # Validation produces short structured output
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -109,16 +80,17 @@ def _get_llm() -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 
 
-def router_node(state: PropertyQAState) -> dict:
+async def router_node(state: PropertyQAState) -> dict:
     """Classify user intent into one of 7 categories.
 
-    Turn-limit check: if >40 messages, forces off_topic to end conversation.
+    Turn-limit check: exceeding MAX_TURN_LIMIT forces off_topic to end conversation.
     Uses structured output for reliable JSON parsing.
     """
+    settings = get_settings()
     messages = state.get("messages", [])
 
     # Turn-limit guard
-    if len(messages) > 40:
+    if len(messages) > settings.MAX_TURN_LIMIT:
         logger.warning("Turn limit exceeded (%d messages), forcing off_topic", len(messages))
         return {
             "query_type": "off_topic",
@@ -158,7 +130,7 @@ def router_node(state: PropertyQAState) -> dict:
     prompt_text = ROUTER_PROMPT.safe_substitute(user_message=user_message)
 
     try:
-        result: RouterOutput = router_llm.invoke(prompt_text)
+        result: RouterOutput = await router_llm.ainvoke(prompt_text)
         return {
             "query_type": result.query_type,
             "router_confidence": result.confidence,
@@ -176,7 +148,7 @@ def router_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def retrieve_node(state: PropertyQAState) -> dict:
+async def retrieve_node(state: PropertyQAState) -> dict:
     """Retrieve relevant documents from the knowledge base.
 
     Extracts the latest user message and searches for matching content.
@@ -194,11 +166,13 @@ def retrieve_node(state: PropertyQAState) -> dict:
     if not query:
         return {"retrieved_context": []}
 
-    # Use schedule-focused search for hours/schedule queries
+    # Use schedule-focused search for hours/schedule queries.
+    # ChromaDB is sync-only in LangChain; wrap in asyncio.to_thread to avoid
+    # blocking the event loop.  Production path (Vertex AI) has native async.
     if query_type == "hours_schedule":
-        results = search_hours(query)
+        results = await asyncio.to_thread(search_hours, query)
     else:
-        results = search_knowledge_base(query)
+        results = await asyncio.to_thread(search_knowledge_base, query)
 
     return {"retrieved_context": results}
 
@@ -208,10 +182,10 @@ def retrieve_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def generate_node(state: PropertyQAState) -> dict:
+async def generate_node(state: PropertyQAState) -> dict:
     """Generate a response using the concierge system prompt and retrieved context.
 
-    If no context was retrieved, sets retry_count=99 to skip validation.
+    If no context was retrieved, sets retry_count=SKIP_VALIDATION to skip validation.
     On retry, prepends validation feedback as a SystemMessage.
     """
     settings = get_settings()
@@ -220,9 +194,21 @@ def generate_node(state: PropertyQAState) -> dict:
     retry_count = state.get("retry_count", 0)
     retry_feedback = state.get("retry_feedback")
 
+    # Circuit breaker check — early exit before building prompts
+    if _get_circuit_breaker().is_open:
+        logger.warning("Circuit breaker open — returning fallback without LLM call")
+        return {
+            "messages": [AIMessage(content=(
+                "I'm experiencing temporary technical difficulties. "
+                f"Please try again in a minute, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
+            ))],
+            "retry_count": SKIP_VALIDATION,
+        }
+
     system_prompt = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
         property_name=settings.PROPERTY_NAME,
         current_time=current_time,
+        responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
     )
 
     # Format retrieved context as numbered sources
@@ -236,18 +222,14 @@ def generate_node(state: PropertyQAState) -> dict:
         system_prompt += f"\n\n## Retrieved Knowledge Base Context\n{context_block}"
     else:
         # No context found — signal to skip validation
-        system_prompt += (
-            "\n\n## No relevant context found in the knowledge base."
-            "\nBe honest and let the guest know you don't have specific information about their question."
-        )
         return {
             "messages": [AIMessage(content=(
                 "I appreciate your question! Unfortunately, I don't have specific information "
                 "about that in my knowledge base. For the most accurate and up-to-date details, "
-                "I'd recommend contacting Mohegan Sun directly at 1-888-226-7711 or visiting "
-                "mohegansun.com."
+                f"I'd recommend contacting {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE} or visiting "
+                f"{settings.PROPERTY_WEBSITE}."
             ))],
-            "retry_count": 99,  # Skip validation
+            "retry_count": SKIP_VALIDATION,
         }
 
     # Build message list
@@ -268,17 +250,19 @@ def generate_node(state: PropertyQAState) -> dict:
     llm = _get_llm()
 
     try:
-        response = llm.invoke(llm_messages)
+        response = await llm.ainvoke(llm_messages)
+        await _get_circuit_breaker().record_success()
         content = response.content if isinstance(response.content, str) else str(response.content)
         return {"messages": [AIMessage(content=content)]}
     except Exception:
+        await _get_circuit_breaker().record_failure()
         logger.exception("Generate LLM call failed")
         return {
             "messages": [AIMessage(content=(
                 "I apologize, but I'm having trouble generating a response right now. "
-                "Please try again, or contact Mohegan Sun directly at 1-888-226-7711."
+                f"Please try again, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
             ))],
-            "retry_count": 99,  # Skip validation on error
+            "retry_count": SKIP_VALIDATION,
         }
 
 
@@ -287,17 +271,17 @@ def generate_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def validate_node(state: PropertyQAState) -> dict:
+async def validate_node(state: PropertyQAState) -> dict:
     """Adversarial review of the generated response against 6 criteria.
 
-    If retry_count >= 99 (empty context or error), auto-PASS.
+    If retry_count >= SKIP_VALIDATION (empty context or error), auto-PASS.
     If validation fails and retry_count < 1, returns RETRY.
     If retry_count >= 1, returns FAIL (max 1 retry).
     """
     retry_count = state.get("retry_count", 0)
 
     # Skip validation for empty-context responses
-    if retry_count >= 99:
+    if retry_count >= SKIP_VALIDATION:
         return {"validation_result": "PASS"}
 
     # Get the user question
@@ -329,11 +313,10 @@ def validate_node(state: PropertyQAState) -> dict:
         generated_response=generated_response,
     )
 
-    llm = _get_llm()
-    validator_llm = llm.with_structured_output(ValidationResult)
+    validator_llm = _get_validator_llm().with_structured_output(ValidationResult)
 
     try:
-        result: ValidationResult = validator_llm.invoke(prompt_text)
+        result: ValidationResult = await validator_llm.ainvoke(prompt_text)
 
         if result.status == "PASS":
             return {"validation_result": "PASS"}
@@ -353,8 +336,18 @@ def validate_node(state: PropertyQAState) -> dict:
         }
 
     except Exception:
-        logger.exception("Validation LLM call failed, auto-passing")
-        return {"validation_result": "PASS"}
+        logger.exception("Validation LLM call failed")
+        # Degraded-pass: if this is the first attempt and generate already produced
+        # a response, allow it through with a warning rather than always failing
+        # closed. This improves UX when the validation LLM has transient errors
+        # while the generated response is likely correct.
+        if retry_count == 0:
+            logger.warning("Degraded-pass: validation unavailable, passing generated response with warning")
+            return {"validation_result": "PASS"}
+        return {
+            "validation_result": "FAIL",
+            "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +355,7 @@ def validate_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def respond_node(state: PropertyQAState) -> dict:
+async def respond_node(state: PropertyQAState) -> dict:
     """Extract sources from retrieved context and prepare final response.
 
     Clears retry_feedback. Sets sources_used from context metadata.
@@ -385,20 +378,21 @@ def respond_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def fallback_node(state: PropertyQAState) -> dict:
+async def fallback_node(state: PropertyQAState) -> dict:
     """Safe fallback response when validation fails.
 
     Provides contact information and logs the failure reason.
     """
+    settings = get_settings()
     retry_feedback = state.get("retry_feedback", "Unknown validation failure")
     logger.warning("Fallback triggered. Reason: %s", retry_feedback)
 
     return {
         "messages": [AIMessage(content=(
             "I want to make sure I give you the most accurate information. "
-            "For this question, I'd recommend reaching out directly to Mohegan Sun:\n\n"
-            "- Phone: 1-888-226-7711\n"
-            "- Website: mohegansun.com\n\n"
+            f"For this question, I'd recommend reaching out directly to {settings.PROPERTY_NAME}:\n\n"
+            f"- Phone: {settings.PROPERTY_PHONE}\n"
+            f"- Website: {settings.PROPERTY_WEBSITE}\n\n"
             "They'll be able to help you with the most up-to-date details!"
         ))],
         "sources_used": [],
@@ -411,7 +405,7 @@ def fallback_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def greeting_node(state: PropertyQAState) -> dict:
+async def greeting_node(state: PropertyQAState) -> dict:
     """Template welcome listing available knowledge categories."""
     settings = get_settings()
     return {
@@ -436,7 +430,7 @@ def greeting_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def off_topic_node(state: PropertyQAState) -> dict:
+async def off_topic_node(state: PropertyQAState) -> dict:
     """Handle off-topic, gambling advice, and action requests.
 
     Three sub-cases based on query_type:
@@ -454,9 +448,7 @@ def off_topic_node(state: PropertyQAState) -> dict:
             f"about the gaming areas at {settings.PROPERTY_NAME}.\n\n"
             "If you or someone you know needs help with problem gambling, "
             "please reach out to these resources:\n"
-            "- National Council on Problem Gambling: 1-800-522-4700\n"
-            "- Connecticut Council on Problem Gambling: 1-888-789-7777\n"
-            "- CT DMHAS Self-Exclusion Program: 1-860-418-7000\n\n"
+            f"{RESPONSIBLE_GAMING_HELPLINES}\n\n"
             "Is there anything else about the resort I can help with?"
         )
     elif query_type == "action_request":
@@ -465,7 +457,7 @@ def off_topic_node(state: PropertyQAState) -> dict:
             "or take any actions on your behalf, I can provide all the information "
             "you need to do so yourself.\n\n"
             f"For reservations and bookings, please contact {settings.PROPERTY_NAME} "
-            "directly at 1-888-226-7711 or visit mohegansun.com.\n\n"
+            f"directly at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
             "Is there any information I can help you with?"
         )
     else:
@@ -492,6 +484,14 @@ def route_from_router(state: PropertyQAState) -> str:
     """Route after the router node based on query_type and confidence.
 
     Returns the name of the next node to execute.
+
+    Design decision: ``ambiguous`` queries route to ``retrieve`` (same as
+    ``property_qa`` and ``hours_schedule``).  The RAG pipeline + validation
+    loop handles ambiguity safely: if relevant context exists, the response
+    is grounded and validated; if not, the empty-context fallback provides
+    a safe "contact the property" message.  This is preferable to routing
+    ambiguous queries to ``off_topic``, which would refuse to help with
+    legitimate-but-unclear property questions.
     """
     query_type = state.get("query_type", "property_qa")
     confidence = state.get("router_confidence", 0.5)
@@ -505,7 +505,8 @@ def route_from_router(state: PropertyQAState) -> str:
     if confidence < 0.3:
         return "off_topic"
 
-    # property_qa, hours_schedule, ambiguous → retrieve
+    # property_qa, hours_schedule, and ambiguous all route to retrieve.
+    # See docstring for ambiguous rationale.
     return "retrieve"
 
 

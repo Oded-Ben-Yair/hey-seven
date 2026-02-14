@@ -1,14 +1,43 @@
+# Version control
 .git
+.gitignore
+
+# Python
 .venv
 __pycache__
 *.pyc
+*.pyo
 .pytest_cache
 .ruff_cache
-data/chroma
+htmlcov
+.coverage
+
+# Development & test
 .env
 .env.*
 !.env.example
 tests/
 requirements-dev.txt
+reviews/
+deliverables/
+research/
+knowledge-base/
+boilerplate/
+assignment/
+
+# Documentation (not needed in image)
 *.md
 !README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Docker meta (avoid recursive copy)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Data (rebuilt at startup via lifespan)
+data/chroma/

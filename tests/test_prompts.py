@@ -1,13 +1,20 @@
 """Tests for prompt templates (src/agent/prompts.py)."""
 
-from src.agent.prompts import CONCIERGE_SYSTEM_PROMPT, ROUTER_PROMPT, VALIDATION_PROMPT
+from src.agent.prompts import (
+    CONCIERGE_SYSTEM_PROMPT,
+    RESPONSIBLE_GAMING_HELPLINES,
+    ROUTER_PROMPT,
+    VALIDATION_PROMPT,
+)
 
 
 class TestPromptTemplates:
     def test_concierge_renders_with_safe_substitute(self):
-        """Concierge prompt renders property_name and current_time."""
+        """Concierge prompt renders property_name, current_time, and helplines."""
         result = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
-            property_name="Test Casino", current_time="Monday 3 PM"
+            property_name="Test Casino",
+            current_time="Monday 3 PM",
+            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
         )
         assert "Test Casino" in result
         assert "Monday 3 PM" in result
@@ -18,13 +25,22 @@ class TestPromptTemplates:
         assert "{this}" in result
 
     def test_helpline_numbers_present(self):
-        """Concierge prompt includes all 3 responsible gaming helplines."""
+        """Concierge prompt includes all responsible gaming helplines via constant."""
         result = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
-            property_name="X", current_time="now"
+            property_name="X",
+            current_time="now",
+            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
         )
-        assert "1-800-522-4700" in result
+        assert "1-800-MY-RESET" in result or "1-800-699-7378" in result
         assert "1-888-789-7777" in result
-        assert "1-860-418-7000" in result
+        assert "ct.gov/selfexclusion" in result
+
+    def test_helplines_constant_contains_all_resources(self):
+        """RESPONSIBLE_GAMING_HELPLINES constant includes updated resources."""
+        assert "1-800-MY-RESET" in RESPONSIBLE_GAMING_HELPLINES
+        assert "1-800-699-7378" in RESPONSIBLE_GAMING_HELPLINES
+        assert "1-888-789-7777" in RESPONSIBLE_GAMING_HELPLINES
+        assert "ct.gov/selfexclusion" in RESPONSIBLE_GAMING_HELPLINES
 
     def test_router_prompt_includes_categories(self):
         """Router prompt lists all 7 query categories."""

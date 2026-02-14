@@ -23,6 +23,12 @@ class ChatRequest(BaseModel):
         return v
 
 
+# --- SSE Event Schemas (Wire Format Documentation) ---
+# These models document the SSE event contract between backend and frontend.
+# Events are serialized as dicts in graph.py for streaming performance;
+# these schemas serve as the canonical API reference for each event type.
+
+
 class SSEMetadataEvent(BaseModel):
     """``event: metadata`` — sent first with the thread ID."""
 
