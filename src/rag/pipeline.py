@@ -6,7 +6,6 @@ and stores in ChromaDB for local vector search.
 
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any
 

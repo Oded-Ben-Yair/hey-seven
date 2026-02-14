@@ -40,9 +40,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize agent and property data on startup, cleanup on shutdown."""
     logger.info("Initializing Property Q&A agent...")
     try:
-        from src.agent.graph import create_agent
+        from src.agent.graph import build_graph
 
-        app.state.agent = create_agent()
+        app.state.agent = build_graph()
         logger.info("Agent initialized successfully.")
     except Exception:
         logger.exception("Failed to initialize agent. /chat will return 503.")
