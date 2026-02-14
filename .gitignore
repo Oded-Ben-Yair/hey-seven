@@ -42,10 +42,6 @@ data/chroma/
 .gcloud/
 service-account*.json
 
-# Claude Code
-.claude/tasks/
-.claude/telemetry/
-
 # Zone identifiers (Windows downloads)
 *:Zone.Identifier
 
@@ -53,6 +49,15 @@ service-account*.json
 .playwright-mcp/
 heyseven-full-page.png
 
-# Session artifacts
-former session hey seven.txt
+# Internal prep work (not part of submission)
+.claude/
+CLAUDE.md
+research/
+boilerplate/
+knowledge-base/
+assignment/
+reviews/
+deliverables/
 docs/
+former session hey seven.txt
+Take-Home Assignment*.pdf

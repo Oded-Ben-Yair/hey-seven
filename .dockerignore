@@ -3,15 +3,11 @@
 __pycache__
 *.pyc
 .pytest_cache
+.ruff_cache
 data/chroma
 .env
 .env.*
 !.env.example
-reviews/
-assignment/
-research/
-boilerplate/
-knowledge-base/
 tests/
 requirements-dev.txt
 *.md
