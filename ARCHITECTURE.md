@@ -176,7 +176,7 @@ Five sub-cases based on `query_type`:
 
 ## State Schema
 
-`PropertyQAState` is a `TypedDict` with 9 fields (`src/agent/state.py:12`):
+`PropertyQAState` is a `TypedDict` with 10 fields (`src/agent/state.py:12`):
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -189,10 +189,11 @@ Five sub-cases based on `query_type`:
 | `retry_feedback` | `str \| None` | Reason validation failed |
 | `current_time` | `str` | UTC timestamp injected at graph entry |
 | `sources_used` | `list[str]` | Knowledge-base categories cited in the response |
+| `skip_validation` | `bool` | When `True`, validate node auto-passes (set by generate on empty context or LLM error) |
 
 Two Pydantic models for structured LLM output:
 
-- **`RouterOutput`** (`state.py:25`): `query_type` (`Literal` constrained to 7 valid categories) + `confidence` (float, 0.0-1.0).
+- **`RouterOutput`** (`state.py:25`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `responsible_gaming`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails before the LLM router runs, expanding the effective routing space to 9 categories.
 - **`ValidationResult`** (`state.py:36`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
 
 ---
@@ -313,7 +314,7 @@ Two plain functions in `src/agent/tools.py` (no `@tool` decorators), both using 
 - **`search_knowledge_base(query)`**: Combines semantic search + entity-augmented query (`{query} name location details`) via RRF. Returns `list[dict]` with keys: `content`, `metadata` (category, item_name, source), `score`.
 - **`search_hours(query)`**: Combines schedule-augmented query (`{query} hours schedule open close`) + direct semantic search via RRF.
 
-RRF fusion merges multiple ranked lists using `score = sum(1/(k + rank))` with standard `k=60` dampening. Documents appearing in multiple strategies get boosted, improving recall for entity-heavy queries (e.g., "Todd English's") where different strategies surface different relevant docs. Document deduplication uses a hash of `page_content + source` metadata (MD5) to prevent collision when identical text appears in different categories.
+RRF fusion merges multiple ranked lists using `score = sum(1/(k + rank))` with standard `k=60` dampening. Documents appearing in multiple strategies get boosted, improving recall for entity-heavy queries (e.g., "Todd English's") where different strategies surface different relevant docs. Document deduplication uses a SHA-256 hash of `page_content + source` metadata to prevent collision when identical text appears in different categories.
 
 Both use the global `CasinoKnowledgeRetriever` singleton which wraps ChromaDB `similarity_search_with_relevance_scores()`. The collection is configured with `hnsw:space=cosine`, producing cosine similarity scores in [0, 1] where 1.0 = exact match. The `>= RAG_MIN_RELEVANCE_SCORE` (default 0.3) filter applies **after** RRF fusion using the original cosine similarity scores (not RRF rank scores), ensuring absolute semantic relevance regardless of fusion rank.
 

@@ -27,6 +27,13 @@ def _clear_singleton_caches():
         pass
 
     try:
+        from src.agent.nodes import _build_greeting_categories
+
+        _build_greeting_categories.cache_clear()
+    except ImportError:
+        pass
+
+    try:
         from src.agent.circuit_breaker import _get_circuit_breaker
 
         _get_circuit_breaker.cache_clear()
