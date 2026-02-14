@@ -80,7 +80,7 @@ Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a c
 
 Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`.
 
-Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 22 patterns (17 English + 5 Spanish) and routes to `gambling_advice` deterministically.
+Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 22 patterns (17 English + 5 Spanish + 3 Mandarin) and routes to `gambling_advice` deterministically. `detect_age_verification()` checks 6 patterns for underage-related queries and routes to `age_verification` with the 21+ requirement.
 
 Turn-limit guard: if `messages` exceeds `MAX_TURN_LIMIT` (default 40, configurable), forces `off_topic` to end the conversation. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing via `ainvoke()` (fully async). On LLM error, defaults to `property_qa` with confidence 0.5.
 
@@ -252,7 +252,7 @@ Adversarial review prompt checking 6 criteria: grounded, on-topic, no gambling a
 
 ## Guardrails
 
-Three layers: two deterministic (pre-LLM, in `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). The deterministic guardrails are in a dedicated module to separate safety concerns from graph node logic.
+Four layers: three deterministic (pre-LLM, in `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). The deterministic guardrails are in a dedicated module to separate safety concerns from graph node logic.
 
 ### Deterministic: audit_input (`src/agent/guardrails.py`)
 
@@ -263,6 +263,10 @@ Pre-LLM regex-based prompt injection detection. Runs before the router LLM call.
 Pre-LLM regex-based responsible gaming safety net. Runs after `audit_input` but before the router LLM call. Checks 22 patterns across English (17) and Spanish (5), including: "gambling problem", "addicted to gambling", "self-exclusion", "can't stop gambling", "limit my gambling", "take a break from gambling", "spending too much at the casino", "family says I gamble", "cooling-off period", "want to ban myself", and Spanish equivalents ("problema de juego", "adicción al juego", "juego compulsivo"). Spanish patterns serve the diverse US casino clientele. Detected queries are routed directly to `gambling_advice` (which provides NCPG 1-800-MY-RESET, CT Council 1-888-789-7777, and CT DCP self-exclusion resources) without invoking any LLM. This ensures responsible gaming helplines are always provided deterministically, regardless of LLM routing accuracy.
 
 Responsible gaming helplines are defined as a `RESPONSIBLE_GAMING_HELPLINES` constant in `src/agent/prompts.py` (DRY — used in both the system prompt and the `off_topic_node` response). For multi-property deployment across states, these would be loaded from the property data file.
+
+### Deterministic: detect_age_verification (`src/agent/guardrails.py`)
+
+Pre-LLM regex-based age verification guardrail. Runs after `detect_responsible_gaming` but before the router LLM call. Checks 6 patterns for underage-related queries (e.g., "my kid wants to play", "minimum gambling age", "can underage guests enter", "how old do you have to be to gamble", "minors allowed"). Connecticut law requires casino guests to be 21+ for gaming. Detected queries route to `age_verification` which provides a structured response listing what minors can and cannot do at the property, the 21+ requirement, and the ID requirement. This ensures the legal age requirement is always communicated deterministically, regardless of LLM routing.
 
 ### Structural: property_id metadata filter (`src/rag/pipeline.py`)
 
@@ -281,13 +285,13 @@ Post-generation adversarial review against 6 criteria (see Prompt System above).
 ### Ingestion
 
 ```
-mohegan_sun.json --> Parse by category --> Format --> Chunk (800/100) --> Embed --> ChromaDB
+mohegan_sun.json --> Parse by category --> Format --> Chunk (800/120) --> Embed --> ChromaDB
 ```
 
 1. **Load**: Read `data/mohegan_sun.json` (configurable path).
 2. **Parse**: Extract items by category. Flatten nested dicts (hotel towers, gaming sub-areas).
 3. **Format**: Category-specific formatters for restaurants, entertainment, hotel rooms; generic formatter for others.
-4. **Chunk**: `RecursiveCharacterTextSplitter` (800 chars, 100 overlap, separators: `\n\n`, `\n`, `. `, ` `). 800 characters is chosen to balance context density vs retrieval precision: casino property items (restaurant descriptions, room details) average 200-400 characters, so 800 chars preserves complete items while allowing the splitter to group related smaller items. Smaller chunks (e.g., 500) would fragment multi-field items; larger chunks (e.g., 1200) would mix unrelated categories.
+4. **Chunk**: `RecursiveCharacterTextSplitter` (800 chars, 120 overlap [15% of chunk size], separators: `\n\n`, `\n`, `. `, ` `). 800 characters is chosen to balance context density vs retrieval precision: casino property items (restaurant descriptions, room details) average 200-400 characters, so 800 chars preserves complete items while allowing the splitter to group related smaller items. Smaller chunks (e.g., 500) would fragment multi-field items; larger chunks (e.g., 1200) would mix unrelated categories.
 5. **Embed**: Google `text-embedding-004` (768 dimensions).
 6. **Store**: ChromaDB collection `property_knowledge`, persistent to disk.
 
@@ -358,6 +362,8 @@ Send a message, receive an SSE token stream.
 **Error responses**: 422 (validation), 429 (rate limited), 503 (agent not initialized).
 
 ### GET /health
+
+Returns 200 when healthy, 503 when degraded (so Cloud Run / k8s don't route traffic to unhealthy containers).
 
 ```json
 {
@@ -442,7 +448,7 @@ The `_FixtureReplayLLM` class in `tests/test_eval_deterministic.py` replays pre-
 | Validation loop | Built-in: generate -> validate -> retry/fallback | Not available without wrapping |
 | Routing control | Explicit 7-category router with confidence threshold | LLM decides tool calls implicitly |
 | Time awareness | `current_time` injected into state at entry | Must be added to system prompt manually |
-| Domain guardrails | Dedicated off_topic, gambling_advice, action_request paths | Single system prompt, no structured routing |
+| Domain guardrails | Dedicated off_topic, gambling_advice, action_request, age_verification paths | Single system prompt, no structured routing |
 | Observability | Each node is individually traceable in LangSmith | Tool calls are traceable but routing is opaque |
 | Code complexity | More code (8 nodes, 2 routing functions) | ~10 lines to set up |
 | Flexibility | Full control over retry logic, validation criteria | Simpler but less control |
@@ -456,7 +462,7 @@ The validate node uses a **degraded-pass** strategy when the validator LLM fails
 | First attempt | **PASS** (serve unvalidated response) | Availability over safety — a failed validator should not block an otherwise grounded response |
 | Retry attempt | **FAIL** (route to fallback) | Safety over availability — if validation failed twice, the response is suspect |
 
-**Trade-off**: On first attempt, the system may serve an unvalidated LLM response to a casino guest. This is acceptable because: (1) the response is still RAG-grounded by the generate node's context, (2) deterministic guardrails (prompt injection, responsible gaming, competitor deflection) run *before* the LLM and are not affected, (3) the fallback path always provides safe, human-written responses with the property's contact information.
+**Trade-off**: On first attempt, the system may serve an unvalidated LLM response to a casino guest. This is acceptable because: (1) the response is still RAG-grounded by the generate node's context, (2) deterministic guardrails (prompt injection, responsible gaming, age verification, competitor deflection) run *before* the LLM and are not affected, (3) the fallback path always provides safe, human-written responses with the property's contact information.
 
 In production, this trade-off should be reviewed with the compliance team. A stricter policy (fail-closed on all validator failures) trades availability for safety.
 
@@ -619,7 +625,7 @@ The following features from the initial architecture specification (`assignment/
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH) | ~110 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns) | ~144 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~87 |
 | `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons | ~522 |
 | `graph.py` | StateGraph compilation, `chat()`, `chat_stream()`, `_initial_state()` DRY helper | ~255 |

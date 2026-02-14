@@ -226,11 +226,11 @@ class TestChatAgent503:
 
 class TestHealthDegraded:
     def test_health_degraded_when_agent_not_ready(self):
-        """GET /health returns 'degraded' when agent is None."""
+        """GET /health returns 503 'degraded' when agent is None."""
         test_app = _make_test_app_no_agent()
         with TestClient(test_app) as client:
             resp = client.get("/health")
-            assert resp.status_code == 200
+            assert resp.status_code == 503
             assert resp.json()["status"] == "degraded"
             assert resp.json()["agent_ready"] is False
 

@@ -1009,6 +1009,103 @@ class TestSecretStrConfig:
         assert s.CB_COOLDOWN_SECONDS == 60
 
 
+class TestAgeVerificationRouting:
+    """Tests for age verification deterministic guardrail wiring."""
+
+    @patch("src.agent.nodes._get_llm")
+    async def test_age_query_routes_to_age_verification(self, mock_get_llm):
+        """Age-related query in router_node returns age_verification."""
+        from src.agent.nodes import router_node
+
+        state = _state(messages=[HumanMessage(content="Can my kid play the slots?")])
+        result = await router_node(state)
+        assert result["query_type"] == "age_verification"
+        assert result["router_confidence"] == 1.0
+        mock_get_llm.assert_not_called()
+
+    @patch("src.agent.nodes._get_llm")
+    async def test_minimum_age_query_routes_to_age_verification(self, mock_get_llm):
+        """'minimum gambling age' routes to age_verification."""
+        from src.agent.nodes import router_node
+
+        state = _state(messages=[HumanMessage(content="What is the minimum gambling age?")])
+        result = await router_node(state)
+        assert result["query_type"] == "age_verification"
+        mock_get_llm.assert_not_called()
+
+    def test_age_verification_routes_to_off_topic_node(self):
+        """age_verification query_type routes to off_topic node."""
+        from src.agent.nodes import route_from_router
+
+        state = _state(query_type="age_verification")
+        assert route_from_router(state) == "off_topic"
+
+    async def test_age_verification_response_includes_21_requirement(self):
+        """Age verification response includes the 21+ requirement."""
+        from src.agent.nodes import off_topic_node
+
+        state = _state(query_type="age_verification")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+        assert "21" in content
+        assert "photo ID" in content or "government-issued" in content
+
+    async def test_age_verification_response_includes_minor_info(self):
+        """Age verification response includes what minors CAN do."""
+        from src.agent.nodes import off_topic_node
+
+        state = _state(query_type="age_verification")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+        assert "minor" in content.lower() or "shops" in content.lower() or "restaurants" in content.lower()
+
+    @patch("src.agent.nodes._get_llm")
+    async def test_normal_age_question_not_flagged(self, mock_get_llm):
+        """'How old is this casino?' should NOT trigger age verification."""
+        from src.agent.nodes import router_node
+
+        mock_llm = MagicMock()
+        mock_structured = MagicMock()
+        mock_structured.ainvoke = AsyncMock(return_value=RouterOutput(
+            query_type="property_qa", confidence=0.9
+        ))
+        mock_llm.with_structured_output.return_value = mock_structured
+        mock_get_llm.return_value = mock_llm
+
+        state = _state(messages=[HumanMessage(content="How old is this casino?")])
+        result = await router_node(state)
+        # Should NOT be age_verification — the LLM classifies it
+        assert result["query_type"] != "age_verification"
+
+
+class TestGetLastHumanMessage:
+    """Tests for the _get_last_human_message helper function."""
+
+    def test_returns_last_human_message(self):
+        """Returns content of the most recent HumanMessage."""
+        from src.agent.nodes import _get_last_human_message
+
+        messages = [
+            HumanMessage(content="first"),
+            AIMessage(content="response"),
+            HumanMessage(content="second"),
+        ]
+        assert _get_last_human_message(messages) == "second"
+
+    def test_returns_empty_for_no_human_messages(self):
+        """Returns empty string when no HumanMessage exists."""
+        from src.agent.nodes import _get_last_human_message
+
+        messages = [AIMessage(content="bot says hello")]
+        assert _get_last_human_message(messages) == ""
+
+    def test_returns_empty_for_empty_list(self):
+        """Returns empty string for empty message list."""
+        from src.agent.nodes import _get_last_human_message
+
+        assert _get_last_human_message([]) == ""
+
+
 class TestValidatorLLMSeparation:
     """Tests that validation uses a separate LLM with temperature=0."""
 

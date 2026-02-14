@@ -18,7 +18,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from src.config import get_settings
 
 from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401
-from .guardrails import audit_input, detect_responsible_gaming  # noqa: F401
+from .guardrails import audit_input, detect_age_verification, detect_responsible_gaming  # noqa: F401
 from .prompts import (
     CONCIERGE_SYSTEM_PROMPT,
     RESPONSIBLE_GAMING_HELPLINES,
@@ -29,6 +29,19 @@ from .state import PropertyQAState, RouterOutput, ValidationResult
 from .tools import search_hours, search_knowledge_base
 
 logger = logging.getLogger(__name__)
+
+
+def _get_last_human_message(messages: list) -> str:
+    """Extract the content of the last HumanMessage from a message list.
+
+    Iterates in reverse to find the most recent user message.
+    Returns an empty string if no HumanMessage is found.
+    """
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage):
+            return msg.content if isinstance(msg.content, str) else str(msg.content)
+    return ""
+
 
 #: Sentinel value to signal that validation should be skipped (empty context or error path).
 #: When ``retry_count`` is set to this value, ``route_after_validate`` routes directly
@@ -98,11 +111,7 @@ async def router_node(state: PropertyQAState) -> dict:
         }
 
     # Get the last human message
-    user_message = ""
-    for msg in reversed(messages):
-        if isinstance(msg, HumanMessage):
-            user_message = msg.content if isinstance(msg.content, str) else str(msg.content)
-            break
+    user_message = _get_last_human_message(messages)
 
     if not user_message:
         return {
@@ -121,6 +130,13 @@ async def router_node(state: PropertyQAState) -> dict:
     if detect_responsible_gaming(user_message):
         return {
             "query_type": "gambling_advice",
+            "router_confidence": 1.0,
+        }
+
+    # Deterministic age verification detection (21+ casino requirement)
+    if detect_age_verification(user_message):
+        return {
+            "query_type": "age_verification",
             "router_confidence": 1.0,
         }
 
@@ -157,11 +173,7 @@ async def retrieve_node(state: PropertyQAState) -> dict:
     messages = state.get("messages", [])
     query_type = state.get("query_type", "property_qa")
 
-    query = ""
-    for msg in reversed(messages):
-        if isinstance(msg, HumanMessage):
-            query = msg.content if isinstance(msg.content, str) else str(msg.content)
-            break
+    query = _get_last_human_message(messages)
 
     if not query:
         return {"retrieved_context": []}
@@ -285,11 +297,7 @@ async def validate_node(state: PropertyQAState) -> dict:
         return {"validation_result": "PASS"}
 
     # Get the user question
-    user_question = ""
-    for msg in reversed(state.get("messages", [])):
-        if isinstance(msg, HumanMessage):
-            user_question = msg.content if isinstance(msg.content, str) else str(msg.content)
-            break
+    user_question = _get_last_human_message(state.get("messages", []))
 
     # Get the generated response (last AI message)
     generated_response = ""
@@ -451,6 +459,23 @@ async def off_topic_node(state: PropertyQAState) -> dict:
             f"{RESPONSIBLE_GAMING_HELPLINES}\n\n"
             "Is there anything else about the resort I can help with?"
         )
+    elif query_type == "age_verification":
+        content = (
+            f"Great question! At {settings.PROPERTY_NAME}, guests must be **21 years of age or older** "
+            "to access the gaming floor, purchase or consume alcohol, and enter most entertainment venues.\n\n"
+            "**What minors CAN do:**\n"
+            "- Walk through designated non-gaming areas\n"
+            "- Dine at select restaurants (with an adult)\n"
+            "- Visit the shops at Mohegan Sun\n\n"
+            "**What requires 21+:**\n"
+            "- Casino gaming floor\n"
+            "- Table games, slots, and poker\n"
+            "- Bars and lounges\n"
+            "- Most entertainment venues\n\n"
+            "Valid government-issued photo ID is required. Connecticut state law strictly "
+            "enforces the 21+ age requirement for gaming.\n\n"
+            "Is there anything else I can help you with?"
+        )
     elif query_type == "action_request":
         content = (
             "I appreciate you asking! While I can't make reservations, bookings, "
@@ -499,7 +524,7 @@ def route_from_router(state: PropertyQAState) -> str:
     if query_type == "greeting":
         return "greeting"
 
-    if query_type in ("off_topic", "gambling_advice", "action_request"):
+    if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification"):
         return "off_topic"
 
     if confidence < 0.3:

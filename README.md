@@ -64,7 +64,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full details: node descriptions, stat
 | Frontend | Vanilla HTML/CSS/JS | No build step, minimal footprint, backend is 90% of evaluation |
 | Validation | Adversarial LLM review (6 criteria) | Catches hallucination, off-topic drift, gambling advice leaks |
 | Config | `pydantic-settings` BaseSettings | Zero hardcoded values; every constant overridable via env var |
-| Guardrails | Deterministic regex + LLM validation | Pre-LLM `audit_input()` (7 patterns) + `detect_responsible_gaming()` (6 patterns) |
+| Guardrails | Deterministic regex + LLM validation | Pre-LLM `audit_input()` (7 patterns) + `detect_responsible_gaming()` (22 patterns) + `detect_age_verification()` (6 patterns) |
 
 ## Project Structure
 
@@ -79,17 +79,17 @@ hey-seven/
 │   │   ├── prompts.py         # 3 prompt templates (11-rule concierge, VIP tone)
 │   │   └── tools.py           # search_knowledge_base + search_hours
 │   ├── rag/
-│   │   ├── pipeline.py        # Ingest, chunk (800/100), embed, retrieve (ChromaDB)
+│   │   ├── pipeline.py        # Ingest, chunk (800/120), embed, retrieve (ChromaDB)
 │   │   └── embeddings.py      # Google text-embedding-004 config
 │   └── api/
 │       ├── app.py             # FastAPI app, lifespan, SSE streaming, disconnect detection
 │       ├── models.py          # Pydantic request/response + SSE event schemas
-│       └── middleware.py      # 5 pure ASGI middleware (logging, errors, security, auth, rate limit)
+│       └── middleware.py      # 6 pure ASGI middleware (logging, errors, security, auth, rate limit, body limit)
 ├── data/
 │   └── mohegan_sun.json       # Curated property data (30 items, 7 categories)
 ├── static/
 │   └── index.html             # Branded chat UI (Hey Seven gold/dark/cream)
-├── tests/                     # 143 tests across 11 files
+├── tests/                     # 277 tests across 11 files
 ├── Dockerfile                 # Multi-stage Python 3.12, non-root, HEALTHCHECK
 ├── docker-compose.yml         # Single service, health check, named volume, 2GB limit
 ├── requirements.txt           # Pinned production dependencies
@@ -103,7 +103,7 @@ hey-seven/
 ## Running Tests
 
 ```bash
-# Unit + integration tests (no API key needed, 131 tests)
+# Unit + integration tests (no API key needed, 265 tests)
 make test-ci
 
 # Deterministic eval tests (no API key, VCR fixtures, 12 tests)
@@ -119,7 +119,7 @@ pytest tests/ --cov=src --cov-report=term-missing --ignore=tests/test_eval.py
 make lint   # 0 errors
 ```
 
-**Test pyramid**: 60 unit + 58 integration + 12 deterministic eval + 14 live eval = **143 total tests**.
+**Test pyramid**: 277 tests pass without API key (unit + integration + deterministic eval) + 14 live eval = **291 total tests** (90%+ coverage).
 
 Tests run without `GOOGLE_API_KEY` except `test_eval.py` (live LLM). Deterministic eval tests use VCR-style fixtures with pre-recorded LLM responses.
 
@@ -128,7 +128,7 @@ Tests run without `GOOGLE_API_KEY` except `test_eval.py` (live LLM). Determinist
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/chat` | API key + rate limit | Send message, receive SSE token stream |
-| `GET` | `/health` | None | Health check (agent + ChromaDB status) |
+| `GET` | `/health` | None | Health check — 200 healthy, 503 degraded (Cloud Run routing) |
 | `GET` | `/property` | None | Property metadata (name, categories, doc count) |
 | `GET` | `/` | None | Chat UI (static HTML) |
 
@@ -169,19 +169,21 @@ data: {"done": true}
 
 ## Security & Middleware
 
-5 pure ASGI middleware classes (no `BaseHTTPMiddleware` — preserves SSE streaming):
+6 pure ASGI middleware classes (no `BaseHTTPMiddleware` — preserves SSE streaming):
 
 | Middleware | Description |
 |-----------|-------------|
 | **RequestLogging** | Cloud Logging JSON format, `X-Request-ID`, `X-Response-Time-Ms` |
 | **SecurityHeaders** | `nosniff`, `DENY`, CSP, `Referrer-Policy` |
 | **ApiKeyAuth** | `X-API-Key` with `hmac.compare_digest` (disabled when `API_KEY` empty) |
+| **RequestBodyLimit** | 64 KB max request body to prevent abuse |
 | **RateLimit** | Token-bucket per IP, 20 req/min on `/chat` |
 | **ErrorHandling** | `CancelledError` at INFO, structured 500 JSON for unhandled errors |
 
 Additional safety:
 - **Input auditing**: `audit_input()` regex detects 7 prompt injection patterns pre-LLM
-- **Responsible gaming**: `detect_responsible_gaming()` regex detects 6 gambling concern patterns deterministically
+- **Responsible gaming**: `detect_responsible_gaming()` regex detects 22 gambling concern patterns (English, Spanish, Mandarin) deterministically
+- **Age verification**: `detect_age_verification()` regex detects 6 underage-related patterns, ensures 21+ requirement is always communicated
 - **CORS**: Configurable allowed origins
 - **SSE timeout**: Configurable timeout with clean error event on expiry
 - **Request cancellation**: SSE stream cancels on client disconnect
@@ -202,7 +204,7 @@ All settings are configurable via environment variables (powered by `pydantic-se
 | `CHROMA_PERSIST_DIR` | `data/chroma` | ChromaDB persistence directory |
 | `RAG_TOP_K` | `5` | Number of retrieval results |
 | `RAG_CHUNK_SIZE` | `800` | Chunk size for text splitting |
-| `RAG_CHUNK_OVERLAP` | `100` | Chunk overlap |
+| `RAG_CHUNK_OVERLAP` | `120` | Chunk overlap (15% of chunk size) |
 | `ALLOWED_ORIGINS` | `["http://localhost:8080"]` | CORS allowed origins |
 | `RATE_LIMIT_CHAT` | `20` | Max chat requests per minute per IP |
 | `SSE_TIMEOUT_SECONDS` | `60` | Stream timeout |

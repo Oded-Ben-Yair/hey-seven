@@ -16,7 +16,7 @@ addopts = "--cov=src --cov-report=term-missing"
 source = ["src"]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 show_missing = true
 
 [tool.black]

@@ -151,16 +151,22 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     @app.get("/health", response_model=HealthResponse)
     async def health(request: Request):
+        from fastapi.responses import JSONResponse
+
         ready = getattr(request.app.state, "ready", False)
         agent_ready = getattr(request.app.state, "agent", None) is not None
         property_loaded = bool(getattr(request.app.state, "property_data", None))
         all_healthy = ready and agent_ready and property_loaded
-        return HealthResponse(
+        body = HealthResponse(
             status="healthy" if all_healthy else "degraded",
             version=settings.VERSION,
             agent_ready=agent_ready,
             property_loaded=property_loaded,
         )
+        # Return 503 for degraded state so Cloud Run / k8s don't route
+        # traffic to unhealthy containers.
+        status_code = 200 if all_healthy else 503
+        return JSONResponse(content=body.model_dump(), status_code=status_code)
 
     # ------------------------------------------------------------------
     # GET /property — Property metadata
