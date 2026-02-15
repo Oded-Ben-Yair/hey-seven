@@ -2,6 +2,8 @@
 
 An AI concierge for Mohegan Sun casino resort, built with a custom 8-node LangGraph StateGraph.
 
+**[Live Demo](https://hey-seven-180574405300.us-central1.run.app)** · [GitHub](https://github.com/Oded-Ben-Yair/hey-seven)
+
 ![Screenshot](docs/screenshot-desktop.png)
 
 ## Quick Start
@@ -76,7 +78,7 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 | LLM | Gemini 2.5 Flash | GCP-aligned, cost-effective (~$0.0014/request) |
 | Vector DB | ChromaDB (embedded) | Zero infrastructure for demo; Vertex AI Vector Search for production |
 | Streaming | Real token SSE via `astream_events` v2 | True progressive rendering with timeout + disconnect detection |
-| Embeddings | Google `text-embedding-004` | GCP-native, free tier, 768 dimensions |
+| Embeddings | Google `gemini-embedding-001` | GCP-native, free tier, 768 dimensions |
 | Frontend | Single-file HTML/CSS/JS | No build step, minimal footprint, ships with FastAPI |
 | Validation | Adversarial LLM review (6 criteria) | Catches hallucination, off-topic drift, gambling advice leaks |
 | Config | `pydantic-settings` BaseSettings | 31 env-overridable settings, zero hardcoded values |
@@ -193,7 +195,7 @@ hey-seven/
 │   │   └── tools.py           # search_knowledge_base + search_hours
 │   ├── rag/
 │   │   ├── pipeline.py        # Ingest, chunk (800/120), embed, retrieve (ChromaDB)
-│   │   └── embeddings.py      # Google text-embedding-004
+│   │   └── embeddings.py      # Google gemini-embedding-001
 │   └── api/
 │       ├── app.py             # FastAPI app, lifespan, SSE streaming
 │       ├── models.py          # Pydantic schemas + SSE event models

@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     MODEL_MAX_OUTPUT_TOKENS: int = 2048  # Max response tokens
 
     # --- Embeddings ---
-    EMBEDDING_MODEL: str = "models/text-embedding-004"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # --- RAG ---
     CHROMA_PERSIST_DIR: str = "data/chroma"
