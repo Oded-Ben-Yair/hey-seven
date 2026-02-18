@@ -14,6 +14,16 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 
+def _keep_max(a: int, b: int) -> int:
+    """Reducer that preserves the maximum value across state updates.
+
+    Used for session-level counters that must accumulate across turns.
+    When _initial_state() passes 0, max(existing, 0) preserves the count.
+    When a node increments, max(existing, new) updates the count.
+    """
+    return max(a, b)
+
+
 class RetrievedChunk(TypedDict):
     """A single chunk returned by the RAG retriever.
 
@@ -29,11 +39,11 @@ class RetrievedChunk(TypedDict):
 class PropertyQAState(TypedDict):
     """Typed state flowing through the property Q&A graph.
 
-    ``messages`` is the only field persisted across turns via the checkpointer's
-    ``add_messages`` reducer. All other fields are **per-turn** — they are reset
-    by ``_initial_state()`` at the start of each ``chat()`` / ``chat_stream()``
-    call. This ensures clean routing and validation state per turn while the
-    checkpointer maintains conversation history.
+    ``messages`` is persisted across turns via the checkpointer's ``add_messages``
+    reducer. ``responsible_gaming_count`` also persists via ``_keep_max`` reducer
+    for session-level escalation tracking. All other fields are **per-turn** —
+    they are reset by ``_initial_state()`` at the start of each ``chat()`` /
+    ``chat_stream()`` call.
 
     ``skip_validation`` is set to ``True`` by the generate node (host_agent)
     when the response is a deterministic fallback (empty context, LLM error,
@@ -57,7 +67,7 @@ class PropertyQAState(TypedDict):
     # v2 fields
     extracted_fields: dict[str, Any]  # structured fields from guest message
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
-    responsible_gaming_count: int  # session-level escalation counter for responsible gaming triggers
+    responsible_gaming_count: Annotated[int, _keep_max]  # session-level escalation counter (persists across turns via _keep_max reducer)
 
 
 # Deprecated alias — use PropertyQAState directly. Kept for backward

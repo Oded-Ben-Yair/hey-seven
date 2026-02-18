@@ -115,6 +115,10 @@ class CircuitBreaker:
     def is_open(self) -> bool:
         """Whether the breaker is in open state (blocking all requests).
 
+        Note: This is a non-atomic read (no lock). Safe in CPython due to GIL
+        for simple attribute reads. Use ``allow_request()`` for the authoritative
+        lock-protected check in production code paths.
+
         Returns:
             True if the breaker is open and cooldown has NOT expired.
         """
