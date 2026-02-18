@@ -273,6 +273,7 @@ class TestGuardrailIntegration:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
 
         state = {
             "messages": [HumanMessage(content="What restaurants?")],

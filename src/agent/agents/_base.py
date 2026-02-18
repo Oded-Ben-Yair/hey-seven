@@ -67,8 +67,10 @@ async def execute_specialist(
     # Cache circuit breaker instance — avoids repeated get_cb_fn() calls
     cb = get_cb_fn()
 
-    # Circuit breaker check -- early exit before building prompts
-    if cb.is_open:
+    # Circuit breaker check -- early exit before building prompts.
+    # Uses lock-protected allow_request() instead of is_open property
+    # to ensure atomic state transition (open -> half_open -> probe).
+    if not await cb.allow_request():
         logger.warning("Circuit breaker open — %s agent returning fallback", agent_name)
         return {
             "messages": [AIMessage(content=Template(

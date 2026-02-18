@@ -173,6 +173,7 @@ class TestHostAgentWhisperInjection:
 
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
         with (
@@ -206,6 +207,7 @@ class TestHostAgentWhisperInjection:
 
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
         with (
@@ -231,6 +233,7 @@ class TestHostAgentWhisperInjection:
 
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
 
         with patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb):
             result = await host_agent(state)
@@ -263,6 +266,7 @@ class TestCompAgentProfileGate:
 
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
 
         with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
             result = await comp_agent(state)
@@ -292,6 +296,7 @@ class TestCompAgentProfileGate:
 
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
 
         with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
             result = await comp_agent(state)
@@ -337,6 +342,7 @@ class TestCompAgentProfileGate:
         mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="Here are our promotions!"))
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
         with (
@@ -383,6 +389,7 @@ class TestCompAgentProfileGate:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
 
         with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
             result = await comp_agent(state)
@@ -424,6 +431,7 @@ class TestCompAgentProfileGate:
 
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
 
         with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
             result = await comp_agent(state)

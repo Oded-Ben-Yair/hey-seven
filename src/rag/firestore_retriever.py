@@ -4,9 +4,12 @@ Uses Firestore's built-in ``find_nearest()`` API with COSINE distance
 for vector similarity search.  Implements ``AbstractRetriever`` for
 formal swappability in ``get_retriever()``.
 
-Multi-strategy retrieval with RRF reranking matches the ChromaDB path
-in ``tools.py``.  RRF is imported from ``src.rag.reranking`` (shared
-module) to eliminate duplication.
+Multi-strategy RRF reranking is handled by ``tools.py`` (the caller),
+NOT inside the retriever.  This matches ``CasinoKnowledgeRetriever``
+which also returns single-strategy results.  ``tools.py`` calls
+``retrieve_with_scores()`` twice (semantic + augmented) and applies
+RRF once — avoiding the double-RRF bug where the retriever did
+internal RRF and the caller did external RRF on top.
 
 The ``google.cloud.firestore`` import is lazy to avoid pulling in the
 heavy GCP SDK (~200MB) at module level, consistent with ChromaDB lazy
@@ -20,7 +23,6 @@ from langchain_core.documents import Document
 
 from src.config import get_settings
 from src.rag.pipeline import AbstractRetriever
-from src.rag.reranking import rerank_by_rrf
 
 logger = logging.getLogger(__name__)
 
@@ -125,14 +127,13 @@ class FirestoreRetriever(AbstractRetriever):
         query: str,
         top_k: int = 5,
     ) -> list[tuple[Document, float]]:
-        """Retrieve documents with relevance scores via multi-strategy Firestore search.
+        """Retrieve documents with relevance scores via single Firestore vector search.
 
-        Uses Reciprocal Rank Fusion (RRF) to combine two retrieval strategies:
-        1. Direct semantic search (embedding cosine similarity)
-        2. Entity-augmented search (query + domain terms for proper noun matching)
-
-        This matches the dual-strategy RRF pattern used by the ChromaDB path
-        in ``tools.search_knowledge_base()``.
+        Returns single-strategy results. Multi-strategy RRF reranking is
+        handled by the caller (``tools.search_knowledge_base()``) which
+        calls this method twice with different query variants and applies
+        RRF once.  This matches ``CasinoKnowledgeRetriever`` behavior and
+        avoids the double-RRF bug (retriever-internal + caller-external).
 
         Args:
             query: The search query.
@@ -143,30 +144,13 @@ class FirestoreRetriever(AbstractRetriever):
         """
         settings = get_settings()
         property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
-
-        # Strategy 1: Direct semantic search
-        semantic_results = self._single_vector_query(query, top_k, property_id)
-
-        # Strategy 2: Entity-augmented query for proper noun / name matching
-        augmented_results = self._single_vector_query(
-            f"{query} name location details", top_k, property_id
-        )
-
-        # Reciprocal Rank Fusion: merge rankings for better recall
-        fused = rerank_by_rrf(
-            [semantic_results, augmented_results],
-            top_k=top_k,
-        )
-
+        results = self._single_vector_query(query, top_k, property_id)
         logger.info(
-            "Firestore RRF search returned %d results from %d+%d strategies "
-            "(query: %.40s...)",
-            len(fused),
-            len(semantic_results),
-            len(augmented_results),
+            "Firestore search returned %d results (query: %.40s...)",
+            len(results),
             query,
         )
-        return fused
+        return results
 
     def retrieve(
         self,

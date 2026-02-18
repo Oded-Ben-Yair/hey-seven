@@ -746,6 +746,7 @@ class TestCircuitBreaker:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
         mock_get_cb.return_value = mock_cb
         state = _state(
             messages=[HumanMessage(content="What restaurants?")],

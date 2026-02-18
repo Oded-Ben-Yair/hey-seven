@@ -99,6 +99,7 @@ class TestHostAgent:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
         mock_get_cb.return_value = mock_cb
 
         state = _state(
@@ -232,6 +233,7 @@ class TestDiningAgent:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
         mock_get_cb.return_value = mock_cb
 
         state = _state(
@@ -321,6 +323,7 @@ class TestEntertainmentAgent:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
         mock_get_cb.return_value = mock_cb
 
         state = _state(
@@ -412,6 +415,7 @@ class TestCompAgent:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
         mock_get_cb.return_value = mock_cb
 
         state = _state(
@@ -604,6 +608,7 @@ class TestSpecialistContract:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
 
         # Comp agent profile gate runs BEFORE CB check in execute_specialist,
         # so we need high completeness to reach the CB path

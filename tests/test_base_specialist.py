@@ -46,6 +46,7 @@ def _make_execute_kwargs(
     if get_cb_fn is None:
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
         mock_cb.record_failure = AsyncMock()
         get_cb_fn = MagicMock(return_value=mock_cb)
@@ -78,6 +79,7 @@ class TestCircuitBreakerOpen:
 
         mock_cb = MagicMock()
         mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
         get_cb_fn = MagicMock(return_value=mock_cb)
 
         kwargs = _make_execute_kwargs(get_cb_fn=get_cb_fn)
@@ -127,6 +129,7 @@ class TestHappyPath:
         )
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
         kwargs = _make_execute_kwargs(
@@ -162,6 +165,7 @@ class TestRetryFeedbackInjection:
         )
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
         kwargs = _make_execute_kwargs(
@@ -203,6 +207,7 @@ class TestWhisperPlanInjection:
         )
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
         kwargs = _make_execute_kwargs(
@@ -251,6 +256,7 @@ class TestValueTypeErrorFallback:
         mock_llm.ainvoke = AsyncMock(side_effect=exc_cls("bad response"))
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_failure = AsyncMock()
 
         kwargs = _make_execute_kwargs(
@@ -284,6 +290,7 @@ class TestCancelledErrorReRaised:
         mock_llm.ainvoke = AsyncMock(side_effect=asyncio.CancelledError())
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=MagicMock(return_value=mock_llm),
@@ -314,6 +321,7 @@ class TestHttpErrorFallback:
         )
         mock_cb = MagicMock()
         mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_failure = AsyncMock()
 
         kwargs = _make_execute_kwargs(
