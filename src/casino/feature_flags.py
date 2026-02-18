@@ -41,6 +41,7 @@ class FeatureFlags(TypedDict, total=False):
 DEFAULT_FEATURES: dict[str, bool] = {
     "ai_disclosure_enabled": True,
     "whisper_planner_enabled": True,
+    "specialist_agents_enabled": True,
     "comp_agent_enabled": True,
     "spanish_support_enabled": True,
     "outbound_campaigns_enabled": False,

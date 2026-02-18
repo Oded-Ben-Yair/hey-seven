@@ -541,60 +541,60 @@ class TestAreaCodeTimezone:
     """US area code to timezone mapping."""
 
     def test_new_york_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+12125551234") == "America/New_York"
+        assert _get_timezone_from_area_code("+12125551234") == "America/New_York"
 
     def test_chicago_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+13125551234") == "America/Chicago"
+        assert _get_timezone_from_area_code("+13125551234") == "America/Chicago"
 
     def test_denver_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+13035551234") == "America/Denver"
+        assert _get_timezone_from_area_code("+13035551234") == "America/Denver"
 
     def test_los_angeles_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+12135551234") == "America/Los_Angeles"
+        assert _get_timezone_from_area_code("+12135551234") == "America/Los_Angeles"
 
     def test_las_vegas_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+17025551234") == "America/Los_Angeles"
+        assert _get_timezone_from_area_code("+17025551234") == "America/Los_Angeles"
 
     def test_connecticut_area_code(self):
         """860 is Mohegan Sun's area."""
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+18605551234") == "America/New_York"
+        assert _get_timezone_from_area_code("+18605551234") == "America/New_York"
 
     def test_hawaii_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+18085551234") == "Pacific/Honolulu"
+        assert _get_timezone_from_area_code("+18085551234") == "Pacific/Honolulu"
 
     def test_alaska_area_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+19075551234") == "America/Anchorage"
+        assert _get_timezone_from_area_code("+19075551234") == "America/Anchorage"
 
     def test_unknown_area_code_defaults(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("+19995551234") == "America/New_York"
+        assert _get_timezone_from_area_code("+19995551234") == "America/New_York"
 
     def test_without_country_code(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("2125551234") == "America/New_York"
+        assert _get_timezone_from_area_code("2125551234") == "America/New_York"
 
     def test_short_number_defaults(self):
-        from src.sms.compliance import get_timezone_from_area_code
+        from src.sms.compliance import _get_timezone_from_area_code
 
-        assert get_timezone_from_area_code("12") == "America/New_York"
+        assert _get_timezone_from_area_code("12") == "America/New_York"
 
 
 class TestConsentHashChain:
@@ -663,6 +663,60 @@ class TestConsentHashChain:
         chain.add_event("scope_change", "+12125551234", "2026-03-15T14:00:00Z", "upgraded to marketing")
         assert chain.verify_chain() is True
         assert chain.events[0]["event_type"] == "scope_change"
+
+
+class TestConsentHashChainHMAC:
+    """HMAC-SHA256 tamper-evident consent hash chain (production mode)."""
+
+    def test_hmac_chain_verifies(self):
+        """HMAC chain with secret verifies successfully."""
+        from src.sms.compliance import ConsentHashChain
+
+        chain = ConsentHashChain(hmac_secret="test-secret-key")
+        chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
+        chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword")
+        assert chain.verify_chain() is True
+
+    def test_hmac_produces_different_hashes_than_plain(self):
+        """HMAC hashes differ from plain SHA-256 hashes for same input."""
+        from src.sms.compliance import ConsentHashChain
+
+        plain_chain = ConsentHashChain()
+        hmac_chain = ConsentHashChain(hmac_secret="secret")
+
+        h_plain = plain_chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web")
+        h_hmac = hmac_chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web")
+
+        assert h_plain != h_hmac, "HMAC hash must differ from plain SHA-256"
+
+    def test_hmac_tampered_chain_detected(self):
+        """Tampering with HMAC chain is detected."""
+        from src.sms.compliance import ConsentHashChain
+
+        chain = ConsentHashChain(hmac_secret="secret-key")
+        chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
+        chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword")
+        chain._events[0]["evidence"] = "tampered"
+        assert chain.verify_chain() is False
+
+    def test_hmac_wrong_secret_fails_verification(self):
+        """Chain built with one secret cannot be verified with another."""
+        from src.sms.compliance import ConsentHashChain
+
+        chain = ConsentHashChain(hmac_secret="correct-secret")
+        chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
+
+        # Swap secret and verify — should fail
+        chain._hmac_secret = "wrong-secret"
+        assert chain.verify_chain() is False
+
+    def test_settings_consent_hmac_secret_exists(self):
+        """CONSENT_HMAC_SECRET field exists in settings."""
+        from src.config import Settings
+
+        s = Settings()
+        assert hasattr(s, "CONSENT_HMAC_SECRET")
+        assert s.CONSENT_HMAC_SECRET == "change-me-in-production"
 
 
 class TestConsentChecking:

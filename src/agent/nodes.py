@@ -20,6 +20,7 @@ from pathlib import Path
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
 
 from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401 (CircuitBreaker re-exported for tests)
@@ -106,6 +107,13 @@ def _get_llm() -> ChatGoogleGenerativeAI:
 
     Uses ``@lru_cache`` consistent with ``get_settings()`` pattern.
     Cache is transparent to tests that ``patch("src.agent.nodes._get_llm")``.
+
+    Production scaling note: ``@lru_cache`` singletons are process-scoped.
+    For multi-container deployments (Cloud Run auto-scaling), each container
+    gets its own LLM instance, which is correct behavior (no shared state
+    needed for stateless LLM clients). For scenarios requiring TTL-based
+    cache invalidation (e.g., credential rotation), replace with
+    ``cachetools.TTLCache(maxsize=1, ttl=3600)``.
     """
     settings = get_settings()
     return ChatGoogleGenerativeAI(
@@ -124,6 +132,13 @@ def _get_validator_llm() -> ChatGoogleGenerativeAI:
     Uses temperature=0.0 for deterministic binary classification
     (PASS/RETRY/FAIL). Separate from ``_get_llm()`` which uses the
     configured temperature for creative response generation.
+
+    Production scaling note: ``@lru_cache`` singletons are process-scoped.
+    For multi-container deployments (Cloud Run auto-scaling), each container
+    gets its own validator instance, which is correct behavior (no shared
+    state needed for stateless LLM clients). For scenarios requiring
+    TTL-based cache invalidation (e.g., credential rotation), replace with
+    ``cachetools.TTLCache(maxsize=1, ttl=3600)``.
     """
     settings = get_settings()
     return ChatGoogleGenerativeAI(
@@ -419,13 +434,23 @@ async def greeting_node(state: PropertyQAState) -> dict:
 
     Categories are derived from the actual property data file (cached)
     to stay in sync with available knowledge-base content.
+
+    Feature flag: ``ai_disclosure_enabled`` — when True, includes an
+    explicit AI disclosure line ("I'm an AI assistant") per regulatory
+    best practice for automated guest interactions.
     """
     settings = get_settings()
     categories = _build_greeting_categories()
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
+
+    # Feature flag: AI disclosure for regulatory transparency
+    ai_disclosure = DEFAULT_FEATURES.get("ai_disclosure_enabled", True)
+    disclosure_line = " I'm an AI assistant, " if ai_disclosure else " "
+
     return {
         "messages": [AIMessage(content=(
-            f"Hi! I'm **Seven**, your AI concierge for {settings.PROPERTY_NAME}. "
+            f"Hi! I'm **Seven**, your AI concierge for {settings.PROPERTY_NAME}."
+            f"{disclosure_line}"
             "I'm here to help you explore everything the resort has to offer.\n\n"
             f"I can help with:\n{bullets}\n\n"
             "What would you like to know?"
@@ -441,6 +466,9 @@ async def greeting_node(state: PropertyQAState) -> dict:
 
 async def off_topic_node(state: PropertyQAState) -> dict:
     """Handle off-topic, gambling advice, and action requests.
+
+    Feature flags consulted:
+    - ``ai_disclosure_enabled``: Appends AI disclosure to off-topic responses.
 
     Three sub-cases based on query_type:
     - off_topic: General redirect to property topics
@@ -460,14 +488,35 @@ async def off_topic_node(state: PropertyQAState) -> dict:
             "Is there anything else about the resort I can help with?"
         )
     elif query_type == "gambling_advice":
+        # Feature flag: ai_disclosure_enabled adds transparency to gambling-advice responses
+        ai_disclosure = DEFAULT_FEATURES.get("ai_disclosure_enabled", True)
+        disclosure_suffix = (
+            "\n\n*As an AI assistant, I'm required to direct you to these "
+            "professional resources rather than provide gambling guidance.*"
+            if ai_disclosure else ""
+        )
+        # Escalation: after 3+ responsible gaming triggers in a session,
+        # add a stronger message encouraging live support contact.
+        rg_count = state.get("responsible_gaming_count", 0)
+        escalation_msg = ""
+        if rg_count >= 3:
+            escalation_msg = (
+                f"\n\n**I've noticed you've raised this topic several times.** "
+                f"I strongly encourage you to speak with a live team member who "
+                f"can provide confidential, personalized support. You can reach "
+                f"{settings.PROPERTY_NAME}'s Responsible Gaming team directly "
+                f"at {settings.PROPERTY_PHONE}, or visit the Responsible Gaming "
+                f"desk on-property."
+            )
         content = (
             "I appreciate your interest, but I'm not able to provide gambling advice, "
             "betting strategies, or information about odds. I can share general information "
             f"about the gaming areas at {settings.PROPERTY_NAME}.\n\n"
             "If you or someone you know needs help with problem gambling, "
             "please reach out to these resources:\n"
-            f"{RESPONSIBLE_GAMING_HELPLINES}\n\n"
-            "Is there anything else about the resort I can help with?"
+            f"{RESPONSIBLE_GAMING_HELPLINES}"
+            f"{escalation_msg}\n\n"
+            f"Is there anything else about the resort I can help with?{disclosure_suffix}"
         )
     elif query_type == "age_verification":
         content = (

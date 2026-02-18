@@ -14,6 +14,7 @@ import uuid
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from src.api.errors import ErrorCode, error_response
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -149,10 +150,7 @@ class ErrorHandlingMiddleware:
             )
             if not response_started:
                 body = json.dumps(
-                    {
-                        "error": "internal_server_error",
-                        "message": "An unexpected error occurred.",
-                    }
+                    error_response(ErrorCode.INTERNAL_ERROR, "An unexpected error occurred.")
                 ).encode()
                 await send(
                     {
@@ -240,7 +238,7 @@ class ApiKeyMiddleware:
 
         if not provided or not hmac.compare_digest(provided, self._api_key):
             body = json.dumps(
-                {"error": "unauthorized", "message": "Invalid or missing API key."}
+                error_response(ErrorCode.UNAUTHORIZED, "Invalid or missing API key.")
             ).encode()
             await send(
                 {
@@ -331,7 +329,7 @@ class RateLimitMiddleware:
 
         # Rate limited
         body = json.dumps(
-            {"error": "rate_limit_exceeded", "message": "Too many requests."}
+            error_response(ErrorCode.RATE_LIMITED, "Too many requests.")
         ).encode()
         await send(
             {
@@ -401,10 +399,10 @@ class RequestBodyLimitMiddleware:
 
     async def _send_413(self, send: Send) -> None:
         body = json.dumps(
-            {
-                "error": "payload_too_large",
-                "message": f"Request body exceeds {self._max_size} bytes.",
-            }
+            error_response(
+                ErrorCode.PAYLOAD_TOO_LARGE,
+                f"Request body exceeds {self._max_size} bytes.",
+            )
         ).encode()
         await send(
             {

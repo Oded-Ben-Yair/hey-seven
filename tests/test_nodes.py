@@ -198,7 +198,8 @@ class TestHostAgent:
         )
         result = await host_agent(state)
         assert result is not None, "host_agent must not return None on ValueError"
-        assert result["skip_validation"] is True
+        assert result["skip_validation"] is False
+        assert result["retry_count"] == 1
         assert "trouble processing" in result["messages"][0].content.lower()
 
     @patch("src.agent.agents.host_agent._get_llm")
@@ -219,7 +220,8 @@ class TestHostAgent:
         )
         result = await host_agent(state)
         assert result is not None, "host_agent must not return None on TypeError"
-        assert result["skip_validation"] is True
+        assert result["skip_validation"] is False
+        assert result["retry_count"] == 1
         assert "trouble processing" in result["messages"][0].content.lower()
 
 

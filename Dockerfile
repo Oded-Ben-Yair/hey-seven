@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+# Note: chromadb (~200MB) is included for local dev convenience.
+# Production deployments targeting Firestore-only can exclude it via
+# a separate requirements-prod.txt to reduce image size by ~200MB.
 RUN pip install --no-cache-dir --target=/build/deps -r requirements.txt
 
 # Stage 2: Production

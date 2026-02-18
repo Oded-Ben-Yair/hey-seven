@@ -6,6 +6,7 @@ import sys
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
 
+import httpx
 from fastapi.testclient import TestClient
 
 
@@ -221,7 +222,8 @@ class TestChatAgent503:
             resp = client.post("/chat", json={"message": "hello"})
             assert resp.status_code == 503
             assert "Retry-After" in resp.headers
-            assert resp.json()["error"] == "Agent not initialized. Try again later."
+            assert resp.json()["error"]["code"] == "agent_unavailable"
+            assert resp.json()["error"]["message"] == "Agent not initialized. Try again later."
 
 
 class TestHealthDegraded:
@@ -413,3 +415,63 @@ class TestLifespanIntegration:
             with TestClient(test_app):
                 assert test_app.state.agent is None
                 assert test_app.state.ready is True
+
+
+class TestConcurrentChatRequests:
+    """Verify the async middleware stack handles concurrent load without crashes."""
+
+    @patch("src.agent.graph.chat_stream")
+    async def test_concurrent_chat_requests(self, mock_stream):
+        """5 concurrent POST /chat requests all return 200 — no 500 errors."""
+        mock_stream.side_effect = _mock_chat_stream()
+        app, _ = _make_test_app()
+
+        # httpx.ASGITransport doesn't run lifespan — set app state directly
+        app.state.agent = MagicMock()
+        app.state.property_data = {"property": {"name": "Test"}}
+        app.state.ready = True
+
+        transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            coros = [
+                client.post("/chat", json={"message": f"Question {i}"})
+                for i in range(5)
+            ]
+            responses = await asyncio.gather(*coros)
+
+        for resp in responses:
+            assert resp.status_code in (200, 503), (
+                f"Expected 200 or 503 (degraded), got {resp.status_code}"
+            )
+            assert resp.status_code != 500, "Internal server error under concurrency"
+
+    @patch("src.agent.graph.chat_stream")
+    async def test_concurrent_rate_limit(self, mock_stream):
+        """25 rapid requests from same IP: first batch succeeds, last batch gets 429."""
+        mock_stream.side_effect = _mock_chat_stream()
+        app, _ = _make_test_app()
+
+        # Rate limit default is 20 requests/minute for /chat.
+        # Use httpx.ASGITransport which doesn't manage lifespan,
+        # so set app state manually for the async client.
+        app.state.agent = MagicMock()
+        app.state.property_data = {"property": {"name": "Test"}}
+        app.state.ready = True
+
+        transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            coros = [
+                client.post("/chat", json={"message": f"Rapid {i}"})
+                for i in range(25)
+            ]
+            responses = await asyncio.gather(*coros)
+
+        status_codes = [r.status_code for r in responses]
+        count_ok = sum(1 for s in status_codes if s in (200, 503))
+        count_429 = status_codes.count(429)
+
+        # At least some should succeed (200 or 503 degraded) and some should be rate-limited
+        assert count_ok > 0, "Expected at least some requests to reach the endpoint"
+        assert count_429 > 0, "Expected at least some requests to be rate-limited"
+        # No 500s
+        assert 500 not in status_codes, "Internal server error under concurrent load"

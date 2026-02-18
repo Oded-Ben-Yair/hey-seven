@@ -85,7 +85,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if (
         semantic_result
         and semantic_result.is_injection
-        and semantic_result.confidence >= 0.8
+        and semantic_result.confidence >= settings.SEMANTIC_INJECTION_THRESHOLD
     ):
         logger.warning(
             "Semantic injection detected (confidence=%.2f): %s",
@@ -97,9 +97,20 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
             "router_confidence": semantic_result.confidence,
         }
 
-    # 4. Responsible gaming
+    # 4. Responsible gaming (with session-level escalation)
     if detect_responsible_gaming(user_message):
-        return {"query_type": "gambling_advice", "router_confidence": 1.0}
+        rg_count = state.get("responsible_gaming_count", 0) + 1
+        if rg_count >= 3:
+            logger.warning(
+                "Responsible gaming escalation: %d triggers in session, "
+                "adding live-support escalation",
+                rg_count,
+            )
+        return {
+            "query_type": "gambling_advice",
+            "router_confidence": 1.0,
+            "responsible_gaming_count": rg_count,
+        }
 
     # 5. Age verification
     if detect_age_verification(user_message):

@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     MODEL_TIMEOUT: int = 30  # LLM call timeout in seconds
     MODEL_MAX_RETRIES: int = 2  # LLM call retry count
     MODEL_MAX_OUTPUT_TOKENS: int = 2048  # Max response tokens
+    WHISPER_LLM_TEMPERATURE: float = 0.2  # Lower temperature for deterministic planning
 
     # --- Embeddings ---
     EMBEDDING_MODEL: str = "gemini-embedding-001"
@@ -55,6 +56,8 @@ class Settings(BaseSettings):
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
     COMP_COMPLETENESS_THRESHOLD: float = 0.60  # minimum profile completeness for comp agent
+    SEMANTIC_INJECTION_THRESHOLD: float = 0.8  # confidence threshold for semantic injection classifier
+    SEMANTIC_INJECTION_MODEL: str = ""  # override model for semantic classifier (empty = use default)
 
     # --- Vector DB ---
     VECTOR_DB: str = "chroma"  # "chroma" (local dev) or "firestore" (GCP prod)
@@ -70,6 +73,7 @@ class Settings(BaseSettings):
 
     # --- SMS ---
     SMS_ENABLED: bool = False
+    CONSENT_HMAC_SECRET: str = "change-me-in-production"  # HMAC key for consent hash chain
     PERSONA_MAX_CHARS: int = 0  # 0 = unlimited, 160 = SMS segment limit
     TELNYX_API_KEY: SecretStr = SecretStr("")
     TELNYX_MESSAGING_PROFILE_ID: str = ""

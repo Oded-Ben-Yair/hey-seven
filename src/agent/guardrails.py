@@ -387,6 +387,12 @@ async def classify_injection_semantic(
             result.confidence,
         )
         return result
-    except Exception:
-        logger.warning("Semantic injection classifier unavailable, failing open")
+    except Exception as exc:
+        logger.warning(
+            "Semantic injection classifier failed-open for input (len=%d): %s — "
+            "regex-only protection active. Configure alerting on this log line "
+            "in production monitoring.",
+            len(message),
+            str(exc)[:100],
+        )
         return None

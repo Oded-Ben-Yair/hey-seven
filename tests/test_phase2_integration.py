@@ -683,7 +683,7 @@ class TestWhisperPlannerNodeUnit:
             messages=[HumanMessage(content="We're celebrating our anniversary")],
         )
 
-        with patch("src.agent.whisper_planner._get_llm", return_value=mock_llm):
+        with patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm):
             result = await whisper_planner_node(state)
 
         assert result["whisper_plan"] is not None
@@ -704,7 +704,7 @@ class TestWhisperPlannerNodeUnit:
             messages=[HumanMessage(content="Tell me about dining")],
         )
 
-        with patch("src.agent.whisper_planner._get_llm", return_value=mock_llm):
+        with patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm):
             result = await whisper_planner_node(state)
 
         assert result["whisper_plan"] is None
@@ -723,7 +723,7 @@ class TestWhisperPlannerNodeUnit:
             messages=[HumanMessage(content="Hello")],
         )
 
-        with patch("src.agent.whisper_planner._get_llm", return_value=mock_llm):
+        with patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm):
             result = await whisper_planner_node(state)
 
         assert result["whisper_plan"] is None

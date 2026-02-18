@@ -14,14 +14,17 @@ Key design properties:
 
 import json
 import logging
+from functools import lru_cache
 from typing import Any, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
-from src.agent.nodes import _get_llm
 from src.agent.prompts import WHISPER_PLANNER_PROMPT
 from src.agent.state import CasinoHostState
+from src.casino.feature_flags import DEFAULT_FEATURES
+from src.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,46 @@ __all__ = [
     "WhisperPlan",
     "whisper_planner_node",
     "format_whisper_plan",
+    "_get_whisper_llm",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Whisper-specific LLM singleton (lower temperature for planning)
+# ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def _get_whisper_llm() -> ChatGoogleGenerativeAI:
+    """Get or create the whisper planner LLM instance (cached singleton).
+
+    Uses a lower temperature than the main ``_get_llm()`` because planning
+    decisions should be more deterministic than creative response generation.
+    Configured via ``WHISPER_LLM_TEMPERATURE`` (default 0.2).
+
+    Production scaling note: ``@lru_cache`` singletons are process-scoped.
+    For multi-container deployments (Cloud Run auto-scaling), each container
+    gets its own instance, which is correct behavior.
+    """
+    settings = get_settings()
+    return ChatGoogleGenerativeAI(
+        model=settings.MODEL_NAME,
+        temperature=settings.WHISPER_LLM_TEMPERATURE,
+        timeout=settings.MODEL_TIMEOUT,
+        max_retries=settings.MODEL_MAX_RETRIES,
+        max_output_tokens=512,  # Planning produces short structured output
+    )
+
+# ---------------------------------------------------------------------------
+# Telemetry counter for fail-silent monitoring
+# ---------------------------------------------------------------------------
+_failure_count: int = 0
+"""Module-level counter for whisper planner failures.
+
+Incremented on every except path. Observable via logging and can be
+exported to metrics systems (Prometheus, LangFuse custom metrics) for
+alerting on elevated failure rates without breaking the fail-silent contract.
+"""
 
 # ---------------------------------------------------------------------------
 # Profile fields for completeness calculation (placeholder weights)
@@ -72,6 +114,14 @@ async def whisper_planner_node(state: CasinoHostState) -> dict:
     returns ``{"whisper_plan": None}`` so the agent proceeds without
     guidance (fail-silent contract).
     """
+    # Runtime feature flag check — skip whisper planning when disabled.
+    # This complements the build-time check in build_graph() which removes
+    # the node from the graph topology entirely.  The runtime check handles
+    # dynamic flag changes without requiring a graph rebuild.
+    if not DEFAULT_FEATURES.get("whisper_planner_enabled", True):
+        logger.info("Whisper planner disabled via feature flag — skipping")
+        return {"whisper_plan": None}
+
     try:
         messages = state.get("messages", [])
         extracted_fields = state.get("extracted_fields", {})
@@ -92,8 +142,8 @@ async def whisper_planner_node(state: CasinoHostState) -> dict:
             profile_completeness=f"{profile_completeness:.0%}",
         )
 
-        # Call LLM with structured output
-        llm = _get_llm()
+        # Call LLM with structured output (separate lower-temperature instance)
+        llm = _get_whisper_llm()
         planner_llm = llm.with_structured_output(WhisperPlan)
         plan: WhisperPlan = await planner_llm.ainvoke(prompt_text)
 
@@ -101,14 +151,31 @@ async def whisper_planner_node(state: CasinoHostState) -> dict:
 
     except (ValueError, TypeError) as exc:
         # Structured output parsing failed — planner degrades gracefully
-        logger.warning("Whisper planner parsing failed: %s", exc)
+        global _failure_count  # noqa: PLW0603
+        _failure_count += 1
+        logger.warning(
+            "whisper_planner_failure",
+            extra={
+                "error_type": type(exc).__name__,
+                "error_msg": str(exc)[:200],
+                "failure_count": _failure_count,
+            },
+        )
         return {"whisper_plan": None}
 
-    except Exception:
+    except Exception as exc:
         # API timeout, rate limit, network error — broad catch is intentional
         # because google-genai raises various exception types across versions.
         # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        logger.exception("Whisper planner LLM call failed")
+        _failure_count += 1
+        logger.warning(
+            "whisper_planner_failure",
+            extra={
+                "error_type": type(exc).__name__,
+                "error_msg": str(exc)[:200],
+                "failure_count": _failure_count,
+            },
+        )
         return {"whisper_plan": None}
 
 

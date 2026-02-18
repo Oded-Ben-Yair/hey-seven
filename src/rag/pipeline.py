@@ -7,6 +7,7 @@ and stores in ChromaDB for local vector search.
 import hashlib
 import json
 import logging
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -198,6 +199,7 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                             "source": path.name,
                             "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
                             "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+                            "ingestion_version": "2.1",
                         },
                     })
 
@@ -213,6 +215,7 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                         "source": path.name,
                         "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
                         "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+                        "ingestion_version": "2.1",
                     },
                 })
 
@@ -303,6 +306,14 @@ def ingest_property(
 
     Returns:
         A Chroma vectorstore instance.
+
+    Note:
+        SHA-256 content hashing prevents duplicate chunks on re-ingestion.
+        An ``_ingestion_version`` timestamp is written to each chunk's
+        metadata.  After successful upsert, stale chunks from previous
+        ingestion versions (same property, different version stamp) are
+        purged automatically.  This prevents ghost data accumulation
+        when source content is edited.
     """
     # Lazy import: chromadb is a heavy dependency (~200MB). Importing at module
     # level would slow down test collection and any code that imports src.rag.
@@ -319,8 +330,17 @@ def ingest_property(
 
     chunks = _chunk_documents(documents)
 
+    # Version stamp for this ingestion run (ISO timestamp).
+    # Used to identify and purge stale chunks from previous ingestions.
+    version_stamp = datetime.now(tz=timezone.utc).isoformat()
+
     texts = [c["content"] for c in chunks]
     metadatas = [c["metadata"] for c in chunks]
+
+    # Stamp each chunk with the current ingestion version
+    for meta in metadatas:
+        meta["_ingestion_version"] = version_stamp
+
     # Deterministic IDs prevent duplicate chunks on re-ingestion.
     # Each ID is a SHA-256 hash of content + source metadata, so
     # the same chunk always maps to the same ID regardless of run.
@@ -332,6 +352,7 @@ def ingest_property(
     ]
 
     embeddings = get_embeddings()
+    property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
 
     vectorstore = Chroma.from_texts(
         texts=texts,
@@ -343,10 +364,39 @@ def ingest_property(
         collection_metadata={"hnsw:space": "cosine"},
     )
 
+    # Purge stale chunks from previous ingestion versions.
+    # After successful upsert, any chunks for the same property_id with
+    # a different _ingestion_version are leftover from prior runs where
+    # content was edited (new ID) but old ID was never deleted.
+    try:
+        collection = vectorstore._collection
+        old_docs = collection.get(
+            where={
+                "$and": [
+                    {"property_id": {"$eq": property_id}},
+                    {"_ingestion_version": {"$ne": version_stamp}},
+                ]
+            }
+        )
+        if old_docs and old_docs["ids"]:
+            collection.delete(ids=old_docs["ids"])
+            logger.info(
+                "Purged %d stale chunks from previous ingestion versions.",
+                len(old_docs["ids"]),
+            )
+    except Exception:
+        # Purge failure is non-critical — stale data persists but
+        # does not corrupt new data.  Log and continue.
+        logger.warning(
+            "Failed to purge stale chunks (non-critical).",
+            exc_info=True,
+        )
+
     logger.info(
-        "Indexed %d chunks into ChromaDB at %s.",
+        "Indexed %d chunks into ChromaDB at %s (version=%s).",
         len(chunks),
         persist_dir,
+        version_stamp[:19],
     )
     return vectorstore
 
@@ -356,7 +406,38 @@ def ingest_property(
 # ---------------------------------------------------------------------------
 
 
-class CasinoKnowledgeRetriever:
+class AbstractRetriever(ABC):
+    """Abstract interface for property knowledge retrieval.
+
+    Concrete implementations:
+    - CasinoKnowledgeRetriever: ChromaDB-backed (local development)
+    - FirestoreRetriever: Firestore-backed (GCP production)
+
+    Both provide identical retrieve/retrieve_with_scores interfaces,
+    ensuring the graph nodes are backend-agnostic.
+    """
+
+    @abstractmethod
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 5,
+        filter_category: str | None = None,
+    ) -> list:
+        """Retrieve relevant documents for a query."""
+        ...
+
+    @abstractmethod
+    def retrieve_with_scores(
+        self,
+        query: str,
+        top_k: int = 5,
+    ) -> list[tuple]:
+        """Retrieve documents with relevance scores."""
+        ...
+
+
+class CasinoKnowledgeRetriever(AbstractRetriever):
     """Semantic search retriever for property knowledge.
 
     Wraps a ChromaDB vectorstore and provides retrieval with optional
@@ -434,7 +515,7 @@ class CasinoKnowledgeRetriever:
 
 
 @lru_cache(maxsize=1)
-def _get_retriever_cached() -> CasinoKnowledgeRetriever:
+def _get_retriever_cached() -> AbstractRetriever:
     """Return a cached retriever using default settings.
 
     Internal helper for ``get_retriever()`` — separated so that the
@@ -452,7 +533,7 @@ def _get_retriever_cached() -> CasinoKnowledgeRetriever:
                 embeddings=get_embeddings(),
             )
             logger.info("Using Firestore retriever (project=%s)", settings.FIRESTORE_PROJECT)
-            return retriever  # type: ignore[return-value]
+            return retriever
         except Exception:
             logger.warning(
                 "Failed to create Firestore retriever. Falling back to ChromaDB.",
@@ -495,7 +576,7 @@ def _clear_retriever_cache() -> None:
     _get_retriever_cached.cache_clear()
 
 
-def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
+def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
     """Get or create the global retriever singleton.
 
     Uses ``@lru_cache`` for consistency with other singletons in the codebase

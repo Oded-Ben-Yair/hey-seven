@@ -99,8 +99,8 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 | Guardrails | Deterministic regex + LLM validation | Pre-LLM compliance gate blocks injection; 5 categories, 73 patterns, 4 languages |
 | Specialist agents | Registry-based dispatch (4 agents) | Domain-specific prompts and tool selection per query type |
 | Guest profiles | Per-field confidence with decay | 90-day decay, weighted completeness, CCPA cascade delete |
-| SMS compliance | TCPA keyword handling + quiet hours | Deterministic STOP/HELP/START, area-code timezone mapping, consent hash chain |
-| Multi-tenant | Per-casino config with Firestore | Feature flags infrastructure scaffolded, branding, regulations, 5-min TTL cache, deep-merge defaults |
+| SMS compliance | TCPA keyword handling + quiet hours | Deterministic STOP/HELP/START, 280+ area-code timezone mappings, HMAC-authenticated consent hash chain |
+| Multi-tenant | Per-casino config with Firestore | Feature flags wired into graph (whisper planner, specialist agents), branding, regulations, 5-min TTL cache, deep-merge defaults |
 | CMS | Google Sheets + webhook | Staff-editable content, HMAC-verified webhooks, schema validation |
 | Observability | LangFuse + evaluation framework | Infrastructure scaffolded: LangFuse callback handler, A/B hash splitting, evaluation framework. Graph wiring TODO |
 
@@ -123,12 +123,12 @@ Additionally, 7 PII redaction patterns protect logs and traces: phone, email, cr
 ## Testing
 
 ```bash
-make test-ci       # 912 tests, no API key needed
+make test-ci       # 976 tests, no API key needed
 make test-eval     # 14 live eval tests (requires GOOGLE_API_KEY)
 make lint          # ruff + mypy
 ```
 
-**912 tests passed, 14 skipped, 93.26% coverage** across 26 test files and 5 layers:
+**976 tests passed, 14 skipped, 93.26% coverage** across 26 test files and 5 layers:
 
 | Layer | Tests | Description |
 |-------|-------|-------------|
@@ -197,7 +197,7 @@ Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planne
 
 | Component | Current | Production Alternative |
 |-----------|---------|----------------------|
-| Vector DB | ChromaDB (in-process) | Vertex AI Vector Search or Firestore vector search |
+| Vector DB | ChromaDB (in-process) | Vertex AI Vector Search or Firestore vector search (RRF multi-strategy now implemented for both) |
 | Checkpointing | MemorySaver (lost on restart) | FirestoreSaver (wired, config-driven toggle) |
 | Rate limiting | In-memory per-IP | Redis-backed distributed limiter |
 | Monitoring | Structured logging (LangFuse scaffolded, not yet wired to graph) | LangFuse + Cloud Monitoring + alerting |
@@ -208,6 +208,19 @@ Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planne
 | SMS delivery | Telnyx raw HTTP (httpx) | Telnyx SDK with delivery receipts and retry queue |
 | CMS | Google Sheets + webhook | Dedicated headless CMS with versioning |
 | A/B testing | SHA-256 hash-based splitting (scaffolded, not yet wired to graph) | Feature flag service (LaunchDarkly / Statsig) |
+| Error responses | Structured ErrorCode enum (7 codes) across all middleware and endpoints | Consistent -- no change needed |
+
+## Production Backlog
+
+Remaining items for production hardening:
+
+| Item | Description |
+|------|-------------|
+| Load/concurrency testing | Locust or Artillery load testing to validate throughput and latency under concurrent traffic |
+| Blue-green/canary deployment | Cloud Run traffic splitting for zero-downtime rollouts |
+| Redis-backed rate limiter and circuit breaker | Shared state across multiple Cloud Run instances (current in-memory state is per-instance) |
+| FirestoreSaver default | Conversation persistence via FirestoreSaver (code ready and config-driven, not yet default) |
+| Expanded adversarial guardrail testing | OWASP prompt injection benchmarks, red-team testing against multilingual injection vectors |
 
 ## Project Structure
 
@@ -265,7 +278,7 @@ hey-seven/
 ├── static/
 │   ├── index.html                # Branded chat UI (gold/dark/cream)
 │   └── assets/                   # Custom logo assets
-├── tests/                        # 912 tests across 26 files
+├── tests/                        # 976 tests across 26 files
 ├── Dockerfile                    # Multi-stage Python 3.12, non-root, HEALTHCHECK
 ├── docker-compose.yml            # Health check, named volume, 2GB limit
 ├── cloudbuild.yaml               # GCP Cloud Build CI/CD (4-step pipeline)

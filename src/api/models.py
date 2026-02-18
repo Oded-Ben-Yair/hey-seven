@@ -64,6 +64,7 @@ class HealthResponse(BaseModel):
     version: str
     agent_ready: bool
     property_loaded: bool
+    rag_ready: bool = False
     observability_enabled: bool = False
 
 

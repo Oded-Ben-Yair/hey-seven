@@ -161,9 +161,15 @@ class CircuitBreaker:
         Thread-safe via ``asyncio.Lock``.
         """
         async with self._lock:
+            prev_state = self._state
             self._failure_timestamps.clear()
             self._state = "closed"
             self._half_open_in_progress = False
+            if prev_state != "closed":
+                logger.info(
+                    "Circuit breaker %s -> closed (recovered after successful probe)",
+                    prev_state,
+                )
 
     async def record_failure(self) -> None:
         """Record a failed LLM call and potentially trip the breaker.
@@ -203,6 +209,13 @@ def _get_circuit_breaker() -> CircuitBreaker:
 
     Uses ``@lru_cache`` consistent with ``_get_llm()`` / ``get_settings()``
     pattern. Lazy initialization avoids reading settings at import time.
+
+    Production note: Circuit breaker state is process-scoped (in-memory).
+    In multi-container deployments (Cloud Run), each container maintains
+    independent failure tracking. This is acceptable for per-container
+    health detection. For global circuit breaking across containers,
+    use Redis-backed state with ``CB_BACKEND=redis`` config (not yet
+    implemented -- current single-container deployment uses in-memory).
     """
     settings = get_settings()
     return CircuitBreaker(

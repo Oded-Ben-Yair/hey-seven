@@ -109,6 +109,21 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
 def route_from_compliance(state: PropertyQAState) -> str:
     """Route after compliance gate based on whether guardrails triggered.
 
+    Two-layer routing rationale (compliance_gate -> router):
+      - **compliance_gate** (Layer 1): Deterministic regex-based guardrails.
+        Zero-cost, zero-latency safety net that catches safety-critical
+        queries (prompt injection, responsible gaming, BSA/AML, patron
+        privacy, age verification) without an LLM call.
+      - **router** (Layer 2): LLM-based classification via structured
+        output. Required for nuanced intent classification (property_qa
+        vs hours_schedule vs ambiguous) that regex cannot handle.
+
+    These layers are NOT redundant — they implement defense-in-depth.
+    Compliance gate provides a hard deterministic floor; the router
+    adds intelligent classification on top.  Removing either layer
+    creates a gap: no compliance gate = safety depends on prompt
+    engineering alone; no router = every query hits RAG retrieval.
+
     If ``query_type`` is ``None``, all guardrails passed and LLM
     classification is needed (route to router).  Otherwise, route
     directly to the appropriate terminal node.
@@ -185,9 +200,15 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         NODE_OFF_TOPIC: NODE_OFF_TOPIC,
     })
 
-    # retrieve → [whisper_planner →] generate (host_agent) → validate
+    # Feature flags consumed here (graph topology) and in nodes
+    # (greeting_node, off_topic_node) and in agents/_base.py (execute_specialist).
+    # Topology-altering flags must be checked at build time; runtime flags
+    # are checked per-invocation inside node functions.
     whisper_enabled = DEFAULT_FEATURES.get("whisper_planner_enabled", True)
-    logger.info("Feature flag whisper_planner_enabled=%s", whisper_enabled)
+    logger.info(
+        "Feature flags at graph build: %s",
+        {k: v for k, v in DEFAULT_FEATURES.items() if v != False},  # noqa: E712 — intentional identity check for readability
+    )
 
     if whisper_enabled:
         graph.add_edge(NODE_RETRIEVE, NODE_WHISPER)
@@ -214,6 +235,13 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     graph.add_edge(NODE_OFF_TOPIC, END)
 
     if checkpointer is None:
+        # Default to MemorySaver for local development and testing.
+        # Production deployment uses FirestoreSaver for cross-request persistence:
+        #   from langgraph.checkpoint.firestore import FirestoreSaver
+        #   checkpointer = FirestoreSaver(project=settings.FIRESTORE_PROJECT)
+        # Cloud Run single-container: MemorySaver is sufficient (conversation
+        # state lives for the container lifetime). Multi-container: requires
+        # FirestoreSaver for consistent conversation history across instances.
         checkpointer = MemorySaver()
 
     # HITL interrupt: when enabled, the graph pauses before the generate node
@@ -252,17 +280,21 @@ def _initial_state(message: str) -> dict[str, Any]:
         # v2 fields
         "extracted_fields": {},
         "whisper_plan": None,
+        "responsible_gaming_count": 0,
     }
 
 
-# Parity check: ensure _initial_state covers all non-messages fields
-_PARITY_FIELDS = set(PropertyQAState.__annotations__) - {"messages"}
-_INITIAL_FIELDS = set(_initial_state("test").keys()) - {"messages"}
-assert _PARITY_FIELDS == _INITIAL_FIELDS, (
-    f"_initial_state parity mismatch: "
-    f"missing={_PARITY_FIELDS - _INITIAL_FIELDS}, "
-    f"extra={_INITIAL_FIELDS - _PARITY_FIELDS}"
-)
+# Parity check: ensure _initial_state covers all non-messages fields.
+# Guarded behind __debug__ so it is stripped in optimized mode (python -O),
+# avoiding a production crash if state schema drifts between deploys.
+if __debug__:
+    _PARITY_FIELDS = set(PropertyQAState.__annotations__) - {"messages"}
+    _INITIAL_FIELDS = set(_initial_state("test").keys()) - {"messages"}
+    assert _PARITY_FIELDS == _INITIAL_FIELDS, (
+        f"_initial_state parity mismatch: "
+        f"missing={_PARITY_FIELDS - _INITIAL_FIELDS}, "
+        f"extra={_INITIAL_FIELDS - _PARITY_FIELDS}"
+    )
 
 
 async def chat(

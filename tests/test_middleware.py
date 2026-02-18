@@ -67,7 +67,8 @@ class TestErrorHandlingMiddleware:
         resp = client.get("/error")
         assert resp.status_code == 500
         data = resp.json()
-        assert data["error"] == "internal_server_error"
+        assert data["error"]["code"] == "internal_error"
+        assert "message" in data["error"]
 
     def test_passes_through_normal_requests(self):
         """Normal requests pass through without modification."""
@@ -145,7 +146,7 @@ class TestRateLimitMiddleware:
         resp = client.post("/chat")
         assert resp.status_code == 429
         data = resp.json()
-        assert data["error"] == "rate_limit_exceeded"
+        assert data["error"]["code"] == "rate_limit_exceeded"
         assert "retry-after" in resp.headers
 
     def test_respects_x_forwarded_for(self):
@@ -232,7 +233,7 @@ class TestApiKeyMiddleware:
             client = TestClient(app)
             resp = client.post("/chat", headers={"X-API-Key": "wrong-key"})
             assert resp.status_code == 401
-            assert resp.json()["error"] == "unauthorized"
+            assert resp.json()["error"]["code"] == "unauthorized"
 
     def test_missing_key_returns_401(self):
         """Missing API key returns 401 when key is configured."""
@@ -302,7 +303,7 @@ class TestRequestBodyLimitMiddleware:
                 headers={"Content-Length": str(len(large_body))},
             )
             assert resp.status_code == 413
-            assert resp.json()["error"] == "payload_too_large"
+            assert resp.json()["error"]["code"] == "payload_too_large"
 
     def test_rejects_oversized_chunked_request(self):
         """Streaming enforcement catches oversized body without Content-Length header."""

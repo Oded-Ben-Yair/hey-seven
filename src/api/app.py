@@ -18,6 +18,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from src.config import get_settings
 
+from .errors import ErrorCode, error_response
 from .middleware import (
     ApiKeyMiddleware,
     ErrorHandlingMiddleware,
@@ -136,7 +137,7 @@ def create_app() -> FastAPI:
 
             return JSONResponse(
                 status_code=503,
-                content={"error": "Agent not initialized. Try again later."},
+                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Agent not initialized. Try again later."),
                 headers={"Retry-After": "30"},
             )
 
@@ -183,12 +184,28 @@ def create_app() -> FastAPI:
         ready = getattr(request.app.state, "ready", False)
         agent_ready = getattr(request.app.state, "agent", None) is not None
         property_loaded = bool(getattr(request.app.state, "property_data", None))
+
+        # RAG health check: verify embeddings + vector store are accessible.
+        # Uses cached state to stay fast (< 1s).  Catches exceptions to
+        # report degraded rather than crashing the health endpoint.
+        rag_ready = False
+        try:
+            from src.rag.pipeline import get_retriever
+
+            retriever = get_retriever()
+            # Check that the retriever has a vectorstore (not an empty fallback)
+            if hasattr(retriever, "vectorstore") and retriever.vectorstore is not None:
+                rag_ready = True
+        except Exception:
+            logger.debug("RAG health check failed", exc_info=True)
+
         all_healthy = ready and agent_ready and property_loaded
         body = HealthResponse(
             status="healthy" if all_healthy else "degraded",
             version=get_settings().VERSION,
             agent_ready=agent_ready,
             property_loaded=property_loaded,
+            rag_ready=rag_ready,
             observability_enabled=is_observability_enabled(),
         )
         # Return 503 for degraded state so Cloud Run / k8s don't route
@@ -321,7 +338,10 @@ def create_app() -> FastAPI:
             )
         except Exception:
             logger.exception("SMS webhook error")
-            return JSONResponse(content={"error": "Internal error"}, status_code=500)
+            return JSONResponse(
+                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error"),
+                status_code=500,
+            )
 
     # ------------------------------------------------------------------
     # POST /cms/webhook — Google Sheets CMS content update
@@ -348,7 +368,10 @@ def create_app() -> FastAPI:
             return JSONResponse(content=result, status_code=status_code)
         except Exception:
             logger.exception("CMS webhook error")
-            return JSONResponse(content={"error": "Internal error"}, status_code=500)
+            return JSONResponse(
+                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error"),
+                status_code=500,
+            )
 
     # ------------------------------------------------------------------
     # POST /feedback — User feedback on agent responses

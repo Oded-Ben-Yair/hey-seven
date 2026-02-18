@@ -34,6 +34,13 @@ def _clear_singleton_caches():
         pass
 
     try:
+        from src.agent.whisper_planner import _get_whisper_llm
+
+        _get_whisper_llm.cache_clear()
+    except ImportError:
+        pass
+
+    try:
         from src.agent.circuit_breaker import _get_circuit_breaker
 
         _get_circuit_breaker.cache_clear()

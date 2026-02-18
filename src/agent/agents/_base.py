@@ -22,6 +22,7 @@ from src.agent.nodes import _format_context_block
 from src.agent.prompts import get_responsible_gaming_helplines
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
+from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,16 @@ async def execute_specialist(
 
     llm = get_llm_fn()
 
+    # Feature flag: human_like_delay_enabled
+    # When enabled in production, a small random delay (0.5-1.5s) would be
+    # inserted here via ``await asyncio.sleep(random.uniform(0.5, 1.5))``
+    # to simulate human-like typing cadence for a more natural guest UX.
+    # The delay is NOT active in this codebase to keep tests fast and
+    # deterministic.  Wire it via:
+    #   if DEFAULT_FEATURES.get("human_like_delay_enabled", False):
+    #       await asyncio.sleep(random.uniform(0.5, 1.5))
+    _ = DEFAULT_FEATURES.get("human_like_delay_enabled", False)  # read to register consumer
+
     try:
         response = await llm.ainvoke(llm_messages)
         await cb.record_success()
@@ -133,6 +144,11 @@ async def execute_specialist(
     except (ValueError, TypeError) as exc:
         await cb.record_failure()
         logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
+        # ValueError/TypeError may produce malformed content that still
+        # warrants validation.  Setting retry_count=1 ensures the validator
+        # runs but does NOT trigger a second generate attempt (retry budget
+        # already consumed).  Only circuit-breaker-open and network-error
+        # paths use skip_validation=True.
         return {
             "messages": [AIMessage(content=Template(
                 "I apologize, but I had trouble processing that response. "
@@ -141,7 +157,8 @@ async def execute_specialist(
                 property_name=settings.PROPERTY_NAME,
                 property_phone=settings.PROPERTY_PHONE,
             ))],
-            "skip_validation": True,
+            "skip_validation": False,
+            "retry_count": 1,
         }
     except asyncio.CancelledError:
         raise

@@ -351,8 +351,15 @@ def update_confidence(
     """Update a ProfileField's confidence based on confirmation or contradiction.
 
     Rules from Section 2.2:
-    - Same value confirmed by second source: confidence += 0.15 (capped at 1.0)
-    - Value contradicted: confidence -= 0.30 (floored at 0.0), flagged for review
+    - Same value confirmed by second source: increases confidence by
+      ``CONFIDENCE_CONFIRM_BOOST`` (0.15), **capped at ceiling 1.0** via
+      ``min(1.0, old + boost)``.  A field at 0.95 confirmed becomes 1.0,
+      never exceeds it.
+    - Value contradicted: decreases confidence by
+      ``CONFIDENCE_CONTRADICT_PENALTY`` (0.30), **floored at 0.0** via
+      ``max(0.0, old - penalty)``.  A field at 0.20 contradicted becomes
+      0.0, never goes negative.  Contradicted fields are flagged with
+      ``_contradicted=True`` for review.
 
     Args:
         existing_field: The current ProfileField dict.

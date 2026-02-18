@@ -234,12 +234,17 @@ class TestWhisperPlanInjection:
 
 
 class TestValueTypeErrorFallback:
-    """ValueError/TypeError from LLM returns fallback with skip_validation=True."""
+    """ValueError/TypeError from LLM returns fallback with validation enabled.
+
+    Unlike circuit-breaker-open or network-error paths, parsing errors
+    still go through validation (skip_validation=False) with retry_count=1
+    so that the validator runs but does not trigger a second generate.
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("exc_cls", [ValueError, TypeError])
     async def test_value_type_error_returns_fallback(self, exc_cls):
-        """ValueError and TypeError from LLM produce fallback with skip_validation."""
+        """ValueError and TypeError from LLM produce fallback without skip_validation."""
         from src.agent.agents._base import execute_specialist
 
         mock_llm = MagicMock()
@@ -261,7 +266,8 @@ class TestValueTypeErrorFallback:
 
         result = await execute_specialist(state, **kwargs)
 
-        assert result["skip_validation"] is True
+        assert result["skip_validation"] is False
+        assert result["retry_count"] == 1
         assert "trouble processing" in result["messages"][0].content.lower()
         mock_cb.record_failure.assert_awaited_once()
 

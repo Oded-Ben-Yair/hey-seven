@@ -114,7 +114,7 @@ class TestRetrieveToGenerate:
             patch("src.agent.nodes._get_llm") as mock_get_llm,
             patch("src.agent.nodes._get_validator_llm") as mock_get_validator,
             patch("src.agent.agents.host_agent._get_llm") as mock_get_host_llm,
-            patch("src.agent.whisper_planner._get_llm") as mock_get_whisper_llm,
+            patch("src.agent.whisper_planner._get_whisper_llm") as mock_get_whisper_llm,
             patch("src.agent.compliance_gate.classify_injection_semantic", new_callable=AsyncMock, return_value=None),
         ):
             # Router LLM returns property_qa classification

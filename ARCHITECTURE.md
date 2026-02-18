@@ -827,9 +827,9 @@ The following features from the initial architecture specification (`assignment/
 |---------|---------|---------------|-------------|
 | `src/sms/` | `compliance.py`, `telnyx_client.py`, `webhook.py` | SMS channel: TCPA compliance, Telnyx integration, inbound webhook handler | ~1,021 |
 | `src/cms/` | `sheets_client.py`, `validation.py`, `webhook.py` | CMS: Google Sheets client, content validation, webhook handler | ~490 |
-| `src/casino/` | `config.py`, `feature_flags.py` | Casino configuration, multi-property feature flags (infrastructure scaffolded, graph wiring TODO) | ~408 |
+| `src/casino/` | `config.py`, `feature_flags.py` | Casino configuration, multi-property feature flags (wired into graph: whisper planner, specialist agents) | ~408 |
 | `src/data/` | `guest_profile.py`, `models.py` | Guest profile data model, domain data models | ~802 |
-| `src/observability/` | `ab_testing.py`, `evaluation.py`, `langfuse_client.py`, `traces.py` | LangFuse callback handler, A/B hash splitting, evaluation framework, tracing (all scaffolded, graph wiring TODO) | ~857 |
+| `src/observability/` | `ab_testing.py`, `evaluation.py`, `langfuse_client.py`, `traces.py` | LangFuse callback handler (wired via RunnableConfig callbacks), A/B hash splitting, evaluation framework, tracing | ~857 |
 | `src/api/` | `pii_redaction.py` | PII redaction for feedback comments | ~136 |
 
 All deferred features have clear production paths documented in the Trade-offs section above.
