@@ -16,8 +16,8 @@ Casino-domain PII patterns:
 - Player card / loyalty card numbers
 - Names preceded by common identifiers ("Mr.", "Mrs.", "my name is")
 
-Design: Fails OPEN — if redaction fails, the original text is logged
-with a warning. Never blocks the request pipeline.
+Design: Fails CLOSED — if redaction fails, a placeholder is returned
+instead of the original text. PII never leaks to logs on error.
 """
 
 import re
@@ -58,7 +58,8 @@ def redact_pii(text: str) -> str:
     """Redact PII patterns from text.
 
     Applies all regex patterns and replaces matches with redaction tokens.
-    Fails open: returns original text with warning on regex errors.
+    Fails CLOSED: if redaction errors, returns a safe placeholder instead
+    of the original text. PII never leaks to downstream consumers on error.
 
     Args:
         text: Input text potentially containing PII.
@@ -82,8 +83,8 @@ def redact_pii(text: str) -> str:
 
         return result
     except Exception:
-        logger.warning("PII redaction failed; returning original text", exc_info=True)
-        return text
+        logger.warning("PII redaction failed; returning redacted placeholder", exc_info=True)
+        return "[PII_REDACTION_ERROR]"
 
 
 def redact_dict(data: dict[str, Any], *, keys_to_redact: set[str] | None = None) -> dict[str, Any]:

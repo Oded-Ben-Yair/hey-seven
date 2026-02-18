@@ -45,11 +45,8 @@ class TestComplianceGateNode:
                 "retry_feedback": None,
                 "current_time": "Monday, February 18, 2026",
                 "sources_used": [],
-                "active_agent": None,
                 "extracted_fields": {},
                 "whisper_plan": None,
-                "delay_seconds": 0.0,
-                "sms_segments": [],
             }
         return factory
 
@@ -278,11 +275,8 @@ class TestStateSchemaV2:
         from src.agent.state import PropertyQAState
 
         annotations = PropertyQAState.__annotations__
-        assert "active_agent" in annotations
         assert "extracted_fields" in annotations
         assert "whisper_plan" in annotations
-        assert "delay_seconds" in annotations
-        assert "sms_segments" in annotations
 
     def test_state_json_serialization_roundtrip(self):
         """Full state with v2 fields survives JSON roundtrip."""
@@ -297,11 +291,8 @@ class TestStateSchemaV2:
             "retry_feedback": None,
             "current_time": "2026-02-18",
             "sources_used": ["dining"],
-            "active_agent": "dining",
             "extracted_fields": {"cuisine": "italian", "party_size": 4},
-            "whisper_plan": "Suggest Toscana based on Italian preference",
-            "delay_seconds": 1.5,
-            "sms_segments": ["Welcome!", "Your table is ready."],
+            "whisper_plan": {"next_topic": "dining", "extraction_targets": [], "offer_readiness": 0.3, "conversation_note": "Suggest Toscana"},
         }
         roundtrip = json.loads(json.dumps(state))
         assert roundtrip == state
@@ -310,19 +301,13 @@ class TestStateSchemaV2:
         """Verify v2 fields have sensible default-like values."""
         # These are the values _initial_state() should set
         defaults = {
-            "active_agent": None,
             "extracted_fields": {},
             "whisper_plan": None,
-            "delay_seconds": 0.0,
-            "sms_segments": [],
         }
         # Verify they're JSON serializable
         roundtrip = json.loads(json.dumps(defaults))
-        assert roundtrip["active_agent"] is None
         assert roundtrip["extracted_fields"] == {}
         assert roundtrip["whisper_plan"] is None
-        assert roundtrip["delay_seconds"] == 0.0
-        assert roundtrip["sms_segments"] == []
 
 
 # ---------------------------------------------------------------------------

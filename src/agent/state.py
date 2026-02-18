@@ -3,9 +3,8 @@
 Defines PropertyQAState as a TypedDict with fields for the graph nodes,
 plus Pydantic models for structured LLM outputs (router + validation).
 
-v2 additions: ``active_agent``, ``extracted_fields``, ``whisper_plan``,
-``delay_seconds``, ``sms_segments`` for specialist agent routing, background
-planning, and SMS response segmentation.  ``CasinoHostState`` is a
+v2 additions: ``extracted_fields``, ``whisper_plan`` for specialist agent
+routing and background planning.  ``CasinoHostState`` is a
 backward-compatible alias for v2 code.
 """
 
@@ -36,16 +35,13 @@ class PropertyQAState(TypedDict):
     call. This ensures clean routing and validation state per turn while the
     checkpointer maintains conversation history.
 
-    ``skip_validation`` is set to ``True`` by ``generate_node`` when the
-    response is a deterministic fallback (empty context, LLM error, circuit
-    breaker open) that does not need adversarial validation.
+    ``skip_validation`` is set to ``True`` by the generate node (host_agent)
+    when the response is a deterministic fallback (empty context, LLM error,
+    circuit breaker open) that does not need adversarial validation.
 
     v2 fields (all optional with defaults in ``_initial_state()``):
-    - ``active_agent``: which specialist agent handles the query
     - ``extracted_fields``: structured fields extracted from the guest message
-    - ``whisper_plan``: background planner output for agent guidance
-    - ``delay_seconds``: response delay for natural pacing (SMS/chat)
-    - ``sms_segments``: segmented SMS responses (160-char compliance)
+    - ``whisper_plan``: background planner output (dict from WhisperPlan.model_dump())
     """
 
     messages: Annotated[list, add_messages]
@@ -59,11 +55,8 @@ class PropertyQAState(TypedDict):
     current_time: str               # injected at graph entry
     sources_used: list[str]         # knowledge-base categories cited
     # v2 fields
-    active_agent: str | None        # specialist: host/dining/entertainment/comp
     extracted_fields: dict[str, Any]  # structured fields from guest message
-    whisper_plan: str | None        # background planner output
-    delay_seconds: float            # response delay for natural pacing
-    sms_segments: list[str]         # segmented SMS responses
+    whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
 
 
 # Backward-compatible alias for v2 code that prefers the domain-specific name.

@@ -1,7 +1,10 @@
-"""Node functions for the 8-node Property Q&A StateGraph.
+"""Node functions for the 11-node Property Q&A StateGraph (v2).
 
 Each node takes PropertyQAState and returns a partial dict update.
 Two routing functions determine conditional edges.
+
+The ``generate_node`` from v1 has been removed — ``host_agent``
+(from ``agents.host_agent``) is the generate node in v2.
 
 Guardrail functions (``audit_input``, ``detect_responsible_gaming``) live in
 ``guardrails.py`` and are re-exported here for backward compatibility with
@@ -14,7 +17,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.config import get_settings
@@ -28,7 +31,6 @@ from .guardrails import (
     detect_responsible_gaming,
 )
 from .prompts import (
-    CONCIERGE_SYSTEM_PROMPT,
     RESPONSIBLE_GAMING_HELPLINES,
     ROUTER_PROMPT,
     VALIDATION_PROMPT,
@@ -41,7 +43,6 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "router_node",
     "retrieve_node",
-    "generate_node",
     "validate_node",
     "respond_node",
     "fallback_node",
@@ -61,7 +62,7 @@ __all__ = [
 def _format_context_block(retrieved: list[dict], separator: str = "\n---\n") -> str:
     """Format retrieved context as numbered sources for LLM consumption.
 
-    Used by both ``generate_node`` (appended to system prompt) and
+    Used by specialist agents (appended to system prompt) and
     ``validate_node`` (included in validation prompt) to ensure consistent
     context presentation across the pipeline.
 
@@ -165,40 +166,10 @@ async def router_node(state: PropertyQAState) -> dict:
             "router_confidence": 1.0,
         }
 
-    # Deterministic prompt injection check (pre-LLM)
-    if not audit_input(user_message):
-        return {
-            "query_type": "off_topic",
-            "router_confidence": 1.0,
-        }
-
-    # Deterministic responsible gaming detection (pre-LLM safety net)
-    if detect_responsible_gaming(user_message):
-        return {
-            "query_type": "gambling_advice",
-            "router_confidence": 1.0,
-        }
-
-    # Deterministic age verification detection (21+ casino requirement)
-    if detect_age_verification(user_message):
-        return {
-            "query_type": "age_verification",
-            "router_confidence": 1.0,
-        }
-
-    # Deterministic BSA/AML detection (financial crime prevention)
-    if detect_bsa_aml(user_message):
-        return {
-            "query_type": "off_topic",
-            "router_confidence": 1.0,
-        }
-
-    # Deterministic patron privacy detection (never disclose guest presence/info)
-    if detect_patron_privacy(user_message):
-        return {
-            "query_type": "patron_privacy",
-            "router_confidence": 1.0,
-        }
+    # Note: All 5 deterministic guardrail checks (prompt injection, responsible
+    # gaming, age verification, BSA/AML, patron privacy) are handled by the
+    # upstream compliance_gate_node.  Guardrail-triggered messages never reach
+    # the router, so duplicate checks here are unnecessary.
 
     llm = _get_llm()
     router_llm = llm.with_structured_output(RouterOutput)
@@ -260,104 +231,7 @@ async def retrieve_node(state: PropertyQAState) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 3. Generate Node
-# ---------------------------------------------------------------------------
-
-
-async def generate_node(state: PropertyQAState) -> dict:
-    """Generate a response using the concierge system prompt and retrieved context.
-
-    If no context was retrieved, sets skip_validation=True to bypass the validator.
-    On retry, prepends validation feedback as a SystemMessage.
-    """
-    settings = get_settings()
-    retrieved = state.get("retrieved_context", [])
-    current_time = state.get("current_time", "unknown")
-    retry_count = state.get("retry_count", 0)
-    retry_feedback = state.get("retry_feedback")
-
-    # Circuit breaker check — early exit before building prompts
-    if _get_circuit_breaker().is_open:
-        logger.warning("Circuit breaker open — returning fallback without LLM call")
-        return {
-            "messages": [AIMessage(content=(
-                "I'm experiencing temporary technical difficulties. "
-                f"Please try again in a minute, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
-            ))],
-            "skip_validation": True,
-        }
-
-    system_prompt = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
-        property_name=settings.PROPERTY_NAME,
-        current_time=current_time,
-        responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
-    )
-
-    # Format retrieved context as numbered sources
-    if retrieved:
-        context_block = _format_context_block(retrieved)
-        system_prompt += f"\n\n## Retrieved Knowledge Base Context\n{context_block}"
-    else:
-        # No context found — signal to skip validation
-        return {
-            "messages": [AIMessage(content=(
-                "I appreciate your question! Unfortunately, I don't have specific information "
-                "about that in my knowledge base. For the most accurate and up-to-date details, "
-                f"I'd recommend contacting {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE} or visiting "
-                f"{settings.PROPERTY_WEBSITE}."
-            ))],
-            "skip_validation": True,
-        }
-
-    # Build message list
-    llm_messages = [SystemMessage(content=system_prompt)]
-
-    # On retry, inject feedback
-    if retry_count > 0 and retry_feedback:
-        llm_messages.append(SystemMessage(
-            content=f"IMPORTANT: Your previous response failed validation. Reason: {retry_feedback}. "
-            "Please generate a corrected response that addresses this issue."
-        ))
-
-    # Add conversation history (only HumanMessage and AIMessage, skip tool messages).
-    # Sliding window: keep only the last MAX_HISTORY_MESSAGES to bound context size.
-    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
-    window = history[-settings.MAX_HISTORY_MESSAGES:]
-    llm_messages.extend(window)
-
-    llm = _get_llm()
-
-    try:
-        response = await llm.ainvoke(llm_messages)
-        await _get_circuit_breaker().record_success()
-        content = response.content if isinstance(response.content, str) else str(response.content)
-        return {"messages": [AIMessage(content=content)]}
-    except (ValueError, TypeError) as exc:
-        await _get_circuit_breaker().record_failure()
-        logger.warning("Generate LLM response parsing failed: %s", exc)
-        return {
-            "messages": [AIMessage(content=(
-                "I apologize, but I had trouble processing that response. "
-                f"Please try again, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
-            ))],
-            "skip_validation": True,
-        }
-    except Exception:
-        # Broad catch: google-genai can raise GoogleAPICallError, DeadlineExceeded,
-        # ResourceExhausted, etc. across SDK versions.
-        await _get_circuit_breaker().record_failure()
-        logger.exception("Generate LLM call failed")
-        return {
-            "messages": [AIMessage(content=(
-                "I apologize, but I'm having trouble generating a response right now. "
-                f"Please try again, or contact {settings.PROPERTY_NAME} directly at {settings.PROPERTY_PHONE}."
-            ))],
-            "skip_validation": True,
-        }
-
-
-# ---------------------------------------------------------------------------
-# 4. Validate Node
+# 3. Validate Node (generate_node removed in v2 — host_agent is the generate node)
 # ---------------------------------------------------------------------------
 
 

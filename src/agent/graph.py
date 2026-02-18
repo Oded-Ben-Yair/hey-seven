@@ -29,7 +29,6 @@ from .compliance_gate import compliance_gate_node
 from .whisper_planner import whisper_planner_node
 from .nodes import (
     fallback_node,
-    generate_node,  # noqa: F401 — kept for backward compat (tests import from nodes)
     greeting_node,
     off_topic_node,
     respond_node,
@@ -242,11 +241,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "retry_feedback": None,
         "sources_used": [],
         # v2 fields
-        "active_agent": None,
         "extracted_fields": {},
         "whisper_plan": None,
-        "delay_seconds": 0.0,
-        "sms_segments": [],
     }
 
 

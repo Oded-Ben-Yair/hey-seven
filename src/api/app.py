@@ -35,18 +35,20 @@ from .models import (
     PropertyInfoResponse,
 )
 
-settings = get_settings()
-
-logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+# Note: settings are accessed via get_settings() at call sites rather than
+# frozen at module level.  This ensures test monkeypatching works and
+# avoids stale config values.  Logging is configured at app creation time.
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize agent and property data on startup, cleanup on shutdown."""
+    settings = get_settings()
+    logging.basicConfig(
+        level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     logger.info("Initializing Property Q&A agent...")
     try:
         from src.agent.graph import build_graph
@@ -90,6 +92,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    settings = get_settings()
     app = FastAPI(
         title="Hey Seven Property Q&A Agent",
         version=settings.VERSION,
@@ -129,9 +132,11 @@ def create_app() -> FastAPI:
 
         from src.agent.graph import chat_stream
 
+        sse_timeout = get_settings().SSE_TIMEOUT_SECONDS
+
         async def event_generator():
             try:
-                async with asyncio.timeout(settings.SSE_TIMEOUT_SECONDS):
+                async with asyncio.timeout(sse_timeout):
                     async for event in chat_stream(
                         agent, body.message, body.thread_id
                     ):
@@ -140,7 +145,7 @@ def create_app() -> FastAPI:
                             return
                         yield event
             except TimeoutError:
-                logger.warning("SSE stream timed out after %ds", settings.SSE_TIMEOUT_SECONDS)
+                logger.warning("SSE stream timed out after %ds", sse_timeout)
                 yield {
                     "event": "error",
                     "data": json.dumps({"error": "Response timed out. Please try again."}),
@@ -171,7 +176,7 @@ def create_app() -> FastAPI:
         all_healthy = ready and agent_ready and property_loaded
         body = HealthResponse(
             status="healthy" if all_healthy else "degraded",
-            version=settings.VERSION,
+            version=get_settings().VERSION,
             agent_ready=agent_ready,
             property_loaded=property_loaded,
             observability_enabled=is_observability_enabled(),
@@ -292,7 +297,7 @@ def create_app() -> FastAPI:
 
             result = await handle_cms_webhook(
                 payload=body,
-                webhook_secret=settings.CMS_WEBHOOK_SECRET,
+                webhook_secret=get_settings().CMS_WEBHOOK_SECRET,
                 raw_body=raw_body,
                 signature=signature,
             )

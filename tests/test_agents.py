@@ -19,11 +19,8 @@ def _state(**overrides):
         "retry_feedback": None,
         "current_time": "Monday 3 PM",
         "sources_used": [],
-        "active_agent": None,
         "extracted_fields": {},
         "whisper_plan": None,
-        "delay_seconds": 0.0,
-        "sms_segments": [],
     }
     base.update(overrides)
     return base

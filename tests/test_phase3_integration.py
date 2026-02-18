@@ -62,18 +62,13 @@ class TestCMSWebhookEndpoint:
         return TestClient(app)
 
     def _patch_secret(self, monkeypatch, secret: str):
-        """Patch CMS_WEBHOOK_SECRET on the module-level settings in app.py.
+        """Patch CMS_WEBHOOK_SECRET on the cached settings instance.
 
-        After conftest clears ``get_settings.cache_clear()``, the module-level
-        ``settings`` in ``src.api.app`` and ``get_settings()`` may point to
-        different objects.  We must patch BOTH to cover all code paths.
+        The cms_webhook endpoint calls ``get_settings().CMS_WEBHOOK_SECRET``
+        at runtime, so patching the cached settings object is sufficient.
         """
-        import sys
-
         from src.config import get_settings
 
-        app_module = sys.modules["src.api.app"]
-        monkeypatch.setattr(app_module.settings, "CMS_WEBHOOK_SECRET", secret)
         monkeypatch.setattr(get_settings(), "CMS_WEBHOOK_SECRET", secret)
 
     def test_valid_item_returns_indexed(self, client, monkeypatch):

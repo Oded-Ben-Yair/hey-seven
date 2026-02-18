@@ -252,15 +252,28 @@ def _chunk_documents(
 
     chunks: list[dict[str, Any]] = []
     for doc in documents:
-        text_chunks = splitter.split_text(doc["content"])
-        for i, chunk_text in enumerate(text_chunks):
+        content = doc["content"]
+        # Skip splitting for items already below chunk size — per-item chunks
+        # from category-specific formatters are typically 200-400 chars and
+        # should not be fragmented at arbitrary boundaries.
+        if len(content) <= chunk_size:
             chunks.append({
-                "content": chunk_text,
+                "content": content,
                 "metadata": {
                     **doc["metadata"],
-                    "chunk_index": i,
+                    "chunk_index": 0,
                 },
             })
+        else:
+            text_chunks = splitter.split_text(content)
+            for i, chunk_text in enumerate(text_chunks):
+                chunks.append({
+                    "content": chunk_text,
+                    "metadata": {
+                        **doc["metadata"],
+                        "chunk_index": i,
+                    },
+                })
 
     logger.info("Split %d documents into %d chunks.", len(documents), len(chunks))
     return chunks

@@ -276,13 +276,14 @@ class TestChatSSEErrors:
         mock_stream.side_effect = _mock_chat_stream_slow()
         app, _ = _make_test_app()
 
-        # Patch the module-level settings to use a 1-second timeout
-        import src.api.app  # noqa: F401
-        app_mod = sys.modules["src.api.app"]
+        # Patch get_settings() to use a 1-second SSE timeout
+        from src.config import get_settings
 
-        original_timeout = app_mod.settings.SSE_TIMEOUT_SECONDS
-        app_mod.settings.SSE_TIMEOUT_SECONDS = 1
-        try:
+        original_settings = get_settings()
+
+        with patch("src.api.app.get_settings") as mock_settings:
+            patched = original_settings.model_copy(update={"SSE_TIMEOUT_SECONDS": 1})
+            mock_settings.return_value = patched
             with TestClient(app) as client:
                 resp = client.post("/chat", json={"message": "test"})
                 assert resp.status_code == 200
@@ -292,8 +293,6 @@ class TestChatSSEErrors:
                 assert "done" in event_types
                 error_event = next(e for e in events if e["event"] == "error")
                 assert "timed out" in error_event["data"]["error"].lower()
-        finally:
-            app_mod.settings.SSE_TIMEOUT_SECONDS = original_timeout
 
 
 class TestChatReplaceEvent:

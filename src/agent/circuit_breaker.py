@@ -49,13 +49,9 @@ class CircuitBreaker:
     In ``half_open`` state, exactly one probe request is allowed through.
     If it succeeds, the breaker closes. If it fails, the breaker re-opens.
 
-    Note:
-        The ``state`` property reads and may mutate ``_state`` (open -> half_open
-        transition) **outside** the async lock. This is a documented trade-off:
-        acquiring an async lock from a sync property is not possible, and the
-        transition is idempotent (worst case: two coroutines both see "half_open"
-        and both proceed as probe requests). For the single-worker deployment
-        (``--workers 1``) used in this demo, no concurrent mutation is possible.
+    The ``state`` property is **read-only** — it never mutates ``_state``.
+    The open -> half_open transition happens inside ``allow_request()`` under
+    the async lock, ensuring no concurrent race on state transitions.
     """
 
     def __init__(
@@ -87,6 +83,12 @@ class CircuitBreaker:
             ts for ts in self._failure_timestamps if ts > cutoff
         ]
 
+    def _cooldown_expired(self) -> bool:
+        """Check if the cooldown period has elapsed since the last failure."""
+        if self._last_failure_time is None:
+            return False
+        return (time.monotonic() - self._last_failure_time) >= self._cooldown_seconds
+
     @property
     def failure_count(self) -> int:
         """Number of failures within the rolling window."""
@@ -100,10 +102,13 @@ class CircuitBreaker:
 
     @property
     def state(self) -> str:
-        if self._state == "open" and self._last_failure_time is not None:
-            if (time.monotonic() - self._last_failure_time) >= self._cooldown_seconds:
-                self._state = "half_open"
-                self._half_open_in_progress = False
+        """Current circuit breaker state (read-only, no mutation).
+
+        To check whether to allow a request, use ``allow_request()``
+        which performs the open -> half_open transition under the lock.
+        """
+        if self._state == "open" and self._cooldown_expired():
+            return "half_open"
         return self._state
 
     @property
@@ -117,19 +122,24 @@ class CircuitBreaker:
     async def allow_request(self) -> bool:
         """Check if a request should be allowed through.
 
+        Performs the open -> half_open transition atomically under the lock.
         In ``half_open`` state, only one probe request is allowed at a time.
 
         Returns:
             True if the request is allowed, False if blocked.
         """
         async with self._lock:
-            current_state = self.state
-            if current_state == "closed":
+            # Perform open -> half_open transition under the lock (race-safe)
+            if self._state == "open" and self._cooldown_expired():
+                self._state = "half_open"
+                self._half_open_in_progress = False
+
+            if self._state == "closed":
                 return True
-            if current_state == "open":
+            if self._state == "open":
                 return False
             # half_open: allow exactly one probe
-            if current_state == "half_open" and not self._half_open_in_progress:
+            if self._state == "half_open" and not self._half_open_in_progress:
                 self._half_open_in_progress = True
                 return True
             return False

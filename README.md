@@ -61,7 +61,7 @@ START ──> compliance_gate ──┬──> greeting ────────
 | Structured output routing | `router_node` | `.with_structured_output(RouterOutput)` — no string parsing |
 | Conditional edges with functions | `route_from_compliance`, `route_from_router`, `_route_after_validate_v2` | Explicit, testable routing logic at 3 branch points |
 | Graph-native retry loop | validate → generate | Not Python retry — graph-level state loop with counter |
-| State schema with reducers | `Annotated[list, add_messages]` | Proper LangGraph state management (15 fields, 5 v2 additions) |
+| State schema with reducers | `Annotated[list, add_messages]` | Proper LangGraph state management (12 fields, 2 v2 additions) |
 | `astream_events` v2 | `chat_stream()` | Most advanced streaming API with per-node event filtering |
 | Dual LLM strategy | Generator (0.3) vs Validator (0.0) | Different temperatures for creativity vs strictness |
 | HITL interrupt support | `interrupt_before` config | Production pattern for regulated environments |
@@ -100,9 +100,9 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 | Specialist agents | Registry-based dispatch (4 agents) | Domain-specific prompts and tool selection per query type |
 | Guest profiles | Per-field confidence with decay | 90-day decay, weighted completeness, CCPA cascade delete |
 | SMS compliance | TCPA keyword handling + quiet hours | Deterministic STOP/HELP/START, area-code timezone mapping, consent hash chain |
-| Multi-tenant | Per-casino config with Firestore | Feature flags, branding, regulations, 5-min TTL cache, deep-merge defaults |
+| Multi-tenant | Per-casino config with Firestore | Feature flags infrastructure scaffolded, branding, regulations, 5-min TTL cache, deep-merge defaults |
 | CMS | Google Sheets + webhook | Staff-editable content, HMAC-verified webhooks, schema validation |
-| Observability | LangFuse traces + evaluation framework | Per-node spans, A/B testing, deterministic scoring (no LLM eval cost) |
+| Observability | LangFuse + evaluation framework | Infrastructure scaffolded: LangFuse callback handler, A/B hash splitting, evaluation framework. Graph wiring TODO |
 
 ## Safety & Guardrails
 
@@ -200,14 +200,14 @@ Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planne
 | Vector DB | ChromaDB (in-process) | Vertex AI Vector Search or Firestore vector search |
 | Checkpointing | MemorySaver (lost on restart) | FirestoreSaver (wired, config-driven toggle) |
 | Rate limiting | In-memory per-IP | Redis-backed distributed limiter |
-| Monitoring | LangFuse + structured logging | LangFuse + Cloud Monitoring + alerting |
+| Monitoring | Structured logging (LangFuse scaffolded, not yet wired to graph) | LangFuse + Cloud Monitoring + alerting |
 | Frontend | Single HTML file | Next.js with React 19 |
 | Circuit breaker | In-memory (reset on restart) | Redis-backed with persistence |
 | Guest profiles | In-memory fallback for dev | Firestore with CCPA cascade delete (wired) |
 | Multi-tenant config | Firestore with 5-min TTL cache | Firestore with pub/sub invalidation |
 | SMS delivery | Telnyx raw HTTP (httpx) | Telnyx SDK with delivery receipts and retry queue |
 | CMS | Google Sheets + webhook | Dedicated headless CMS with versioning |
-| A/B testing | SHA-256 hash-based splitting | Feature flag service (LaunchDarkly / Statsig) |
+| A/B testing | SHA-256 hash-based splitting (scaffolded, not yet wired to graph) | Feature flag service (LaunchDarkly / Statsig) |
 
 ## Project Structure
 

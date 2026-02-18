@@ -44,11 +44,8 @@ def _state(**overrides) -> dict:
         "retry_feedback": None,
         "current_time": "Monday 3 PM",
         "sources_used": [],
-        "active_agent": None,
         "extracted_fields": {},
         "whisper_plan": None,
-        "delay_seconds": 0.0,
-        "sms_segments": [],
     }
     base.update(overrides)
     return base
@@ -287,15 +284,12 @@ class TestInitialStateV2:
     """Tests for v2 fields in _initial_state."""
 
     def test_v2_fields_present(self):
-        """_initial_state includes all 5 v2 fields with correct defaults."""
+        """_initial_state includes v2 fields with correct defaults."""
         from src.agent.graph import _initial_state
 
         state = _initial_state("Hello")
-        assert state["active_agent"] is None
         assert state["extracted_fields"] == {}
         assert state["whisper_plan"] is None
-        assert state["delay_seconds"] == 0.0
-        assert state["sms_segments"] == []
 
     def test_v1_fields_unchanged(self):
         """_initial_state preserves all v1 field defaults."""
