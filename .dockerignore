@@ -28,6 +28,7 @@ assignment/
 # Documentation (not needed in image)
 *.md
 !README.md
+!ARCHITECTURE.md
 
 # IDE
 .vscode

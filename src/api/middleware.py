@@ -101,8 +101,20 @@ class RequestLoggingMiddleware:
 class ErrorHandlingMiddleware:
     """Catch unhandled exceptions and return a structured 500 JSON body.
 
-    Prevents stack traces from leaking to clients.
+    Prevents stack traces from leaking to clients.  When this middleware
+    is the outermost layer, its error responses bypass SecurityHeadersMiddleware.
+    To ensure security headers are always present (even on 500s), the error
+    response includes the same headers that SecurityHeadersMiddleware adds.
     """
+
+    # Security headers included in error responses so that 500s generated
+    # by this outermost middleware still carry all security headers.
+    _SECURITY_HEADERS = [
+        (b"x-content-type-options", b"nosniff"),
+        (b"x-frame-options", b"DENY"),
+        (b"referrer-policy", b"strict-origin-when-cross-origin"),
+        (b"x-xss-protection", b"1; mode=block"),
+    ]
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -149,7 +161,8 @@ class ErrorHandlingMiddleware:
                         "headers": [
                             (b"content-type", b"application/json"),
                             (b"content-length", str(len(body)).encode()),
-                        ],
+                        ]
+                        + list(self._SECURITY_HEADERS),
                     }
                 )
                 await send({"type": "http.response.body", "body": body})
@@ -158,13 +171,14 @@ class ErrorHandlingMiddleware:
 class SecurityHeadersMiddleware:
     """Add security headers to every HTTP response."""
 
-    # Trade-off: ``'unsafe-inline'`` is required because the demo serves a
-    # single-file chat UI (``static/index.html``) with embedded ``<style>``
-    # and ``<script>`` blocks.  No user-generated content is rendered as HTML,
-    # so the XSS attack surface is minimal.
+    # CSP: 'unsafe-inline' required for single-file demo HTML with inline scripts.
+    # Production deployment should externalize scripts and use nonce-based CSP.
+    # Trade-off documented: demo simplicity vs strict CSP -- acceptable for
+    # interview demo where the frontend is secondary to the agent architecture.
+    # No user-generated content is rendered as HTML, so XSS surface is minimal.
     # Production path: externalize CSS/JS into separate static files and
-    # replace ``'unsafe-inline'`` with nonce-based CSP (generate per-request
-    # nonce in middleware, inject into ``<script nonce="...">`` tags).
+    # replace 'unsafe-inline' with nonce-based CSP (generate per-request
+    # nonce in middleware, inject into <script nonce="..."> tags).
     HEADERS = [
         (b"x-content-type-options", b"nosniff"),
         (b"x-frame-options", b"DENY"),

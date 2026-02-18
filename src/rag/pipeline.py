@@ -427,22 +427,11 @@ class CasinoKnowledgeRetriever:
 
 
 @lru_cache(maxsize=1)
-def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
-    """Get or create the global retriever singleton.
+def _get_retriever_cached() -> CasinoKnowledgeRetriever:
+    """Return a cached retriever using default settings.
 
-    Uses ``@lru_cache`` for consistency with other singletons in the codebase
-    (``get_settings``, ``_get_llm``, ``_get_circuit_breaker``, ``get_embeddings``).
-
-    When ``VECTOR_DB=firestore``, returns a ``FirestoreRetriever`` (same
-    interface shape).  Otherwise falls back to ChromaDB (local dev default).
-
-    Initialized during FastAPI lifespan (before requests arrive).
-
-    Args:
-        persist_dir: ChromaDB persistence directory (ignored for Firestore).
-
-    Returns:
-        A retriever with ``retrieve()`` and ``retrieve_with_scores()`` methods.
+    Internal helper for ``get_retriever()`` — separated so that the
+    ``persist_dir`` override path does not pollute the cache key.
     """
     settings = get_settings()
 
@@ -463,7 +452,7 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
                 exc_info=True,
             )
 
-    chroma_dir = persist_dir or settings.CHROMA_PERSIST_DIR
+    chroma_dir = settings.CHROMA_PERSIST_DIR
 
     try:
         # Lazy import: see ingest_property() for rationale.
@@ -486,3 +475,65 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
         retriever = CasinoKnowledgeRetriever()
 
     return retriever
+
+
+def _clear_retriever_cache() -> None:
+    """Clear the retriever singleton cache.
+
+    Delegates to ``_get_retriever_cached.cache_clear()``.  Exposed as
+    ``get_retriever.cache_clear`` so existing call sites (tests, conftest)
+    that relied on the old ``@lru_cache``-decorated ``get_retriever``
+    continue to work without modification.
+    """
+    _get_retriever_cached.cache_clear()
+
+
+def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
+    """Get or create the global retriever singleton.
+
+    Uses ``@lru_cache`` for consistency with other singletons in the codebase
+    (``get_settings``, ``_get_llm``, ``_get_circuit_breaker``, ``get_embeddings``).
+
+    When ``VECTOR_DB=firestore``, returns a ``FirestoreRetriever`` (same
+    interface shape).  Otherwise falls back to ChromaDB (local dev default).
+
+    Initialized during FastAPI lifespan (before requests arrive).
+
+    Args:
+        persist_dir: Override for ChromaDB directory. When None (default),
+            uses ``settings.CHROMA_PERSIST_DIR`` and returns a cached instance.
+            When specified, creates a new (uncached) instance -- primarily
+            used by tests.
+
+    Returns:
+        A retriever with ``retrieve()`` and ``retrieve_with_scores()`` methods.
+    """
+    if persist_dir is None:
+        return _get_retriever_cached()
+
+    # Explicit persist_dir: create a new uncached instance (tests, CLI tools).
+    try:
+        from langchain_community.vectorstores import Chroma
+
+        vectorstore = Chroma(
+            collection_name="property_knowledge",
+            embedding_function=get_embeddings(),
+            persist_directory=persist_dir,
+            collection_metadata={"hnsw:space": "cosine"},
+        )
+        retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
+        logger.info("Loaded ChromaDB retriever from %s (uncached)", persist_dir)
+    except Exception:
+        logger.warning(
+            "Could not load ChromaDB from %s. Retriever returns empty results.",
+            persist_dir,
+            exc_info=True,
+        )
+        retriever = CasinoKnowledgeRetriever()
+
+    return retriever
+
+
+# Attach cache_clear to the public function so existing callers
+# (tests, conftest) that do ``get_retriever.cache_clear()`` still work.
+get_retriever.cache_clear = _clear_retriever_cache  # type: ignore[attr-defined]

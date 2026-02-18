@@ -166,7 +166,7 @@ class TestHostAgent:
         from src.agent.agents.host_agent import host_agent
 
         mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API error"))
+        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
         mock_get_llm.return_value = mock_llm
 
         state = _state(

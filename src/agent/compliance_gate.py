@@ -1,10 +1,10 @@
-"""Deterministic compliance gate node for the property Q&A graph.
+"""Compliance gate node for the property Q&A graph.
 
-Runs all 5 guardrail layers (prompt injection, responsible gaming, age
-verification, BSA/AML, patron privacy) as a single pre-router node.  Zero
-LLM calls — pure regex-based classification.  Returns ``query_type``
-directly when a guardrail triggers, or ``None`` to signal the downstream
-router should perform LLM classification.
+Runs 5 deterministic guardrail layers (prompt injection regex, responsible
+gaming, age verification, BSA/AML, patron privacy) plus a secondary semantic
+injection classifier as a pre-router node.  Returns ``query_type`` directly
+when a guardrail triggers, or ``None`` to signal the downstream router should
+perform LLM classification.
 
 Also includes the turn-limit guard (moved from ``router_node`` to centralize
 all deterministic checks before the LLM router).
@@ -19,6 +19,7 @@ from src.config import get_settings
 
 from .guardrails import (
     audit_input,
+    classify_injection_semantic,
     detect_age_verification,
     detect_bsa_aml,
     detect_patron_privacy,
@@ -75,9 +76,26 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if not user_message:
         return {"query_type": "greeting", "router_confidence": 1.0}
 
-    # 3. Prompt injection (audit_input returns False when injection detected)
+    # 3a. Prompt injection — regex (fast deterministic first layer)
     if not audit_input(user_message):
         return {"query_type": "off_topic", "router_confidence": 1.0}
+
+    # 3b. Prompt injection — semantic (LLM second layer, only when regex passes)
+    semantic_result = await classify_injection_semantic(user_message)
+    if (
+        semantic_result
+        and semantic_result.is_injection
+        and semantic_result.confidence >= 0.8
+    ):
+        logger.warning(
+            "Semantic injection detected (confidence=%.2f): %s",
+            semantic_result.confidence,
+            semantic_result.reason[:100],
+        )
+        return {
+            "query_type": "off_topic",
+            "router_confidence": semantic_result.confidence,
+        }
 
     # 4. Responsible gaming
     if detect_responsible_gaming(user_message):

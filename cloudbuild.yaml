@@ -49,7 +49,7 @@ steps:
       - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest'
       - '--set-env-vars=ENVIRONMENT=production,LOG_LEVEL=WARNING'
       - '--cpu-boost'  # Full CPU during startup for faster cold start
-      - '--min-instances=0'  # Scale to zero in dev; set to 1 in production
+      - '--min-instances=1'  # Keep one warm instance to avoid cold-start latency
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'

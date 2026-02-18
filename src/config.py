@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     GRAPH_RECURSION_LIMIT: int = 10  # LangGraph recursion limit (validate->retry loop bound)
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
+    COMP_COMPLETENESS_THRESHOLD: float = 0.60  # minimum profile completeness for comp agent
 
     # --- Vector DB ---
     VECTOR_DB: str = "chroma"  # "chroma" (local dev) or "firestore" (GCP prod)

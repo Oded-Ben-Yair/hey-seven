@@ -163,6 +163,27 @@ Behavior:
 - **Message windowing**: Only the last `MAX_HISTORY_MESSAGES` (default 20) human and AI messages are sent to the LLM, bounding context size for long conversations while preserving recent context.
 - On LLM error, returns a static error message and sets `skip_validation=True`.
 
+### Specialist Agent Base Pattern (`_base.py`)
+
+All 4 specialist agents (host, dining, entertainment, comp) delegate to a shared
+`execute_specialist()` function that handles:
+- Circuit breaker checks (fail-open with safe fallback)
+- System prompt construction via `string.Template.safe_substitute()`
+- Retrieved context formatting and injection
+- Whisper planner guidance (host agent only)
+- Retry feedback injection on validation failures
+- Sliding window on conversation history
+- Error handling with `skip_validation=True` for safe fallback paths
+
+The `skip_validation` contract: when set to `True`, the downstream `validate_node`
+is bypassed entirely. This is used for deterministic fallback paths (circuit breaker
+open, no retrieved context, LLM errors) that don't need adversarial validation.
+
+**Whisper planner cost note**: The whisper planner adds one additional LLM call
+per property_qa turn. At Gemini 2.5 Flash pricing ($0.15/1M input, $0.60/1M output),
+this adds ~$0.0003 per turn. The planner can be disabled via the
+`whisper_planner_enabled` feature flag without code changes.
+
 ### 6. validate (`src/agent/nodes.py`)
 
 **Purpose**: Adversarial review of the generated response against 6 criteria.

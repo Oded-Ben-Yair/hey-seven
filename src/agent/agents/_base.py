@@ -10,14 +10,16 @@ test mock paths -- tests that ``patch("src.agent.agents.host_agent._get_llm")``
 continue to work because the agent passes its own module-level reference.
 """
 
+import asyncio
 import logging
 from collections.abc import Callable
 from string import Template
 
+import httpx
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.nodes import _format_context_block
-from src.agent.prompts import RESPONSIBLE_GAMING_HELPLINES
+from src.agent.prompts import get_responsible_gaming_helplines
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
 from src.config import get_settings
@@ -61,23 +63,28 @@ async def execute_specialist(
     retry_count = state.get("retry_count", 0)
     retry_feedback = state.get("retry_feedback")
 
+    # Cache circuit breaker instance — avoids repeated get_cb_fn() calls
+    cb = get_cb_fn()
+
     # Circuit breaker check -- early exit before building prompts
-    if get_cb_fn().is_open:
+    if cb.is_open:
         logger.warning("Circuit breaker open — %s agent returning fallback", agent_name)
         return {
-            "messages": [AIMessage(content=(
+            "messages": [AIMessage(content=Template(
                 "I'm experiencing temporary technical difficulties. "
                 "Please try again in a minute, or contact "
                 "$property_name directly at $property_phone."
-            ).replace("$property_name", settings.PROPERTY_NAME)
-             .replace("$property_phone", settings.PROPERTY_PHONE))],
+            ).safe_substitute(
+                property_name=settings.PROPERTY_NAME,
+                property_phone=settings.PROPERTY_PHONE,
+            ))],
             "skip_validation": True,
         }
 
     system_prompt = system_prompt_template.safe_substitute(
         property_name=settings.PROPERTY_NAME,
         current_time=current_time,
-        responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
+        responsible_gaming_helplines=get_responsible_gaming_helplines(),
     )
 
     # Format and append retrieved context
@@ -120,28 +127,34 @@ async def execute_specialist(
 
     try:
         response = await llm.ainvoke(llm_messages)
-        await get_cb_fn().record_success()
+        await cb.record_success()
         content = response.content if isinstance(response.content, str) else str(response.content)
         return {"messages": [AIMessage(content=content)]}
     except (ValueError, TypeError) as exc:
-        await get_cb_fn().record_failure()
+        await cb.record_failure()
         logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
         return {
-            "messages": [AIMessage(content=(
+            "messages": [AIMessage(content=Template(
                 "I apologize, but I had trouble processing that response. "
                 "Please try again, or contact $property_name directly at $property_phone."
-            ).replace("$property_name", settings.PROPERTY_NAME)
-             .replace("$property_phone", settings.PROPERTY_PHONE))],
+            ).safe_substitute(
+                property_name=settings.PROPERTY_NAME,
+                property_phone=settings.PROPERTY_PHONE,
+            ))],
             "skip_validation": True,
         }
-    except Exception:
-        await get_cb_fn().record_failure()
+    except asyncio.CancelledError:
+        raise
+    except (httpx.HTTPError, asyncio.TimeoutError, ConnectionError):
+        await cb.record_failure()
         logger.exception("%s agent LLM call failed", agent_name.capitalize())
         return {
-            "messages": [AIMessage(content=(
+            "messages": [AIMessage(content=Template(
                 "I apologize, but I'm having trouble generating a response right now. "
                 "Please try again, or contact $property_name directly at $property_phone."
-            ).replace("$property_name", settings.PROPERTY_NAME)
-             .replace("$property_phone", settings.PROPERTY_PHONE))],
+            ).safe_substitute(
+                property_name=settings.PROPERTY_NAME,
+                property_phone=settings.PROPERTY_PHONE,
+            ))],
             "skip_validation": True,
         }

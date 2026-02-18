@@ -113,10 +113,20 @@ class CircuitBreaker:
 
     @property
     def is_open(self) -> bool:
+        """Whether the breaker is in open state (blocking all requests).
+
+        Returns:
+            True if the breaker is open and cooldown has NOT expired.
+        """
         return self.state == "open"
 
     @property
     def is_half_open(self) -> bool:
+        """Whether the breaker is in half-open state (allowing one probe).
+
+        Returns:
+            True if the breaker is open and cooldown HAS expired.
+        """
         return self.state == "half_open"
 
     async def allow_request(self) -> bool:
@@ -145,12 +155,24 @@ class CircuitBreaker:
             return False
 
     async def record_success(self) -> None:
+        """Record a successful LLM call and reset the breaker to closed state.
+
+        Clears all failure timestamps and transitions from any state to closed.
+        Thread-safe via ``asyncio.Lock``.
+        """
         async with self._lock:
             self._failure_timestamps.clear()
             self._state = "closed"
             self._half_open_in_progress = False
 
     async def record_failure(self) -> None:
+        """Record a failed LLM call and potentially trip the breaker.
+
+        Appends the current timestamp to the failure window, prunes old
+        failures, and transitions to open if the threshold is exceeded.
+        In half-open state, any failure immediately re-opens the breaker.
+        Thread-safe via ``asyncio.Lock``.
+        """
         async with self._lock:
             now = time.monotonic()
             self._failure_timestamps.append(now)

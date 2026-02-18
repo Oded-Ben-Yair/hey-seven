@@ -22,7 +22,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
+from src.observability.langfuse_client import get_langfuse_handler
 
 from .agents.host_agent import host_agent
 from .compliance_gate import compliance_gate_node
@@ -183,9 +185,16 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         NODE_OFF_TOPIC: NODE_OFF_TOPIC,
     })
 
-    # retrieve → whisper_planner → generate (host_agent) → validate
-    graph.add_edge(NODE_RETRIEVE, NODE_WHISPER)
-    graph.add_edge(NODE_WHISPER, NODE_GENERATE)
+    # retrieve → [whisper_planner →] generate (host_agent) → validate
+    whisper_enabled = DEFAULT_FEATURES.get("whisper_planner_enabled", True)
+    logger.info("Feature flag whisper_planner_enabled=%s", whisper_enabled)
+
+    if whisper_enabled:
+        graph.add_edge(NODE_RETRIEVE, NODE_WHISPER)
+        graph.add_edge(NODE_WHISPER, NODE_GENERATE)
+    else:
+        graph.add_edge(NODE_RETRIEVE, NODE_GENERATE)
+
     graph.add_edge(NODE_GENERATE, NODE_VALIDATE)
 
     # validate → {persona_envelope (PASS), generate (RETRY), fallback (FAIL)}
@@ -246,6 +255,16 @@ def _initial_state(message: str) -> dict[str, Any]:
     }
 
 
+# Parity check: ensure _initial_state covers all non-messages fields
+_PARITY_FIELDS = set(PropertyQAState.__annotations__) - {"messages"}
+_INITIAL_FIELDS = set(_initial_state("test").keys()) - {"messages"}
+assert _PARITY_FIELDS == _INITIAL_FIELDS, (
+    f"_initial_state parity mismatch: "
+    f"missing={_PARITY_FIELDS - _INITIAL_FIELDS}, "
+    f"extra={_INITIAL_FIELDS - _PARITY_FIELDS}"
+)
+
+
 async def chat(
     graph: CompiledStateGraph,
     message: str,
@@ -265,6 +284,9 @@ async def chat(
         thread_id = str(uuid.uuid4())
 
     config = {"configurable": {"thread_id": thread_id}}
+    handler = get_langfuse_handler(session_id=thread_id)
+    if handler:
+        config["callbacks"] = [handler]
 
     result = await graph.ainvoke(
         _initial_state(message),
@@ -312,6 +334,9 @@ async def chat_stream(
         thread_id = str(uuid.uuid4())
 
     config = {"configurable": {"thread_id": thread_id}}
+    handler = get_langfuse_handler(session_id=thread_id)
+    if handler:
+        config["callbacks"] = [handler]
 
     yield {
         "event": "metadata",

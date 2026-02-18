@@ -115,7 +115,7 @@ class TestHostAgent:
         from src.agent.agents.host_agent import host_agent
 
         mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API error"))
+        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
         mock_get_llm.return_value = mock_llm
 
         state = _state(
@@ -247,7 +247,7 @@ class TestDiningAgent:
         from src.agent.agents.dining_agent import dining_agent
 
         mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API error"))
+        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
         mock_get_llm.return_value = mock_llm
 
         state = _state(
@@ -336,7 +336,7 @@ class TestEntertainmentAgent:
         from src.agent.agents.entertainment_agent import entertainment_agent
 
         mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API error"))
+        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
         mock_get_llm.return_value = mock_llm
 
         state = _state(
@@ -416,6 +416,7 @@ class TestCompAgent:
         state = _state(
             messages=[HumanMessage(content="What offers?")],
             retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
+            extracted_fields=_high_completeness_fields(),
         )
         result = await comp_agent(state)
         assert result["skip_validation"] is True
@@ -427,7 +428,7 @@ class TestCompAgent:
         from src.agent.agents.comp_agent import comp_agent
 
         mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API error"))
+        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
         mock_get_llm.return_value = mock_llm
 
         state = _state(
@@ -543,3 +544,80 @@ class TestPackageImports:
 
         for name in agents_pkg.__all__:
             assert hasattr(agents_pkg, name), f"Missing export: {name}"
+
+
+# ---------------------------------------------------------------------------
+# Parametrized Specialist Contract Tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("agent_fn,agent_module", [
+    ("host_agent", "src.agent.agents.host_agent"),
+    ("dining_agent", "src.agent.agents.dining_agent"),
+    ("entertainment_agent", "src.agent.agents.entertainment_agent"),
+    ("comp_agent", "src.agent.agents.comp_agent"),
+])
+class TestSpecialistContract:
+    """Verify all 4 specialist agents follow the same contract via _base.py."""
+
+    @pytest.mark.asyncio
+    async def test_returns_messages_key(self, agent_fn, agent_module):
+        """All specialists must return dict with 'messages' key."""
+        import importlib
+
+        mod = importlib.import_module(agent_module)
+        fn = getattr(mod, agent_fn)
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(
+            return_value=MagicMock(content="Test response from agent.")
+        )
+
+        # Comp agent needs high profile completeness to pass its gate
+        extra = {}
+        if agent_fn == "comp_agent":
+            extra["extracted_fields"] = _high_completeness_fields()
+
+        state = _state(
+            messages=[HumanMessage(content="Tell me about the property")],
+            retrieved_context=[
+                {"content": "Property info here", "metadata": {"category": "property"}, "score": 0.9}
+            ],
+            **extra,
+        )
+
+        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+            result = await fn(state)
+
+        assert "messages" in result
+        assert len(result["messages"]) >= 1
+        assert isinstance(result["messages"][0], AIMessage)
+
+    @pytest.mark.asyncio
+    async def test_cb_open_returns_fallback(self, agent_fn, agent_module):
+        """All specialists return fallback when circuit breaker is open."""
+        import importlib
+
+        mod = importlib.import_module(agent_module)
+        fn = getattr(mod, agent_fn)
+
+        mock_cb = MagicMock()
+        mock_cb.is_open = True
+
+        # Comp agent profile gate runs BEFORE CB check in execute_specialist,
+        # so we need high completeness to reach the CB path
+        extra = {}
+        if agent_fn == "comp_agent":
+            extra["extracted_fields"] = _high_completeness_fields()
+
+        state = _state(
+            messages=[HumanMessage(content="What offers?")],
+            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
+            **extra,
+        )
+
+        with patch(f"{agent_module}._get_circuit_breaker", return_value=mock_cb):
+            result = await fn(state)
+
+        assert result.get("skip_validation") is True
+        assert "technical difficulties" in result["messages"][0].content

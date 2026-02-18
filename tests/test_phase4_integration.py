@@ -332,102 +332,8 @@ class TestEvaluationFrameworkIntegration:
 
 
 # ---------------------------------------------------------------------------
-# TestABTestingIntegration
+# TestABTestingIntegration — REMOVED (ab_testing.py deleted in v2.1 cleanup)
 # ---------------------------------------------------------------------------
-
-
-class TestABTestingIntegration:
-    """Test A/B testing framework end-to-end."""
-
-    def test_experiment_lifecycle(self):
-        """Full A/B experiment: create, assign, tag."""
-        from src.observability.ab_testing import (
-            ABExperiment,
-            ABVariant,
-            assign_variant,
-            get_trace_tags,
-        )
-
-        experiment = ABExperiment(
-            experiment_id="persona-v2",
-            description="Test new persona prompt",
-            variants=[
-                ABVariant(
-                    name="control",
-                    description="Current Seven persona",
-                    config_overrides={},
-                ),
-                ABVariant(
-                    name="treatment",
-                    description="More casual persona",
-                    config_overrides={"system_prompt_suffix": "Be more casual."},
-                ),
-            ],
-            traffic_split=[70, 30],
-        )
-
-        thread_id = str(uuid.uuid4())
-        assignment = assign_variant(thread_id, experiment)
-
-        assert assignment.experiment_id == "persona-v2"
-        assert assignment.variant_name in {"control", "treatment"}
-        assert 0 <= assignment.bucket <= 99
-
-        tags = get_trace_tags(assignment)
-        assert len(tags) == 3
-        assert any("ab:persona-v2" in t for t in tags)
-        assert any("variant:" in t for t in tags)
-
-    def test_ab_determinism_across_calls(self):
-        """Same thread_id always gets same variant across multiple calls."""
-        from src.observability.ab_testing import ABExperiment, ABVariant, assign_variant
-
-        experiment = ABExperiment(
-            experiment_id="test-det",
-            description="Determinism test",
-            variants=[
-                ABVariant(name="a", description="A"),
-                ABVariant(name="b", description="B"),
-            ],
-            traffic_split=[50, 50],
-        )
-
-        thread_id = str(uuid.uuid4())
-        results = [assign_variant(thread_id, experiment).variant_name for _ in range(10)]
-        assert len(set(results)) == 1  # All same
-
-    def test_ab_tags_work_with_trace_context(self):
-        """A/B trace tags integrate with TraceContext."""
-        from src.observability.ab_testing import (
-            ABExperiment,
-            ABVariant,
-            assign_variant,
-            get_trace_tags,
-        )
-        from src.observability.traces import create_trace_context
-
-        experiment = ABExperiment(
-            experiment_id="prompt-v3",
-            description="Test",
-            variants=[
-                ABVariant(name="control", description="A"),
-                ABVariant(name="treatment", description="B"),
-            ],
-            traffic_split=[50, 50],
-        )
-
-        thread_id = str(uuid.uuid4())
-        assignment = assign_variant(thread_id, experiment)
-        tags = get_trace_tags(assignment)
-
-        # Create trace context with A/B tags
-        ctx = create_trace_context(
-            trace_id="trace-ab-test",
-            session_id=thread_id,
-            tags=tags,
-        )
-        assert len(ctx.tags) == 3
-        assert any("ab:" in t for t in ctx.tags)
 
 
 # ---------------------------------------------------------------------------
@@ -507,13 +413,6 @@ class TestPhase4ModuleImports:
 
         assert len(GOLDEN_DATASET) == 20
         assert callable(run_evaluation)
-
-    def test_ab_testing_module(self):
-        """A/B testing module is importable."""
-        from src.observability.ab_testing import assign_variant, get_trace_tags
-
-        assert callable(assign_variant)
-        assert callable(get_trace_tags)
 
     def test_pii_redaction_module(self):
         """PII redaction module is importable."""

@@ -13,17 +13,29 @@ Constants:
 from string import Template
 
 # ---------------------------------------------------------------------------
-# Responsible Gaming Helplines (DRY constant)
+# Responsible Gaming Helplines
 # ---------------------------------------------------------------------------
-# These are regulatory-mandated numbers for the Mohegan Sun jurisdiction
-# (Connecticut).  For multi-property deployments across states, load from
-# the property data file instead.
+# Default: Connecticut (Mohegan Sun's jurisdiction).  For multi-property
+# deployments across states, override via get_responsible_gaming_helplines()
+# or a property-specific configuration.
 
-RESPONSIBLE_GAMING_HELPLINES = (
+RESPONSIBLE_GAMING_HELPLINES_DEFAULT = (
     "- National Problem Gambling Helpline: 1-800-MY-RESET (1-800-699-7378)\n"
     "- Connecticut Council on Problem Gambling: 1-888-789-7777\n"
     "- CT Self-Exclusion Program: ct.gov/selfexclusion (Dept. of Consumer Protection)"
 )
+
+# Backward-compatible alias
+RESPONSIBLE_GAMING_HELPLINES = RESPONSIBLE_GAMING_HELPLINES_DEFAULT
+
+
+def get_responsible_gaming_helplines() -> str:
+    """Return responsible gaming helplines for the current property.
+
+    Falls back to Connecticut (Mohegan Sun default) helplines if no
+    property-specific configuration is available.
+    """
+    return RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
 # ---------------------------------------------------------------------------
 # 1. CONCIERGE_SYSTEM_PROMPT

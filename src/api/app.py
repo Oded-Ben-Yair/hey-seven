@@ -107,13 +107,23 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type", "X-Request-ID", "X-API-Key"],
     )
 
-    # Pure ASGI middleware (added in reverse execution order)
-    app.add_middleware(ErrorHandlingMiddleware)
+    # Pure ASGI middleware — Starlette executes in REVERSE add order.
+    # Add order (top to bottom) vs execution order (bottom to top):
+    #   RateLimit        (added 1st, executes last / innermost)
+    #   BodyLimit        (added 2nd)
+    #   ApiKey           (added 3rd)
+    #   Security         (added 4th)
+    #   Logging          (added 5th)
+    #   ErrorHandling    (added 6th, executes first / outermost)
+    # This ensures ErrorHandling wraps ALL other middleware, so unhandled
+    # exceptions from any layer are caught and returned as structured 500s
+    # with security headers.
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestBodyLimitMiddleware)
     app.add_middleware(ApiKeyMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(ErrorHandlingMiddleware)
 
     # ------------------------------------------------------------------
     # POST /chat — SSE streaming response (real token streaming)
@@ -209,36 +219,68 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     # GET /graph — Graph structure for visualization
     # ------------------------------------------------------------------
+    # Static fallback for /graph when agent is not initialized or
+    # introspection fails.
+    _STATIC_GRAPH_STRUCTURE = {
+        "nodes": [
+            "compliance_gate", "router", "retrieve", "whisper_planner",
+            "generate", "validate", "persona_envelope",
+            "respond", "fallback", "greeting", "off_topic",
+        ],
+        "edges": [
+            {"from": "__start__", "to": "compliance_gate"},
+            {"from": "compliance_gate", "to": "router", "condition": "clean (no guardrail match)"},
+            {"from": "compliance_gate", "to": "greeting", "condition": "greeting"},
+            {"from": "compliance_gate", "to": "off_topic", "condition": "guardrail triggered"},
+            {"from": "router", "to": "retrieve", "condition": "property_qa | hours_schedule | ambiguous"},
+            {"from": "router", "to": "greeting", "condition": "greeting"},
+            {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request"},
+            {"from": "retrieve", "to": "whisper_planner"},
+            {"from": "whisper_planner", "to": "generate"},
+            {"from": "generate", "to": "validate"},
+            {"from": "validate", "to": "persona_envelope", "condition": "PASS"},
+            {"from": "validate", "to": "generate", "condition": "RETRY (max 1)"},
+            {"from": "validate", "to": "fallback", "condition": "FAIL"},
+            {"from": "persona_envelope", "to": "respond"},
+            {"from": "respond", "to": "__end__"},
+            {"from": "fallback", "to": "__end__"},
+            {"from": "greeting", "to": "__end__"},
+            {"from": "off_topic", "to": "__end__"},
+        ],
+    }
+
     @app.get("/graph", response_model=GraphStructureResponse)
-    async def graph_structure():
-        """Return the StateGraph structure for visualization."""
-        return {
-            "nodes": [
-                "compliance_gate", "router", "retrieve", "whisper_planner",
-                "generate", "validate", "persona_envelope",
-                "respond", "fallback", "greeting", "off_topic",
-            ],
-            "edges": [
-                {"from": "__start__", "to": "compliance_gate"},
-                {"from": "compliance_gate", "to": "router", "condition": "clean (no guardrail match)"},
-                {"from": "compliance_gate", "to": "greeting", "condition": "greeting"},
-                {"from": "compliance_gate", "to": "off_topic", "condition": "guardrail triggered"},
-                {"from": "router", "to": "retrieve", "condition": "property_qa | hours_schedule | ambiguous"},
-                {"from": "router", "to": "greeting", "condition": "greeting"},
-                {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request"},
-                {"from": "retrieve", "to": "whisper_planner"},
-                {"from": "whisper_planner", "to": "generate"},
-                {"from": "generate", "to": "validate"},
-                {"from": "validate", "to": "persona_envelope", "condition": "PASS"},
-                {"from": "validate", "to": "generate", "condition": "RETRY (max 1)"},
-                {"from": "validate", "to": "fallback", "condition": "FAIL"},
-                {"from": "persona_envelope", "to": "respond"},
-                {"from": "respond", "to": "__end__"},
-                {"from": "fallback", "to": "__end__"},
-                {"from": "greeting", "to": "__end__"},
-                {"from": "off_topic", "to": "__end__"},
-            ],
-        }
+    async def graph_structure(request: Request):
+        """Return the StateGraph structure for visualization.
+
+        Introspects the compiled LangGraph agent when available, falling
+        back to a static structure when the agent is not initialized.
+        """
+        agent = getattr(request.app.state, "agent", None)
+        if agent is None:
+            return _STATIC_GRAPH_STRUCTURE
+
+        try:
+            graph_data = agent.get_graph()
+            nodes = [
+                node.id
+                for node in graph_data.nodes
+                if node.id not in ("__start__", "__end__")
+            ]
+            # Sanity check: introspection must return real nodes, otherwise
+            # a mock or uninitialized graph would yield empty lists.
+            if not nodes:
+                return _STATIC_GRAPH_STRUCTURE
+            edges = []
+            for edge in graph_data.edges:
+                edge_dict = {"from": edge.source, "to": edge.target}
+                if hasattr(edge, "data") and edge.data:
+                    edge_dict["condition"] = str(edge.data)
+                edges.append(edge_dict)
+            return {"nodes": nodes, "edges": edges}
+        except Exception:
+            logger.warning("Graph introspection failed, using static structure")
+            return _STATIC_GRAPH_STRUCTURE
 
     # ------------------------------------------------------------------
     # POST /sms/webhook — Telnyx inbound SMS webhook

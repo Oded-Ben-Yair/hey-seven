@@ -1,8 +1,9 @@
-"""Telnyx webhook handler for inbound SMS and delivery receipts.
+"""SMS webhook handler with HMAC-SHA256 signature verification.
 
-Provides ED25519 webhook signature verification (HMAC-SHA256 placeholder),
-inbound SMS parsing with mandatory keyword pre-screening, delivery receipt
-tracking, and an in-memory idempotency tracker with TTL-based cleanup.
+Provides webhook signature verification (HMAC-SHA256 placeholder for
+Telnyx Ed25519 -- will be upgraded to Ed25519 when production webhook
+signing keys are provisioned), message parsing, TCPA compliance checking,
+and idempotency tracking.
 """
 
 from __future__ import annotations

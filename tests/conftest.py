@@ -48,10 +48,10 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.rag.pipeline import get_retriever
+        from src.rag.pipeline import _get_retriever_cached
 
-        get_retriever.cache_clear()
-    except ImportError:
+        _get_retriever_cached.cache_clear()
+    except (ImportError, AttributeError):
         pass
 
     try:
