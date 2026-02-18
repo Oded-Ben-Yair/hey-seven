@@ -231,7 +231,7 @@ class ApiKeyMiddleware:
             await self.app(scope, receive, send)
             return
 
-        path = scope.get("path", "/")
+        path = scope.get("path", "/").rstrip("/") or "/"
         if path not in self._PROTECTED_PATHS:
             await self.app(scope, receive, send)
             return
@@ -330,7 +330,7 @@ class RateLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        path = scope.get("path", "/")
+        path = scope.get("path", "/").rstrip("/") or "/"
 
         # Only rate-limit /chat
         if path != "/chat":

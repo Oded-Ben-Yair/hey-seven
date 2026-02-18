@@ -121,8 +121,12 @@ async def execute_specialist(
             ).safe_substitute(feedback=retry_feedback)
         ))
 
-    # Sliding window on conversation history
+    # Sliding window on conversation history.
+    # On retry, exclude the last AIMessage (the one that failed validation)
+    # to prevent the LLM from parroting the invalid response.
     history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    if retry_count > 0 and history and isinstance(history[-1], AIMessage):
+        history = history[:-1]
     window = history[-settings.MAX_HISTORY_MESSAGES:]
     llm_messages.extend(window)
 

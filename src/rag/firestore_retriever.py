@@ -93,6 +93,7 @@ class FirestoreRetriever(AbstractRetriever):
                 query_vector=Vector(query_vector),
                 distance_measure=DistanceMeasure.COSINE,
                 limit=top_k,
+                distance_result_field="distance",
             )
 
             results: list[tuple[Document, float]] = []
