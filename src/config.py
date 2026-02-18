@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = ["http://localhost:8080"]
     RATE_LIMIT_CHAT: int = 20  # requests per minute
     RATE_LIMIT_MAX_CLIENTS: int = 10000  # max tracked client IPs (memory guard)
+    TRUSTED_PROXIES: list[str] = []  # CIDRs/IPs that may set X-Forwarded-For (empty = trust all, for Cloud Run)
     SSE_TIMEOUT_SECONDS: int = 60
     MAX_REQUEST_BODY_SIZE: int = 65536  # 64 KB max request body
 

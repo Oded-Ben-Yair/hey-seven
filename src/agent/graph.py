@@ -9,6 +9,7 @@ instead of the v1 ``generate_node``.  The node name ``"generate"`` is
 preserved for SSE streaming compatibility and test backward compat.
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -462,6 +463,11 @@ async def chat_stream(
                     }),
                 }
 
+    except asyncio.CancelledError:
+        # Client disconnect during SSE stream — normal, not an error.
+        # Re-raise to let ASGI server handle cleanup.
+        logger.info("SSE stream cancelled (client disconnect)")
+        raise
     except Exception:
         logger.exception("Error during SSE stream")
         yield {

@@ -82,8 +82,8 @@ class TestRouterNode:
         assert result["router_confidence"] == 1.0
 
     @patch("src.agent.nodes._get_llm")
-    async def test_llm_failure_defaults_to_property_qa(self, mock_get_llm):
-        """When LLM call raises, router defaults to property_qa with low confidence."""
+    async def test_llm_failure_defaults_to_off_topic(self, mock_get_llm):
+        """When LLM call raises, router defaults to off_topic (fail-safe)."""
         from src.agent.nodes import router_node
 
         mock_llm = MagicMock()
@@ -94,8 +94,8 @@ class TestRouterNode:
 
         state = _state(messages=[HumanMessage(content="What restaurants?")])
         result = await router_node(state)
-        assert result["query_type"] == "property_qa"
-        assert result["router_confidence"] == 0.5
+        assert result["query_type"] == "off_topic"
+        assert result["router_confidence"] == 0.0
 
 
 class TestRetrieveNode:
@@ -880,12 +880,12 @@ class TestSpanishResponsibleGaming:
         assert result["router_confidence"] == 1.0
 
 
-class TestValidationDegradedPass:
-    """Tests for degraded-pass mode when validation LLM fails."""
+class TestValidationFailClosed:
+    """Tests for fail-closed validation when LLM fails."""
 
     @patch("src.agent.nodes._get_validator_llm")
-    async def test_validation_degraded_pass_on_first_attempt(self, mock_get_validator_llm):
-        """When validation LLM fails on first attempt, pass the response through."""
+    async def test_validation_fail_closed_on_llm_failure(self, mock_get_validator_llm):
+        """When validation LLM fails, return FAIL (fail-closed for safety)."""
         from src.agent.nodes import validate_node
 
         mock_llm = MagicMock()
@@ -903,7 +903,8 @@ class TestValidationDegradedPass:
             retry_count=0,
         )
         result = await validate_node(state)
-        assert result["validation_result"] == "PASS"
+        assert result["validation_result"] == "FAIL"
+        assert "Validation unavailable" in result["retry_feedback"]
 
     @patch("src.agent.nodes._get_validator_llm")
     async def test_validation_fails_closed_on_retry(self, mock_get_validator_llm):

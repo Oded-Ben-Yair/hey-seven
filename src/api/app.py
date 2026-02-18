@@ -64,12 +64,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Run RAG ingestion if ChromaDB collection is empty or missing.
     # Checking the chroma.sqlite3 file is more reliable than directory existence
     # because the directory may exist but contain no data (e.g., after a failed run).
+    # Run RAG ingestion if ChromaDB collection is empty or missing.
+    # Wrap in asyncio.to_thread() because ChromaDB operations are synchronous
+    # and would block the event loop during startup.
     chroma_db_file = Path(settings.CHROMA_PERSIST_DIR) / "chroma.sqlite3"
     if not chroma_db_file.exists():
         try:
             from src.rag.pipeline import ingest_property
 
-            ingest_property()
+            await asyncio.to_thread(ingest_property)
             logger.info("Property data ingested into ChromaDB.")
         except Exception:
             logger.exception("Failed to ingest property data.")

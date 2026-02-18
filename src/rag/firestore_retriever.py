@@ -108,7 +108,9 @@ class FirestoreRetriever(AbstractRetriever):
 
                 # Firestore COSINE distance is in [0, 2]; convert to similarity [0, 1].
                 # distance = 0 => similarity = 1 (identical).
-                distance = data.get("distance", 0.0)
+                # Default to 2.0 (worst case) when field is missing to avoid
+                # treating missing-distance docs as perfect matches.
+                distance = data.get("distance", 2.0)
                 similarity = max(0.0, 1.0 - distance)
 
                 results.append((

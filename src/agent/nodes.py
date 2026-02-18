@@ -208,10 +208,13 @@ async def router_node(state: PropertyQAState) -> dict:
         # Network errors, API failures, timeouts — broad catch is intentional
         # because google-genai raises various exception types across versions.
         # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        logger.exception("Router LLM call failed, defaulting to property_qa")
+        # Fail-safe: route to off_topic since we cannot classify the query.
+        # This is safer than defaulting to property_qa which would send
+        # unclassified queries through the full RAG + LLM pipeline.
+        logger.exception("Router LLM call failed, defaulting to off_topic (fail-safe)")
         return {
-            "query_type": "property_qa",
-            "router_confidence": 0.5,
+            "query_type": "off_topic",
+            "router_confidence": 0.0,
         }
 
 
@@ -307,23 +310,12 @@ async def validate_node(state: PropertyQAState) -> dict:
 
     except (ValueError, TypeError) as exc:
         logger.warning("Validation structured output parsing failed: %s", exc)
-        # Treat parsing failure same as LLM failure — degraded-pass or fail-closed
-        if retry_count == 0:
-            logger.warning("Degraded-pass: validation parsing failed, passing generated response")
-            return {"validation_result": "PASS"}
         return {
             "validation_result": "FAIL",
             "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
         }
     except Exception:
         logger.exception("Validation LLM call failed")
-        # Degraded-pass: if this is the first attempt and generate already produced
-        # a response, allow it through with a warning rather than always failing
-        # closed. This improves UX when the validation LLM has transient errors
-        # while the generated response is likely correct.
-        if retry_count == 0:
-            logger.warning("Degraded-pass: validation unavailable, passing generated response with warning")
-            return {"validation_result": "PASS"}
         return {
             "validation_result": "FAIL",
             "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
