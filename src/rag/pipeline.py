@@ -265,6 +265,13 @@ def _chunk_documents(
                 },
             })
         else:
+            logger.warning(
+                "Item '%s' (%d chars) exceeds chunk_size=%d — text splitter activated, "
+                "structured context may be fragmented",
+                doc["metadata"].get("item_name", "unknown"),
+                len(content),
+                chunk_size,
+            )
             text_chunks = splitter.split_text(content)
             for i, chunk_text in enumerate(text_chunks):
                 chunks.append({

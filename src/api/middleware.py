@@ -273,8 +273,10 @@ class RateLimitMiddleware:
         self.max_tokens = settings.RATE_LIMIT_CHAT
         self.max_clients = settings.RATE_LIMIT_MAX_CLIENTS
         self.window_seconds = 60.0
-        # {ip: deque of request timestamps}
-        self._requests: dict[str, collections.deque] = {}
+        # {ip: deque of request timestamps} — defaultdict avoids check-then-set race
+        self._requests: dict[str, collections.deque] = collections.defaultdict(collections.deque)
+        # Protects _requests mutations under concurrent async requests
+        self._lock = asyncio.Lock()
 
     def _get_client_ip(self, scope: Scope) -> str:
         """Extract client IP, preferring X-Forwarded-For behind proxies."""
@@ -286,29 +288,28 @@ class RateLimitMiddleware:
         client = scope.get("client")
         return client[0] if client else "unknown"
 
-    def _is_allowed(self, client_ip: str) -> bool:
+    async def _is_allowed(self, client_ip: str) -> bool:
         """Check if a request from client_ip is within the rate limit."""
         now = time.monotonic()
         window_start = now - self.window_seconds
 
-        if client_ip not in self._requests:
+        async with self._lock:
             # Memory guard: evict oldest client if at capacity
-            if len(self._requests) >= self.max_clients:
+            if client_ip not in self._requests and len(self._requests) >= self.max_clients:
                 oldest_ip = next(iter(self._requests))
                 del self._requests[oldest_ip]
-            self._requests[client_ip] = collections.deque()
 
-        bucket = self._requests[client_ip]
+            bucket = self._requests[client_ip]
 
-        # Evict expired entries
-        while bucket and bucket[0] < window_start:
-            bucket.popleft()
+            # Evict expired entries
+            while bucket and bucket[0] < window_start:
+                bucket.popleft()
 
-        if len(bucket) >= self.max_tokens:
-            return False
+            if len(bucket) >= self.max_tokens:
+                return False
 
-        bucket.append(now)
-        return True
+            bucket.append(now)
+            return True
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -324,7 +325,7 @@ class RateLimitMiddleware:
 
         client_ip = self._get_client_ip(scope)
 
-        if self._is_allowed(client_ip):
+        if await self._is_allowed(client_ip):
             await self.app(scope, receive, send)
             return
 
