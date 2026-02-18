@@ -16,8 +16,8 @@ class TestBuildGraph:
         assert graph is not None
         assert hasattr(graph, "invoke") or hasattr(graph, "ainvoke")
 
-    def test_graph_has_8_nodes(self):
-        """The compiled graph contains exactly 8 user-defined nodes."""
+    def test_graph_has_11_nodes(self):
+        """The compiled graph contains exactly 11 user-defined nodes (v2.1)."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -25,8 +25,9 @@ class TestBuildGraph:
         all_nodes = set(graph.get_graph().nodes)
         user_nodes = all_nodes - {"__start__", "__end__"}
         expected = {
-            "router", "retrieve", "generate", "validate",
-            "respond", "fallback", "greeting", "off_topic",
+            "compliance_gate", "router", "retrieve", "whisper_planner",
+            "generate", "validate", "persona_envelope", "respond",
+            "fallback", "greeting", "off_topic",
         }
         assert user_nodes == expected
 
@@ -336,46 +337,56 @@ class TestNodeConstants:
     """Node name constants prevent silent breakage from string typos."""
 
     def test_constants_exported(self):
-        """All 8 node constants are importable from graph module."""
+        """All 11 node constants are importable from graph module."""
         from src.agent.graph import (
+            NODE_COMPLIANCE_GATE,
             NODE_FALLBACK,
             NODE_GENERATE,
             NODE_GREETING,
             NODE_OFF_TOPIC,
+            NODE_PERSONA,
             NODE_RESPOND,
             NODE_RETRIEVE,
             NODE_ROUTER,
             NODE_VALIDATE,
+            NODE_WHISPER,
         )
 
+        assert NODE_COMPLIANCE_GATE == "compliance_gate"
         assert NODE_ROUTER == "router"
         assert NODE_RETRIEVE == "retrieve"
         assert NODE_GENERATE == "generate"
         assert NODE_VALIDATE == "validate"
+        assert NODE_PERSONA == "persona_envelope"
         assert NODE_RESPOND == "respond"
         assert NODE_FALLBACK == "fallback"
         assert NODE_GREETING == "greeting"
         assert NODE_OFF_TOPIC == "off_topic"
+        assert NODE_WHISPER == "whisper_planner"
 
     def test_graph_nodes_match_constants(self):
         """Graph node names match the defined constants."""
         from src.agent.graph import (
+            NODE_COMPLIANCE_GATE,
             NODE_FALLBACK,
             NODE_GENERATE,
             NODE_GREETING,
             NODE_OFF_TOPIC,
+            NODE_PERSONA,
             NODE_RESPOND,
             NODE_RETRIEVE,
             NODE_ROUTER,
             NODE_VALIDATE,
+            NODE_WHISPER,
             build_graph,
         )
 
         graph = build_graph()
         all_nodes = set(graph.get_graph().nodes) - {"__start__", "__end__"}
         expected = {
-            NODE_ROUTER, NODE_RETRIEVE, NODE_GENERATE, NODE_VALIDATE,
-            NODE_RESPOND, NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
+            NODE_COMPLIANCE_GATE, NODE_ROUTER, NODE_RETRIEVE, NODE_WHISPER,
+            NODE_GENERATE, NODE_VALIDATE, NODE_PERSONA, NODE_RESPOND,
+            NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
         }
         assert all_nodes == expected
 
@@ -437,6 +448,18 @@ class TestExtractNodeMetadata:
         output = {"sources_used": ["restaurants", "entertainment"]}
         meta = _extract_node_metadata("respond", output)
         assert meta["sources"] == ["restaurants", "entertainment"]
+
+    def test_whisper_metadata(self):
+        """Whisper planner node extracts has_plan."""
+        from src.agent.graph import _extract_node_metadata
+
+        output_with_plan = {"whisper_plan": {"next_topic": "dining"}}
+        meta = _extract_node_metadata("whisper_planner", output_with_plan)
+        assert meta["has_plan"] is True
+
+        output_no_plan = {"whisper_plan": None}
+        meta = _extract_node_metadata("whisper_planner", output_no_plan)
+        assert meta["has_plan"] is False
 
     def test_unknown_node_returns_empty(self):
         """Unknown or unhandled nodes return empty dict."""

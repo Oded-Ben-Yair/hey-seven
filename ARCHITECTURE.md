@@ -2,49 +2,58 @@
 
 ## System Overview
 
-Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 8-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
+Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 11-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
 
-The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB.
+The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB. v2 adds a compliance gate (pre-router deterministic guardrails), a Whisper Track Planner (silent background LLM for agent guidance), a persona envelope (SMS truncation layer), 4 specialist agents, SMS/CMS webhooks, and LangFuse observability.
 
 **Design philosophy:** Build for one property, design for N. Every configuration choice (property name, data paths, model name, prompts) is externalized via `pydantic-settings` so adding a second property requires zero code changes.
 
 ```
-Browser (static/index.html)
-    |
-    | POST /chat (SSE: metadata -> token* -> sources -> done)
-    v
+Browser (static/index.html)           Telnyx SMS            Google Sheets CMS
+    |                                    |                        |
+    | POST /chat (SSE)            POST /sms/webhook        POST /cms/webhook
+    v                                    v                        v
 FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + Auth + Logging + ErrorHandler
     |
     | lifespan: build_graph() + ingest data
     v
-Custom 8-node StateGraph (src/agent/graph.py)
+Custom 11-node StateGraph (src/agent/graph.py)
     |
+    |-- compliance_gate (73 regex patterns) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
-    |-- generate -----> Gemini 2.5 Flash (grounded response)
+    |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
+    |-- generate (host_agent) -----> Gemini 2.5 Flash (grounded response)
     |-- validate -----> Gemini 2.5 Flash (adversarial review)
+    |-- persona_envelope -----> SMS truncation (160-char segments)
     |-- respond / fallback / greeting / off_topic -----> END
     |
     v
-Gemini 2.5 Flash               Knowledge Base
-(config-driven)                (data/mohegan_sun.json -> ChromaDB)
+Gemini 2.5 Flash               Knowledge Base              LangFuse
+(config-driven)                (data/mohegan_sun.json       (observability)
+                                -> ChromaDB)
 ```
 
 ---
 
 ## Custom StateGraph
 
-The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 8 nodes with two conditional routing points.
+The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 11 nodes with three conditional routing points.
 
 ```mermaid
 graph LR
-    START((START)) --> router
-    router -->|greeting| greeting --> END1((END))
-    router -->|off_topic / gambling / action| off_topic --> END2((END))
+    START((START)) --> compliance_gate
+    compliance_gate -->|greeting| greeting --> END1((END))
+    compliance_gate -->|guardrail triggered| off_topic --> END2((END))
+    compliance_gate -->|clean| router
+    router -->|greeting| greeting
+    router -->|off_topic / gambling / action| off_topic
     router -->|property_qa / hours / ambiguous| retrieve
-    retrieve --> generate
+    retrieve --> whisper_planner
+    whisper_planner --> generate
     generate --> validate
-    validate -->|PASS| respond --> END3((END))
+    validate -->|PASS| persona_envelope
+    persona_envelope --> respond --> END3((END))
     validate -->|RETRY max 1| generate
     validate -->|FAIL| fallback --> END4((END))
 ```
@@ -52,41 +61,62 @@ graph LR
 <details><summary>ASCII fallback</summary>
 
 ```
-START --> router --+--> greeting ----------------------> END
-                   |
-                   +--> off_topic --------------------> END
-                   |
-                   +--> retrieve --> generate --> validate --+--> respond --> END
-                                       ^                     |
-                                       |                     +--> generate  (retry, max 1)
-                                       +---------------------+
-                                                             +--> fallback --> END
+START --> compliance_gate --+--> greeting ----------------------------------------> END
+                            |
+                            +--> off_topic -------------------------------------> END
+                            |
+                            +--> router --+--> greeting ------------------------> END
+                                          |
+                                          +--> off_topic ----------------------> END
+                                          |
+                                          +--> retrieve --> whisper_planner --> generate --> validate --+--> persona_envelope --> respond --> END
+                                                                                   ^                   |
+                                                                                   |                   +--> generate  (retry, max 1)
+                                                                                   +-------------------+
+                                                                                                       +--> fallback --> END
 ```
 
 </details>
 
-Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a checkpointer (defaults to `MemorySaver` for local development).
+Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a checkpointer (defaults to `MemorySaver` via `get_checkpointer()` in `src/agent/memory.py` for local development; `FirestoreSaver` when `VECTOR_DB=firestore`).
 
 ---
 
 ## Node Descriptions
 
-### 1. router (`src/agent/nodes.py`)
+### 1. compliance_gate (`src/agent/compliance_gate.py`)
+
+**Purpose**: Run all 5 deterministic guardrail layers as a single pre-router node. Zero LLM calls — pure regex classification.
+
+**Input**: `messages` (conversation history).
+**Output**: `query_type` (str or None), `router_confidence` (float).
+
+Priority order (first match wins):
+1. Turn-limit guard: if `messages` exceeds `MAX_MESSAGE_LIMIT` (default 40), forces `off_topic`.
+2. Empty message: routes to `greeting`.
+3. Prompt injection (`audit_input()`): 11 patterns — routes to `off_topic`.
+4. Responsible gaming (`detect_responsible_gaming()`): 31 patterns (17 EN + 8 ES + 3 PT + 3 ZH) — routes to `gambling_advice`.
+5. Age verification (`detect_age_verification()`): 6 patterns — routes to `age_verification`.
+6. BSA/AML (`detect_bsa_aml()`): 14 patterns — routes to `off_topic`.
+7. Patron privacy (`detect_patron_privacy()`): 11 patterns — routes to `patron_privacy`.
+8. All pass: `query_type=None` signals the downstream router to classify via LLM.
+
+All guardrail patterns are defined in `src/agent/guardrails.py` (73 total patterns). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
+
+### 2. router (`src/agent/nodes.py`)
 
 **Purpose**: Classify user intent into one of 7 categories using structured LLM output.
 
 **Input**: `messages` (conversation history).
 **Output**: `query_type` (str), `router_confidence` (float 0-1).
 
-Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `age_verification`, `patron_privacy`, `ambiguous`.
+Categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`. Two additional categories (`age_verification`, `patron_privacy`) are detected by the upstream `compliance_gate` before the router runs.
 
-Pre-LLM guardrails (from `src/agent/guardrails.py`): `audit_input()` runs regex-based prompt injection detection (7 patterns) before any LLM call. Detected injections route directly to `off_topic` without invoking the LLM. `detect_responsible_gaming()` checks 25 patterns (17 English + 5 Spanish + 3 Mandarin) and routes to `gambling_advice` deterministically. `detect_age_verification()` checks 6 patterns for underage-related queries and routes to `age_verification` with the 21+ requirement. `detect_bsa_aml()` checks 11 patterns for money laundering, structuring, and CTR/SAR evasion queries and routes to `off_topic` — casinos are Money Services Businesses under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime. `detect_patron_privacy()` checks 7 patterns for queries about other guests' presence, identity, or membership status — casinos must never disclose whether a specific person is at the property (privacy obligation and liability safeguard against stalking, celebrity harassment, and domestic disputes).
+Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing via `ainvoke()` (fully async). On LLM error, defaults to `property_qa` with confidence 0.5.
 
-Message-limit guard: if `messages` exceeds `MAX_MESSAGE_LIMIT` (default 40, configurable), forces `off_topic` to end the conversation. The limit counts all messages (human + AI), not just human turns. Uses `llm.with_structured_output(RouterOutput)` for reliable JSON parsing via `ainvoke()` (fully async). On LLM error, defaults to `property_qa` with confidence 0.5.
+All 11 node functions are `async def`, using `ainvoke()` for LLM calls. This ensures proper async execution throughout the LangGraph pipeline without blocking the event loop. The `retrieve` node wraps sync ChromaDB calls in `asyncio.to_thread()` since ChromaDB's LangChain wrapper only offers synchronous methods — the production path (Vertex AI Vector Search) has native async APIs.
 
-All 8 node functions are `async def`, using `ainvoke()` for LLM calls. This ensures proper async execution throughout the LangGraph pipeline without blocking the event loop. The `retrieve` node wraps sync ChromaDB calls in `asyncio.to_thread()` since ChromaDB's LangChain wrapper only offers synchronous methods — the production path (Vertex AI Vector Search) has native async APIs.
-
-### 2. retrieve (`src/agent/nodes.py`)
+### 3. retrieve (`src/agent/nodes.py`)
 
 **Purpose**: Search the ChromaDB knowledge base for documents relevant to the user query.
 
@@ -103,11 +133,26 @@ The ChromaDB collection uses **cosine similarity** (`hnsw:space=cosine`) instead
 
 Results are filtered by `RAG_MIN_RELEVANCE_SCORE` (default 0.3) — chunks below this cosine similarity threshold are discarded before being passed to the generate node.
 
-### 3. generate (`src/agent/nodes.py`)
+### 4. whisper_planner (`src/agent/whisper_planner.py`)
 
-**Purpose**: Produce a concierge response grounded in retrieved context.
+**Purpose**: Silent background LLM that guides the speaking agent without generating guest-facing text.
 
-**Input**: `messages`, `retrieved_context`, `current_time`, `retry_count`, `retry_feedback`.
+**Input**: `messages` (conversation history, last 20), `extracted_fields` (guest profile).
+**Output**: `whisper_plan` (dict from `WhisperPlan.model_dump()` or `None`).
+
+Analyzes conversation context and guest profile completeness, then produces a structured `WhisperPlan` with:
+- `next_topic`: which profiling topic to explore naturally (e.g., `dining`, `party_size`, `offer_ready`)
+- `extraction_targets`: specific data points to extract (e.g., `kids_ages`, `dietary_restrictions`)
+- `offer_readiness`: float 0.0-1.0 indicating how ready the guest is for a personalized offer
+- `conversation_note`: brief tactical note for the speaking agent
+
+**Fail-silent contract**: Any LLM failure returns `{"whisper_plan": None}` — the speaking agent proceeds without guidance. Never crashes the pipeline. Per-turn only (reset by `_initial_state()`).
+
+### 5. generate (`src/agent/nodes.py` / `src/agent/agents/host_agent.py`)
+
+**Purpose**: Produce a concierge response grounded in retrieved context. In v2, the `generate` node name is preserved for SSE streaming compatibility, but execution is delegated to `host_agent` (from `src/agent/agents/host_agent.py`) which receives whisper plan guidance from the upstream `whisper_planner` node.
+
+**Input**: `messages`, `retrieved_context`, `current_time`, `retry_count`, `retry_feedback`, `whisper_plan`.
 **Output**: `messages` (appends `AIMessage`), optionally `skip_validation`.
 
 Behavior:
@@ -118,7 +163,7 @@ Behavior:
 - **Message windowing**: Only the last `MAX_HISTORY_MESSAGES` (default 20) human and AI messages are sent to the LLM, bounding context size for long conversations while preserving recent context.
 - On LLM error, returns a static error message and sets `skip_validation=True`.
 
-### 4. validate (`src/agent/nodes.py`)
+### 6. validate (`src/agent/nodes.py`)
 
 **Purpose**: Adversarial review of the generated response against 6 criteria.
 
@@ -135,14 +180,23 @@ Behavior:
 - If `retry_count >= 1`, returns FAIL (max 1 retry).
 - On validation LLM error: **degraded-pass on first attempt** (retry_count == 0) — if `generate_node` produced a response successfully but the validation LLM is unavailable, the generated response is passed through with a warning log. On retry attempts (retry_count > 0), **fail-closed** (returns FAIL, routes to fallback). This balances availability (generate already succeeded) with safety (retries indicate prior issues).
 
-### 5. respond (`src/agent/nodes.py`)
+### 7. persona_envelope (`src/agent/persona.py`)
+
+**Purpose**: Apply persona formatting between validation and response. For web mode (`PERSONA_MAX_CHARS=0`): pass through unchanged. For SMS mode (`PERSONA_MAX_CHARS=160`): truncate the last AI message to fit a single SMS segment with ellipsis.
+
+**Input**: `messages` (last AI message).
+**Output**: Empty dict (passthrough) or dict with truncated `messages`.
+
+This node sits between `validate` (PASS) and `respond`, enabling channel-specific formatting without modifying the core generation pipeline.
+
+### 8. respond (`src/agent/nodes.py`)
 
 **Purpose**: Extract source categories from retrieved context and prepare final response.
 
 **Input**: `retrieved_context`.
 **Output**: `sources_used` (deduplicated list of category strings), `retry_feedback` cleared to `None`.
 
-### 6. fallback (`src/agent/nodes.py`)
+### 9. fallback (`src/agent/nodes.py`)
 
 **Purpose**: Safe fallback when validation fails after retry.
 
@@ -151,14 +205,14 @@ Behavior:
 
 Logs the validation failure reason for observability.
 
-### 7. greeting (`src/agent/nodes.py`)
+### 10. greeting (`src/agent/nodes.py`)
 
 **Purpose**: Return a template welcome message listing available knowledge categories.
 
 **Input**: None (uses `PROPERTY_NAME` from settings).
 **Output**: `messages` (appends welcome AIMessage), `sources_used` cleared.
 
-### 8. off_topic (`src/agent/nodes.py`)
+### 11. off_topic (`src/agent/nodes.py`)
 
 **Purpose**: Handle off-topic queries, gambling advice requests, and action requests.
 
@@ -176,29 +230,45 @@ Five sub-cases based on `query_type`:
 
 ## State Schema
 
-`PropertyQAState` is a `TypedDict` with 10 fields (`src/agent/state.py:12`):
+`PropertyQAState` is a `TypedDict` with 15 fields (`src/agent/state.py:30`). `CasinoHostState` is a backward-compatible alias for v2 code that prefers the domain-specific name.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `messages` | `Annotated[list, add_messages]` | Conversation history (LangGraph message reducer) |
 | `query_type` | `str \| None` | Router classification (9 categories) |
 | `router_confidence` | `float` | Router confidence score (0.0-1.0) |
-| `retrieved_context` | `list[dict]` | Retrieved documents: `{content, metadata, score}` |
+| `retrieved_context` | `list[RetrievedChunk]` | Retrieved documents: `{content, metadata, score}` |
 | `validation_result` | `str \| None` | Validation outcome: PASS, FAIL, or RETRY |
 | `retry_count` | `int` | Current retry count (max 1 before fallback) |
+| `skip_validation` | `bool` | When `True`, validate node auto-passes (set by generate on empty context or LLM error) |
 | `retry_feedback` | `str \| None` | Reason validation failed |
 | `current_time` | `str` | UTC timestamp injected at graph entry |
 | `sources_used` | `list[str]` | Knowledge-base categories cited in the response |
-| `skip_validation` | `bool` | When `True`, validate node auto-passes (set by generate on empty context or LLM error) |
+| `active_agent` | `str \| None` | v2: which specialist agent handles the query (host/dining/entertainment/comp) |
+| `extracted_fields` | `dict[str, Any]` | v2: structured fields extracted from the guest message |
+| `whisper_plan` | `str \| None` | v2: background planner output for agent guidance |
+| `delay_seconds` | `float` | v2: response delay for natural pacing (SMS/chat) |
+| `sms_segments` | `list[str]` | v2: segmented SMS responses (160-char compliance) |
 
 Two Pydantic models for structured LLM output:
 
-- **`RouterOutput`** (`state.py:25`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `responsible_gaming`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails before the LLM router runs, expanding the effective routing space to 9 categories.
-- **`ValidationResult`** (`state.py:36`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
+- **`RouterOutput`** (`state.py:73`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails in the `compliance_gate` before the LLM router runs, expanding the effective routing space to 9 categories.
+- **`ValidationResult`** (`state.py:87`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
+- **`WhisperPlan`** (`whisper_planner.py:43`): `next_topic` (`Literal` constrained to 10 profiling topics) + `extraction_targets` (list[str]) + `offer_readiness` (float 0.0-1.0) + `conversation_note` (str). Used exclusively by the `whisper_planner` node for silent agent guidance.
 
 ---
 
 ## Routing Logic
+
+### route_from_compliance (`src/agent/graph.py`)
+
+Called after the `compliance_gate` node. Routes based on whether deterministic guardrails triggered:
+
+| Condition | Next Node |
+|-----------|-----------|
+| `query_type is None` (all guardrails passed) | `router` (LLM classification needed) |
+| `query_type == "greeting"` | `greeting` |
+| All other guardrail-triggered types | `off_topic` |
 
 ### route_from_router (`src/agent/nodes.py`)
 
@@ -211,13 +281,13 @@ Called after the `router` node. Returns the next node name:
 | `router_confidence < 0.3` | `off_topic` (low-confidence catch-all) |
 | Everything else (`property_qa`, `hours_schedule`, `ambiguous`) | `retrieve` |
 
-### route_after_validate (`src/agent/nodes.py`)
+### _route_after_validate_v2 (`src/agent/graph.py`)
 
-Called after the `validate` node. Returns the next node name:
+Called after the `validate` node. v2 routes PASS to `persona_envelope` instead of directly to `respond`:
 
 | Condition | Next Node |
 |-----------|-----------|
-| `validation_result == "PASS"` | `respond` |
+| `validation_result == "PASS"` | `persona_envelope` |
 | `validation_result == "RETRY"` | `generate` (loops back for re-generation) |
 | `validation_result == "FAIL"` | `fallback` |
 
@@ -225,7 +295,7 @@ Called after the `validate` node. Returns the next node name:
 
 ## Prompt System
 
-Three `string.Template` prompts in `src/agent/prompts.py`:
+Four `string.Template` prompts in `src/agent/prompts.py`:
 
 ### CONCIERGE_SYSTEM_PROMPT
 
@@ -258,25 +328,39 @@ Variables: `$user_question`, `$retrieved_context`, `$generated_response`.
 
 Adversarial review prompt checking 6 criteria: grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming. Includes PASS and FAIL examples for calibration. Returns `{"status": "<PASS|FAIL|RETRY>", "reason": "<explanation>"}`.
 
+### WHISPER_PLANNER_PROMPT
+
+Variables: `$conversation_history`, `$guest_profile`, `$profile_completeness`.
+
+Used by the `whisper_planner` node to produce structured guidance for the speaking agent. Instructs the planner to identify the next profiling topic, list extraction targets, assess offer readiness, and write a tactical note. Rules prevent re-asking known fields and gate offer readiness behind profile completeness thresholds.
+
 ---
 
 ## Guardrails
 
-Four layers: three deterministic (pre-LLM, in `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). The deterministic guardrails are in a dedicated module to separate safety concerns from graph node logic.
+Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **73 regex patterns** across all deterministic guardrails.
 
 ### Deterministic: audit_input (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based prompt injection detection. Runs before the router LLM call. Checks 7 patterns (e.g., "ignore previous instructions", "system:", "DAN mode", "pretend you are"). Detected injections are logged and routed directly to `off_topic` without invoking any LLM.
+Pre-LLM regex-based prompt injection detection. Checks **11 patterns** (e.g., "ignore previous instructions", "system:", "DAN mode", "pretend you are", base64/encoding tricks, unicode homoglyphs, multi-line injection framing, jailbreak prompts). Detected injections are logged and routed directly to `off_topic` without invoking any LLM.
 
 ### Deterministic: detect_responsible_gaming (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based responsible gaming safety net. Runs after `audit_input` but before the router LLM call. Checks 25 patterns across English (17), Spanish (5), and Mandarin (3), including: "gambling problem", "addicted to gambling", "self-exclusion", "can't stop gambling", "limit my gambling", "take a break from gambling", "spending too much at the casino", "family says I gamble", "cooling-off period", "want to ban myself", and Spanish equivalents ("problema de juego", "adicción al juego", "juego compulsivo"). Spanish patterns serve the diverse US casino clientele. Mandarin patterns ("赌博成瘾", "戒赌", "赌瘾") serve CT casinos' significant Asian clientele. Detected queries are routed directly to `gambling_advice` (which provides NCPG 1-800-MY-RESET, CT Council 1-888-789-7777, and CT DCP self-exclusion resources) without invoking any LLM. This ensures responsible gaming helplines are always provided deterministically, regardless of LLM routing accuracy.
+Pre-LLM regex-based responsible gaming safety net. Checks **31 patterns** across English (17), Spanish (8), Portuguese (3), and Mandarin (3), including: "gambling problem", "addicted to gambling", "self-exclusion", "can't stop gambling", "limit my gambling", "take a break from gambling", "spending too much at the casino", "family says I gamble", "cooling-off period", "want to ban myself", and Spanish equivalents ("problema de juego", "adiccion al juego", "juego compulsivo", "auto-exclusion", "limite de juego", "perdi todo en el casino"). Portuguese patterns ("problema com jogo", "vicio em jogo", "nao consigo parar de jogar") serve CT's diverse Brazilian/Portuguese community. Mandarin patterns ("赌博成瘾", "戒赌", "赌瘾") serve CT casinos' significant Asian clientele. Detected queries are routed directly to `gambling_advice` (which provides NCPG 1-800-MY-RESET, CT Council 1-888-789-7777, and CT DCP self-exclusion resources) without invoking any LLM.
 
 Responsible gaming helplines are defined as a `RESPONSIBLE_GAMING_HELPLINES` constant in `src/agent/prompts.py` (DRY — used in both the system prompt and the `off_topic_node` response). For multi-property deployment across states, these would be loaded from the property data file.
 
 ### Deterministic: detect_age_verification (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based age verification guardrail. Runs after `detect_responsible_gaming` but before the router LLM call. Checks 6 patterns for underage-related queries (e.g., "my kid wants to play", "minimum gambling age", "can underage guests enter", "how old do you have to be to gamble", "minors allowed"). Connecticut law requires casino guests to be 21+ for gaming. Detected queries route to `age_verification` which provides a structured response listing what minors can and cannot do at the property, the 21+ requirement, and the ID requirement. This ensures the legal age requirement is always communicated deterministically, regardless of LLM routing.
+Pre-LLM regex-based age verification guardrail. Checks **6 patterns** for underage-related queries (e.g., "my kid wants to play", "minimum gambling age", "can underage guests enter", "how old do you have to be to gamble", "minors allowed"). Connecticut law requires casino guests to be 21+ for gaming. Detected queries route to `age_verification` which provides a structured response listing what minors can and cannot do at the property, the 21+ requirement, and the ID requirement.
+
+### Deterministic: detect_bsa_aml (`src/agent/guardrails.py`)
+
+Pre-LLM regex-based BSA/AML detection. Checks **14 patterns** for money laundering, structuring, and CTR/SAR evasion queries — including chip walking and multiple buy-in structuring. Casinos are MSBs under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
+
+### Deterministic: detect_patron_privacy (`src/agent/guardrails.py`)
+
+Pre-LLM regex-based patron privacy guardrail. Checks **11 patterns** for queries about other guests' presence, identity, or membership status — including social media surveillance, table/machine surveillance, and stalking/tracking patterns. Casinos must never disclose whether a specific person is at the property (privacy obligation and liability safeguard).
 
 ### Structural: property_id metadata filter (`src/rag/pipeline.py`)
 
@@ -338,20 +422,23 @@ Metadata on every chunk: `category`, `item_name`, `source`, `property_id`, `last
 
 ## SSE Streaming
 
-`chat_stream()` in `src/agent/graph.py:147` uses `graph.astream_events(version="v2")`.
+`chat_stream()` in `src/agent/graph.py` uses `graph.astream_events(version="v2")`.
 
 ### Event Types
 
 | Event | When | Payload |
 |-------|------|---------|
 | `metadata` | First event | `{"thread_id": "uuid"}` |
+| `graph_node` | Node start/complete lifecycle | `{"node": "router", "status": "start\|complete", "duration_ms": 42, "metadata": {...}}` |
 | `token` | During `generate` node | `{"content": "..."}` (incremental text chunk) |
-| `replace` | After `greeting`, `off_topic`, or `fallback` node | `{"content": "..."}` (full response) |
+| `replace` | After `greeting`, `off_topic`, `fallback`, `compliance_gate`, `persona_envelope`, or `whisper_planner` node | `{"content": "..."}` (full response) |
 | `sources` | After stream completes (if any) | `{"sources": ["restaurants", ...]}` |
 | `done` | Always last | `{"done": true}` |
 | `error` | On exception | `{"error": "message"}` |
 
-Token streaming uses `on_chat_model_stream` events filtered to the `generate` node only. Non-streaming nodes (`greeting`, `off_topic`, `fallback`) emit `replace` events with the full response via `on_chain_end`.
+Token streaming uses `on_chat_model_stream` events filtered to the `generate` node only. Non-streaming nodes (`greeting`, `off_topic`, `fallback`, `compliance_gate`, `persona_envelope`, `whisper_planner`) emit `replace` events with the full response via `on_chain_end`.
+
+The `graph_node` event provides observability for the frontend's graph trace panel: each node emits a `start` event when it begins and a `complete` event with `duration_ms` and per-node metadata (e.g., `query_type` from router, `doc_count` from retrieve, `result` from validate).
 
 The `/chat` endpoint wraps `chat_stream()` in an `EventSourceResponse` with a configurable timeout (default 60s via `SSE_TIMEOUT_SECONDS`).
 
@@ -382,9 +469,41 @@ Returns 200 when healthy, 503 when degraded (so Cloud Run / k8s don't route traf
   "status": "healthy | degraded",
   "version": "0.1.0",
   "agent_ready": true,
-  "property_loaded": true
+  "property_loaded": true,
+  "observability_enabled": false
 }
 ```
+
+The `observability_enabled` field indicates whether LangFuse tracing is active (determined by `is_observability_enabled()` from `src/observability/langfuse_client.py`).
+
+### GET /graph
+
+Returns the StateGraph structure for frontend visualization.
+
+```json
+{
+  "nodes": ["compliance_gate", "router", "retrieve", "whisper_planner", "generate", "validate", "persona_envelope", "respond", "fallback", "greeting", "off_topic"],
+  "edges": [
+    {"from": "__start__", "to": "compliance_gate"},
+    {"from": "compliance_gate", "to": "router", "condition": "clean (no guardrail match)"},
+    {"from": "retrieve", "to": "whisper_planner"},
+    {"from": "validate", "to": "persona_envelope", "condition": "PASS"},
+    ...
+  ]
+}
+```
+
+### POST /sms/webhook
+
+Telnyx inbound SMS webhook handler. Processes `message.received` events only. Parses the Telnyx payload and routes to `handle_inbound_sms()` (from `src/sms/webhook.py`). Keyword responses (STOP, HELP, etc.) are handled immediately; regular messages return a receipt for full agent routing (Phase 2.4).
+
+### POST /cms/webhook
+
+Google Sheets CMS content update webhook. Verifies HMAC-SHA256 signature against `CMS_WEBHOOK_SECRET`, then delegates to `handle_cms_webhook()` (from `src/cms/webhook.py`). Returns 403 on signature mismatch.
+
+### POST /feedback
+
+Accepts user feedback on agent responses. Validates UUID `thread_id` and rating (1-5). Comments are PII-redacted via `src/api/pii_redaction.py` before logging. In production, feedback is forwarded to LangFuse as a score.
 
 ### GET /property
 
@@ -424,8 +543,8 @@ Six pure ASGI middleware classes in `src/api/middleware.py` (no `BaseHTTPMiddlew
 
 | Layer | Scope | LLM | Command |
 |-------|-------|-----|---------|
-| Unit | Individual functions, state, config, guardrails, middleware | Mocked | `make test-ci` |
-| Integration | Full graph flow, API endpoints, RAG pipeline | Mocked LLM, real ChromaDB | `make test-ci` |
+| Unit | Individual functions, state, config, guardrails, middleware, agents, SMS, CMS, observability | Mocked | `make test-ci` |
+| Integration | Full graph flow (v2 11-node), API endpoints, RAG pipeline, SMS/CMS webhooks | Mocked LLM, real ChromaDB | `make test-ci` |
 | Deterministic Eval | Multi-turn conversations, answer quality, guardrails | VCR fixtures (`_FixtureReplayLLM`) — no API key needed | `make test-ci` |
 | Live Eval | Answer quality with real LLM, hallucination detection | Real Gemini (temp=0) | `make test-eval` |
 
@@ -462,7 +581,7 @@ The `_FixtureReplayLLM` class in `tests/test_eval_deterministic.py` replays pre-
 | Time awareness | `current_time` injected into state at entry | Must be added to system prompt manually |
 | Domain guardrails | Dedicated off_topic, gambling_advice, action_request, age_verification, patron_privacy paths | Single system prompt, no structured routing |
 | Observability | Each node is individually traceable in LangSmith | Tool calls are traceable but routing is opaque |
-| Code complexity | More code (8 nodes, 2 routing functions) | ~10 lines to set up |
+| Code complexity | More code (11 nodes, 3 routing functions) | ~10 lines to set up |
 | Flexibility | Full control over retry logic, validation criteria | Simpler but less control |
 
 ### Degraded-Pass Validation Strategy
@@ -499,11 +618,13 @@ The security headers middleware uses ``script-src 'self' 'unsafe-inline'`` and `
 | Component | Demo | Production |
 |-----------|------|------------|
 | Vector DB | ChromaDB (in-process, persistent) | Vertex AI Vector Search |
-| Checkpointing | MemorySaver (lost on restart) | FirestoreSaver |
+| Checkpointing | MemorySaver (lost on restart) | FirestoreSaver (`VECTOR_DB=firestore`) |
 | LLM auth | API key in `.env` | Vertex AI IAM + GCP Secret Manager |
 | Deployment | Docker Compose (local) | Cloud Run |
 | Rate limiting | In-memory per-IP dict (single-instance only; reset on restart) | Redis-backed distributed limiter (shared state across instances) |
-| Monitoring | Structured logging | LangSmith + Cloud Monitoring |
+| SMS | Disabled (`SMS_ENABLED=false`) | Telnyx integration with TCPA compliance |
+| CMS | Static JSON data file | Google Sheets CMS with webhook updates |
+| Monitoring | Structured logging | LangFuse + LangSmith + Cloud Monitoring |
 
 ---
 
@@ -524,7 +645,7 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `MODEL_TIMEOUT` | `30` | LLM call timeout (seconds) |
 | `MODEL_MAX_RETRIES` | `2` | LLM retry count on failure |
 | `MODEL_MAX_OUTPUT_TOKENS` | `2048` | Max response tokens |
-| `EMBEDDING_MODEL` | `models/text-embedding-004` | Embedding model (768 dim) |
+| `EMBEDDING_MODEL` | `gemini-embedding-001` | Embedding model (768 dim) |
 | `CHROMA_PERSIST_DIR` | `data/chroma` | ChromaDB persistence directory |
 | `RAG_TOP_K` | `5` | Number of retrieval results |
 | `RAG_CHUNK_SIZE` | `800` | Text chunk size (characters) |
@@ -540,6 +661,23 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `CB_FAILURE_THRESHOLD` | `5` | Consecutive LLM failures before circuit opens |
 | `CB_COOLDOWN_SECONDS` | `60` | Seconds before circuit transitions to half-open |
 | `GRAPH_RECURSION_LIMIT` | `10` | LangGraph recursion limit (bounds validate→retry loop) |
+| `VECTOR_DB` | `chroma` | Vector DB backend: `chroma` (local dev) or `firestore` (GCP prod) |
+| `FIRESTORE_PROJECT` | (empty) | GCP project ID for Firestore checkpointer |
+| `FIRESTORE_COLLECTION` | `knowledge_base` | Firestore collection name |
+| `CASINO_ID` | `mohegan_sun` | Multi-tenant casino identifier |
+| `CMS_WEBHOOK_SECRET` | (empty) | HMAC-SHA256 secret for Google Sheets webhook verification |
+| `GOOGLE_SHEETS_ID` | (empty) | Google Sheets spreadsheet ID for CMS content |
+| `SMS_ENABLED` | `false` | Enable SMS channel support |
+| `PERSONA_MAX_CHARS` | `0` | SMS persona truncation (0=unlimited, 160=SMS segment) |
+| `TELNYX_API_KEY` | (empty) | Telnyx API key for SMS (`SecretStr`) |
+| `TELNYX_MESSAGING_PROFILE_ID` | (empty) | Telnyx messaging profile ID |
+| `TELNYX_PUBLIC_KEY` | (empty) | Telnyx webhook signature verification key |
+| `QUIET_HOURS_START` | `21` | SMS quiet hours start (9 PM local) |
+| `QUIET_HOURS_END` | `8` | SMS quiet hours end (8 AM local) |
+| `SMS_FROM_NUMBER` | (empty) | SMS sender number (E.164 format) |
+| `LANGFUSE_PUBLIC_KEY` | (empty) | LangFuse observability public key |
+| `LANGFUSE_SECRET_KEY` | (empty) | LangFuse observability secret key (`SecretStr`) |
+| `LANGFUSE_HOST` | `https://cloud.langfuse.com` | LangFuse server URL |
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `ENVIRONMENT` | `development` | Environment name |
 | `VERSION` | `0.1.0` | Application version |
@@ -582,11 +720,13 @@ Estimated per-request cost using Gemini 2.5 Flash pricing (as of Feb 2026):
 
 | Operation | Input | Output | Est. Cost |
 |-----------|-------|--------|-----------|
+| Compliance gate (regex) | — | — | $0.000000 |
 | Router (structured output) | ~200 tokens | ~30 tokens | $0.000075 |
+| Whisper planner (structured output) | ~800 tokens | ~60 tokens | $0.000156 |
 | Generate (RAG-grounded) | ~2,000 tokens (prompt + context) | ~300 tokens | $0.000825 |
 | Validate (adversarial review) | ~1,500 tokens | ~30 tokens | $0.000465 |
 | Embedding (query) | ~20 tokens | — | $0.000001 |
-| **Total per request** | | | **~$0.0014** |
+| **Total per request** | | | **~$0.0015** |
 
 **Pricing basis**: Gemini 2.5 Flash — $0.15/1M input tokens, $0.60/1M output tokens. Validation retry adds one extra generate + validate cycle (~$0.0013).
 
@@ -608,16 +748,18 @@ Expected per-request latency breakdown (non-cached, single property):
 
 | Phase | P50 | P95 | Notes |
 |-------|-----|-----|-------|
-| Guardrails (audit + responsible gaming) | <1ms | <1ms | Pure regex, no I/O |
+| Compliance gate (5 guardrail layers) | <1ms | <1ms | Pure regex, no I/O |
 | Router LLM (structured output) | ~200ms | ~500ms | Gemini 2.5 Flash, short prompt |
 | Retrieval (ChromaDB) | ~10ms | ~30ms | Local vector search, 5 results |
+| Whisper planner LLM | ~300ms | ~600ms | Background guidance, structured output |
 | Generate LLM (RAG-grounded) | ~800ms | ~1,500ms | ~2K token prompt, streaming first token ~200ms |
 | Validate LLM (adversarial review) | ~300ms | ~600ms | Short prompt, structured output |
-| **Total (happy path)** | **~1.3s** | **~2.6s** | Router + retrieve + generate + validate |
-| **Total (with retry)** | **~2.4s** | **~4.7s** | Adds one generate + validate cycle |
-| **Total (SSE first token)** | **~1.0s** | **~2.0s** | Router + retrieve + generate first token |
+| Persona envelope | <1ms | <1ms | String truncation (SMS) or passthrough (web) |
+| **Total (happy path)** | **~1.6s** | **~3.2s** | Compliance + router + retrieve + whisper + generate + validate + persona |
+| **Total (with retry)** | **~2.7s** | **~5.3s** | Adds one generate + validate cycle |
+| **Total (SSE first token)** | **~1.3s** | **~2.6s** | Compliance + router + retrieve + whisper + generate first token |
 
-Deterministic paths (greeting, off_topic, gambling_advice) skip retrieval and generation — P50 <5ms.
+Deterministic paths (greeting, off_topic, gambling_advice) intercepted at `compliance_gate` skip all LLM calls — P50 <1ms.
 
 *Estimates based on Gemini 2.5 Flash benchmarks (Google AI Studio, Feb 2026) and local ChromaDB profiling. Production latency will vary with network conditions and Vertex AI Vector Search cold starts.*
 
@@ -645,13 +787,29 @@ The following features from the initial architecture specification (`assignment/
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 7 patterns, responsible gaming 25 patterns EN+ES+ZH, age verification 6 patterns, BSA/AML 10 patterns, patron privacy 7 patterns) | ~238 |
-| `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~87 |
-| `nodes.py` | 8 async graph nodes + 2 routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~580 |
-| `graph.py` | StateGraph compilation + node name constants + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper | ~285 |
-| `state.py` | TypedDict state schema (`PropertyQAState`, `RetrievedChunk`) + Pydantic structured output models | ~71 |
-| `prompts.py` | 3 prompt templates + helpline constant | ~161 |
-| `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~188 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 11 patterns, responsible gaming 31 patterns EN+ES+PT+ZH, age verification 6 patterns, BSA/AML 14 patterns, patron privacy 11 patterns — 73 total) | ~262 |
+| `compliance_gate.py` | Dedicated compliance node — runs all 5 guardrail layers as single pre-router node (zero LLM calls) | ~99 |
+| `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~179 |
+| `nodes.py` | 8 async graph nodes (router, retrieve, generate, validate, respond, fallback, greeting, off_topic) + routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~686 |
+| `graph.py` | 11-node StateGraph compilation + node name constants + 3 routing functions + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper, graph trace metadata extraction | ~428 |
+| `state.py` | TypedDict state schema (`PropertyQAState` / `CasinoHostState`, `RetrievedChunk`) + Pydantic structured output models (15 fields) | ~94 |
+| `prompts.py` | 4 prompt templates (concierge, router, validation, whisper planner) + helpline constant | ~193 |
+| `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~186 |
+| `agents/` | 4 specialist agents (host, dining, entertainment, comp) + registry | ~681 |
+| `persona.py` | SMS/web persona envelope — truncation layer for 160-char SMS segments | ~49 |
+| `whisper_planner.py` | Whisper Track Planner — silent background LLM for agent guidance (fail-silent contract) | ~198 |
+| `memory.py` | Checkpointer factory — `MemorySaver` (dev) / `FirestoreSaver` (prod via `VECTOR_DB` config) | ~49 |
+
+#### Additional v2 Modules
+
+| Package | Modules | Responsibility | Total Lines |
+|---------|---------|---------------|-------------|
+| `src/sms/` | `compliance.py`, `telnyx_client.py`, `webhook.py` | SMS channel: TCPA compliance, Telnyx integration, inbound webhook handler | ~1,021 |
+| `src/cms/` | `sheets_client.py`, `validation.py`, `webhook.py` | CMS: Google Sheets client, content validation, webhook handler | ~490 |
+| `src/casino/` | `config.py`, `feature_flags.py` | Casino configuration, multi-property feature flags | ~408 |
+| `src/data/` | `guest_profile.py`, `models.py` | Guest profile data model, domain data models | ~802 |
+| `src/observability/` | `ab_testing.py`, `evaluation.py`, `langfuse_client.py`, `traces.py` | LangFuse integration, A/B testing, evaluation framework, distributed tracing | ~857 |
+| `src/api/` | `pii_redaction.py` | PII redaction for feedback comments | ~136 |
 
 All deferred features have clear production paths documented in the Trade-offs section above.
 

@@ -55,10 +55,35 @@ class Settings(BaseSettings):
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
 
+    # --- Vector DB ---
+    VECTOR_DB: str = "chroma"  # "chroma" (local dev) or "firestore" (GCP prod)
+    FIRESTORE_PROJECT: str = ""  # GCP project ID for Firestore
+    FIRESTORE_COLLECTION: str = "knowledge_base"  # Firestore collection name
+
+    # --- Multi-tenant ---
+    CASINO_ID: str = "mohegan_sun"  # Multi-tenant casino identifier
+
+    # --- CMS ---
+    CMS_WEBHOOK_SECRET: str = ""  # HMAC-SHA256 secret for Google Sheets webhook verification
+    GOOGLE_SHEETS_ID: str = ""  # Default Google Sheets spreadsheet ID for CMS content
+
+    # --- SMS ---
+    SMS_ENABLED: bool = False
+    PERSONA_MAX_CHARS: int = 0  # 0 = unlimited, 160 = SMS segment limit
+    TELNYX_API_KEY: SecretStr = SecretStr("")
+    TELNYX_MESSAGING_PROFILE_ID: str = ""
+    TELNYX_PUBLIC_KEY: str = ""  # For webhook signature verification
+    QUIET_HOURS_START: int = 21  # 9 PM local time
+    QUIET_HOURS_END: int = 8  # 8 AM local time
+    SMS_FROM_NUMBER: str = ""  # E.164 format (e.g. +18605551234)
+
     # --- Observability ---
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
     VERSION: str = "0.1.0"
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: SecretStr = SecretStr("")
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
 
     model_config = {"env_prefix": "", "case_sensitive": True}
 

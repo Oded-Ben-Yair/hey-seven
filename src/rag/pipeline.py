@@ -420,15 +420,36 @@ def get_retriever(persist_dir: str | None = None) -> CasinoKnowledgeRetriever:
     Uses ``@lru_cache`` for consistency with other singletons in the codebase
     (``get_settings``, ``_get_llm``, ``_get_circuit_breaker``, ``get_embeddings``).
 
+    When ``VECTOR_DB=firestore``, returns a ``FirestoreRetriever`` (same
+    interface shape).  Otherwise falls back to ChromaDB (local dev default).
+
     Initialized during FastAPI lifespan (before requests arrive).
 
     Args:
-        persist_dir: ChromaDB persistence directory.
+        persist_dir: ChromaDB persistence directory (ignored for Firestore).
 
     Returns:
-        The CasinoKnowledgeRetriever instance.
+        A retriever with ``retrieve()`` and ``retrieve_with_scores()`` methods.
     """
     settings = get_settings()
+
+    if settings.VECTOR_DB == "firestore":
+        try:
+            from src.rag.firestore_retriever import FirestoreRetriever
+
+            retriever = FirestoreRetriever(
+                project=settings.FIRESTORE_PROJECT,
+                collection=settings.FIRESTORE_COLLECTION,
+                embeddings=get_embeddings(),
+            )
+            logger.info("Using Firestore retriever (project=%s)", settings.FIRESTORE_PROJECT)
+            return retriever  # type: ignore[return-value]
+        except Exception:
+            logger.warning(
+                "Failed to create Firestore retriever. Falling back to ChromaDB.",
+                exc_info=True,
+            )
+
     chroma_dir = persist_dir or settings.CHROMA_PERSIST_DIR
 
     try:

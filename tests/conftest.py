@@ -54,6 +54,41 @@ def _clear_singleton_caches():
     except ImportError:
         pass
 
+    try:
+        from src.agent.memory import get_checkpointer
+
+        get_checkpointer.cache_clear()
+    except ImportError:
+        pass
+
+    try:
+        from src.data.guest_profile import clear_memory_store
+
+        clear_memory_store()
+    except ImportError:
+        pass
+
+    try:
+        from src.casino.config import clear_config_cache
+
+        clear_config_cache()
+    except ImportError:
+        pass
+
+    try:
+        from src.cms.webhook import _content_hashes
+
+        _content_hashes.clear()
+    except ImportError:
+        pass
+
+    try:
+        from src.observability.langfuse_client import _get_langfuse_client
+
+        _get_langfuse_client.cache_clear()
+    except ImportError:
+        pass
+
 
 @pytest.fixture
 def test_property_data():

@@ -34,6 +34,9 @@ ENV PYTHONUNBUFFERED=1 \
     CHROMA_PERSIST_DIR=/app/data/chroma \
     WEB_CONCURRENCY=1
 
+# Cloud Run startup CPU boost: use --cpu-boost in deploy command
+# to get full CPU allocation during container startup (cold start optimization)
+
 EXPOSE 8080
 
 # Switch to non-root user

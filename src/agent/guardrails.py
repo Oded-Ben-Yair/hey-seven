@@ -37,6 +37,14 @@ _INJECTION_PATTERNS = [
     # and casino-domain phrases like "act as a guide", "act as a VIP", "act as a
     # member" which are legitimate guest context.
     re.compile(r"act\s+as\s+(?:if\s+)?(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\s+(?!guide\b|concierge\b|host\b|member\b|vip\b|guest\b|player\b|high\s+roller\b)", re.I),
+    # Base64/encoding tricks
+    re.compile(r"\b(?:base64|decode|encode)\s*[\(:]", re.I),
+    # Unicode homoglyph/obfuscation
+    re.compile(r"[\u200b-\u200f\u2028-\u202f\ufeff]", re.I),  # zero-width chars
+    # Multi-line injection attempts
+    re.compile(r"---\s*(?:system|admin|root|override)", re.I),
+    # Jailbreak prompt framing
+    re.compile(r"\bjailbreak\b", re.I),
 ]
 
 # ---------------------------------------------------------------------------
@@ -70,6 +78,13 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     re.compile(r"no\s+puedo\s+(?:parar|dejar)\s+de\s+jugar", re.I),
     re.compile(r"ayuda\s+con\s+(?:el\s+)?juego", re.I),
     re.compile(r"juego\s+compulsivo", re.I),
+    re.compile(r"auto[- ]?exclusi[oó]n", re.I),   # self-exclusion in Spanish
+    re.compile(r"l[ií]mite\s+(?:de\s+)?(?:juego|apuesta)", re.I),  # betting limit
+    re.compile(r"per[ií]\s+todo\s+(?:en\s+el\s+)?(?:casino|juego)", re.I),  # lost everything
+    # Portuguese patterns (CT casino diverse clientele)
+    re.compile(r"problema\s+(?:com|de)\s+jogo", re.I),  # gambling problem
+    re.compile(r"v[ií]cio\s+(?:em|de)\s+jogo", re.I),   # gambling addiction
+    re.compile(r"n[aã]o\s+consigo\s+parar\s+de\s+jogar", re.I),  # can't stop gambling
     # Mandarin patterns (CT casino significant Asian clientele)
     re.compile(r"赌博\s*(?:成瘾|上瘾|问题)", re.I),  # gambling addiction/problem
     re.compile(r"戒\s*赌", re.I),                     # quit gambling
@@ -111,6 +126,10 @@ _BSA_AML_PATTERNS = [
     re.compile(r"\bhide\s+(?:my\s+)?(?:money|cash|income|winnings)\b", re.I),
     re.compile(r"\b(?:un)?traceable\b.*\b(?:funds?|cash|money)\b", re.I),
     re.compile(r"\b(?:funds?|cash|money)\b.*\b(?:un)?traceable\b", re.I),
+    # Chip walking / multiple buy-in structuring
+    re.compile(r"\bchip\s+walk", re.I),
+    re.compile(r"\bmultiple\s+(?:buy[- ]?ins?|cash[- ]?ins?)\b.*\b(?:avoid|under|split)", re.I),
+    re.compile(r"\bsplit\s+(?:up\s+)?(?:my\s+)?(?:cash|chips?|buy[- ]?in)", re.I),
 ]
 
 # ---------------------------------------------------------------------------
@@ -130,6 +149,12 @@ _PATRON_PRIVACY_PATTERNS = [
     re.compile(r"\b(?:celebrity|famous|star)\s+(?:here|visiting|spotted|seen)\b", re.I),
     re.compile(r"\blook(?:ing)?\s+(?:up|for)\s+(?:a\s+)?(?:guest|patron|member|player)\b", re.I),
     re.compile(r"\b(?:guest|patron|member)\s+(?:list|info|information|record|status)\b", re.I),
+    # Social media / photo surveillance of guests
+    re.compile(r"\b(?:post|share|upload)\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:a\s+)?(?:guest|patron|player)", re.I),
+    re.compile(r"\btake\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:someone|a\s+(?:guest|patron|player))", re.I),
+    # Specific table/machine surveillance
+    re.compile(r"\bwho\s+(?:is|was)\s+(?:at|on|playing\s+at)\s+(?:table|machine|slot)\b", re.I),
+    re.compile(r"\b(?:track|follow|watch|stalk)\s+(?:a\s+|that\s+)?(?:guest|patron|player|person|someone)\b", re.I),
 ]
 
 # ---------------------------------------------------------------------------

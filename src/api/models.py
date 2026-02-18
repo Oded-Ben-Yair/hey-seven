@@ -64,6 +64,33 @@ class HealthResponse(BaseModel):
     version: str
     agent_ready: bool
     property_loaded: bool
+    observability_enabled: bool = False
+
+
+class FeedbackRequest(BaseModel):
+    """User feedback on agent responses."""
+
+    thread_id: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: str | None = None
+
+    @field_validator("thread_id")
+    @classmethod
+    def validate_feedback_thread_id(cls, v: str) -> str:
+        if not re.match(
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            v,
+            re.IGNORECASE,
+        ):
+            raise ValueError("thread_id must be a valid UUID")
+        return v
+
+
+class FeedbackResponse(BaseModel):
+    """Response to feedback submission."""
+
+    status: str
+    thread_id: str
 
 
 class SSEGraphNodeEvent(BaseModel):

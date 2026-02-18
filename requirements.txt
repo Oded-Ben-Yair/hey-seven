@@ -19,6 +19,13 @@ langsmith==0.7.1
 # --- Vector DB (local dev) ---
 chromadb==1.5.0
 
+# --- GCP / Firestore (production) ---
+google-cloud-firestore==2.20.1
+langgraph-checkpoint-firestore==0.1.0
+
+# --- LangGraph Extensions ---
+langgraph-swarm==0.1.0
+
 # --- Utilities ---
 sse-starlette==3.2.0
 httpx==0.28.1

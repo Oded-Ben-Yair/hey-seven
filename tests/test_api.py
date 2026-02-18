@@ -320,7 +320,7 @@ class TestChatReplaceEvent:
 
 class TestGraphEndpoint:
     def test_graph_returns_structure(self):
-        """GET /graph returns expected nodes and edges."""
+        """GET /graph returns expected v2.1 nodes and edges."""
         app, _ = _make_test_app()
         with TestClient(app) as client:
             resp = client.get("/graph")
@@ -328,17 +328,20 @@ class TestGraphEndpoint:
             data = resp.json()
             assert "nodes" in data
             assert "edges" in data
+            assert "compliance_gate" in data["nodes"]
             assert "router" in data["nodes"]
             assert "retrieve" in data["nodes"]
+            assert "whisper_planner" in data["nodes"]
             assert "generate" in data["nodes"]
             assert "validate" in data["nodes"]
+            assert "persona_envelope" in data["nodes"]
             assert "respond" in data["nodes"]
-            assert len(data["nodes"]) == 8
+            assert len(data["nodes"]) == 11
             assert len(data["edges"]) > 0
-            # Verify start edge exists
+            # Verify start edge exists and goes to compliance_gate
             start_edges = [e for e in data["edges"] if e["from"] == "__start__"]
             assert len(start_edges) == 1
-            assert start_edges[0]["to"] == "router"
+            assert start_edges[0]["to"] == "compliance_gate"
 
     def test_graph_includes_all_conditional_edges(self):
         """GET /graph includes conditional edges with condition labels."""
@@ -347,7 +350,7 @@ class TestGraphEndpoint:
             resp = client.get("/graph")
             data = resp.json()
             conditional = [e for e in data["edges"] if "condition" in e]
-            assert len(conditional) >= 5  # router(3) + validate(3)
+            assert len(conditional) >= 7  # compliance_gate(3) + router(3) + validate(3)
 
 
 class TestSecurityHeaders:

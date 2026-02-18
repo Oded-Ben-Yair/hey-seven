@@ -1,7 +1,12 @@
-"""Custom 8-node StateGraph for property Q&A.
+"""Custom 11-node StateGraph for property Q&A (v2.1).
 
-Nodes: router → retrieve → generate → validate → respond
-Branches: greeting, off_topic, fallback
+v1 (8 nodes): START → router → {greeting, off_topic, retrieve → generate → validate → respond/fallback}
+v2 (10 nodes): START → compliance_gate → {greeting, off_topic, router → {greeting, off_topic, retrieve → generate → validate → persona_envelope → respond/fallback}}
+v2.1 (11 nodes): v2 + whisper_planner between retrieve and generate
+
+The ``generate`` node now runs ``host_agent`` (from ``agents.host_agent``)
+instead of the v1 ``generate_node``.  The node name ``"generate"`` is
+preserved for SSE streaming compatibility and test backward compat.
 """
 
 import json
@@ -19,18 +24,22 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.config import get_settings
 
+from .agents.host_agent import host_agent
+from .compliance_gate import compliance_gate_node
+from .whisper_planner import whisper_planner_node
 from .nodes import (
     fallback_node,
-    generate_node,
+    generate_node,  # noqa: F401 — kept for backward compat (tests import from nodes)
     greeting_node,
     off_topic_node,
     respond_node,
     retrieve_node,
-    route_after_validate,
+    route_after_validate,  # noqa: F401 — kept for backward compat (tests import from nodes)
     route_from_router,
     router_node,
     validate_node,
 )
+from .persona import persona_envelope_node
 from .state import PropertyQAState
 
 logger = logging.getLogger(__name__)
@@ -49,12 +58,19 @@ NODE_RESPOND = "respond"
 NODE_FALLBACK = "fallback"
 NODE_GREETING = "greeting"
 NODE_OFF_TOPIC = "off_topic"
+NODE_COMPLIANCE_GATE = "compliance_gate"
+NODE_PERSONA = "persona_envelope"
+NODE_WHISPER = "whisper_planner"
 
-_NON_STREAM_NODES = frozenset({NODE_GREETING, NODE_OFF_TOPIC, NODE_FALLBACK})
+_NON_STREAM_NODES = frozenset({
+    NODE_GREETING, NODE_OFF_TOPIC, NODE_FALLBACK,
+    NODE_COMPLIANCE_GATE, NODE_PERSONA, NODE_WHISPER,
+})
 
 _KNOWN_NODES = frozenset({
     NODE_ROUTER, NODE_RETRIEVE, NODE_GENERATE, NODE_VALIDATE,
     NODE_RESPOND, NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
+    NODE_COMPLIANCE_GATE, NODE_PERSONA, NODE_WHISPER,
 })
 
 
@@ -62,6 +78,11 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
     """Extract per-node metadata for graph trace SSE events."""
     if not isinstance(output, dict):
         return {}
+    if node == NODE_COMPLIANCE_GATE:
+        return {
+            "query_type": output.get("query_type"),
+            "confidence": output.get("router_confidence"),
+        }
     if node == NODE_ROUTER:
         return {
             "query_type": output.get("query_type"),
@@ -74,11 +95,53 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
         return {"result": output.get("validation_result")}
     if node == NODE_RESPOND:
         return {"sources": output.get("sources_used", [])}
+    if node == NODE_WHISPER:
+        return {"has_plan": bool(output.get("whisper_plan"))}
     return {}
 
 
+# ---------------------------------------------------------------------------
+# Routing functions
+# ---------------------------------------------------------------------------
+
+
+def route_from_compliance(state: PropertyQAState) -> str:
+    """Route after compliance gate based on whether guardrails triggered.
+
+    If ``query_type`` is ``None``, all guardrails passed and LLM
+    classification is needed (route to router).  Otherwise, route
+    directly to the appropriate terminal node.
+    """
+    query_type = state.get("query_type")
+    if query_type is None:
+        return NODE_ROUTER
+    if query_type == "greeting":
+        return NODE_GREETING
+    # All other guardrail-triggered types go to off_topic
+    return NODE_OFF_TOPIC
+
+
+def _route_after_validate_v2(state: PropertyQAState) -> str:
+    """Route after validate node — v2 sends PASS to persona_envelope.
+
+    Returns the name of the next node to execute.
+    """
+    result = state.get("validation_result", "PASS")
+    if result == "PASS":
+        return NODE_PERSONA
+    if result == "RETRY":
+        return NODE_GENERATE
+    # FAIL
+    return NODE_FALLBACK
+
+
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
-    """Build the custom 8-node property Q&A graph.
+    """Build the custom 11-node property Q&A graph (v2.1).
+
+    v2.1 topology:
+        START → compliance_gate → {greeting, off_topic, router}
+        router → {greeting, off_topic, retrieve}
+        retrieve → whisper_planner → generate (host_agent) → validate → {persona_envelope → respond, generate (RETRY), fallback}
 
     Args:
         checkpointer: Optional checkpointer for conversation persistence.
@@ -90,31 +153,54 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     settings = get_settings()
     graph = StateGraph(PropertyQAState)
 
-    # Add all 8 nodes
+    # Add all 11 nodes
+    graph.add_node(NODE_COMPLIANCE_GATE, compliance_gate_node)
     graph.add_node(NODE_ROUTER, router_node)
     graph.add_node(NODE_RETRIEVE, retrieve_node)
-    graph.add_node(NODE_GENERATE, generate_node)
+    graph.add_node(NODE_WHISPER, whisper_planner_node)
+    graph.add_node(NODE_GENERATE, host_agent)  # v2: host_agent replaces generate_node
     graph.add_node(NODE_VALIDATE, validate_node)
+    graph.add_node(NODE_PERSONA, persona_envelope_node)
     graph.add_node(NODE_RESPOND, respond_node)
     graph.add_node(NODE_FALLBACK, fallback_node)
     graph.add_node(NODE_GREETING, greeting_node)
     graph.add_node(NODE_OFF_TOPIC, off_topic_node)
 
-    # Edge map
-    graph.add_edge(START, NODE_ROUTER)
+    # Edge map — v2 topology
+    # START → compliance_gate
+    graph.add_edge(START, NODE_COMPLIANCE_GATE)
+
+    # compliance_gate → {greeting, off_topic, router}
+    graph.add_conditional_edges(NODE_COMPLIANCE_GATE, route_from_compliance, {
+        NODE_ROUTER: NODE_ROUTER,
+        NODE_GREETING: NODE_GREETING,
+        NODE_OFF_TOPIC: NODE_OFF_TOPIC,
+    })
+
+    # router → {retrieve, greeting, off_topic} (defense-in-depth: router still has guardrails)
     graph.add_conditional_edges(NODE_ROUTER, route_from_router, {
         NODE_RETRIEVE: NODE_RETRIEVE,
         NODE_GREETING: NODE_GREETING,
         NODE_OFF_TOPIC: NODE_OFF_TOPIC,
     })
-    graph.add_edge(NODE_RETRIEVE, NODE_GENERATE)
+
+    # retrieve → whisper_planner → generate (host_agent) → validate
+    graph.add_edge(NODE_RETRIEVE, NODE_WHISPER)
+    graph.add_edge(NODE_WHISPER, NODE_GENERATE)
     graph.add_edge(NODE_GENERATE, NODE_VALIDATE)
-    graph.add_conditional_edges(NODE_VALIDATE, route_after_validate, {
-        NODE_RESPOND: NODE_RESPOND,
+
+    # validate → {persona_envelope (PASS), generate (RETRY), fallback (FAIL)}
+    graph.add_conditional_edges(NODE_VALIDATE, _route_after_validate_v2, {
+        NODE_PERSONA: NODE_PERSONA,
         NODE_GENERATE: NODE_GENERATE,
         NODE_FALLBACK: NODE_FALLBACK,
     })
+
+    # persona_envelope → respond → END
+    graph.add_edge(NODE_PERSONA, NODE_RESPOND)
     graph.add_edge(NODE_RESPOND, END)
+
+    # Terminal nodes
     graph.add_edge(NODE_FALLBACK, END)
     graph.add_edge(NODE_GREETING, END)
     graph.add_edge(NODE_OFF_TOPIC, END)
@@ -122,10 +208,9 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     if checkpointer is None:
         checkpointer = MemorySaver()
 
-    # HITL interrupt: when enabled, the graph pauses before generate_node
+    # HITL interrupt: when enabled, the graph pauses before the generate node
     # so a human operator can review/approve the retrieved context before
-    # the LLM generates a response.  This is the LangGraph-native pattern
-    # for regulated environments where certain responses need human oversight.
+    # the LLM generates a response.
     interrupt_before = [NODE_GENERATE] if settings.ENABLE_HITL_INTERRUPT else None
 
     compiled = graph.compile(
@@ -133,7 +218,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         interrupt_before=interrupt_before,
     )
     compiled.recursion_limit = settings.GRAPH_RECURSION_LIMIT  # type: ignore[attr-defined]
-    logger.info("Custom 8-node StateGraph compiled successfully.")
+    logger.info("Custom 11-node StateGraph compiled successfully.")
     return compiled
 
 
@@ -156,6 +241,12 @@ def _initial_state(message: str) -> dict[str, Any]:
         "skip_validation": False,
         "retry_feedback": None,
         "sources_used": [],
+        # v2 fields
+        "active_agent": None,
+        "extracted_fields": {},
+        "whisper_plan": None,
+        "delay_seconds": 0.0,
+        "sms_segments": [],
     }
 
 

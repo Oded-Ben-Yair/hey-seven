@@ -26,7 +26,14 @@ from .middleware import (
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
 )
-from .models import ChatRequest, GraphStructureResponse, HealthResponse, PropertyInfoResponse
+from .models import (
+    ChatRequest,
+    FeedbackRequest,
+    FeedbackResponse,
+    GraphStructureResponse,
+    HealthResponse,
+    PropertyInfoResponse,
+)
 
 settings = get_settings()
 
@@ -43,8 +50,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Initializing Property Q&A agent...")
     try:
         from src.agent.graph import build_graph
+        from src.agent.memory import get_checkpointer
 
-        app.state.agent = build_graph()
+        app.state.agent = build_graph(checkpointer=get_checkpointer())
         logger.info("Agent initialized successfully.")
     except Exception:
         logger.exception("Failed to initialize agent. /chat will return 503.")
@@ -155,6 +163,8 @@ def create_app() -> FastAPI:
     async def health(request: Request):
         from fastapi.responses import JSONResponse
 
+        from src.observability.langfuse_client import is_observability_enabled
+
         ready = getattr(request.app.state, "ready", False)
         agent_ready = getattr(request.app.state, "agent", None) is not None
         property_loaded = bool(getattr(request.app.state, "property_data", None))
@@ -164,6 +174,7 @@ def create_app() -> FastAPI:
             version=settings.VERSION,
             agent_ready=agent_ready,
             property_loaded=property_loaded,
+            observability_enabled=is_observability_enabled(),
         )
         # Return 503 for degraded state so Cloud Run / k8s don't route
         # traffic to unhealthy containers.
@@ -198,25 +209,119 @@ def create_app() -> FastAPI:
         """Return the StateGraph structure for visualization."""
         return {
             "nodes": [
-                "router", "retrieve", "generate", "validate",
+                "compliance_gate", "router", "retrieve", "whisper_planner",
+                "generate", "validate", "persona_envelope",
                 "respond", "fallback", "greeting", "off_topic",
             ],
             "edges": [
-                {"from": "__start__", "to": "router"},
+                {"from": "__start__", "to": "compliance_gate"},
+                {"from": "compliance_gate", "to": "router", "condition": "clean (no guardrail match)"},
+                {"from": "compliance_gate", "to": "greeting", "condition": "greeting"},
+                {"from": "compliance_gate", "to": "off_topic", "condition": "guardrail triggered"},
                 {"from": "router", "to": "retrieve", "condition": "property_qa | hours_schedule | ambiguous"},
                 {"from": "router", "to": "greeting", "condition": "greeting"},
-                {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request | age_verification | patron_privacy"},
-                {"from": "retrieve", "to": "generate"},
+                {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request"},
+                {"from": "retrieve", "to": "whisper_planner"},
+                {"from": "whisper_planner", "to": "generate"},
                 {"from": "generate", "to": "validate"},
-                {"from": "validate", "to": "respond", "condition": "PASS"},
+                {"from": "validate", "to": "persona_envelope", "condition": "PASS"},
                 {"from": "validate", "to": "generate", "condition": "RETRY (max 1)"},
                 {"from": "validate", "to": "fallback", "condition": "FAIL"},
+                {"from": "persona_envelope", "to": "respond"},
                 {"from": "respond", "to": "__end__"},
                 {"from": "fallback", "to": "__end__"},
                 {"from": "greeting", "to": "__end__"},
                 {"from": "off_topic", "to": "__end__"},
             ],
         }
+
+    # ------------------------------------------------------------------
+    # POST /sms/webhook — Telnyx inbound SMS webhook
+    # ------------------------------------------------------------------
+    @app.post("/sms/webhook")
+    async def sms_webhook(request: Request):
+        """Telnyx inbound SMS webhook handler."""
+        from fastapi.responses import JSONResponse
+        from src.sms.webhook import handle_inbound_sms
+
+        try:
+            body = await request.json()
+
+            # Parse the Telnyx webhook payload
+            event_type = body.get("data", {}).get("event_type", "")
+
+            # Only process inbound messages
+            if event_type != "message.received":
+                return JSONResponse(content={"status": "ignored"}, status_code=200)
+
+            payload = body.get("data", {}).get("payload", {})
+            sms = await handle_inbound_sms(payload)
+
+            # If keyword was already handled by handle_inbound_sms
+            if sms.get("type") == "keyword_response":
+                return JSONResponse(
+                    content={
+                        "status": "keyword_handled",
+                        "response": sms["keyword_response"],
+                    },
+                    status_code=200,
+                )
+
+            # Regular message — route to agent (Phase 2.4 will handle full routing)
+            return JSONResponse(
+                content={"status": "received", "from": sms.get("from_", "")},
+                status_code=200,
+            )
+        except Exception:
+            logger.exception("SMS webhook error")
+            return JSONResponse(content={"error": "Internal error"}, status_code=500)
+
+    # ------------------------------------------------------------------
+    # POST /cms/webhook — Google Sheets CMS content update
+    # ------------------------------------------------------------------
+    @app.post("/cms/webhook")
+    async def cms_webhook(request: Request):
+        """CMS webhook handler for Google Sheets content updates."""
+        from fastapi.responses import JSONResponse
+        from src.cms.webhook import handle_cms_webhook
+
+        try:
+            raw_body = await request.body()
+            body = json.loads(raw_body)
+            signature = request.headers.get("X-Webhook-Signature", "")
+
+            result = await handle_cms_webhook(
+                payload=body,
+                webhook_secret=settings.CMS_WEBHOOK_SECRET,
+                raw_body=raw_body,
+                signature=signature,
+            )
+
+            status_code = 200 if result["status"] != "rejected" else 403
+            return JSONResponse(content=result, status_code=status_code)
+        except Exception:
+            logger.exception("CMS webhook error")
+            return JSONResponse(content={"error": "Internal error"}, status_code=500)
+
+    # ------------------------------------------------------------------
+    # POST /feedback — User feedback on agent responses
+    # ------------------------------------------------------------------
+    @app.post("/feedback", response_model=FeedbackResponse)
+    async def feedback_endpoint(body: FeedbackRequest):
+        """Accept user feedback on agent responses.
+
+        Stores feedback for evaluation and model improvement.
+        In production, feedback is forwarded to LangFuse as a score.
+        """
+        from src.api.pii_redaction import redact_pii
+
+        logger.info(
+            "Feedback received: thread_id=%s rating=%d comment=%s",
+            body.thread_id,
+            body.rating,
+            redact_pii(body.comment) if body.comment else None,
+        )
+        return FeedbackResponse(status="received", thread_id=body.thread_id)
 
     # ------------------------------------------------------------------
     # Static files for frontend (MUST be last)

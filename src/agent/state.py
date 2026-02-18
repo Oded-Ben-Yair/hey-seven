@@ -1,7 +1,12 @@
 """State schema for the Property Q&A custom StateGraph.
 
-Defines PropertyQAState as a TypedDict with 9 fields for the 8-node graph,
+Defines PropertyQAState as a TypedDict with fields for the graph nodes,
 plus Pydantic models for structured LLM outputs (router + validation).
+
+v2 additions: ``active_agent``, ``extracted_fields``, ``whisper_plan``,
+``delay_seconds``, ``sms_segments`` for specialist agent routing, background
+planning, and SMS response segmentation.  ``CasinoHostState`` is a
+backward-compatible alias for v2 code.
 """
 
 from typing import Annotated, Any, Literal, TypedDict
@@ -23,7 +28,7 @@ class RetrievedChunk(TypedDict):
 
 
 class PropertyQAState(TypedDict):
-    """Typed state flowing through the 8-node property Q&A graph.
+    """Typed state flowing through the property Q&A graph.
 
     ``messages`` is the only field persisted across turns via the checkpointer's
     ``add_messages`` reducer. All other fields are **per-turn** — they are reset
@@ -34,6 +39,13 @@ class PropertyQAState(TypedDict):
     ``skip_validation`` is set to ``True`` by ``generate_node`` when the
     response is a deterministic fallback (empty context, LLM error, circuit
     breaker open) that does not need adversarial validation.
+
+    v2 fields (all optional with defaults in ``_initial_state()``):
+    - ``active_agent``: which specialist agent handles the query
+    - ``extracted_fields``: structured fields extracted from the guest message
+    - ``whisper_plan``: background planner output for agent guidance
+    - ``delay_seconds``: response delay for natural pacing (SMS/chat)
+    - ``sms_segments``: segmented SMS responses (160-char compliance)
     """
 
     messages: Annotated[list, add_messages]
@@ -46,6 +58,16 @@ class PropertyQAState(TypedDict):
     retry_feedback: str | None      # why validation failed
     current_time: str               # injected at graph entry
     sources_used: list[str]         # knowledge-base categories cited
+    # v2 fields
+    active_agent: str | None        # specialist: host/dining/entertainment/comp
+    extracted_fields: dict[str, Any]  # structured fields from guest message
+    whisper_plan: str | None        # background planner output
+    delay_seconds: float            # response delay for natural pacing
+    sms_segments: list[str]         # segmented SMS responses
+
+
+# Backward-compatible alias for v2 code that prefers the domain-specific name.
+CasinoHostState = PropertyQAState
 
 
 class RouterOutput(BaseModel):

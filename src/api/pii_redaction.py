@@ -1,0 +1,136 @@
+"""PII redaction for logs, traces, and structured output.
+
+Regex-based redaction of personally identifiable information before
+the data reaches logging, LangFuse traces, or any external system.
+
+Redaction is applied to:
+- Structured log output (via middleware)
+- LangFuse trace metadata (before sending to LangFuse)
+- Error messages in API responses
+
+Casino-domain PII patterns:
+- Phone numbers (E.164 and US formats)
+- Email addresses
+- Credit card numbers (Visa, MC, Amex, Discover)
+- SSN (full and partial)
+- Player card / loyalty card numbers
+- Names preceded by common identifiers ("Mr.", "Mrs.", "my name is")
+
+Design: Fails OPEN — if redaction fails, the original text is logged
+with a warning. Never blocks the request pipeline.
+"""
+
+import re
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Redaction patterns (compiled for performance)
+# ---------------------------------------------------------------------------
+
+_PATTERNS: list[tuple[re.Pattern, str, str]] = [
+    # Phone numbers: E.164, US formats
+    (re.compile(r'\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b'), '[PHONE]', 'phone'),
+    # Email addresses
+    (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'), '[EMAIL]', 'email'),
+    # Credit cards: Visa, MC, Amex, Discover (with optional separators)
+    (re.compile(r'\b(?:\d{4}[-\s]?){3}\d{4}\b'), '[CARD]', 'credit_card'),
+    # Amex: 15 digits
+    (re.compile(r'\b\d{4}[-\s]?\d{6}[-\s]?\d{5}\b'), '[CARD]', 'amex'),
+    # SSN: full (XXX-XX-XXXX)
+    (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '[SSN]', 'ssn'),
+    # SSN: no separators (9 consecutive digits in SSN context)
+    (re.compile(r'(?i)(?:ssn|social\s+security)[:\s]*(\d{9})\b'), '[SSN]', 'ssn_raw'),
+    # Player/loyalty card numbers (6-12 digit sequences with common prefixes)
+    (re.compile(r'(?i)(?:player|loyalty|rewards?|member)\s*(?:card\s*(?:number|#|id)?|number|#|id)[:\s]*(\d{6,12})\b'), '[PLAYER_ID]', 'player_card'),
+]
+
+# Name patterns: more conservative, only match when preceded by identifiers
+_NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'(?i)\b(?:my\s+name\s+is|i\'?m|this\s+is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)'), 'name_self_id'),
+    (re.compile(r'(?i)\b(?:mr\.?|mrs\.?|ms\.?|dr\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)'), 'name_honorific'),
+]
+
+
+def redact_pii(text: str) -> str:
+    """Redact PII patterns from text.
+
+    Applies all regex patterns and replaces matches with redaction tokens.
+    Fails open: returns original text with warning on regex errors.
+
+    Args:
+        text: Input text potentially containing PII.
+
+    Returns:
+        Text with PII replaced by redaction tokens.
+    """
+    if not text:
+        return text
+
+    try:
+        result = text
+
+        # Apply standard patterns
+        for pattern, replacement, _name in _PATTERNS:
+            result = pattern.sub(replacement, result)
+
+        # Apply name patterns (replace the captured group only)
+        for pattern, _name in _NAME_PATTERNS:
+            result = pattern.sub(lambda m: m.group(0).replace(m.group(1), '[NAME]'), result)
+
+        return result
+    except Exception:
+        logger.warning("PII redaction failed; returning original text", exc_info=True)
+        return text
+
+
+def redact_dict(data: dict[str, Any], *, keys_to_redact: set[str] | None = None) -> dict[str, Any]:
+    """Redact PII from string values in a dict (shallow).
+
+    Only processes string values. Does not recurse into nested dicts
+    unless they are in the keys_to_redact set.
+
+    Args:
+        data: Dict with potentially PII-containing string values.
+        keys_to_redact: Specific keys to redact. If None, redacts all string values.
+
+    Returns:
+        New dict with redacted string values.
+    """
+    result = {}
+    target_keys = keys_to_redact or set(data.keys())
+
+    for key, value in data.items():
+        if key in target_keys and isinstance(value, str):
+            result[key] = redact_pii(value)
+        else:
+            result[key] = value
+
+    return result
+
+
+def contains_pii(text: str) -> bool:
+    """Check if text contains any PII patterns.
+
+    Useful for validation/alerting without modifying the text.
+
+    Args:
+        text: Text to check.
+
+    Returns:
+        True if any PII pattern matches.
+    """
+    if not text:
+        return False
+
+    for pattern, _, _ in _PATTERNS:
+        if pattern.search(text):
+            return True
+
+    for pattern, _ in _NAME_PATTERNS:
+        if pattern.search(text):
+            return True
+
+    return False

@@ -113,6 +113,8 @@ class TestRetrieveToGenerate:
             patch("src.agent.tools.get_retriever", return_value=ingested_retriever),
             patch("src.agent.nodes._get_llm") as mock_get_llm,
             patch("src.agent.nodes._get_validator_llm") as mock_get_validator,
+            patch("src.agent.agents.host_agent._get_llm") as mock_get_host_llm,
+            patch("src.agent.whisper_planner._get_llm") as mock_get_whisper_llm,
         ):
             # Router LLM returns property_qa classification
             router_llm = AsyncMock()
@@ -124,6 +126,8 @@ class TestRetrieveToGenerate:
             generate_llm = AsyncMock()
             generate_llm.ainvoke = AsyncMock(return_value=mock_generate_response)
             mock_get_llm.return_value = generate_llm
+            # v2: host_agent imports _get_llm separately
+            mock_get_host_llm.return_value = generate_llm
 
             # Validator LLM returns PASS
             validator_llm = AsyncMock()
@@ -134,6 +138,20 @@ class TestRetrieveToGenerate:
 
             # Also mock the router's with_structured_output call
             generate_llm.with_structured_output.return_value = router_structured
+
+            # v2.1: whisper planner uses _get_llm with structured output
+            whisper_llm = AsyncMock()
+            from src.agent.whisper_planner import WhisperPlan
+            whisper_plan = WhisperPlan(
+                next_topic="dining",
+                extraction_targets=["cuisine_preferences"],
+                offer_readiness=0.3,
+                conversation_note="Ask about dining preferences",
+            )
+            whisper_structured = AsyncMock()
+            whisper_structured.ainvoke = AsyncMock(return_value=whisper_plan)
+            whisper_llm.with_structured_output.return_value = whisper_structured
+            mock_get_whisper_llm.return_value = whisper_llm
 
             graph = build_graph()
             result = await chat(graph, "Tell me about the steakhouse")
