@@ -5,16 +5,14 @@ for vector similarity search.  Implements ``AbstractRetriever`` for
 formal swappability in ``get_retriever()``.
 
 Multi-strategy retrieval with RRF reranking matches the ChromaDB path
-in ``tools.py``.  The ``_rerank_by_rrf`` function is intentionally
-duplicated here (rather than imported from ``tools.py``) to avoid
-circular imports: ``tools.py`` imports from ``rag.pipeline``.
+in ``tools.py``.  RRF is imported from ``src.rag.reranking`` (shared
+module) to eliminate duplication.
 
 The ``google.cloud.firestore`` import is lazy to avoid pulling in the
 heavy GCP SDK (~200MB) at module level, consistent with ChromaDB lazy
 imports in ``pipeline.py``.
 """
 
-import hashlib
 import logging
 from typing import Any
 
@@ -22,47 +20,9 @@ from langchain_core.documents import Document
 
 from src.config import get_settings
 from src.rag.pipeline import AbstractRetriever
+from src.rag.reranking import rerank_by_rrf
 
 logger = logging.getLogger(__name__)
-
-
-def _rerank_by_rrf(
-    result_lists: list[list[tuple]],
-    top_k: int = 5,
-    k: int = 60,
-) -> list[tuple]:
-    """Reciprocal Rank Fusion: merge multiple ranked lists into one.
-
-    RRF score = sum(1 / (k + rank_i)) across all rankings for each document.
-    Standard k=60 per the original RRF paper.
-
-    Note: intentionally duplicated from ``tools._rerank_by_rrf`` to avoid
-    circular imports (tools -> rag.pipeline -> this module).
-
-    Args:
-        result_lists: List of ranked result lists, each containing
-            (Document, score) tuples.
-        top_k: Number of results to return after fusion.
-        k: RRF constant (default 60).
-
-    Returns:
-        Top-k fused results as (Document, original_score) tuples,
-        sorted by fused RRF score descending.
-    """
-    rrf_scores: dict[str, float] = {}
-    doc_map: dict[str, tuple] = {}
-
-    for results in result_lists:
-        for rank, (doc, score) in enumerate(results):
-            doc_id = hashlib.sha256(
-                (doc.page_content + str(doc.metadata.get("source", ""))).encode()
-            ).hexdigest()
-            if doc_id not in doc_map or score > doc_map[doc_id][1]:
-                doc_map[doc_id] = (doc, score)
-            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
-
-    sorted_ids = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)
-    return [doc_map[doc_id] for doc_id in sorted_ids[:top_k]]
 
 
 class FirestoreRetriever(AbstractRetriever):
@@ -193,7 +153,7 @@ class FirestoreRetriever(AbstractRetriever):
         )
 
         # Reciprocal Rank Fusion: merge rankings for better recall
-        fused = _rerank_by_rrf(
+        fused = rerank_by_rrf(
             [semantic_results, augmented_results],
             top_k=top_k,
         )

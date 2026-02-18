@@ -9,6 +9,7 @@ Thread-safe via ``asyncio.Lock`` for concurrent coroutine access.
 """
 
 import asyncio
+import collections
 import logging
 import time
 from dataclasses import dataclass
@@ -41,6 +42,8 @@ class CircuitBreaker:
 
     States: closed (normal) -> open (blocking) -> half_open (probe one request).
     Thread-safe via ``asyncio.Lock`` for concurrent coroutine access.
+    Failure timestamps stored in a bounded ``collections.deque`` to prevent
+    unbounded memory growth under sustained failure conditions.
 
     Uses a rolling time window for failure counting: only failures within the
     last ``rolling_window_seconds`` count toward the threshold. Old failures
@@ -70,7 +73,9 @@ class CircuitBreaker:
             self._cooldown_seconds = cooldown_seconds
             self._rolling_window_seconds = rolling_window_seconds
 
-        self._failure_timestamps: list[float] = []
+        self._failure_timestamps: collections.deque[float] = collections.deque(
+            maxlen=self._failure_threshold * 2
+        )
         self._last_failure_time: float | None = None
         self._state = "closed"
         self._half_open_in_progress = False
@@ -79,9 +84,8 @@ class CircuitBreaker:
     def _prune_old_failures(self) -> None:
         """Remove failure timestamps outside the rolling window."""
         cutoff = time.monotonic() - self._rolling_window_seconds
-        self._failure_timestamps = [
-            ts for ts in self._failure_timestamps if ts > cutoff
-        ]
+        while self._failure_timestamps and self._failure_timestamps[0] <= cutoff:
+            self._failure_timestamps.popleft()
 
     def _cooldown_expired(self) -> bool:
         """Check if the cooldown period has elapsed since the last failure."""

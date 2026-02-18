@@ -136,12 +136,15 @@ class ErrorHandlingMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         except asyncio.CancelledError:
-            # Client disconnected (normal for SSE) — log at INFO, not ERROR
+            # Client disconnected (normal for SSE) — log at INFO, not ERROR.
+            # Re-raise to preserve asyncio task cancellation semantics;
+            # without re-raise, parent tasks waiting on cancellation hang.
             logger.info(
                 "Client disconnected: %s %s",
                 scope.get("method", "?"),
                 scope.get("path", "/"),
             )
+            raise
         except Exception:
             logger.exception(
                 "Unhandled exception on %s %s",
@@ -217,7 +220,7 @@ class ApiKeyMiddleware:
     Uses ``hmac.compare_digest`` to prevent timing attacks.
     """
 
-    _PROTECTED_PATHS = {"/chat"}
+    _PROTECTED_PATHS = {"/chat", "/graph", "/property"}
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app

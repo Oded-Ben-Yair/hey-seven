@@ -31,6 +31,10 @@ COPY src/ ./src/
 RUN mkdir -p /app/data/chroma && chown -R appuser:appuser /app/data
 
 # Environment
+# WEB_CONCURRENCY=1 for demo/single-container deployment.
+# Production scaling: set WEB_CONCURRENCY=2-4 based on Cloud Run vCPU
+# allocation (1 worker per vCPU). Gunicorn with uvicorn workers:
+#   CMD gunicorn src.api.app:app -w ${WEB_CONCURRENCY} -k uvicorn.workers.UvicornWorker
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \

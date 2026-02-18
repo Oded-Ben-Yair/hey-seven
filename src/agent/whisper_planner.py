@@ -12,6 +12,7 @@ Key design properties:
 - **Sequential**: Runs between handoff_router and speaking agent (not parallel).
 """
 
+import asyncio
 import json
 import logging
 from functools import lru_cache
@@ -33,6 +34,7 @@ __all__ = [
     "whisper_planner_node",
     "format_whisper_plan",
     "_get_whisper_llm",
+    "_failure_counter",
 ]
 
 
@@ -65,13 +67,33 @@ def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 # Telemetry counter for fail-silent monitoring
 # ---------------------------------------------------------------------------
-_failure_count: int = 0
-"""Module-level counter for whisper planner failures.
 
-Incremented on every except path. Observable via logging and can be
-exported to metrics systems (Prometheus, LangFuse custom metrics) for
-alerting on elevated failure rates without breaking the fail-silent contract.
-"""
+
+class _FailureCounter:
+    """Async-safe failure counter for whisper planner monitoring.
+
+    Uses ``asyncio.Lock`` for formal thread-safety under concurrent
+    coroutine access.  Observable via logging and exportable to metrics
+    systems (Prometheus, LangFuse custom metrics).
+    """
+
+    def __init__(self) -> None:
+        self._count = 0
+        self._lock = asyncio.Lock()
+
+    async def increment(self) -> int:
+        """Increment and return the new count."""
+        async with self._lock:
+            self._count += 1
+            return self._count
+
+    @property
+    def value(self) -> int:
+        """Current count (non-atomic read, safe for logging)."""
+        return self._count
+
+
+_failure_counter = _FailureCounter()
 
 # ---------------------------------------------------------------------------
 # Profile fields for completeness calculation (placeholder weights)
@@ -151,14 +173,13 @@ async def whisper_planner_node(state: CasinoHostState) -> dict:
 
     except (ValueError, TypeError) as exc:
         # Structured output parsing failed — planner degrades gracefully
-        global _failure_count  # noqa: PLW0603
-        _failure_count += 1
+        count = await _failure_counter.increment()
         logger.warning(
             "whisper_planner_failure",
             extra={
                 "error_type": type(exc).__name__,
                 "error_msg": str(exc)[:200],
-                "failure_count": _failure_count,
+                "failure_count": count,
             },
         )
         return {"whisper_plan": None}
@@ -167,13 +188,13 @@ async def whisper_planner_node(state: CasinoHostState) -> dict:
         # API timeout, rate limit, network error — broad catch is intentional
         # because google-genai raises various exception types across versions.
         # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        _failure_count += 1
+        count = await _failure_counter.increment()
         logger.warning(
             "whisper_planner_failure",
             extra={
                 "error_type": type(exc).__name__,
                 "error_msg": str(exc)[:200],
-                "failure_count": _failure_count,
+                "failure_count": count,
             },
         )
         return {"whisper_plan": None}

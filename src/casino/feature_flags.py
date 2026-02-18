@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import time
 from typing import TypedDict
 
 from src.casino.config import get_casino_config
@@ -52,6 +53,16 @@ DEFAULT_FEATURES: dict[str, bool] = {
 
 
 # ---------------------------------------------------------------------------
+# TTL cache for feature flags (avoids repeated Firestore reads)
+# ---------------------------------------------------------------------------
+
+# Simple TTL cache for feature flags (avoids repeated Firestore reads).
+# 5-minute TTL matches the casino config cache in config.py.
+_flag_cache: dict[str, tuple[dict[str, bool], float]] = {}
+_FLAG_CACHE_TTL = 300.0  # 5 minutes
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -63,18 +74,30 @@ async def get_feature_flags(casino_id: str) -> dict[str, bool]:
     the config document's ``features`` section. Unknown flags in the
     config document are preserved (forward-compatible).
 
+    Results are cached per casino_id with a 5-minute TTL to avoid
+    repeated Firestore reads on every graph invocation.
+
     Args:
         casino_id: Casino identifier (e.g., ``"mohegan_sun"``).
 
     Returns:
         A dict of flag_name -> bool with all known flags present.
     """
+    now = time.monotonic()
+    cached = _flag_cache.get(casino_id)
+    if cached is not None:
+        flags, expires_at = cached
+        if now < expires_at:
+            return flags
+
     config = await get_casino_config(casino_id)
     casino_features = config.get("features", {})
 
     # Defaults first, then casino overrides
     merged = dict(DEFAULT_FEATURES)
     merged.update(casino_features)
+
+    _flag_cache[casino_id] = (merged, now + _FLAG_CACHE_TTL)
     return merged
 
 

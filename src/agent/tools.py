@@ -9,12 +9,12 @@ strategies for improved recall, especially for proper noun queries
 (e.g., "Todd English's") where augmented search ranks differently.
 """
 
-import hashlib
 import logging
 
 from src.agent.state import RetrievedChunk
 from src.config import get_settings
 from src.rag.pipeline import get_retriever
+from src.rag.reranking import rerank_by_rrf
 
 logger = logging.getLogger(__name__)
 
@@ -36,44 +36,8 @@ def _filter_by_relevance(results: list[tuple], min_score: float) -> list[tuple]:
     return [(doc, score) for doc, score in results if score >= min_score]
 
 
-def _rerank_by_rrf(
-    result_lists: list[list[tuple]],
-    top_k: int = 5,
-    k: int = 60,
-) -> list[tuple]:
-    """Reciprocal Rank Fusion: merge multiple ranked lists into one.
-
-    RRF score = sum(1 / (k + rank_i)) across all rankings for each document.
-    Standard k=60 dampens the influence of high-ranking outliers while
-    preserving the benefit of appearing in multiple result lists.
-
-    Documents appearing in multiple lists get a boost, improving recall
-    for queries where different strategies surface different relevant docs.
-
-    Args:
-        result_lists: List of ranked result lists, each containing
-            (Document, score) tuples.
-        top_k: Number of results to return after fusion.
-        k: RRF constant (default 60, per original RRF paper).
-
-    Returns:
-        Top-k fused results as (Document, original_score) tuples,
-        sorted by fused RRF score descending.
-    """
-    rrf_scores: dict[str, float] = {}
-    doc_map: dict[str, tuple] = {}
-
-    for results in result_lists:
-        for rank, (doc, score) in enumerate(results):
-            doc_id = hashlib.sha256(
-                (doc.page_content + str(doc.metadata.get("source", ""))).encode()
-            ).hexdigest()
-            if doc_id not in doc_map or score > doc_map[doc_id][1]:
-                doc_map[doc_id] = (doc, score)
-            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
-
-    sorted_ids = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)
-    return [doc_map[doc_id] for doc_id in sorted_ids[:top_k]]
+# Backward compat alias — tests import ``_rerank_by_rrf`` from this module.
+_rerank_by_rrf = rerank_by_rrf
 
 
 def search_knowledge_base(query: str) -> list[RetrievedChunk]:
@@ -105,7 +69,7 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
             top_k=settings.RAG_TOP_K,
         )
         # Reciprocal Rank Fusion: merge rankings for better recall
-        fused = _rerank_by_rrf(
+        fused = rerank_by_rrf(
             [semantic_results, augmented_results],
             top_k=settings.RAG_TOP_K,
         )
@@ -160,7 +124,7 @@ def search_hours(query: str) -> list[RetrievedChunk]:
         # Strategy 2: Direct semantic search for broader venue context
         semantic_results = retriever.retrieve_with_scores(query, top_k=settings.RAG_TOP_K)
         # Reciprocal Rank Fusion
-        fused = _rerank_by_rrf(
+        fused = rerank_by_rrf(
             [schedule_results, semantic_results],
             top_k=settings.RAG_TOP_K,
         )
