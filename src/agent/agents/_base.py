@@ -1,0 +1,147 @@
+"""Shared specialist agent execution logic.
+
+Extracts the ~80% duplicated code from the 4 specialist agents
+(host, dining, entertainment, comp) into a single ``execute_specialist()``
+function. Each agent file becomes a thin wrapper that passes its unique
+system prompt template and configuration.
+
+Dependency injection (``get_llm_fn``, ``get_cb_fn``) preserves existing
+test mock paths -- tests that ``patch("src.agent.agents.host_agent._get_llm")``
+continue to work because the agent passes its own module-level reference.
+"""
+
+import logging
+from collections.abc import Callable
+from string import Template
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+from src.agent.nodes import _format_context_block
+from src.agent.prompts import RESPONSIBLE_GAMING_HELPLINES
+from src.agent.state import PropertyQAState
+from src.agent.whisper_planner import format_whisper_plan
+from src.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+async def execute_specialist(
+    state: PropertyQAState,
+    *,
+    agent_name: str,
+    system_prompt_template: Template,
+    context_header: str,
+    no_context_fallback: str,
+    get_llm_fn: Callable,
+    get_cb_fn: Callable,
+    include_whisper: bool = False,
+) -> dict:
+    """Execute the shared specialist agent logic.
+
+    Args:
+        state: Current graph state.
+        agent_name: Agent name for logging (e.g. "dining", "host").
+        system_prompt_template: string.Template with $property_name,
+            $current_time, ${responsible_gaming_helplines} placeholders.
+        context_header: Label for the retrieved context section
+            (e.g. "Retrieved Dining Knowledge Base Context").
+        no_context_fallback: Pre-formatted fallback message for empty
+            retrieved context. Property placeholders ($property_name etc.)
+            must already be substituted by the caller.
+        get_llm_fn: Callable that returns the LLM instance (injected for testability).
+        get_cb_fn: Callable that returns the CircuitBreaker instance (injected for testability).
+        include_whisper: If True, append whisper planner guidance to the system prompt.
+
+    Returns:
+        Dict with ``messages`` (and optionally ``skip_validation``).
+    """
+    settings = get_settings()
+    retrieved = state.get("retrieved_context", [])
+    current_time = state.get("current_time", "unknown")
+    retry_count = state.get("retry_count", 0)
+    retry_feedback = state.get("retry_feedback")
+
+    # Circuit breaker check -- early exit before building prompts
+    if get_cb_fn().is_open:
+        logger.warning("Circuit breaker open — %s agent returning fallback", agent_name)
+        return {
+            "messages": [AIMessage(content=(
+                "I'm experiencing temporary technical difficulties. "
+                "Please try again in a minute, or contact "
+                "$property_name directly at $property_phone."
+            ).replace("$property_name", settings.PROPERTY_NAME)
+             .replace("$property_phone", settings.PROPERTY_PHONE))],
+            "skip_validation": True,
+        }
+
+    system_prompt = system_prompt_template.safe_substitute(
+        property_name=settings.PROPERTY_NAME,
+        current_time=current_time,
+        responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
+    )
+
+    # Format and append retrieved context
+    if retrieved:
+        context_block = _format_context_block(retrieved)
+        system_prompt += Template(
+            "\n\n## $header\n$context"
+        ).safe_substitute(header=context_header, context=context_block)
+    else:
+        # No context found -- return domain-specific fallback
+        return {
+            "messages": [AIMessage(content=no_context_fallback)],
+            "skip_validation": True,
+        }
+
+    # Inject whisper planner guidance (host_agent only)
+    if include_whisper:
+        whisper_guidance = format_whisper_plan(state.get("whisper_plan"))
+        if whisper_guidance:
+            system_prompt += whisper_guidance
+
+    # Build message list
+    llm_messages = [SystemMessage(content=system_prompt)]
+
+    # On retry, inject feedback
+    if retry_count > 0 and retry_feedback:
+        llm_messages.append(SystemMessage(
+            content=Template(
+                "IMPORTANT: Your previous response failed validation. Reason: $feedback. "
+                "Please generate a corrected response that addresses this issue."
+            ).safe_substitute(feedback=retry_feedback)
+        ))
+
+    # Sliding window on conversation history
+    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    window = history[-settings.MAX_HISTORY_MESSAGES:]
+    llm_messages.extend(window)
+
+    llm = get_llm_fn()
+
+    try:
+        response = await llm.ainvoke(llm_messages)
+        await get_cb_fn().record_success()
+        content = response.content if isinstance(response.content, str) else str(response.content)
+        return {"messages": [AIMessage(content=content)]}
+    except (ValueError, TypeError) as exc:
+        await get_cb_fn().record_failure()
+        logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
+        return {
+            "messages": [AIMessage(content=(
+                "I apologize, but I had trouble processing that response. "
+                "Please try again, or contact $property_name directly at $property_phone."
+            ).replace("$property_name", settings.PROPERTY_NAME)
+             .replace("$property_phone", settings.PROPERTY_PHONE))],
+            "skip_validation": True,
+        }
+    except Exception:
+        await get_cb_fn().record_failure()
+        logger.exception("%s agent LLM call failed", agent_name.capitalize())
+        return {
+            "messages": [AIMessage(content=(
+                "I apologize, but I'm having trouble generating a response right now. "
+                "Please try again, or contact $property_name directly at $property_phone."
+            ).replace("$property_name", settings.PROPERTY_NAME)
+             .replace("$property_phone", settings.PROPERTY_PHONE))],
+            "skip_validation": True,
+        }
