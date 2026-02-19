@@ -23,7 +23,7 @@ Custom 11-node StateGraph (src/agent/graph.py)
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
-    |-- generate (host_agent) -----> Gemini 2.5 Flash (grounded response)
+    |-- generate (specialist dispatch) -> host/dining/entertainment/comp agent -> Gemini 2.5 Flash
     |-- validate -----> Gemini 2.5 Flash (adversarial review)
     |-- persona_envelope -----> SMS truncation (160-char segments)
     |-- respond / fallback / greeting / off_topic -----> END
@@ -407,7 +407,7 @@ mohegan_sun.json --> Parse by category --> Format --> Chunk (800/120) --> Embed 
 2. **Parse**: Extract items by category. Flatten nested dicts (hotel towers, gaming sub-areas).
 3. **Format**: Category-specific formatters for restaurants, entertainment, hotel rooms; generic formatter for others.
 4. **Chunk**: `RecursiveCharacterTextSplitter` (800 chars, 120 overlap [15% of chunk size], separators: `\n\n`, `\n`, `. `, ` `). 800 characters is chosen to balance context density vs retrieval precision: casino property items (restaurant descriptions, room details) average 200-400 characters, so 800 chars preserves complete items while allowing the splitter to group related smaller items. Smaller chunks (e.g., 500) would fragment multi-field items; larger chunks (e.g., 1200) would mix unrelated categories.
-5. **Embed**: Google `text-embedding-004` (768 dimensions).
+5. **Embed**: Google `gemini-embedding-001` (768 dimensions).
 6. **Store**: ChromaDB collection `property_knowledge`, persistent to disk.
 
 Ingestion runs at FastAPI startup (lifespan) if the ChromaDB `chroma.sqlite3` file does not exist. First boot takes ~30 seconds. Chunks are stored with **deterministic SHA-256 IDs** (hash of content + source metadata), so re-ingestion is idempotent — restarting the application without clearing ChromaDB will not create duplicate chunks.

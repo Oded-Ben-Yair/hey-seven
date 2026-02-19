@@ -51,6 +51,30 @@ def _state(**overrides) -> dict:
     return base
 
 
+def _high_completeness_fields():
+    """Return extracted_fields dict with >=60% profile completeness for comp agent."""
+    ts = "2026-01-01T00:00:00Z"
+    return {
+        "core_identity": {
+            "name": {"value": "John", "confidence": 0.9, "source": "self_reported", "collected_at": ts},
+            "email": {"value": "j@t.com", "confidence": 0.8, "source": "self_reported", "collected_at": ts},
+            "language": {"value": "en", "confidence": 0.9, "source": "contextual_extraction", "collected_at": ts},
+            "full_name": {"value": "John Doe", "confidence": 0.85, "source": "self_reported", "collected_at": ts},
+            "date_of_birth": {"value": "1985-01-01", "confidence": 0.7, "source": "self_reported", "collected_at": ts},
+        },
+        "visit_context": {
+            "planned_visit_date": {"value": "2026-03-01", "confidence": 0.9, "source": "self_reported", "collected_at": ts},
+            "party_size": {"value": 4, "confidence": 0.85, "source": "self_reported", "collected_at": ts},
+            "occasion": {"value": "birthday", "confidence": 0.8, "source": "contextual_extraction", "collected_at": ts},
+        },
+        "preferences": {
+            "dining": {
+                "dietary_restrictions": {"value": "none", "confidence": 0.7, "source": "self_reported", "collected_at": ts},
+            },
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # Graph compilation
 # ---------------------------------------------------------------------------
@@ -510,3 +534,196 @@ class TestSpecialistDispatch:
         assert "hotel" not in _CATEGORY_TO_AGENT
         # generate should NOT be in non-stream (it streams tokens)
         assert NODE_GENERATE not in _NON_STREAM_NODES
+
+
+# ---------------------------------------------------------------------------
+# Specialist dispatch integration tests (real dispatch chain, mock only LLM)
+# ---------------------------------------------------------------------------
+
+
+class TestSpecialistDispatchIntegration:
+    """Integration tests that exercise the real dispatch chain.
+
+    Unlike the unit tests above which mock ``get_agent()``, these tests
+    let ``_dispatch_to_specialist()`` → ``get_agent()`` → real agent function
+    → ``execute_specialist()`` run unmocked.  Only the LLM and circuit breaker
+    are mocked to avoid API calls.
+    """
+
+    @pytest.mark.asyncio
+    async def test_restaurant_context_dispatches_through_dining_agent(self):
+        """Restaurant-category context routes through real dining_agent to LLM."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        mock_llm_response = MagicMock()
+        mock_llm_response.content = "Todd English's Tuscany is an excellent choice for Italian dining."
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        state = _state(
+            messages=[HumanMessage(content="Where can I get Italian food?")],
+            retrieved_context=[
+                {"content": "Todd English's Tuscany offers authentic Italian cuisine",
+                 "metadata": {"category": "restaurants"}, "score": 0.92},
+                {"content": "Bobby Flay's Bar Americain features American grill",
+                 "metadata": {"category": "restaurants"}, "score": 0.85},
+            ],
+        )
+
+        with (
+            mock_patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
+        ):
+            result = await _dispatch_to_specialist(state)
+
+        # Verify real dining agent produced a response (not just that get_agent was called)
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        assert "Todd English" in result["messages"][0].content
+        # Verify LLM was actually invoked (dining agent called execute_specialist)
+        mock_llm.ainvoke.assert_called_once()
+        # Verify circuit breaker was consulted
+        mock_cb.allow_request.assert_called_once()
+        mock_cb.record_success.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_entertainment_context_dispatches_through_entertainment_agent(self):
+        """Entertainment-category context routes through real entertainment_agent."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        mock_llm_response = MagicMock()
+        mock_llm_response.content = "Tonight's show at the Arena features a great lineup."
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        state = _state(
+            messages=[HumanMessage(content="What shows are on tonight?")],
+            retrieved_context=[
+                {"content": "Mohegan Sun Arena hosts concerts and comedy shows",
+                 "metadata": {"category": "entertainment"}, "score": 0.90},
+            ],
+        )
+
+        with (
+            mock_patch("src.agent.agents.entertainment_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.entertainment_agent._get_circuit_breaker", return_value=mock_cb),
+        ):
+            result = await _dispatch_to_specialist(state)
+
+        assert "messages" in result
+        assert "Arena" in result["messages"][0].content
+        mock_llm.ainvoke.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_gaming_context_dispatches_through_comp_agent(self):
+        """Gaming-category context with high completeness routes through comp_agent."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        mock_llm_response = MagicMock()
+        mock_llm_response.content = "Based on your gaming preferences, I can suggest some great promotions."
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        state = _state(
+            messages=[HumanMessage(content="What slots do you have?")],
+            retrieved_context=[
+                {"content": "Casino floor features 5000+ slot machines",
+                 "metadata": {"category": "gaming"}, "score": 0.88},
+            ],
+            extracted_fields=_high_completeness_fields(),
+        )
+
+        with (
+            mock_patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
+        ):
+            result = await _dispatch_to_specialist(state)
+
+        assert "messages" in result
+        mock_llm.ainvoke.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_no_context_returns_fallback_without_llm_call(self):
+        """When retrieved_context has items but they produce no context block,
+        specialist returns a fallback without calling the LLM."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        mock_llm = AsyncMock()
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+
+        # Empty retrieved_context → host agent → no context → fallback
+        state = _state(
+            messages=[HumanMessage(content="Tell me about something")],
+            retrieved_context=[],
+        )
+
+        with (
+            mock_patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
+        ):
+            result = await _dispatch_to_specialist(state)
+
+        # Host agent with empty context returns fallback (skip_validation=True)
+        assert "messages" in result
+        assert result.get("skip_validation") is True
+        # LLM should NOT be called for fallback path
+        mock_llm.ainvoke.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_mixed_categories_with_tie_dispatches_deterministically(self):
+        """Equal category counts dispatch deterministically via alphabetical tie-breaking."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        mock_llm_response = MagicMock()
+        mock_llm_response.content = "Great entertainment options tonight."
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        # "entertainment" and "restaurants" each have 1 chunk.
+        # Alphabetically: "entertainment" < "restaurants" → BUT tie-break is
+        # (count, name) so max picks highest name alphabetically last.
+        # "restaurants" > "entertainment" alphabetically → restaurants wins → dining agent.
+        state = _state(
+            messages=[HumanMessage(content="What can I do tonight?")],
+            retrieved_context=[
+                {"content": "Live music at the bar", "metadata": {"category": "entertainment"}, "score": 0.8},
+                {"content": "Late night dining options", "metadata": {"category": "restaurants"}, "score": 0.8},
+            ],
+        )
+
+        with (
+            mock_patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
+        ):
+            result = await _dispatch_to_specialist(state)
+
+        # "restaurants" wins alphabetical tie-break → dining agent
+        assert "messages" in result
+        mock_llm.ainvoke.assert_called_once()

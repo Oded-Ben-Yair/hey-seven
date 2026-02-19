@@ -104,6 +104,23 @@ class Settings(BaseSettings):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_consent_hmac(self) -> "Settings":
+        """Warn if CONSENT_HMAC_SECRET is using the default insecure value."""
+        if (
+            self.SMS_ENABLED
+            and self.CONSENT_HMAC_SECRET == "change-me-in-production"
+        ):
+            import warnings
+
+            warnings.warn(
+                "CONSENT_HMAC_SECRET is using the default value. "
+                "Set a secure secret via environment variable before enabling SMS in production.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return self
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

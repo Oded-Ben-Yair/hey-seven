@@ -23,7 +23,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from src.agent.prompts import WHISPER_PLANNER_PROMPT
-from src.agent.state import CasinoHostState
+from src.agent.state import PropertyQAState
 from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
 
@@ -128,7 +128,7 @@ class WhisperPlan(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-async def whisper_planner_node(state: CasinoHostState) -> dict:
+async def whisper_planner_node(state: PropertyQAState) -> dict:
     """Silent planner node for the StateGraph.
 
     Reads conversation history and guest profile, outputs a structured

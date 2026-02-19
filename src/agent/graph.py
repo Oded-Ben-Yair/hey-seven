@@ -145,7 +145,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict:
     agent_name = "host"
     dominant = "none"
     if category_counts:
-        dominant = max(category_counts, key=lambda k: category_counts[k])
+        dominant = max(category_counts, key=lambda k: (category_counts[k], k))
         agent_name = _CATEGORY_TO_AGENT.get(dominant, "host")
 
     agent_fn = get_agent(agent_name)

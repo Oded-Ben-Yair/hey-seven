@@ -35,19 +35,12 @@ from .guardrails import (
     detect_patron_privacy,
     detect_responsible_gaming,
 )
+from .nodes import _get_last_human_message
 from .state import PropertyQAState
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["compliance_gate_node"]
-
-
-def _get_last_human_message(messages: list) -> str:
-    """Extract the content of the last HumanMessage from a message list."""
-    for msg in reversed(messages):
-        if isinstance(msg, HumanMessage):
-            return msg.content if isinstance(msg.content, str) else str(msg.content)
-    return ""
 
 
 async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:

@@ -132,16 +132,6 @@ async def execute_specialist(
 
     llm = get_llm_fn()
 
-    # Feature flag: human_like_delay_enabled
-    # When enabled in production, a small random delay (0.5-1.5s) would be
-    # inserted here via ``await asyncio.sleep(random.uniform(0.5, 1.5))``
-    # to simulate human-like typing cadence for a more natural guest UX.
-    # The delay is NOT active in this codebase to keep tests fast and
-    # deterministic.  Wire it via:
-    #   if DEFAULT_FEATURES.get("human_like_delay_enabled", False):
-    #       await asyncio.sleep(random.uniform(0.5, 1.5))
-    _ = DEFAULT_FEATURES.get("human_like_delay_enabled", False)  # read to register consumer
-
     try:
         response = await llm.ainvoke(llm_messages)
         await cb.record_success()
