@@ -168,6 +168,13 @@ def _get_firestore_client() -> Any | None:
 
     Lazy-imports ``google.cloud.firestore`` to avoid import failures when
     the dependency is not installed (local dev without GCP SDK).
+
+    Note: A near-identical helper exists in ``src.data.guest_profile``.
+    Both are intentionally kept separate: this one uses ``CASINO_ID`` as
+    the database parameter (per-casino config isolation), while the guest
+    profile variant uses the same pattern for guest document storage.
+    Extracting a shared utility would save ~10 LOC but add an import
+    dependency between unrelated modules.
     """
     try:
         from google.cloud.firestore import AsyncClient  # noqa: F401

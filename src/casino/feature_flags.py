@@ -40,6 +40,11 @@ class FeatureFlags(TypedDict, total=False):
 # Default feature flags
 # ---------------------------------------------------------------------------
 
+# Trade-off: Graph nodes read DEFAULT_FEATURES directly (synchronous) rather than
+# calling the async get_feature_flags(casino_id) API.  This is intentional for
+# Phase 1 single-tenant deployment — avoids async overhead in every node.
+# The async API (get_feature_flags / is_feature_enabled) is ready for Phase 2
+# multi-tenant support when per-casino overrides are needed from Firestore.
 DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "ai_disclosure_enabled": True,
     "whisper_planner_enabled": True,

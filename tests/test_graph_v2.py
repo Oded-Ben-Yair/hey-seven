@@ -52,26 +52,20 @@ def _state(**overrides) -> dict:
 
 
 def _high_completeness_fields():
-    """Return extracted_fields dict with >=60% profile completeness for comp agent."""
-    ts = "2026-01-01T00:00:00Z"
+    """Return flat extracted_fields dict with >=60% profile completeness for comp agent.
+
+    Uses the flat whisper-planner schema (name, visit_date, party_size, etc.)
+    with 5/8 fields filled = 62.5% > 60% threshold.
+    """
     return {
-        "core_identity": {
-            "name": {"value": "John", "confidence": 0.9, "source": "self_reported", "collected_at": ts},
-            "email": {"value": "j@t.com", "confidence": 0.8, "source": "self_reported", "collected_at": ts},
-            "language": {"value": "en", "confidence": 0.9, "source": "contextual_extraction", "collected_at": ts},
-            "full_name": {"value": "John Doe", "confidence": 0.85, "source": "self_reported", "collected_at": ts},
-            "date_of_birth": {"value": "1985-01-01", "confidence": 0.7, "source": "self_reported", "collected_at": ts},
-        },
-        "visit_context": {
-            "planned_visit_date": {"value": "2026-03-01", "confidence": 0.9, "source": "self_reported", "collected_at": ts},
-            "party_size": {"value": 4, "confidence": 0.85, "source": "self_reported", "collected_at": ts},
-            "occasion": {"value": "birthday", "confidence": 0.8, "source": "contextual_extraction", "collected_at": ts},
-        },
-        "preferences": {
-            "dining": {
-                "dietary_restrictions": {"value": "none", "confidence": 0.7, "source": "self_reported", "collected_at": ts},
-            },
-        },
+        "name": "John Doe",
+        "visit_date": "2026-03-01",
+        "party_size": 4,
+        "dining": "steakhouse",
+        "entertainment": "comedy show",
+        "gaming": None,
+        "occasions": None,
+        "companions": None,
     }
 
 

@@ -464,6 +464,7 @@ async def chat_stream(
 
     sources: list[str] = []
     node_start_times: dict[str, float] = {}
+    errored = False
 
     try:
         async for event in graph.astream_events(
@@ -556,12 +557,15 @@ async def chat_stream(
         raise
     except Exception:
         logger.exception("Error during SSE stream")
+        errored = True
         yield {
             "event": "error",
             "data": json.dumps({"error": "An error occurred while generating the response."}),
         }
 
-    if sources:
+    # After an error, sources may contain stale/partial data from a partially-
+    # completed graph execution — suppress to avoid confusing the client.
+    if sources and not errored:
         yield {
             "event": "sources",
             "data": json.dumps({"sources": sources}),

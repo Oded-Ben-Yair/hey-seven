@@ -30,29 +30,20 @@ def _state(**overrides):
 
 
 def _high_completeness_fields():
-    """Return extracted_fields dict with >=60% profile completeness.
+    """Return flat extracted_fields dict with >=60% profile completeness.
 
-    Used by comp agent tests that need to pass the profile completeness gate.
+    Uses the flat whisper-planner schema (name, visit_date, party_size, etc.)
+    with 5/8 fields filled = 62.5% > 60% threshold.
     """
-    ts = "2026-01-01T00:00:00Z"
     return {
-        "core_identity": {
-            "name": {"value": "John", "confidence": 0.9, "source": "self_reported", "collected_at": ts},
-            "email": {"value": "j@t.com", "confidence": 0.8, "source": "self_reported", "collected_at": ts},
-            "language": {"value": "en", "confidence": 0.9, "source": "contextual_extraction", "collected_at": ts},
-            "full_name": {"value": "John Doe", "confidence": 0.85, "source": "self_reported", "collected_at": ts},
-            "date_of_birth": {"value": "1985-01-01", "confidence": 0.7, "source": "self_reported", "collected_at": ts},
-        },
-        "visit_context": {
-            "planned_visit_date": {"value": "2026-03-01", "confidence": 0.9, "source": "self_reported", "collected_at": ts},
-            "party_size": {"value": 4, "confidence": 0.85, "source": "self_reported", "collected_at": ts},
-            "occasion": {"value": "birthday", "confidence": 0.8, "source": "contextual_extraction", "collected_at": ts},
-        },
-        "preferences": {
-            "dining": {
-                "dietary_restrictions": {"value": "none", "confidence": 0.7, "source": "self_reported", "collected_at": ts},
-            },
-        },
+        "name": "John Doe",
+        "visit_date": "2026-03-01",
+        "party_size": 4,
+        "dining": "steakhouse",
+        "entertainment": "comedy show",
+        "gaming": None,
+        "occasions": None,
+        "companions": None,
     }
 
 
@@ -449,6 +440,54 @@ class TestCompAgent:
         result = await comp_agent(state)
         assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
+
+    async def test_flat_fields_completeness_below_threshold(self):
+        """Flat extracted_fields with few filled values triggers deflection."""
+        from src.agent.agents.comp_agent import comp_agent
+
+        state = _state(
+            messages=[HumanMessage(content="What comps?")],
+            retrieved_context=[{"content": "data", "metadata": {}, "score": 0.9}],
+            extracted_fields={
+                "name": "John",
+                "visit_date": None,
+                "party_size": None,
+                "dining": None,
+                "entertainment": None,
+                "gaming": None,
+                "occasions": None,
+                "companions": None,
+            },  # 1/8 = 12.5% < 60%
+        )
+        result = await comp_agent(state)
+        assert result["skip_validation"] is True
+        assert "rewards and promotions" in result["messages"][0].content
+
+    async def test_flat_fields_completeness_above_threshold(self):
+        """Flat extracted_fields with enough values passes gate."""
+        from src.agent.agents.comp_agent import comp_agent
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="Here are your rewards!"))
+
+        state = _state(
+            messages=[HumanMessage(content="What comps?")],
+            retrieved_context=[{"content": "Loyalty info", "metadata": {"category": "promotions"}, "score": 0.9}],
+            extracted_fields={
+                "name": "John",
+                "visit_date": "2026-03-01",
+                "party_size": 4,
+                "dining": "steakhouse",
+                "entertainment": "comedy",
+                "gaming": None,
+                "occasions": None,
+                "companions": None,
+            },  # 5/8 = 62.5% > 60%
+        )
+        with patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm):
+            result = await comp_agent(state)
+        assert isinstance(result["messages"][0], AIMessage)
+        mock_llm.ainvoke.assert_called_once()
 
     def test_comp_prompt_uses_cautious_language(self):
         """Comp system prompt includes cautious language guidance."""

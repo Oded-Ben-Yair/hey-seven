@@ -411,6 +411,39 @@ class TestIdempotencyTracker:
         assert tracker.size == 1  # Only msg-006
 
 
+class TestInboundSmsIdempotency:
+    """handle_inbound_sms deduplicates retries via idempotency tracker."""
+
+    @pytest.mark.asyncio
+    async def test_duplicate_message_returns_duplicate_type(self):
+        from unittest.mock import patch
+
+        from src.sms.webhook import handle_inbound_sms
+
+        payload = {
+            "from": {"phone_number": "+12125551234"},
+            "to": [{"phone_number": "+18605559999"}],
+            "text": "Hello",
+            "id": "msg-dedup-001",
+        }
+        # First call — not a duplicate
+        with patch("src.sms.webhook._get_idempotency_tracker") as mock_tracker:
+            mock_t = MagicMock()
+            mock_t.is_duplicate = AsyncMock(return_value=False)
+            mock_tracker.return_value = mock_t
+            result = await handle_inbound_sms(payload)
+        assert result["type"] == "message"
+
+        # Second call — duplicate
+        with patch("src.sms.webhook._get_idempotency_tracker") as mock_tracker:
+            mock_t = MagicMock()
+            mock_t.is_duplicate = AsyncMock(return_value=True)
+            mock_tracker.return_value = mock_t
+            result = await handle_inbound_sms(payload)
+        assert result["type"] == "duplicate"
+        assert result["message_id"] == "msg-dedup-001"
+
+
 # ============================================================================
 # Compliance tests
 # ============================================================================

@@ -21,6 +21,18 @@ from .compliance import handle_mandatory_keywords
 
 logger = logging.getLogger(__name__)
 
+# Module-level idempotency tracker for deduplicating Telnyx webhook retries.
+# Instantiated here so all inbound SMS requests share the same tracker.
+_idempotency_tracker: WebhookIdempotencyTracker | None = None
+
+
+def _get_idempotency_tracker() -> WebhookIdempotencyTracker:
+    """Lazy singleton for the idempotency tracker."""
+    global _idempotency_tracker  # noqa: PLW0603
+    if _idempotency_tracker is None:
+        _idempotency_tracker = WebhookIdempotencyTracker()
+    return _idempotency_tracker
+
 
 # ---------------------------------------------------------------------------
 # Webhook signature verification
@@ -123,6 +135,18 @@ async def handle_inbound_sms(payload: dict[str, Any]) -> dict[str, Any]:
         len(text),
         message_id[:12] if message_id else "none",
     )
+
+    # Idempotency: deduplicate Telnyx webhook retries (4xx/5xx/timeout).
+    if message_id and await _get_idempotency_tracker().is_duplicate(message_id):
+        logger.info("Duplicate webhook skipped: %s", message_id[:12])
+        return {
+            "type": "duplicate",
+            "from_": from_number,
+            "to": to_number,
+            "text": text,
+            "message_id": message_id,
+            "media_urls": media_urls,
+        }
 
     # MANDATORY: Check keywords BEFORE any LLM call
     keyword_response = await handle_mandatory_keywords(text, from_number)

@@ -96,6 +96,13 @@ def _clear_singleton_caches():
         pass
 
     try:
+        from src.sms import webhook as _sms_webhook
+
+        _sms_webhook._idempotency_tracker = None
+    except ImportError:
+        pass
+
+    try:
         from src.observability.langfuse_client import _get_langfuse_client
 
         _get_langfuse_client.cache_clear()

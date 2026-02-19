@@ -14,8 +14,6 @@ from src.agent.circuit_breaker import _get_circuit_breaker
 from src.agent.nodes import _get_llm
 from src.agent.state import PropertyQAState
 from src.config import get_settings
-from src.data.models import calculate_completeness
-
 from ._base import execute_specialist
 
 logger = logging.getLogger(__name__)
@@ -77,10 +75,14 @@ async def comp_agent(state: PropertyQAState) -> dict:
     """
     settings = get_settings()
 
-    # Profile completeness gate (unique to comp_agent)
-    # NOTE: CB check is handled by execute_specialist() — no duplicate needed here.
+    # Profile completeness gate (unique to comp_agent).
+    # Uses flat extracted_fields dict (guest_name, party_size, date_preference),
+    # NOT the GuestProfile dotted-path schema from models.calculate_completeness().
+    # CB check is handled by execute_specialist() — no duplicate needed here.
     extracted_fields = state.get("extracted_fields", {})
-    completeness = calculate_completeness(extracted_fields)
+    filled = sum(1 for v in extracted_fields.values() if v is not None and v != "")
+    total = max(len(extracted_fields), 1)
+    completeness = filled / total
     if completeness < settings.COMP_COMPLETENESS_THRESHOLD:
         return {
             "messages": [AIMessage(content=(
