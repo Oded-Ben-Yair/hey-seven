@@ -17,6 +17,7 @@ import logging
 import threading
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from cachetools import TTLCache
 
@@ -164,7 +165,7 @@ def _get_validator_llm() -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 
 
-async def router_node(state: PropertyQAState) -> dict:
+async def router_node(state: PropertyQAState) -> dict[str, Any]:
     """Classify user intent into one of 7 categories.
 
     Message-limit check: exceeding MAX_MESSAGE_LIMIT forces off_topic to end conversation.
@@ -173,7 +174,7 @@ async def router_node(state: PropertyQAState) -> dict:
     settings = get_settings()
     messages = state.get("messages", [])
 
-    # Turn-limit guard
+    # Turn-limit guard (defense-in-depth: also checked by compliance_gate_node upstream).
     if len(messages) > settings.MAX_MESSAGE_LIMIT:
         logger.warning("Message limit exceeded (%d messages), forcing off_topic", len(messages))
         return {
@@ -232,7 +233,7 @@ async def router_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def retrieve_node(state: PropertyQAState) -> dict:
+async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
     """Retrieve relevant documents from the knowledge base.
 
     Extracts the latest user message and searches for matching content.
@@ -262,7 +263,7 @@ async def retrieve_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def validate_node(state: PropertyQAState) -> dict:
+async def validate_node(state: PropertyQAState) -> dict[str, Any]:
     """Adversarial review of the generated response against 6 criteria.
 
     If ``skip_validation`` is True (empty context or error), auto-PASS.
@@ -353,7 +354,7 @@ async def validate_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def respond_node(state: PropertyQAState) -> dict:
+async def respond_node(state: PropertyQAState) -> dict[str, Any]:
     """Extract sources from retrieved context and prepare final response.
 
     Clears retry_feedback. Sets sources_used from context metadata.
@@ -376,7 +377,7 @@ async def respond_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def fallback_node(state: PropertyQAState) -> dict:
+async def fallback_node(state: PropertyQAState) -> dict[str, Any]:
     """Safe fallback response when validation fails.
 
     Provides contact information and logs the failure reason.
@@ -447,7 +448,7 @@ def _build_greeting_categories() -> dict[str, str]:
         return dict(_KNOWN_CATEGORY_LABELS)
 
 
-async def greeting_node(state: PropertyQAState) -> dict:
+async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     """Template welcome listing available knowledge categories.
 
     Categories are derived from the actual property data file (cached)
@@ -482,7 +483,7 @@ async def greeting_node(state: PropertyQAState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def off_topic_node(state: PropertyQAState) -> dict:
+async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     """Handle off-topic, gambling advice, and action requests.
 
     Feature flags consulted:

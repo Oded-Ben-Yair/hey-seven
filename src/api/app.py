@@ -384,7 +384,7 @@ def create_app() -> FastAPI:
 
             result = await handle_cms_webhook(
                 payload=body,
-                webhook_secret=get_settings().CMS_WEBHOOK_SECRET,
+                webhook_secret=get_settings().CMS_WEBHOOK_SECRET.get_secret_value(),
                 raw_body=raw_body,
                 signature=signature,
             )

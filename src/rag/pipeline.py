@@ -423,7 +423,7 @@ class AbstractRetriever(ABC):
         query: str,
         top_k: int = 5,
         filter_category: str | None = None,
-    ) -> list:
+    ) -> list[Document]:
         """Retrieve relevant documents for a query."""
         ...
 
@@ -432,7 +432,7 @@ class AbstractRetriever(ABC):
         self,
         query: str,
         top_k: int = 5,
-    ) -> list[tuple]:
+    ) -> list[tuple[Document, float]]:
         """Retrieve documents with relevance scores."""
         ...
 

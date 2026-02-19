@@ -11,6 +11,7 @@ Channel formatting:
 """
 
 import logging
+from typing import Any
 
 from langchain_core.messages import AIMessage
 
@@ -42,7 +43,7 @@ def _validate_output(response_text: str) -> str:
     return redacted
 
 
-async def persona_envelope_node(state: PropertyQAState) -> dict:
+async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     """Apply output guardrails and persona formatting to the final response.
 
     Processing order:

@@ -67,9 +67,11 @@ class TestCMSWebhookEndpoint:
         The cms_webhook endpoint calls ``get_settings().CMS_WEBHOOK_SECRET``
         at runtime, so patching the cached settings object is sufficient.
         """
+        from pydantic import SecretStr
+
         from src.config import get_settings
 
-        monkeypatch.setattr(get_settings(), "CMS_WEBHOOK_SECRET", secret)
+        monkeypatch.setattr(get_settings(), "CMS_WEBHOOK_SECRET", SecretStr(secret))
 
     def test_valid_item_returns_indexed(self, client, monkeypatch):
         """Valid CMS webhook with proper signature returns 200 and 'indexed' status."""

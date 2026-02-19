@@ -273,6 +273,18 @@ class TestFeatureFlags:
         defaults["test_flag"] = True
         assert defaults["test_flag"] is True
 
+    def test_feature_flags_typeddict_parity(self):
+        """FeatureFlags TypedDict declares every key in DEFAULT_FEATURES (and vice versa)."""
+        from src.casino.feature_flags import FeatureFlags
+
+        typeddict_keys = set(FeatureFlags.__annotations__)
+        default_keys = set(DEFAULT_FEATURES.keys())
+        assert typeddict_keys == default_keys, (
+            f"FeatureFlags drift: "
+            f"missing={default_keys - typeddict_keys}, "
+            f"extra={typeddict_keys - default_keys}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # TestBrandingConfig

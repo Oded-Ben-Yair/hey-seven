@@ -27,6 +27,7 @@ class FeatureFlags(TypedDict, total=False):
 
     ai_disclosure_enabled: bool
     whisper_planner_enabled: bool
+    specialist_agents_enabled: bool
     comp_agent_enabled: bool
     spanish_support_enabled: bool
     outbound_campaigns_enabled: bool
@@ -50,6 +51,14 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "human_like_delay_enabled": True,
     "sms_enabled": False,  # Requires Telnyx setup
 })
+
+# Parity assertion: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.
+# Catches schema drift at import time (same pattern as _initial_state parity in graph.py).
+assert set(FeatureFlags.__annotations__) == set(DEFAULT_FEATURES.keys()), (
+    f"FeatureFlags TypedDict drift: "
+    f"missing={set(DEFAULT_FEATURES.keys()) - set(FeatureFlags.__annotations__)}, "
+    f"extra={set(FeatureFlags.__annotations__) - set(DEFAULT_FEATURES.keys())}"
+)
 
 
 # ---------------------------------------------------------------------------

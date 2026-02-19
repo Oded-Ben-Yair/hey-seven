@@ -122,7 +122,7 @@ _CATEGORY_TO_AGENT: dict[str, str] = {
 }
 
 
-async def _dispatch_to_specialist(state: PropertyQAState) -> dict:
+async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     """Dispatch to the appropriate specialist agent based on retrieved context.
 
     Examines the dominant category in ``retrieved_context`` metadata and

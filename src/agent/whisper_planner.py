@@ -138,7 +138,7 @@ class WhisperPlan(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-async def whisper_planner_node(state: PropertyQAState) -> dict:
+async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
     """Silent planner node for the StateGraph.
 
     Reads conversation history and guest profile, outputs a structured

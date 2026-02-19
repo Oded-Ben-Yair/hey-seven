@@ -8,6 +8,9 @@ Reference: Cormack, Clarke, Buettcher (2009) — k=60 per original paper.
 """
 
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def rerank_by_rrf(
@@ -47,4 +50,11 @@ def rerank_by_rrf(
             rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
 
     sorted_ids = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)
-    return [doc_map[doc_id] for doc_id in sorted_ids[:top_k]]
+    fused = [doc_map[doc_id] for doc_id in sorted_ids[:top_k]]
+    logger.debug(
+        "RRF fusion: %d lists, %d unique docs, returning top %d",
+        len(result_lists),
+        len(doc_map),
+        len(fused),
+    )
+    return fused

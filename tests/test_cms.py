@@ -588,5 +588,14 @@ class TestCMSConfigFields:
         from src.config import Settings
 
         s = Settings()
-        assert s.CMS_WEBHOOK_SECRET == ""
+        assert s.CMS_WEBHOOK_SECRET.get_secret_value() == ""
         assert s.GOOGLE_SHEETS_ID == ""
+
+    def test_cms_webhook_secret_is_secretstr(self):
+        """CMS_WEBHOOK_SECRET uses SecretStr to prevent accidental logging exposure."""
+        from pydantic import SecretStr
+
+        from src.config import Settings
+
+        s = Settings()
+        assert isinstance(s.CMS_WEBHOOK_SECRET, SecretStr)

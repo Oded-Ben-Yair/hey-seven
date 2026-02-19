@@ -71,12 +71,12 @@ class Settings(BaseSettings):
     CASINO_ID: str = "mohegan_sun"  # Multi-tenant casino identifier
 
     # --- CMS ---
-    CMS_WEBHOOK_SECRET: str = ""  # HMAC-SHA256 secret for Google Sheets webhook verification
+    CMS_WEBHOOK_SECRET: SecretStr = SecretStr("")  # HMAC-SHA256 secret for Google Sheets webhook verification
     GOOGLE_SHEETS_ID: str = ""  # Default Google Sheets spreadsheet ID for CMS content
 
     # --- SMS ---
     SMS_ENABLED: bool = False
-    CONSENT_HMAC_SECRET: str = "change-me-in-production"  # HMAC key for consent hash chain
+    CONSENT_HMAC_SECRET: SecretStr = SecretStr("change-me-in-production")  # HMAC key for consent hash chain
     PERSONA_MAX_CHARS: int = 0  # 0 = unlimited, 160 = SMS segment limit
     TELNYX_API_KEY: SecretStr = SecretStr("")
     TELNYX_MESSAGING_PROFILE_ID: str = ""
@@ -110,7 +110,7 @@ class Settings(BaseSettings):
         """Warn if CONSENT_HMAC_SECRET is using the default insecure value."""
         if (
             self.SMS_ENABLED
-            and self.CONSENT_HMAC_SECRET == "change-me-in-production"
+            and self.CONSENT_HMAC_SECRET.get_secret_value() == "change-me-in-production"
         ):
             import warnings
 

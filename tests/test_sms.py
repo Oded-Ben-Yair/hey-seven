@@ -725,7 +725,10 @@ class TestConsentHashChainHMAC:
 
         s = Settings()
         assert hasattr(s, "CONSENT_HMAC_SECRET")
-        assert s.CONSENT_HMAC_SECRET == "change-me-in-production"
+        from pydantic import SecretStr
+
+        assert isinstance(s.CONSENT_HMAC_SECRET, SecretStr)
+        assert s.CONSENT_HMAC_SECRET.get_secret_value() == "change-me-in-production"
 
 
 class TestConsentChecking:

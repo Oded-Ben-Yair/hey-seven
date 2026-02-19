@@ -82,6 +82,13 @@ def _clear_singleton_caches():
         pass
 
     try:
+        from src.casino.feature_flags import _flag_cache
+
+        _flag_cache.clear()
+    except ImportError:
+        pass
+
+    try:
         from src.cms.webhook import _content_hashes
 
         _content_hashes.clear()
