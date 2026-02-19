@@ -284,9 +284,9 @@ Five sub-cases based on `query_type`:
 
 Two Pydantic models for structured LLM output:
 
-- **`RouterOutput`** (`state.py:73`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails in the `compliance_gate` before the LLM router runs, expanding the effective routing space to 9 categories.
-- **`ValidationResult`** (`state.py:87`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
-- **`WhisperPlan`** (`whisper_planner.py:43`): `next_topic` (`Literal` constrained to 10 profiling topics) + `extraction_targets` (list[str]) + `offer_readiness` (float 0.0-1.0) + `conversation_note` (str). Used exclusively by the `whisper_planner` node for silent agent guidance.
+- **`RouterOutput`** (`state.py:79`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails in the `compliance_gate` before the LLM router runs, expanding the effective routing space to 9 categories.
+- **`ValidationResult`** (`state.py:93`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
+- **`WhisperPlan`** (`whisper_planner.py:107`): `next_topic` (`Literal` constrained to 10 profiling topics) + `extraction_targets` (list[str]) + `offer_readiness` (float 0.0-1.0) + `conversation_note` (str). Used exclusively by the `whisper_planner` node for silent agent guidance.
 
 ---
 
