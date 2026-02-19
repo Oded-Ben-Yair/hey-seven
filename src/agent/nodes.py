@@ -14,8 +14,11 @@ test imports.
 import asyncio
 import json
 import logging
+import threading
 from functools import lru_cache
 from pathlib import Path
+
+from cachetools import TTLCache
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -97,56 +100,63 @@ def _get_last_human_message(messages: list) -> str:
 
 
 # ---------------------------------------------------------------------------
-# LLM singleton
+# LLM singleton (TTL-cached for credential rotation)
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=1)
+# TTL-cached LLM singletons: process-scoped with automatic refresh.
+# TTL=3600s (1 hour) allows credential rotation (e.g., GCP Workload Identity
+# Federation) without process restart.  Thread-safe via _llm_lock.
+_LLM_CACHE_TTL = 3600
+_llm_cache: TTLCache = TTLCache(maxsize=2, ttl=_LLM_CACHE_TTL)
+_llm_lock = threading.Lock()
+
+
 def _get_llm() -> ChatGoogleGenerativeAI:
-    """Get or create the shared LLM instance (cached singleton).
+    """Get or create the shared LLM instance (TTL-cached singleton).
 
-    Uses ``@lru_cache`` consistent with ``get_settings()`` pattern.
-    Cache is transparent to tests that ``patch("src.agent.nodes._get_llm")``.
-
-    Production scaling note: ``@lru_cache`` singletons are process-scoped.
-    For multi-container deployments (Cloud Run auto-scaling), each container
-    gets its own LLM instance, which is correct behavior (no shared state
-    needed for stateless LLM clients). For scenarios requiring TTL-based
-    cache invalidation (e.g., credential rotation), replace with
-    ``cachetools.TTLCache(maxsize=1, ttl=3600)``.
+    Cache refreshes every hour to pick up rotated credentials.
+    Thread-safe via ``_llm_lock``.  Tests can ``patch("src.agent.nodes._get_llm")``
+    without interacting with the cache.
     """
-    settings = get_settings()
-    return ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        temperature=settings.MODEL_TEMPERATURE,
-        timeout=settings.MODEL_TIMEOUT,
-        max_retries=settings.MODEL_MAX_RETRIES,
-        max_output_tokens=settings.MODEL_MAX_OUTPUT_TOKENS,
-    )
+    with _llm_lock:
+        cached = _llm_cache.get("llm")
+        if cached is not None:
+            return cached
+        settings = get_settings()
+        llm = ChatGoogleGenerativeAI(
+            model=settings.MODEL_NAME,
+            temperature=settings.MODEL_TEMPERATURE,
+            timeout=settings.MODEL_TIMEOUT,
+            max_retries=settings.MODEL_MAX_RETRIES,
+            max_output_tokens=settings.MODEL_MAX_OUTPUT_TOKENS,
+        )
+        _llm_cache["llm"] = llm
+        return llm
 
 
-@lru_cache(maxsize=1)
 def _get_validator_llm() -> ChatGoogleGenerativeAI:
-    """Get or create the validation LLM instance (cached singleton).
+    """Get or create the validation LLM instance (TTL-cached singleton).
 
     Uses temperature=0.0 for deterministic binary classification
     (PASS/RETRY/FAIL). Separate from ``_get_llm()`` which uses the
     configured temperature for creative response generation.
 
-    Production scaling note: ``@lru_cache`` singletons are process-scoped.
-    For multi-container deployments (Cloud Run auto-scaling), each container
-    gets its own validator instance, which is correct behavior (no shared
-    state needed for stateless LLM clients). For scenarios requiring
-    TTL-based cache invalidation (e.g., credential rotation), replace with
-    ``cachetools.TTLCache(maxsize=1, ttl=3600)``.
+    Cache refreshes every hour (same TTL as ``_get_llm``).
     """
-    settings = get_settings()
-    return ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        temperature=0.0,
-        timeout=settings.MODEL_TIMEOUT,
-        max_retries=settings.MODEL_MAX_RETRIES,
-        max_output_tokens=512,  # Validation produces short structured output
-    )
+    with _llm_lock:
+        cached = _llm_cache.get("validator")
+        if cached is not None:
+            return cached
+        settings = get_settings()
+        llm = ChatGoogleGenerativeAI(
+            model=settings.MODEL_NAME,
+            temperature=0.0,
+            timeout=settings.MODEL_TIMEOUT,
+            max_retries=settings.MODEL_MAX_RETRIES,
+            max_output_tokens=512,  # Validation produces short structured output
+        )
+        _llm_cache["validator"] = llm
+        return llm
 
 
 # ---------------------------------------------------------------------------

@@ -29,3 +29,4 @@ langgraph-swarm==0.1.0
 # --- Utilities ---
 sse-starlette==3.2.0
 httpx==0.28.1
+cachetools==5.5.2

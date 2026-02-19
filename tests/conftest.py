@@ -19,10 +19,9 @@ def _clear_singleton_caches():
     get_settings.cache_clear()
 
     try:
-        from src.agent.nodes import _get_llm, _get_validator_llm
+        from src.agent.nodes import _llm_cache
 
-        _get_llm.cache_clear()
-        _get_validator_llm.cache_clear()
+        _llm_cache.clear()
     except ImportError:
         pass
 
@@ -34,9 +33,9 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.agent.whisper_planner import _get_whisper_llm
+        from src.agent.whisper_planner import _whisper_cache
 
-        _get_whisper_llm.cache_clear()
+        _whisper_cache.clear()
     except ImportError:
         pass
 

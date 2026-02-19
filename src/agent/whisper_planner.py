@@ -15,8 +15,10 @@ Key design properties:
 import asyncio
 import json
 import logging
-from functools import lru_cache
+import threading
 from typing import Any, Literal
+
+from cachetools import TTLCache
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -43,26 +45,34 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
-@lru_cache(maxsize=1)
+_whisper_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_whisper_lock = threading.Lock()
+
+
 def _get_whisper_llm() -> ChatGoogleGenerativeAI:
-    """Get or create the whisper planner LLM instance (cached singleton).
+    """Get or create the whisper planner LLM instance (TTL-cached singleton).
 
     Uses a lower temperature than the main ``_get_llm()`` because planning
     decisions should be more deterministic than creative response generation.
     Configured via ``WHISPER_LLM_TEMPERATURE`` (default 0.2).
 
-    Production scaling note: ``@lru_cache`` singletons are process-scoped.
-    For multi-container deployments (Cloud Run auto-scaling), each container
-    gets its own instance, which is correct behavior.
+    Cache refreshes every hour to pick up rotated credentials (same TTL
+    pattern as ``_get_llm`` and ``_get_validator_llm``).
     """
-    settings = get_settings()
-    return ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        temperature=settings.WHISPER_LLM_TEMPERATURE,
-        timeout=settings.MODEL_TIMEOUT,
-        max_retries=settings.MODEL_MAX_RETRIES,
-        max_output_tokens=512,  # Planning produces short structured output
-    )
+    with _whisper_lock:
+        cached = _whisper_cache.get("whisper")
+        if cached is not None:
+            return cached
+        settings = get_settings()
+        llm = ChatGoogleGenerativeAI(
+            model=settings.MODEL_NAME,
+            temperature=settings.WHISPER_LLM_TEMPERATURE,
+            timeout=settings.MODEL_TIMEOUT,
+            max_retries=settings.MODEL_MAX_RETRIES,
+            max_output_tokens=512,  # Planning produces short structured output
+        )
+        _whisper_cache["whisper"] = llm
+        return llm
 
 # ---------------------------------------------------------------------------
 # Telemetry counter for fail-silent monitoring

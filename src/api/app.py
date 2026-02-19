@@ -147,12 +147,17 @@ def create_app() -> FastAPI:
         from src.agent.graph import chat_stream
 
         sse_timeout = get_settings().SSE_TIMEOUT_SECONDS
+        # Thread X-Request-ID from middleware into graph for observability correlation.
+        # RequestLoggingMiddleware injects X-Request-ID into response headers;
+        # we read the header set by the middleware (or generate a fallback).
+        request_id = request.headers.get("x-request-id", None)
 
         async def event_generator():
             try:
                 async with asyncio.timeout(sse_timeout):
                     async for event in chat_stream(
-                        agent, body.message, body.thread_id
+                        agent, body.message, body.thread_id,
+                        request_id=request_id,
                     ):
                         if await request.is_disconnected():
                             logger.info("Client disconnected, cancelling stream")
@@ -307,12 +312,29 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     @app.post("/sms/webhook")
     async def sms_webhook(request: Request):
-        """Telnyx inbound SMS webhook handler."""
+        """Telnyx inbound SMS webhook handler with signature verification."""
         from fastapi.responses import JSONResponse
-        from src.sms.webhook import handle_inbound_sms
+        from src.sms.webhook import handle_inbound_sms, verify_webhook_signature
 
         try:
-            body = await request.json()
+            raw_body = await request.body()
+
+            # Verify Telnyx webhook signature when public key is configured.
+            # Prevents attackers from POSTing fabricated SMS events.
+            telnyx_public_key = get_settings().TELNYX_PUBLIC_KEY
+            if telnyx_public_key:
+                signature = request.headers.get("telnyx-signature-ed25519", "")
+                timestamp = request.headers.get("telnyx-timestamp", "")
+                if not await verify_webhook_signature(
+                    raw_body, signature, timestamp, telnyx_public_key,
+                ):
+                    logger.warning("SMS webhook signature verification failed")
+                    return JSONResponse(
+                        content=error_response(ErrorCode.UNAUTHORIZED, "Invalid webhook signature."),
+                        status_code=401,
+                    )
+
+            body = json.loads(raw_body)
 
             # Parse the Telnyx webhook payload
             event_type = body.get("data", {}).get("event_type", "")

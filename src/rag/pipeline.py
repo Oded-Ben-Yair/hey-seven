@@ -575,22 +575,11 @@ def _get_retriever_cached() -> AbstractRetriever:
     return retriever
 
 
-def _clear_retriever_cache() -> None:
-    """Clear the retriever singleton cache.
-
-    Delegates to ``_get_retriever_cached.cache_clear()``.  Exposed as
-    ``get_retriever.cache_clear`` so existing call sites (tests, conftest)
-    that relied on the old ``@lru_cache``-decorated ``get_retriever``
-    continue to work without modification.
-    """
-    _get_retriever_cached.cache_clear()
-
-
 def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
     """Get or create the global retriever singleton.
 
-    Uses ``@lru_cache`` for consistency with other singletons in the codebase
-    (``get_settings``, ``_get_llm``, ``_get_circuit_breaker``, ``get_embeddings``).
+    Uses ``@lru_cache`` internally for consistency with other singletons
+    (``get_settings``, ``get_embeddings``).
 
     When ``VECTOR_DB=firestore``, returns a ``FirestoreRetriever`` (same
     interface shape).  Otherwise falls back to ChromaDB (local dev default).
@@ -632,6 +621,15 @@ def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
     return retriever
 
 
-# Attach cache_clear to the public function so existing callers
-# (tests, conftest) that do ``get_retriever.cache_clear()`` still work.
-get_retriever.cache_clear = _clear_retriever_cache  # type: ignore[attr-defined]
+def clear_retriever_cache() -> None:
+    """Clear the retriever singleton cache.
+
+    Delegates to ``_get_retriever_cached.cache_clear()``.
+    Call from tests or after re-ingestion to force fresh retriever creation.
+    """
+    _get_retriever_cached.cache_clear()
+
+
+# Backward-compatible attribute: callers using ``get_retriever.cache_clear()``
+# are redirected to the standalone ``clear_retriever_cache()`` function.
+get_retriever.cache_clear = clear_retriever_cache  # type: ignore[attr-defined]

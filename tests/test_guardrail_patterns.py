@@ -105,14 +105,32 @@ class TestBsaAmlPatterns:
         "How do I avoid reporting at the casino?",
         "I want to hide my winnings",
         "Can I chip walk to avoid detection?",
+        # Spanish BSA/AML
+        "como lavar dinero en el casino",
+        "quiero lavar dinero",
+        "evitar el reporte de transacción",
+        "ocultar mi dinero del casino",
+        # Portuguese BSA/AML
+        "lavagem de dinheiro no cassino",
+        "esconder meu dinheiro",
+        # Mandarin BSA/AML
+        "怎么洗钱",
+        "我想逃税",
+        "隐藏现金",
     ])
     def test_detected(self, message):
-        """BSA/AML patterns must be detected."""
+        """BSA/AML patterns must be detected (multilingual)."""
         assert detect_bsa_aml(message)
 
-    def test_not_triggered(self):
-        """Legitimate cash queries must not trigger BSA/AML."""
-        assert not detect_bsa_aml("How much cash can I bring?")
+    @pytest.mark.parametrize("message", [
+        "How much cash can I bring?",
+        "Quiero cambiar dinero",         # legitimate: change money
+        "Onde posso trocar dinheiro?",   # legitimate: where to exchange money
+        "赌场有多少台老虎机?",             # legitimate: how many slot machines
+    ])
+    def test_not_triggered(self, message):
+        """Legitimate queries must not trigger BSA/AML."""
+        assert not detect_bsa_aml(message)
 
 
 class TestPatronPrivacyPatterns:

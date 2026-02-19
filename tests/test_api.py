@@ -4,7 +4,7 @@ import asyncio
 import json
 import sys
 from contextlib import asynccontextmanager
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 from fastapi.testclient import TestClient
@@ -86,7 +86,7 @@ def _mock_chat_stream(thread_id="test-thread-123", tokens=None, sources=None):
     tokens = tokens or ["The steakhouse ", "is on the ", "main floor."]
     sources = sources or ["restaurants"]
 
-    async def fake_stream(agent, message, tid=None):
+    async def fake_stream(agent, message, tid=None, request_id=None):
         yield {"event": "metadata", "data": json.dumps({"thread_id": thread_id})}
         for tok in tokens:
             yield {"event": "token", "data": json.dumps({"content": tok})}
@@ -239,7 +239,7 @@ class TestHealthDegraded:
 
 def _mock_chat_stream_error():
     """Create a mock that raises an exception mid-stream."""
-    async def failing_stream(agent, message, tid=None):
+    async def failing_stream(agent, message, tid=None, request_id=None):
         yield {"event": "metadata", "data": json.dumps({"thread_id": "err-thread"})}
         yield {"event": "token", "data": json.dumps({"content": "partial "})}
         raise RuntimeError("LLM API failure")
@@ -249,7 +249,7 @@ def _mock_chat_stream_error():
 
 def _mock_chat_stream_slow():
     """Create a mock that hangs (simulates timeout)."""
-    async def slow_stream(agent, message, tid=None):
+    async def slow_stream(agent, message, tid=None, request_id=None):
         yield {"event": "metadata", "data": json.dumps({"thread_id": "slow-thread"})}
         await asyncio.sleep(999)  # Will be interrupted by timeout
 
@@ -302,7 +302,7 @@ class TestChatReplaceEvent:
     def test_replace_event_in_sse_stream(self, mock_stream):
         """POST /chat can include 'replace' SSE events (from greeting/off_topic/fallback)."""
 
-        async def replace_stream(agent, message, tid=None):
+        async def replace_stream(agent, message, tid=None, request_id=None):
             yield {"event": "metadata", "data": json.dumps({"thread_id": "replace-test"})}
             yield {"event": "replace", "data": json.dumps({"content": "Welcome to Mohegan Sun!"})}
             yield {"event": "done", "data": json.dumps({"done": True})}
@@ -673,3 +673,157 @@ class TestEndToEndGraphIntegration:
             complete = next(e for e in cg_events if e["data"]["status"] == "complete")
             assert "duration_ms" in complete["data"]
             assert isinstance(complete["data"]["duration_ms"], int)
+
+    def test_happy_path_property_qa_e2e(self):
+        """Full happy path: compliance_gate → router → retrieve → whisper → generate → validate → persona → respond.
+
+        This is the gold-standard E2E test: exercises the FULL pipeline with
+        mocked LLMs but real graph execution.  Validates that all 8 happy-path
+        nodes execute, SSE events conform to the contract, and sources are
+        returned from retrieved context.
+        """
+        from langchain_core.messages import AIMessage
+
+        from src.agent.circuit_breaker import CircuitBreaker
+        from src.agent.state import RouterOutput, ValidationResult
+        from src.agent.whisper_planner import WhisperPlan
+
+        # -- Router + host_agent LLM mock --
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(
+            return_value=AIMessage(
+                content=(
+                    "Our Sky Tower offers luxurious rooms starting at $199/night "
+                    "with stunning mountain views across 34 floors."
+                )
+            )
+        )
+        mock_router_chain = MagicMock()
+        mock_router_chain.ainvoke = AsyncMock(
+            return_value=RouterOutput(query_type="property_qa", confidence=0.95)
+        )
+        mock_llm.with_structured_output.return_value = mock_router_chain
+
+        # -- Validator LLM mock --
+        mock_validator_llm = MagicMock()
+        mock_validator_chain = MagicMock()
+        mock_validator_chain.ainvoke = AsyncMock(
+            return_value=ValidationResult(
+                status="PASS", reason="Response grounded in retrieved context"
+            )
+        )
+        mock_validator_llm.with_structured_output.return_value = mock_validator_chain
+
+        # -- Whisper planner LLM mock --
+        mock_whisper_llm = MagicMock()
+        mock_whisper_chain = MagicMock()
+        mock_whisper_chain.ainvoke = AsyncMock(
+            return_value=WhisperPlan(
+                next_topic="dining",
+                extraction_targets=["cuisine_preference"],
+                offer_readiness=0.3,
+                conversation_note="Guest asking about dining options",
+            )
+        )
+        mock_whisper_llm.with_structured_output.return_value = mock_whisper_chain
+
+        # -- Circuit breaker (fresh, closed state) --
+        mock_cb = CircuitBreaker()
+
+        # -- Retrieved context chunks (hotel category → routes to host agent) --
+        mock_chunks = [
+            {
+                "content": "Sky Tower - Luxury tower with mountain views, 34 floors",
+                "metadata": {
+                    "category": "hotel",
+                    "source": "test",
+                    "property_id": "test_casino",
+                },
+                "score": 0.92,
+            },
+            {
+                "content": "Deluxe King - 400 sq ft, king bed, $199/night",
+                "metadata": {
+                    "category": "hotel",
+                    "source": "test",
+                    "property_id": "test_casino",
+                },
+                "score": 0.85,
+            },
+        ]
+
+        with (
+            patch("src.agent.nodes._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.nodes._get_validator_llm", return_value=mock_validator_llm),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                return_value=mock_whisper_llm,
+            ),
+            patch(
+                "src.agent.compliance_gate.classify_injection_semantic",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base", return_value=mock_chunks
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_circuit_breaker",
+                return_value=mock_cb,
+            ),
+        ):
+            test_app = _make_e2e_app()
+            with TestClient(test_app) as client:
+                resp = client.post(
+                    "/chat",
+                    json={"message": "What hotel rooms do you have?"},
+                )
+                assert resp.status_code == 200
+                assert "text/event-stream" in resp.headers["content-type"]
+                events = _parse_sse_events(resp.text)
+                event_types = [e["event"] for e in events]
+
+                # SSE contract: metadata first, done last
+                assert events[0]["event"] == "metadata"
+                assert "thread_id" in events[0]["data"]
+                assert events[-1]["event"] == "done"
+                assert events[-1]["data"]["done"] is True
+
+                # All 8 happy-path nodes must execute
+                graph_events = [e for e in events if e["event"] == "graph_node"]
+                nodes_seen = {e["data"]["node"] for e in graph_events}
+                expected_nodes = {
+                    "compliance_gate",
+                    "router",
+                    "retrieve",
+                    "whisper_planner",
+                    "generate",
+                    "validate",
+                    "persona_envelope",
+                    "respond",
+                }
+                assert expected_nodes.issubset(nodes_seen), (
+                    f"Missing nodes: {expected_nodes - nodes_seen}"
+                )
+
+                # Each node must have start+complete lifecycle events
+                for node_name in expected_nodes:
+                    node_events = [
+                        e
+                        for e in graph_events
+                        if e["data"]["node"] == node_name
+                    ]
+                    statuses = [e["data"]["status"] for e in node_events]
+                    assert "start" in statuses, f"{node_name} missing 'start'"
+                    assert "complete" in statuses, f"{node_name} missing 'complete'"
+
+                # Sources from retrieved context
+                assert "sources" in event_types
+                sources_event = next(
+                    e for e in events if e["event"] == "sources"
+                )
+                assert "hotel" in sources_event["data"]["sources"]
+
+                # No errors
+                assert "error" not in event_types

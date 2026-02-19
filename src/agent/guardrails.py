@@ -123,6 +123,8 @@ _AGE_VERIFICATION_PATTERNS = [
 #: laundering, or structuring.  Casinos are MSBs under BSA and must report
 #: CTRs (>$10 000 cash) and SARs.  The agent must never provide advice that
 #: could facilitate structuring or help circumvent reporting requirements.
+#: Includes English, Spanish, Portuguese, and Mandarin patterns for
+#: multilingual guest populations (parity with responsible gaming coverage).
 _BSA_AML_PATTERNS = [
     re.compile(r"\b(?:money\s+)?launder", re.I),
     re.compile(r"\bstructur(?:e|ing)\s+(?:cash|transaction|deposit|chip)", re.I),
@@ -139,6 +141,20 @@ _BSA_AML_PATTERNS = [
     re.compile(r"\bchip\s+walk", re.I),
     re.compile(r"\bmultiple\s+(?:buy[- ]?ins?|cash[- ]?ins?)\b.*\b(?:avoid|under|split)", re.I),
     re.compile(r"\bsplit\s+(?:up\s+)?(?:my\s+)?(?:cash|chips?|buy[- ]?in)", re.I),
+    # Spanish BSA/AML patterns (US casino diverse clientele)
+    re.compile(r"\blava(?:do|r)\s+(?:de\s+)?dinero", re.I),         # money laundering
+    re.compile(r"\b(?:como|quiero)\s+lavar\s+dinero", re.I),        # how to / I want to launder money
+    re.compile(r"\bevitar\s+(?:el\s+)?reporte", re.I),              # avoid report
+    re.compile(r"\b(?:ocultar|esconder)\s+(?:mi\s+)?(?:dinero|efectivo|ganancias)", re.I),  # hide money/cash/winnings
+    re.compile(r"\bestructurar?\s+(?:cash|transacci|dep[oó]sito)", re.I),  # structuring
+    # Portuguese BSA/AML patterns
+    re.compile(r"\blavagem\s+de\s+dinheiro", re.I),                 # money laundering
+    re.compile(r"\b(?:esconder|ocultar)\s+(?:meu\s+)?dinheiro", re.I),  # hide my money
+    re.compile(r"\bevitar\s+(?:o\s+)?relat[oó]rio", re.I),         # avoid report
+    # Mandarin BSA/AML patterns
+    re.compile(r"洗\s*钱", re.I),                                   # money laundering (洗钱)
+    re.compile(r"逃\s*税", re.I),                                   # tax evasion (逃税)
+    re.compile(r"(?:隐藏|藏)\s*(?:钱|现金)", re.I),                  # hide money/cash
 ]
 
 # ---------------------------------------------------------------------------

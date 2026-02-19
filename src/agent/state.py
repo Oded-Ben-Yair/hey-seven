@@ -70,9 +70,7 @@ class PropertyQAState(TypedDict):
     responsible_gaming_count: Annotated[int, _keep_max]  # session-level escalation counter (persists across turns via _keep_max reducer)
 
 
-# Deprecated alias — use PropertyQAState directly. Kept for backward
-# compatibility with any external code referencing the v1 name.
-# TODO(v3): Remove this alias.
+# Deprecated alias — use PropertyQAState directly.
 CasinoHostState = PropertyQAState
 
 

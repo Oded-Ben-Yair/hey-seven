@@ -79,6 +79,7 @@ def get_langfuse_handler(
     trace_id: str | None = None,
     session_id: str | None = None,
     user_id: str | None = None,
+    request_id: str | None = None,
     tags: list[str] | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> Any | None:
@@ -91,6 +92,8 @@ def get_langfuse_handler(
         trace_id: Unique trace ID (defaults to request_id).
         session_id: Session ID for grouping traces (e.g., thread_id).
         user_id: User identifier (e.g., guest phone hash).
+        request_id: HTTP X-Request-ID for correlating graph traces with
+            HTTP request logs.  Stored in trace metadata.
         tags: List of tags (e.g., ["property_qa", "dining"]).
         metadata: Additional metadata dict.
 
@@ -104,6 +107,11 @@ def get_langfuse_handler(
     if not should_sample():
         return None
 
+    # Merge request_id into metadata for end-to-end correlation
+    merged_metadata = dict(metadata or {})
+    if request_id:
+        merged_metadata["request_id"] = request_id
+
     try:
         from langfuse.callback import CallbackHandler  # noqa: E402
 
@@ -115,7 +123,7 @@ def get_langfuse_handler(
             session_id=session_id,
             user_id=user_id,
             tags=tags or [],
-            metadata=metadata or {},
+            metadata=merged_metadata,
         )
         return handler
     except ImportError:

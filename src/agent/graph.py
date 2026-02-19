@@ -367,6 +367,7 @@ async def chat(
     graph: CompiledStateGraph,
     message: str,
     thread_id: str | None = None,
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     """Send a message to the graph and get a response.
 
@@ -374,6 +375,8 @@ async def chat(
         graph: A compiled StateGraph (from build_graph).
         message: The user's message text.
         thread_id: Optional conversation thread ID for persistence.
+        request_id: Optional X-Request-ID from HTTP middleware for
+            end-to-end observability correlation (appears in LangFuse traces).
 
     Returns:
         A dict with response, thread_id, and sources.
@@ -381,8 +384,10 @@ async def chat(
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    config = {"configurable": {"thread_id": thread_id}}
-    handler = get_langfuse_handler(session_id=thread_id)
+    config: dict[str, Any] = {"configurable": {"thread_id": thread_id}}
+    if request_id:
+        config["configurable"]["request_id"] = request_id
+    handler = get_langfuse_handler(session_id=thread_id, request_id=request_id)
     if handler:
         config["callbacks"] = [handler]
 
@@ -414,6 +419,7 @@ async def chat_stream(
     graph: CompiledStateGraph,
     message: str,
     thread_id: str | None = None,
+    request_id: str | None = None,
 ) -> AsyncGenerator[dict[str, str], None]:
     """Stream a response from the graph as typed SSE events.
 
@@ -427,12 +433,21 @@ async def chat_stream(
         sources   – cited knowledge-base categories
         done      – signals end of stream
         error     – on failure
+
+    Args:
+        graph: A compiled StateGraph (from build_graph).
+        message: The user's message text.
+        thread_id: Optional conversation thread ID for persistence.
+        request_id: Optional X-Request-ID from HTTP middleware for
+            end-to-end observability correlation (appears in LangFuse traces).
     """
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
-    config = {"configurable": {"thread_id": thread_id}}
-    handler = get_langfuse_handler(session_id=thread_id)
+    config: dict[str, Any] = {"configurable": {"thread_id": thread_id}}
+    if request_id:
+        config["configurable"]["request_id"] = request_id
+    handler = get_langfuse_handler(session_id=thread_id, request_id=request_id)
     if handler:
         config["callbacks"] = [handler]
 
