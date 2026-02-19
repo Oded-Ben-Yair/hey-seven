@@ -158,6 +158,39 @@ class TestChatEndpoint:
             assert "done" in event_types
 
 
+class TestChatRequestIdPropagation:
+    @patch("src.agent.graph.chat_stream")
+    def test_x_request_id_propagated_to_chat_stream(self, mock_stream):
+        """X-Request-ID header is propagated to chat_stream as request_id kwarg."""
+        mock_stream.side_effect = _mock_chat_stream()
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/chat",
+                json={"message": "Hello"},
+                headers={"X-Request-ID": "trace-abc-123"},
+            )
+            assert resp.status_code == 200
+            # Verify chat_stream received request_id
+            call_kwargs = mock_stream.call_args
+            assert call_kwargs.kwargs.get("request_id") == "trace-abc-123" or (
+                len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "trace-abc-123"
+            )
+
+    @patch("src.agent.graph.chat_stream")
+    def test_missing_x_request_id_passes_none(self, mock_stream):
+        """Without X-Request-ID header, request_id is None."""
+        mock_stream.side_effect = _mock_chat_stream()
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post("/chat", json={"message": "Hello"})
+            assert resp.status_code == 200
+            call_kwargs = mock_stream.call_args
+            # request_id should be None when no header
+            request_id = call_kwargs.kwargs.get("request_id")
+            assert request_id is None
+
+
 class TestChatValidation:
     def test_message_too_short(self):
         """POST /chat with empty string returns 422."""
