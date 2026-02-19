@@ -149,7 +149,13 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     dominant = "none"
     if category_counts:
         dominant = max(category_counts, key=lambda k: (category_counts[k], k))
-        agent_name = _CATEGORY_TO_AGENT.get(dominant, "host")
+        candidate = _CATEGORY_TO_AGENT.get(dominant, "host")
+        # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
+        # When disabled, all queries route to the general host concierge.
+        if candidate != "host" and not DEFAULT_FEATURES.get("specialist_agents_enabled", True):
+            logger.info("Specialist agents disabled; routing %s to host", candidate)
+            candidate = "host"
+        agent_name = candidate
 
     agent_fn = get_agent(agent_name)
     logger.info(

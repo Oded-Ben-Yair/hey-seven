@@ -407,10 +407,15 @@ class RequestBodyLimitMiddleware:
                     exceeded = True
             return message
 
+        sent_413 = False
+
         async def send_wrapper(message: Message) -> None:
-            if exceeded and message.get("type") == "http.response.start":
-                await self._send_413(send)
-                return
+            nonlocal sent_413
+            if exceeded:
+                if not sent_413 and message.get("type") == "http.response.start":
+                    await self._send_413(send)
+                    sent_413 = True
+                return  # Suppress all messages after exceeding limit
             await send(message)
 
         await self.app(scope, receive_wrapper, send_wrapper)

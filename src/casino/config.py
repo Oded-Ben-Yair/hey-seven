@@ -108,6 +108,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "features": {
         "ai_disclosure_enabled": True,
         "whisper_planner_enabled": True,
+        "specialist_agents_enabled": True,
         "comp_agent_enabled": True,
         "spanish_support_enabled": True,
         "outbound_campaigns_enabled": False,
@@ -117,8 +118,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "prompts": {
         "system_prompt_override": None,
-        "greeting_template": "Hi {guest_name}, this is {persona_name} from {casino_name}! How can I help you today?",
-        "greeting_template_es": "Hola {guest_name}, soy {persona_name} de {casino_name}. Como puedo ayudarte hoy?",
+        "greeting_template": "Hi $guest_name, this is $persona_name from $casino_name! How can I help you today?",
+        "greeting_template_es": "Hola $guest_name, soy $persona_name de $casino_name. Como puedo ayudarte hoy?",
         "fallback_message": "I want to make sure I get you the right answer. Let me connect you with someone who can help.",
         "casino_name_display": "the resort",
     },

@@ -60,6 +60,16 @@ assert set(FeatureFlags.__annotations__) == set(DEFAULT_FEATURES.keys()), (
     f"extra={set(FeatureFlags.__annotations__) - set(DEFAULT_FEATURES.keys())}"
 )
 
+# Cross-module parity: DEFAULT_CONFIG["features"] (config.py) must match DEFAULT_FEATURES.
+# Prevents drift between the two sources of truth for feature flags.
+from src.casino.config import DEFAULT_CONFIG as _DEFAULT_CONFIG  # noqa: E402
+
+assert set(_DEFAULT_CONFIG["features"].keys()) == set(DEFAULT_FEATURES.keys()), (
+    f"DEFAULT_CONFIG['features'] drift from DEFAULT_FEATURES: "
+    f"missing={set(DEFAULT_FEATURES.keys()) - set(_DEFAULT_CONFIG['features'].keys())}, "
+    f"extra={set(_DEFAULT_CONFIG['features'].keys()) - set(DEFAULT_FEATURES.keys())}"
+)
+
 
 # ---------------------------------------------------------------------------
 # TTL cache for feature flags (avoids repeated Firestore reads)

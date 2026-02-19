@@ -535,6 +535,36 @@ class TestSpecialistDispatch:
         # generate should NOT be in non-stream (it streams tokens)
         assert NODE_GENERATE not in _NON_STREAM_NODES
 
+    @pytest.mark.asyncio
+    async def test_specialist_disabled_flag_routes_to_host(self):
+        """When specialist_agents_enabled=False, specialist categories fall back to host."""
+        import types
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        state = _state(
+            messages=[HumanMessage(content="What restaurants?")],
+            retrieved_context=[
+                {"content": "Todd English's Tuscany", "metadata": {"category": "restaurants"}, "score": 0.9},
+            ],
+        )
+
+        # Patch DEFAULT_FEATURES to disable specialist agents
+        from src.casino.feature_flags import DEFAULT_FEATURES
+
+        disabled_features = types.MappingProxyType({
+            **dict(DEFAULT_FEATURES),
+            "specialist_agents_enabled": False,
+        })
+        mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
+        with mock_patch("src.agent.graph.DEFAULT_FEATURES", disabled_features), \
+             mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
+            result = await _dispatch_to_specialist(state)
+
+        # Should dispatch to host, not dining
+        mock_get.assert_called_once_with("host")
+
 
 # ---------------------------------------------------------------------------
 # Specialist dispatch integration tests (real dispatch chain, mock only LLM)

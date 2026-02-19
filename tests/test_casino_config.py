@@ -169,6 +169,27 @@ class TestCasinoConfig:
         assert config["branding"]["persona_name"] == "Seven"
         assert config["_id"] == "new_casino"
 
+    def test_greeting_templates_use_safe_substitute_syntax(self):
+        """Greeting templates use $placeholder syntax (safe_substitute), not {placeholder} (.format)."""
+        from src.casino.config import DEFAULT_CONFIG
+
+        for key in ("greeting_template", "greeting_template_es"):
+            template = DEFAULT_CONFIG["prompts"][key]
+            assert "{" not in template, f"{key} uses unsafe .format() placeholder syntax"
+            assert "$" in template, f"{key} missing $placeholder for safe_substitute"
+
+    def test_default_config_features_parity_with_default_features(self):
+        """DEFAULT_CONFIG['features'] keys must match DEFAULT_FEATURES keys (no drift)."""
+        from src.casino.config import DEFAULT_CONFIG
+
+        config_keys = set(DEFAULT_CONFIG["features"].keys())
+        default_keys = set(DEFAULT_FEATURES.keys())
+        assert config_keys == default_keys, (
+            f"Feature flag drift: "
+            f"missing={default_keys - config_keys}, "
+            f"extra={config_keys - default_keys}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # TestFeatureFlags
