@@ -1,10 +1,20 @@
 """Compliance gate node for the property Q&A graph.
 
-Runs 5 deterministic guardrail layers (prompt injection regex, responsible
-gaming, age verification, BSA/AML, patron privacy) plus a secondary semantic
-injection classifier as a pre-router node.  Returns ``query_type`` directly
-when a guardrail triggers, or ``None`` to signal the downstream router should
-perform LLM classification.
+Two-layer pre-router safety net:
+
+**Layer 1 — Deterministic regex (zero LLM cost, zero latency):**
+5 guardrail categories (prompt injection, responsible gaming, age verification,
+BSA/AML, patron privacy) using 73 compiled regex patterns across 4 languages.
+
+**Layer 2 — Semantic injection classifier (configurable LLM second layer):**
+When ``SEMANTIC_INJECTION_ENABLED=True`` (default), an LLM-based classifier
+runs on messages that pass Layer 1 regex to catch sophisticated injection
+attempts that evade pattern matching.  Fails open (returns None on error).
+Disable via ``SEMANTIC_INJECTION_ENABLED=False`` to eliminate LLM cost/latency
+in this node.
+
+Returns ``query_type`` directly when a guardrail triggers, or ``None`` to
+signal the downstream router should perform LLM classification.
 
 Also includes the turn-limit guard (moved from ``router_node`` to centralize
 all deterministic checks before the LLM router).
@@ -80,8 +90,14 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if not audit_input(user_message):
         return {"query_type": "off_topic", "router_confidence": 1.0}
 
-    # 3b. Prompt injection — semantic (LLM second layer, only when regex passes)
-    semantic_result = await classify_injection_semantic(user_message)
+    # 3b. Prompt injection — semantic (LLM second layer, configurable)
+    # Gate: skip semantic classifier when disabled to eliminate LLM cost/latency.
+    # In production high-volume deployments, disable via SEMANTIC_INJECTION_ENABLED=False
+    # and rely on Layer 1 regex alone, or enable selectively for high-risk messages.
+    if not settings.SEMANTIC_INJECTION_ENABLED:
+        semantic_result = None
+    else:
+        semantic_result = await classify_injection_semantic(user_message)
     if (
         semantic_result
         and semantic_result.is_injection

@@ -116,20 +116,6 @@ class ExtractedFields(BaseModel):
     model_config = {"extra": "allow"}  # Forward-compatible: unknown fields preserved
 
 
-class WhisperPlan(BaseModel):
-    """Schema for whisper planner output.
-
-    Validates the background planner's structured output before it flows
-    through the graph state.
-    """
-    engagement_hooks: list[str] = Field(default_factory=list)
-    upsell_opportunities: list[str] = Field(default_factory=list)
-    personalization_notes: str = ""
-    profile_completeness: float = Field(0.0, ge=0.0, le=1.0)
-
-    model_config = {"extra": "allow"}
-
-
 def validate_state_transition(state: dict) -> list[str]:
     """Validate state field constraints for debugging and monitoring.
 

@@ -1,12 +1,15 @@
-"""Custom 11-node StateGraph for property Q&A (v2.1).
+"""Custom 11-node StateGraph for property Q&A (v2.2).
 
 v1 (8 nodes): START → router → {greeting, off_topic, retrieve → generate → validate → respond/fallback}
 v2 (10 nodes): START → compliance_gate → {greeting, off_topic, router → {greeting, off_topic, retrieve → generate → validate → persona_envelope → respond/fallback}}
 v2.1 (11 nodes): v2 + whisper_planner between retrieve and generate
+v2.2: generate node dispatches to specialist agents (host, dining, entertainment, comp)
+      via the agent registry based on dominant category in retrieved context.
 
-The ``generate`` node now runs ``host_agent`` (from ``agents.host_agent``)
-instead of the v1 ``generate_node``.  The node name ``"generate"`` is
-preserved for SSE streaming compatibility and test backward compat.
+The ``generate`` node runs ``_dispatch_to_specialist()`` which examines the
+dominant category in ``retrieved_context`` metadata and routes to the
+appropriate specialist agent via ``get_agent()`` from the registry.  The
+node name ``"generate"`` is preserved for SSE streaming compatibility.
 """
 
 import asyncio
@@ -27,7 +30,7 @@ from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
 from src.observability.langfuse_client import get_langfuse_handler
 
-from .agents.host_agent import host_agent
+from .agents.registry import get_agent
 from .compliance_gate import compliance_gate_node
 from .whisper_planner import whisper_planner_node
 from .nodes import (
@@ -102,6 +105,60 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Specialist agent dispatch
+# ---------------------------------------------------------------------------
+
+# Maps retrieved-context metadata categories to specialist agent names.
+# Categories not listed here route to the "host" (general concierge) agent.
+_CATEGORY_TO_AGENT: dict[str, str] = {
+    "restaurants": "dining",
+    "entertainment": "entertainment",
+    "spa": "entertainment",
+    "gaming": "comp",
+    "promotions": "comp",
+}
+
+
+async def _dispatch_to_specialist(state: PropertyQAState) -> dict:
+    """Dispatch to the appropriate specialist agent based on retrieved context.
+
+    Examines the dominant category in ``retrieved_context`` metadata and
+    routes to the specialist with domain-specific prompts via the agent
+    registry.  Falls back to ``host_agent`` for general or mixed queries.
+
+    Dispatch logic:
+    - Count category occurrences across all retrieved chunks.
+    - If a dominant category maps to a specialist, dispatch to it.
+    - Otherwise, use the general ``host`` concierge agent.
+    - ``host_agent`` includes whisper planner guidance; specialists do not.
+    """
+    retrieved = state.get("retrieved_context", [])
+
+    # Count categories in retrieved context
+    category_counts: dict[str, int] = {}
+    for chunk in retrieved:
+        cat = chunk.get("metadata", {}).get("category", "")
+        if cat:
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    # Determine specialist from dominant category
+    agent_name = "host"
+    dominant = "none"
+    if category_counts:
+        dominant = max(category_counts, key=lambda k: category_counts[k])
+        agent_name = _CATEGORY_TO_AGENT.get(dominant, "host")
+
+    agent_fn = get_agent(agent_name)
+    logger.info(
+        "Dispatching to %s agent (dominant_category=%s, categories=%s)",
+        agent_name,
+        dominant,
+        category_counts,
+    )
+    return await agent_fn(state)
+
+
+# ---------------------------------------------------------------------------
 # Routing functions
 # ---------------------------------------------------------------------------
 
@@ -158,12 +215,12 @@ def _route_after_validate_v2(state: PropertyQAState) -> str:
 
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
-    """Build the custom 11-node property Q&A graph (v2.1).
+    """Build the custom 11-node property Q&A graph (v2.2).
 
-    v2.1 topology:
+    v2.2 topology:
         START → compliance_gate → {greeting, off_topic, router}
         router → {greeting, off_topic, retrieve}
-        retrieve → whisper_planner → generate (host_agent) → validate → {persona_envelope → respond, generate (RETRY), fallback}
+        retrieve → whisper_planner → generate (specialist dispatch) → validate → {persona_envelope → respond, generate (RETRY), fallback}
 
     Args:
         checkpointer: Optional checkpointer for conversation persistence.
@@ -180,7 +237,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     graph.add_node(NODE_ROUTER, router_node)
     graph.add_node(NODE_RETRIEVE, retrieve_node)
     graph.add_node(NODE_WHISPER, whisper_planner_node)
-    graph.add_node(NODE_GENERATE, host_agent)  # v2: host_agent replaces generate_node
+    graph.add_node(NODE_GENERATE, _dispatch_to_specialist)  # v2.2: dispatches to specialist via registry
     graph.add_node(NODE_VALIDATE, validate_node)
     graph.add_node(NODE_PERSONA, persona_envelope_node)
     graph.add_node(NODE_RESPOND, respond_node)

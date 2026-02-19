@@ -113,7 +113,11 @@ class TestRetrieveToGenerate:
             patch("src.agent.tools.get_retriever", return_value=ingested_retriever),
             patch("src.agent.nodes._get_llm") as mock_get_llm,
             patch("src.agent.nodes._get_validator_llm") as mock_get_validator,
+            # v2.2: specialist dispatch — mock _get_llm for all agents
             patch("src.agent.agents.host_agent._get_llm") as mock_get_host_llm,
+            patch("src.agent.agents.dining_agent._get_llm") as mock_get_dining_llm,
+            patch("src.agent.agents.entertainment_agent._get_llm") as mock_get_entertainment_llm,
+            patch("src.agent.agents.comp_agent._get_llm") as mock_get_comp_llm,
             patch("src.agent.whisper_planner._get_whisper_llm") as mock_get_whisper_llm,
             patch("src.agent.compliance_gate.classify_injection_semantic", new_callable=AsyncMock, return_value=None),
         ):
@@ -127,8 +131,11 @@ class TestRetrieveToGenerate:
             generate_llm = AsyncMock()
             generate_llm.ainvoke = AsyncMock(return_value=mock_generate_response)
             mock_get_llm.return_value = generate_llm
-            # v2: host_agent imports _get_llm separately
+            # v2.2: all specialist agents import _get_llm separately
             mock_get_host_llm.return_value = generate_llm
+            mock_get_dining_llm.return_value = generate_llm
+            mock_get_entertainment_llm.return_value = generate_llm
+            mock_get_comp_llm.return_value = generate_llm
 
             # Validator LLM returns PASS
             validator_llm = AsyncMock()

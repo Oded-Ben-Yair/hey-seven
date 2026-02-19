@@ -5,11 +5,10 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-# Note: chromadb (~200MB) is included for local dev convenience.
-# Production deployments targeting Firestore-only can exclude it via
-# a separate requirements-prod.txt to reduce image size by ~200MB.
-RUN pip install --no-cache-dir --target=/build/deps -r requirements.txt
+COPY requirements-prod.txt .
+# Production build uses requirements-prod.txt which excludes chromadb (~200MB)
+# and dev dependencies. For local dev with ChromaDB, use requirements.txt.
+RUN pip install --no-cache-dir --target=/build/deps -r requirements-prod.txt
 
 # Stage 2: Production
 FROM python:3.12.8-slim-bookworm

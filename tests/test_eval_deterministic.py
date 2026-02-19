@@ -218,8 +218,11 @@ async def _run_fixture(fixture_name: str):
         patch("src.agent.nodes._get_validator_llm", return_value=mock_llm),
         patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
         patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
-        # v2: generate node now runs host_agent which imports _get_llm separately
+        # v2.2: specialist dispatch — mock _get_llm for all agents that may be dispatched
         patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+        patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+        patch("src.agent.agents.entertainment_agent._get_llm", return_value=mock_llm),
+        patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
         # v2.1: whisper_planner uses _get_llm for structured output
         patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm),
     ):
@@ -306,6 +309,9 @@ class TestDeterministicEval:
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
             patch("src.agent.agents.host_agent._get_llm", return_value=_FixtureReplayLLM(fixture_greeting)),
+            patch("src.agent.agents.dining_agent._get_llm", return_value=_FixtureReplayLLM(fixture_greeting)),
+            patch("src.agent.agents.entertainment_agent._get_llm", return_value=_FixtureReplayLLM(fixture_greeting)),
+            patch("src.agent.agents.comp_agent._get_llm", return_value=_FixtureReplayLLM(fixture_greeting)),
             patch("src.agent.whisper_planner._get_whisper_llm", return_value=_FixtureReplayLLM(fixture_greeting)),
         ):
             graph = build_graph()
@@ -321,6 +327,9 @@ class TestDeterministicEval:
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
             patch("src.agent.agents.host_agent._get_llm", return_value=_FixtureReplayLLM(fixture_qa)),
+            patch("src.agent.agents.dining_agent._get_llm", return_value=_FixtureReplayLLM(fixture_qa)),
+            patch("src.agent.agents.entertainment_agent._get_llm", return_value=_FixtureReplayLLM(fixture_qa)),
+            patch("src.agent.agents.comp_agent._get_llm", return_value=_FixtureReplayLLM(fixture_qa)),
             patch("src.agent.whisper_planner._get_whisper_llm", return_value=_FixtureReplayLLM(fixture_qa)),
         ):
             result2 = await chat(graph, "What restaurants do you have?", thread_id=thread_id)
@@ -366,6 +375,9 @@ class TestStreamingSSE:
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
             patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.entertainment_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
             patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm),
         ):
             graph = build_graph()
@@ -400,6 +412,9 @@ class TestStreamingSSE:
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
             patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.entertainment_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
             patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm),
         ):
             graph = build_graph()
@@ -443,6 +458,9 @@ class TestStreamingSSE:
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
             patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.entertainment_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
             patch("src.agent.whisper_planner._get_whisper_llm", return_value=mock_llm),
         ):
             graph = build_graph()

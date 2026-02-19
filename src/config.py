@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
     COMP_COMPLETENESS_THRESHOLD: float = 0.60  # minimum profile completeness for comp agent
+    SEMANTIC_INJECTION_ENABLED: bool = True  # enable/disable semantic injection classifier (LLM second layer)
     SEMANTIC_INJECTION_THRESHOLD: float = 0.8  # confidence threshold for semantic injection classifier
     SEMANTIC_INJECTION_MODEL: str = ""  # override model for semantic classifier (empty = use default)
 

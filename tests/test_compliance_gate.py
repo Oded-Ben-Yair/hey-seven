@@ -13,7 +13,7 @@ Covers:
 
 import json
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -371,3 +371,86 @@ class TestConfigExpansion:
             assert "sk-secret-123" not in repr(s.LANGFUSE_SECRET_KEY)
             # But should be retrievable
             assert s.LANGFUSE_SECRET_KEY.get_secret_value() == "sk-secret-123"
+
+    def test_semantic_injection_enabled_default(self):
+        """SEMANTIC_INJECTION_ENABLED defaults to True."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.SEMANTIC_INJECTION_ENABLED is True
+
+    def test_semantic_injection_disabled_via_env(self):
+        """SEMANTIC_INJECTION_ENABLED can be disabled via env var."""
+        from src.config import Settings
+
+        with patch.dict(os.environ, {"SEMANTIC_INJECTION_ENABLED": "false"}):
+            s = Settings()
+            assert s.SEMANTIC_INJECTION_ENABLED is False
+
+
+# ---------------------------------------------------------------------------
+# Semantic injection feature flag tests
+# ---------------------------------------------------------------------------
+
+
+class TestSemanticInjectionFeatureFlag:
+    """Tests for SEMANTIC_INJECTION_ENABLED config toggle."""
+
+    @pytest.mark.asyncio
+    async def test_semantic_classifier_skipped_when_disabled(self):
+        """Compliance gate skips semantic classifier when SEMANTIC_INJECTION_ENABLED=False."""
+        from unittest.mock import AsyncMock
+
+        from langchain_core.messages import HumanMessage
+
+        from src.agent.compliance_gate import compliance_gate_node
+
+        state = {
+            "messages": [HumanMessage(content="What restaurants do you have?")],
+            "responsible_gaming_count": 0,
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = False
+        mock_settings.SEMANTIC_INJECTION_THRESHOLD = 0.8
+
+        with (
+            patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
+            patch("src.agent.compliance_gate.classify_injection_semantic", new_callable=AsyncMock) as mock_classify,
+        ):
+            result = await compliance_gate_node(state)
+
+        # Semantic classifier should NOT be called when disabled
+        mock_classify.assert_not_called()
+        # Should pass through to router (query_type=None)
+        assert result["query_type"] is None
+
+    @pytest.mark.asyncio
+    async def test_semantic_classifier_runs_when_enabled(self):
+        """Compliance gate calls semantic classifier when SEMANTIC_INJECTION_ENABLED=True."""
+        from unittest.mock import AsyncMock
+
+        from langchain_core.messages import HumanMessage
+
+        from src.agent.compliance_gate import compliance_gate_node
+
+        state = {
+            "messages": [HumanMessage(content="Tell me about restaurants")],
+            "responsible_gaming_count": 0,
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = True
+        mock_settings.SEMANTIC_INJECTION_THRESHOLD = 0.8
+
+        with (
+            patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
+            patch("src.agent.compliance_gate.classify_injection_semantic", new_callable=AsyncMock, return_value=None) as mock_classify,
+        ):
+            result = await compliance_gate_node(state)
+
+        # Semantic classifier SHOULD be called when enabled
+        mock_classify.assert_called_once()
+        assert result["query_type"] is None
