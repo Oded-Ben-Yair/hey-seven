@@ -1146,6 +1146,34 @@ class TestAgeVerificationRouting:
         content = result["messages"][0].content
         assert "minor" in content.lower() or "shops" in content.lower() or "restaurants" in content.lower()
 
+    async def test_age_verification_uses_configurable_state(self):
+        """Age verification response uses PROPERTY_STATE from config, not hardcoded."""
+        from src.agent.nodes import off_topic_node
+
+        state = _state(query_type="age_verification")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+        # Default is Connecticut; verify the config-driven value is in the response
+        assert "Connecticut" in content
+
+    @patch("src.agent.nodes.get_settings")
+    async def test_age_verification_respects_custom_state(self, mock_settings):
+        """Age verification response uses custom PROPERTY_STATE when configured."""
+        from src.agent.nodes import off_topic_node
+
+        settings = MagicMock()
+        settings.PROPERTY_NAME = "Vegas Casino"
+        settings.PROPERTY_PHONE = "1-800-TEST"
+        settings.PROPERTY_WEBSITE = "vegascasino.com"
+        settings.PROPERTY_STATE = "Nevada"
+        mock_settings.return_value = settings
+
+        state = _state(query_type="age_verification")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+        assert "Nevada" in content
+        assert "Vegas Casino" in content
+
     @patch("src.agent.nodes._get_llm")
     async def test_normal_age_question_not_flagged(self, mock_get_llm):
         """'How old is this casino?' should NOT trigger age verification."""

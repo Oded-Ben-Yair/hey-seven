@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     PROPERTY_DATA_PATH: str = "data/mohegan_sun.json"
     PROPERTY_WEBSITE: str = "mohegansun.com"
     PROPERTY_PHONE: str = "1-888-226-7711"
+    PROPERTY_STATE: str = "Connecticut"  # Jurisdiction for age/gaming regulations
 
     # --- LLM ---
     MODEL_NAME: str = "gemini-2.5-flash"

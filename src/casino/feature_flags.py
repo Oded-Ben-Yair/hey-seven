@@ -7,9 +7,9 @@ core features are on.
 
 from __future__ import annotations
 
-import copy
 import logging
 import time
+import types
 from typing import TypedDict
 
 from src.casino.config import get_casino_config
@@ -39,7 +39,7 @@ class FeatureFlags(TypedDict, total=False):
 # Default feature flags
 # ---------------------------------------------------------------------------
 
-DEFAULT_FEATURES: dict[str, bool] = {
+DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "ai_disclosure_enabled": True,
     "whisper_planner_enabled": True,
     "specialist_agents_enabled": True,
@@ -49,7 +49,7 @@ DEFAULT_FEATURES: dict[str, bool] = {
     "hitl_interrupt_enabled": False,
     "human_like_delay_enabled": True,
     "sms_enabled": False,  # Requires Telnyx setup
-}
+})
 
 
 # ---------------------------------------------------------------------------
@@ -118,9 +118,9 @@ async def is_feature_enabled(casino_id: str, flag_name: str) -> bool:
 
 
 def get_default_features() -> dict[str, bool]:
-    """Return a copy of the default feature flags.
+    """Return a mutable copy of the default feature flags.
 
     Returns:
         A new dict with all default feature flag values.
     """
-    return copy.copy(DEFAULT_FEATURES)
+    return dict(DEFAULT_FEATURES)

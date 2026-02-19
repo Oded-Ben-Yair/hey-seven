@@ -1,5 +1,8 @@
 """Tests for the v2 specialist agents (src/agent/agents/)."""
 
+import asyncio
+
+import httpx
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -627,3 +630,115 @@ class TestSpecialistContract:
 
         assert result.get("skip_validation") is True
         assert "technical difficulties" in result["messages"][0].content
+
+    @pytest.mark.asyncio
+    async def test_empty_context_returns_fallback(self, agent_fn, agent_module):
+        """All specialists return domain-specific fallback on empty context."""
+        import importlib
+
+        mod = importlib.import_module(agent_module)
+        fn = getattr(mod, agent_fn)
+
+        extra = {}
+        if agent_fn == "comp_agent":
+            extra["extracted_fields"] = _high_completeness_fields()
+
+        state = _state(
+            messages=[HumanMessage(content="Tell me about the moon")],
+            retrieved_context=[],
+            **extra,
+        )
+        result = await fn(state)
+        assert result.get("skip_validation") is True
+        assert len(result["messages"]) == 1
+        assert isinstance(result["messages"][0], AIMessage)
+
+    @pytest.mark.asyncio
+    async def test_llm_value_error_returns_retry_fallback(self, agent_fn, agent_module):
+        """All specialists return retry fallback on LLM ValueError (parse failure)."""
+        import importlib
+
+        mod = importlib.import_module(agent_module)
+        fn = getattr(mod, agent_fn)
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad structured output"))
+
+        extra = {}
+        if agent_fn == "comp_agent":
+            extra["extracted_fields"] = _high_completeness_fields()
+
+        state = _state(
+            messages=[HumanMessage(content="Question about property")],
+            retrieved_context=[
+                {"content": "Some data", "metadata": {"category": "general"}, "score": 0.9}
+            ],
+            **extra,
+        )
+
+        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+            result = await fn(state)
+
+        assert result.get("skip_validation") is False
+        assert result.get("retry_count") == 1
+        assert "trouble processing" in result["messages"][0].content.lower()
+
+    @pytest.mark.asyncio
+    async def test_llm_network_error_returns_skip_fallback(self, agent_fn, agent_module):
+        """All specialists return skip_validation fallback on network error."""
+        import importlib
+
+        mod = importlib.import_module(agent_module)
+        fn = getattr(mod, agent_fn)
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
+
+        extra = {}
+        if agent_fn == "comp_agent":
+            extra["extracted_fields"] = _high_completeness_fields()
+
+        state = _state(
+            messages=[HumanMessage(content="Question about property")],
+            retrieved_context=[
+                {"content": "Some data", "metadata": {"category": "general"}, "score": 0.9}
+            ],
+            **extra,
+        )
+
+        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+            result = await fn(state)
+
+        assert result.get("skip_validation") is True
+        assert "trouble generating" in result["messages"][0].content.lower()
+
+    @pytest.mark.asyncio
+    async def test_llm_timeout_returns_skip_fallback(self, agent_fn, agent_module):
+        """All specialists return skip_validation fallback on asyncio.TimeoutError."""
+        import importlib
+
+        mod = importlib.import_module(agent_module)
+        fn = getattr(mod, agent_fn)
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=asyncio.TimeoutError())
+
+        extra = {}
+        if agent_fn == "comp_agent":
+            extra["extracted_fields"] = _high_completeness_fields()
+
+        state = _state(
+            messages=[HumanMessage(content="Question about property")],
+            retrieved_context=[
+                {"content": "Some data", "metadata": {"category": "general"}, "score": 0.9}
+            ],
+            **extra,
+        )
+
+        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+            result = await fn(state)
+
+        assert result.get("skip_validation") is True
+        assert "trouble generating" in result["messages"][0].content.lower()

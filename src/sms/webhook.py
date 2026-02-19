@@ -15,6 +15,8 @@ import logging
 import time
 from typing import Any
 
+from cachetools import TTLCache
+
 from .compliance import handle_mandatory_keywords
 
 logger = logging.getLogger(__name__)
@@ -159,7 +161,10 @@ _TERMINAL_STATUSES: frozenset[str] = frozenset(
     }
 )
 
-_DELIVERY_LOG: dict[str, dict[str, Any]] = {}
+# Bounded delivery log: TTLCache prevents unbounded memory growth in
+# long-running processes.  maxsize=10000 caps tracked messages; TTL=86400
+# (24h) auto-expires old entries.  OrderedDict-based LRU eviction when full.
+_DELIVERY_LOG: TTLCache = TTLCache(maxsize=10000, ttl=86400)
 
 
 async def handle_delivery_receipt(payload: dict[str, Any]) -> None:

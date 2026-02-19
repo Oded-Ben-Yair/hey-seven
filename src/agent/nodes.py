@@ -549,7 +549,7 @@ async def off_topic_node(state: PropertyQAState) -> dict:
             "- Table games, slots, and poker\n"
             "- Bars and lounges\n"
             "- Most entertainment venues\n\n"
-            "Valid government-issued photo ID is required. Connecticut state law strictly "
+            f"Valid government-issued photo ID is required. {settings.PROPERTY_STATE} state law strictly "
             "enforces the 21+ age requirement for gaming.\n\n"
             "Is there anything else I can help you with?"
         )

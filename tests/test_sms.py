@@ -358,6 +358,15 @@ class TestDeliveryReceipts:
 
         assert get_delivery_status("nonexistent-id") is None
 
+    def test_delivery_log_is_bounded(self):
+        """_DELIVERY_LOG is a TTLCache with bounded size (not an unbounded dict)."""
+        from cachetools import TTLCache
+
+        from src.sms.webhook import _DELIVERY_LOG
+
+        assert isinstance(_DELIVERY_LOG, TTLCache)
+        assert _DELIVERY_LOG.maxsize == 10000
+
 
 class TestIdempotencyTracker:
     """WebhookIdempotencyTracker de-duplication."""

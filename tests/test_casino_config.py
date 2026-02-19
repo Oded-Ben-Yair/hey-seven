@@ -257,6 +257,22 @@ class TestFeatureFlags:
         # Original unchanged
         assert DEFAULT_FEATURES["sms_enabled"] is False
 
+    def test_default_features_is_immutable(self):
+        """DEFAULT_FEATURES cannot be mutated (MappingProxyType)."""
+        import types
+
+        assert isinstance(DEFAULT_FEATURES, types.MappingProxyType)
+        with pytest.raises(TypeError):
+            DEFAULT_FEATURES["sms_enabled"] = True
+
+    def test_get_default_features_returns_mutable_dict(self):
+        """get_default_features returns a mutable dict, not a MappingProxyType."""
+        defaults = get_default_features()
+        assert isinstance(defaults, dict)
+        # Should be mutable
+        defaults["test_flag"] = True
+        assert defaults["test_flag"] is True
+
 
 # ---------------------------------------------------------------------------
 # TestBrandingConfig
