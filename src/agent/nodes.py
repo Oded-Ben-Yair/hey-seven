@@ -309,12 +309,29 @@ async def validate_node(state: PropertyQAState) -> dict:
 
     except (ValueError, TypeError) as exc:
         logger.warning("Validation structured output parsing failed: %s", exc)
+        # Degraded-pass strategy: balance availability vs safety.
+        if retry_count == 0:
+            # First attempt: generate succeeded, only validator failed.
+            # Deterministic guardrails already passed. Serve unvalidated.
+            logger.warning(
+                "Degraded-pass: serving unvalidated response (first attempt, "
+                "validator unavailable)"
+            )
+            return {"validation_result": "PASS"}
+        # Retry attempt: prior validation issues + validator failure = suspect.
+        # Fail-closed to protect guest safety.
         return {
             "validation_result": "FAIL",
             "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
         }
     except Exception:
         logger.exception("Validation LLM call failed")
+        if retry_count == 0:
+            logger.warning(
+                "Degraded-pass: serving unvalidated response (first attempt, "
+                "validator unavailable)"
+            )
+            return {"validation_result": "PASS"}
         return {
             "validation_result": "FAIL",
             "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",

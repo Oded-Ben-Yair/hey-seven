@@ -110,6 +110,9 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
 
 # Maps retrieved-context metadata categories to specialist agent names.
 # Categories not listed here route to the "host" (general concierge) agent.
+# "spa" → "entertainment": spa services are managed by the entertainment/amenities
+# team at most casino properties; a separate spa agent would duplicate 90% of
+# entertainment agent logic for minimal retrieval benefit.
 _CATEGORY_TO_AGENT: dict[str, str] = {
     "restaurants": "dining",
     "entertainment": "entertainment",

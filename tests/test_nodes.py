@@ -889,12 +889,17 @@ class TestSpanishResponsibleGaming:
         assert result["router_confidence"] == 1.0
 
 
-class TestValidationFailClosed:
-    """Tests for fail-closed validation when LLM fails."""
+class TestValidationDegradedPass:
+    """Tests for degraded-pass validation strategy when LLM fails.
+
+    Strategy: On first attempt (retry_count=0), degraded-pass serves the
+    unvalidated response (availability over safety — deterministic guardrails
+    already passed). On retry (retry_count>0), fail-closed for guest safety.
+    """
 
     @patch("src.agent.nodes._get_validator_llm")
-    async def test_validation_fail_closed_on_llm_failure(self, mock_get_validator_llm):
-        """When validation LLM fails, return FAIL (fail-closed for safety)."""
+    async def test_degraded_pass_on_first_attempt(self, mock_get_validator_llm):
+        """When validator LLM fails on first attempt, PASS (degraded-pass)."""
         from src.agent.nodes import validate_node
 
         mock_llm = MagicMock()
@@ -912,12 +917,33 @@ class TestValidationFailClosed:
             retry_count=0,
         )
         result = await validate_node(state)
-        assert result["validation_result"] == "FAIL"
-        assert "Validation unavailable" in result["retry_feedback"]
+        assert result["validation_result"] == "PASS"  # degraded-pass on first attempt
 
     @patch("src.agent.nodes._get_validator_llm")
-    async def test_validation_fails_closed_on_retry(self, mock_get_validator_llm):
-        """When validation LLM fails on retry attempt, fail closed."""
+    async def test_degraded_pass_on_value_error(self, mock_get_validator_llm):
+        """ValueError from structured output parsing also degraded-passes on first attempt."""
+        from src.agent.nodes import validate_node
+
+        mock_llm = MagicMock()
+        mock_validator = MagicMock()
+        mock_validator.ainvoke = AsyncMock(side_effect=ValueError("Invalid JSON"))
+        mock_llm.with_structured_output.return_value = mock_validator
+        mock_get_validator_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[
+                HumanMessage(content="What restaurants?"),
+                AIMessage(content="We have Todd English's Tuscany."),
+            ],
+            retrieved_context=[{"content": "Todd English's", "metadata": {"category": "restaurants"}, "score": 0.9}],
+            retry_count=0,
+        )
+        result = await validate_node(state)
+        assert result["validation_result"] == "PASS"  # degraded-pass
+
+    @patch("src.agent.nodes._get_validator_llm")
+    async def test_fail_closed_on_retry_attempt(self, mock_get_validator_llm):
+        """When validator LLM fails on retry attempt, FAIL (fail-closed)."""
         from src.agent.nodes import validate_node
 
         mock_llm = MagicMock()
@@ -936,6 +962,7 @@ class TestValidationFailClosed:
         )
         result = await validate_node(state)
         assert result["validation_result"] == "FAIL"  # fail-closed on retry
+        assert "Validation unavailable" in result["retry_feedback"]
 
 
 class TestCircuitBreakerTransitions:

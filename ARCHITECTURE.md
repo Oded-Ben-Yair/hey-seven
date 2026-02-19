@@ -163,6 +163,19 @@ Behavior:
 - **Message windowing**: Only the last `MAX_HISTORY_MESSAGES` (default 20) human and AI messages are sent to the LLM, bounding context size for long conversations while preserving recent context.
 - On LLM error, returns a static error message and sets `skip_validation=True`.
 
+#### Specialist Dispatch Mapping (`graph.py:_CATEGORY_TO_AGENT`)
+
+| Retrieved Category | Specialist Agent | Rationale |
+|-------------------|------------------|-----------|
+| `restaurants` | `dining` | Domain-specific menu/hours/cuisine prompts |
+| `entertainment` | `entertainment` | Shows, events, venues |
+| `spa` | `entertainment` | Spa services managed by entertainment/amenities team; separate agent would duplicate 90% of logic |
+| `gaming` | `comp` | Gaming areas, table games, loyalty/comp programs |
+| `promotions` | `comp` | Promotions are comp-adjacent (tier benefits, offers) |
+| *(all others)* | `host` | General concierge with whisper planner guidance |
+
+Dispatch tie-breaking: when multiple categories have equal counts, `max(category_counts, key=lambda k: (count, k))` selects alphabetically — deterministic and testable.
+
 ### Specialist Agent Base Pattern (`_base.py`)
 
 All 4 specialist agents (host, dining, entertainment, comp) delegate to a shared
@@ -199,7 +212,7 @@ Behavior:
 - If `skip_validation` is True (empty context, circuit breaker open, or generate error), auto-PASS (these paths produce deterministic safe responses, not LLM-generated content).
 - If validation fails and `retry_count < 1`, returns RETRY with feedback.
 - If `retry_count >= 1`, returns FAIL (max 1 retry).
-- On validation LLM error: **degraded-pass on first attempt** (retry_count == 0) — if `generate_node` produced a response successfully but the validation LLM is unavailable, the generated response is passed through with a warning log. On retry attempts (retry_count > 0), **fail-closed** (returns FAIL, routes to fallback). This balances availability (generate already succeeded) with safety (retries indicate prior issues).
+- On validation LLM error: **degraded-pass on first attempt** (`retry_count == 0`) — if `generate_node` produced a response successfully but the validation LLM is unavailable, the generated response is passed through with a warning log (`nodes.py:313-319`). On retry attempts (`retry_count > 0`), **fail-closed** (returns FAIL, routes to fallback, `nodes.py:321-324`). This balances availability (generate already succeeded, deterministic guardrails already passed) with safety (retries indicate prior issues).
 
 ### 7. persona_envelope (`src/agent/persona.py`)
 
@@ -251,7 +264,7 @@ Five sub-cases based on `query_type`:
 
 ## State Schema
 
-`PropertyQAState` is a `TypedDict` with 15 fields (`src/agent/state.py:30`). `CasinoHostState` is a backward-compatible alias for v2 code that prefers the domain-specific name.
+`PropertyQAState` is a `TypedDict` with 13 fields (`src/agent/state.py:39`). `CasinoHostState` is a backward-compatible alias for v2 code that prefers the domain-specific name.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -265,11 +278,9 @@ Five sub-cases based on `query_type`:
 | `retry_feedback` | `str \| None` | Reason validation failed |
 | `current_time` | `str` | UTC timestamp injected at graph entry |
 | `sources_used` | `list[str]` | Knowledge-base categories cited in the response |
-| `active_agent` | `str \| None` | v2: which specialist agent handles the query (host/dining/entertainment/comp) |
 | `extracted_fields` | `dict[str, Any]` | v2: structured fields extracted from the guest message |
-| `whisper_plan` | `str \| None` | v2: background planner output for agent guidance |
-| `delay_seconds` | `float` | v2: response delay for natural pacing (SMS/chat) |
-| `sms_segments` | `list[str]` | v2: segmented SMS responses (160-char compliance) |
+| `whisper_plan` | `dict[str, Any] \| None` | v2: background planner output (`WhisperPlan.model_dump()`) |
+| `responsible_gaming_count` | `Annotated[int, _keep_max]` | Session-level responsible gaming trigger counter (persists across turns via `_keep_max` reducer) |
 
 Two Pydantic models for structured LLM output:
 
@@ -491,6 +502,7 @@ Returns 200 when healthy, 503 when degraded (so Cloud Run / k8s don't route traf
   "version": "0.1.0",
   "agent_ready": true,
   "property_loaded": true,
+  "rag_ready": true,
   "observability_enabled": false
 }
 ```
@@ -682,6 +694,12 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `CB_FAILURE_THRESHOLD` | `5` | Consecutive LLM failures before circuit opens |
 | `CB_COOLDOWN_SECONDS` | `60` | Seconds before circuit transitions to half-open |
 | `GRAPH_RECURSION_LIMIT` | `10` | LangGraph recursion limit (bounds validate→retry loop) |
+| `MAX_HISTORY_MESSAGES` | `20` | Sliding window: only last N messages sent to LLM |
+| `WHISPER_LLM_TEMPERATURE` | `0.2` | Lower temperature for deterministic whisper planning |
+| `COMP_COMPLETENESS_THRESHOLD` | `0.60` | Minimum profile completeness for comp agent offers |
+| `SEMANTIC_INJECTION_ENABLED` | `true` | Enable/disable semantic injection classifier (LLM second layer) |
+| `SEMANTIC_INJECTION_THRESHOLD` | `0.8` | Confidence threshold for semantic injection classifier |
+| `SEMANTIC_INJECTION_MODEL` | (empty) | Override model for semantic classifier (empty = use default) |
 | `VECTOR_DB` | `chroma` | Vector DB backend: `chroma` (local dev) or `firestore` (GCP prod) |
 | `FIRESTORE_PROJECT` | (empty) | GCP project ID for Firestore checkpointer |
 | `FIRESTORE_COLLECTION` | `knowledge_base` | Firestore collection name |
@@ -689,6 +707,8 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `CMS_WEBHOOK_SECRET` | (empty) | HMAC-SHA256 secret for Google Sheets webhook verification |
 | `GOOGLE_SHEETS_ID` | (empty) | Google Sheets spreadsheet ID for CMS content |
 | `SMS_ENABLED` | `false` | Enable SMS channel support |
+| `CONSENT_HMAC_SECRET` | `change-me-in-production` | HMAC key for SMS consent hash chain (validated at startup) |
+| `TRUSTED_PROXIES` | `[]` | CIDRs/IPs that may set X-Forwarded-For (empty = trust all, for Cloud Run) |
 | `PERSONA_MAX_CHARS` | `0` | SMS persona truncation (0=unlimited, 160=SMS segment) |
 | `TELNYX_API_KEY` | (empty) | Telnyx API key for SMS (`SecretStr`) |
 | `TELNYX_MESSAGING_PROFILE_ID` | (empty) | Telnyx messaging profile ID |
