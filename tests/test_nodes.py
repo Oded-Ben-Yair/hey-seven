@@ -502,27 +502,36 @@ class TestRouteFromRouter:
         assert route_from_router(state) == "off_topic"
 
 
-class TestRouteAfterValidate:
-    def test_pass_routes_to_respond(self):
-        """PASS routes to respond node."""
-        from src.agent.nodes import route_after_validate
+class TestRouteAfterValidateV2:
+    """Tests for _route_after_validate_v2 (production routing function)."""
+
+    def test_pass_routes_to_persona_envelope(self):
+        """PASS routes to persona_envelope node (v2)."""
+        from src.agent.graph import _route_after_validate_v2
 
         state = _state(validation_result="PASS")
-        assert route_after_validate(state) == "respond"
+        assert _route_after_validate_v2(state) == "persona_envelope"
 
     def test_retry_routes_to_generate(self):
         """RETRY routes back to generate node."""
-        from src.agent.nodes import route_after_validate
+        from src.agent.graph import _route_after_validate_v2
 
         state = _state(validation_result="RETRY")
-        assert route_after_validate(state) == "generate"
+        assert _route_after_validate_v2(state) == "generate"
 
     def test_fail_routes_to_fallback(self):
         """FAIL routes to fallback node."""
-        from src.agent.nodes import route_after_validate
+        from src.agent.graph import _route_after_validate_v2
 
         state = _state(validation_result="FAIL")
-        assert route_after_validate(state) == "fallback"
+        assert _route_after_validate_v2(state) == "fallback"
+
+    def test_unexpected_value_routes_to_fallback(self):
+        """Unknown validation result routes to fallback (fail-safe)."""
+        from src.agent.graph import _route_after_validate_v2
+
+        state = _state(validation_result="UNKNOWN")
+        assert _route_after_validate_v2(state) == "fallback"
 
 
 class TestAuditInput:

@@ -50,7 +50,6 @@ __all__ = [
     "greeting_node",
     "off_topic_node",
     "route_from_router",
-    "route_after_validate",
     # Re-exported from guardrails for backward compatibility
     "audit_input",
     "detect_responsible_gaming",
@@ -586,16 +585,3 @@ def route_from_router(state: PropertyQAState) -> str:
     return "retrieve"
 
 
-def route_after_validate(state: PropertyQAState) -> str:
-    """Route after the validate node based on validation result.
-
-    Returns the name of the next node to execute.
-    """
-    result = state.get("validation_result", "PASS")
-
-    if result == "PASS":
-        return "respond"
-    if result == "RETRY":
-        return "generate"
-    # FAIL
-    return "fallback"

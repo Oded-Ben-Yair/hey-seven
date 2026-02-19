@@ -36,7 +36,6 @@ from .nodes import (
     off_topic_node,
     respond_node,
     retrieve_node,
-    route_after_validate,  # noqa: F401 — kept for backward compat (tests import from nodes)
     route_from_router,
     router_node,
     validate_node,
@@ -148,7 +147,13 @@ def _route_after_validate_v2(state: PropertyQAState) -> str:
         return NODE_PERSONA
     if result == "RETRY":
         return NODE_GENERATE
-    # FAIL
+    if result == "FAIL":
+        return NODE_FALLBACK
+    # Defensive: unexpected validation_result value — log and fail safe.
+    logger.warning(
+        "Unexpected validation_result=%r, routing to fallback (fail-safe)",
+        result,
+    )
     return NODE_FALLBACK
 
 

@@ -230,3 +230,12 @@ def _get_circuit_breaker() -> CircuitBreaker:
         failure_threshold=settings.CB_FAILURE_THRESHOLD,
         cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
     )
+
+
+def clear_circuit_breaker_cache() -> None:
+    """Clear the circuit breaker singleton cache.
+
+    Exposed for tests (``conftest.py``) and production use cases like
+    config hot-reload.  Delegates to ``_get_circuit_breaker.cache_clear()``.
+    """
+    _get_circuit_breaker.cache_clear()

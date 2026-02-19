@@ -467,11 +467,21 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
             logger.warning("No vectorstore configured.")
             return []
 
-        search_kwargs: dict[str, Any] = {"k": top_k}
+        # Multi-tenant isolation: always filter by property_id to prevent
+        # cross-property leakage (consistent with retrieve_with_scores()).
+        property_id = get_settings().PROPERTY_NAME.lower().replace(" ", "_")
         if filter_category:
-            search_kwargs["filter"] = {"category": filter_category}
+            # ChromaDB requires $and for multi-key where clauses
+            filter_dict: dict[str, Any] = {
+                "$and": [
+                    {"property_id": property_id},
+                    {"category": filter_category},
+                ]
+            }
+        else:
+            filter_dict = {"property_id": property_id}
 
-        return self.vectorstore.similarity_search(query, **search_kwargs)
+        return self.vectorstore.similarity_search(query, k=top_k, filter=filter_dict)
 
     def retrieve_with_scores(
         self,

@@ -60,9 +60,11 @@ class RequestLoggingMiddleware:
             return
 
         headers = dict(scope.get("headers", []))
-        request_id = (
-            headers.get(b"x-request-id", b"").decode() or str(uuid.uuid4())[:8]
-        )
+        raw_id = headers.get(b"x-request-id", b"").decode()
+        # Sanitize client-provided request IDs to prevent log injection:
+        # strip non-alphanumeric/hyphen chars, cap length at 64.
+        sanitized = "".join(c for c in raw_id if c.isalnum() or c == "-")[:64]
+        request_id = sanitized or str(uuid.uuid4())[:8]
         start_time = time.monotonic()
         method = scope.get("method", "WS")
         path = scope.get("path", "/")

@@ -88,11 +88,13 @@ class FirestoreRetriever(AbstractRetriever):
             client = self._get_client()
             collection_ref = client.collection(self._collection_name)
 
+            # Over-fetch 2x because post-hoc property_id filtering in Python
+            # may discard results.  Trimming to top_k happens after filtering.
             vector_query = collection_ref.find_nearest(
                 vector_field="embedding",
                 query_vector=Vector(query_vector),
                 distance_measure=DistanceMeasure.COSINE,
-                limit=top_k,
+                limit=top_k * 2,
                 distance_result_field="distance",
             )
 
@@ -119,7 +121,7 @@ class FirestoreRetriever(AbstractRetriever):
                     similarity,
                 ))
 
-            return results
+            return results[:top_k]
 
         except Exception:
             logger.exception("Firestore vector search failed.")
