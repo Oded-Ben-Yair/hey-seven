@@ -118,7 +118,7 @@ class TestRetrieveToGenerate:
             patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock) as mock_get_dining_llm,
             patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock) as mock_get_entertainment_llm,
             patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock) as mock_get_comp_llm,
-            patch("src.agent.whisper_planner._get_whisper_llm") as mock_get_whisper_llm,
+            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock) as mock_get_whisper_llm,
             patch("src.agent.compliance_gate.classify_injection_semantic", new_callable=AsyncMock, return_value=None),
         ):
             # Router LLM returns property_qa classification

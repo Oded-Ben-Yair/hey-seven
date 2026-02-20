@@ -170,7 +170,7 @@ class TestWhisperPlanModel:
 
 
 class TestWhisperPlannerNode:
-    @patch("src.agent.whisper_planner._get_whisper_llm")
+    @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_happy_path_returns_plan_dict(self, mock_get_llm):
         """Node returns whisper_plan dict when LLM returns valid WhisperPlan."""
         mock_plan = WhisperPlan(
@@ -195,7 +195,7 @@ class TestWhisperPlannerNode:
         assert result["whisper_plan"]["next_topic"] == "dining"
         assert result["whisper_plan"]["offer_readiness"] == 0.35
 
-    @patch("src.agent.whisper_planner._get_whisper_llm")
+    @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_parse_error_returns_none(self, mock_get_llm):
         """ValueError from structured output parsing returns whisper_plan=None."""
         mock_llm = MagicMock()
@@ -211,7 +211,7 @@ class TestWhisperPlannerNode:
 
         assert result["whisper_plan"] is None
 
-    @patch("src.agent.whisper_planner._get_whisper_llm")
+    @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_type_error_returns_none(self, mock_get_llm):
         """TypeError from structured output parsing returns whisper_plan=None."""
         mock_llm = MagicMock()
@@ -227,7 +227,7 @@ class TestWhisperPlannerNode:
 
         assert result["whisper_plan"] is None
 
-    @patch("src.agent.whisper_planner._get_whisper_llm")
+    @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_api_timeout_returns_none(self, mock_get_llm):
         """API timeout (generic Exception) returns whisper_plan=None."""
         mock_llm = MagicMock()
@@ -243,7 +243,7 @@ class TestWhisperPlannerNode:
 
         assert result["whisper_plan"] is None
 
-    @patch("src.agent.whisper_planner._get_whisper_llm")
+    @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_empty_messages_still_works(self, mock_get_llm):
         """Node handles empty message list gracefully."""
         mock_plan = WhisperPlan(
@@ -264,7 +264,7 @@ class TestWhisperPlannerNode:
         assert result["whisper_plan"] is not None
         assert result["whisper_plan"]["next_topic"] == "name"
 
-    @patch("src.agent.whisper_planner._get_whisper_llm")
+    @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_node_calls_with_structured_output(self, mock_get_llm):
         """Node calls with_structured_output(WhisperPlan) on the LLM."""
         mock_plan = WhisperPlan(

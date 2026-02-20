@@ -15,7 +15,6 @@ Key design properties:
 import asyncio
 import json
 import logging
-import threading
 from typing import Any, Literal
 
 from cachetools import TTLCache
@@ -46,10 +45,10 @@ __all__ = [
 
 
 _whisper_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
-_whisper_lock = threading.Lock()
+_whisper_lock = asyncio.Lock()
 
 
-def _get_whisper_llm() -> ChatGoogleGenerativeAI:
+async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
     """Get or create the whisper planner LLM instance (TTL-cached singleton).
 
     Uses a lower temperature than the main ``_get_llm()`` because planning
@@ -58,8 +57,9 @@ def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 
     Cache refreshes every hour to pick up rotated credentials (same TTL
     pattern as ``_get_llm`` and ``_get_validator_llm``).
+    Coroutine-safe via ``asyncio.Lock`` (non-blocking under contention).
     """
-    with _whisper_lock:
+    async with _whisper_lock:
         cached = _whisper_cache.get("whisper")
         if cached is not None:
             return cached
@@ -175,7 +175,7 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         )
 
         # Call LLM with structured output (separate lower-temperature instance)
-        llm = _get_whisper_llm()
+        llm = await _get_whisper_llm()
         planner_llm = llm.with_structured_output(WhisperPlan)
         plan: WhisperPlan = await planner_llm.ainvoke(prompt_text)
 

@@ -877,6 +877,7 @@ class TestEndToEndGraphIntegration:
             patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_validator_llm),
             patch(
                 "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
                 return_value=mock_whisper_llm,
             ),
             patch(

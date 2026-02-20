@@ -12,6 +12,7 @@ Extracted from ``nodes.py`` to separate guardrail concerns from graph node
 logic.
 """
 
+import asyncio
 import logging
 from string import Template
 import re
@@ -393,7 +394,7 @@ async def classify_injection_semantic(
 
             llm_fn = _get_llm
 
-        llm = llm_fn()
+        llm = await llm_fn() if asyncio.iscoroutinefunction(llm_fn) else llm_fn()
         classifier = llm.with_structured_output(InjectionClassification)
         result = await classifier.ainvoke(
             Template(_SEMANTIC_CLASSIFIER_PROMPT).safe_substitute(message=message)
