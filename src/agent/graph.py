@@ -1,10 +1,9 @@
-"""Custom 11-node StateGraph for property Q&A (v2.2).
+"""Custom 11-node StateGraph for property Q&A.
 
-v1 (8 nodes): START → router → {greeting, off_topic, retrieve → generate → validate → respond/fallback}
-v2 (10 nodes): START → compliance_gate → {greeting, off_topic, router → {greeting, off_topic, retrieve → generate → validate → persona_envelope → respond/fallback}}
-v2.1 (11 nodes): v2 + whisper_planner between retrieve and generate
-v2.2: generate node dispatches to specialist agents (host, dining, entertainment, comp)
-      via the agent registry based on dominant category in retrieved context.
+Topology:
+    START -> compliance_gate -> {greeting, off_topic, router}
+    router -> {greeting, off_topic, retrieve}
+    retrieve -> whisper_planner -> generate -> validate -> {persona_envelope -> respond, generate (RETRY), fallback}
 
 The ``generate`` node runs ``_dispatch_to_specialist()`` which examines the
 dominant category in ``retrieved_context`` metadata and routes to the
@@ -15,6 +14,7 @@ node name ``"generate"`` is preserved for SSE streaming compatibility.
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -26,6 +26,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from src.api.pii_redaction import contains_pii, redact_pii
 from src.casino.feature_flags import DEFAULT_FEATURES, is_feature_enabled
 from src.config import get_settings
 from src.observability.langfuse_client import get_langfuse_handler
@@ -122,6 +123,19 @@ _CATEGORY_TO_AGENT: dict[str, str] = {
     "hotel": "hotel",
 }
 
+# Business-priority tie-break order for specialist dispatch.
+# When two categories have equal chunk counts, the higher-priority category
+# wins. Dining > hotel > entertainment > comp because dining queries are the
+# most common guest request type and have the most actionable content.
+_CATEGORY_PRIORITY: dict[str, int] = {
+    "restaurants": 4,
+    "hotel": 3,
+    "entertainment": 2,
+    "spa": 2,
+    "gaming": 1,
+    "promotions": 1,
+}
+
 
 async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     """Dispatch to the appropriate specialist agent based on retrieved context.
@@ -149,7 +163,12 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     agent_name = "host"
     dominant = "none"
     if category_counts:
-        dominant = max(category_counts, key=lambda k: (category_counts[k], k))
+        # Tie-break: business priority (dining > hotel > entertainment > comp),
+        # then alphabetical for categories not in _CATEGORY_PRIORITY.
+        dominant = max(
+            category_counts,
+            key=lambda k: (category_counts[k], _CATEGORY_PRIORITY.get(k, 0), k),
+        )
         candidate = _CATEGORY_TO_AGENT.get(dominant, "host")
         # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
         # When disabled, all queries route to the general host concierge.
@@ -471,6 +490,28 @@ async def chat_stream(
     sources: list[str] = []
     node_start_times: dict[str, float] = {}
     errored = False
+    # PII buffer: accumulate streamed tokens and check for PII patterns
+    # before emitting. Tokens are small fragments; PII patterns (phone,
+    # SSN, card numbers) span multiple tokens. Buffer when digits are
+    # detected (potential PII), flush immediately for non-digit text to
+    # preserve real-time streaming UX.
+    _pii_buffer = ""
+    _PII_FLUSH_LEN = 80  # Flush after accumulating this many chars (covers most PII patterns)
+    # Digits that could be part of phone/SSN/card patterns trigger buffering
+    _PII_DIGIT_RE = re.compile(r"\d")
+
+    async def _flush_pii_buffer() -> AsyncGenerator[dict[str, str], None]:
+        """Flush the PII buffer, redacting any detected PII before yielding tokens."""
+        nonlocal _pii_buffer
+        if not _pii_buffer:
+            return
+        # Only run the (more expensive) redaction if PII is detected
+        flushed = redact_pii(_pii_buffer) if contains_pii(_pii_buffer) else _pii_buffer
+        _pii_buffer = ""
+        yield {
+            "event": "token",
+            "data": json.dumps({"content": flushed}),
+        }
 
     try:
         async for event in graph.astream_events(
@@ -493,7 +534,10 @@ async def chat_stream(
                     "data": json.dumps({"node": langgraph_node, "status": "start"}),
                 }
 
-            # Stream tokens from generate node only
+            # Stream tokens from generate node only — with inline PII redaction.
+            # Tokens are buffered and flushed at sentence boundaries or max length
+            # to allow PII patterns (phone numbers, SSNs, card numbers) that span
+            # multiple tokens to be caught before reaching the client.
             if kind == "on_chat_model_stream" and langgraph_node == NODE_GENERATE:
                 chunk = event.get("data", {}).get("chunk")
                 if (
@@ -506,10 +550,21 @@ async def chat_stream(
                         if isinstance(chunk.content, str)
                         else str(chunk.content)
                     )
-                    yield {
-                        "event": "token",
-                        "data": json.dumps({"content": content}),
-                    }
+                    _pii_buffer += content
+                    # Strategy: buffer only when digits are present (potential PII).
+                    # Non-digit text flushes immediately to preserve streaming UX.
+                    # When digits accumulate, hold until buffer is large enough
+                    # for PII patterns (phone numbers, SSNs, card numbers) to be
+                    # detected, or until a sentence boundary clears the buffer.
+                    has_digits = bool(_PII_DIGIT_RE.search(_pii_buffer))
+                    if not has_digits:
+                        # No digits in buffer — flush immediately (no PII risk)
+                        async for tok_event in _flush_pii_buffer():
+                            yield tok_event
+                    elif len(_pii_buffer) >= _PII_FLUSH_LEN or _pii_buffer.endswith(("\n", ". ", "! ", "? ")):
+                        # Digits present — wait for enough chars to detect patterns
+                        async for tok_event in _flush_pii_buffer():
+                            yield tok_event
 
             # Capture non-streaming node outputs (greeting, off_topic, fallback)
             elif kind == "on_chain_end" and langgraph_node in _NON_STREAM_NODES:
@@ -568,6 +623,11 @@ async def chat_stream(
             "event": "error",
             "data": json.dumps({"error": "An error occurred while generating the response."}),
         }
+
+    # Flush remaining PII buffer (tokens accumulated but not yet emitted)
+    if _pii_buffer and not errored:
+        async for tok_event in _flush_pii_buffer():
+            yield tok_event
 
     # After an error, sources may contain stale/partial data from a partially-
     # completed graph execution — suppress to avoid confusing the client.

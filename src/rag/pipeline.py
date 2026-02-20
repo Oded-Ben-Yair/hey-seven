@@ -552,6 +552,15 @@ def _get_retriever_cached() -> AbstractRetriever:
 
     chroma_dir = settings.CHROMA_PERSIST_DIR
 
+    # Guard: VECTOR_DB=chroma requires the chromadb package, which is excluded
+    # from requirements-prod.txt (~200MB). If running in production without
+    # chromadb, fail with a clear message instead of an opaque ImportError.
+    if settings.ENVIRONMENT == "production" and settings.VECTOR_DB == "chroma":
+        logger.error(
+            "VECTOR_DB=chroma in production environment. chromadb is excluded "
+            "from requirements-prod.txt. Set VECTOR_DB=firestore for production."
+        )
+
     try:
         # Lazy import: see ingest_property() for rationale.
         from langchain_community.vectorstores import Chroma

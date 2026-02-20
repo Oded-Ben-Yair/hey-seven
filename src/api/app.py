@@ -64,18 +64,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Run RAG ingestion if ChromaDB collection is empty or missing.
     # Checking the chroma.sqlite3 file is more reliable than directory existence
     # because the directory may exist but contain no data (e.g., after a failed run).
-    # Run RAG ingestion if ChromaDB collection is empty or missing.
     # Wrap in asyncio.to_thread() because ChromaDB operations are synchronous
     # and would block the event loop during startup.
-    chroma_db_file = Path(settings.CHROMA_PERSIST_DIR) / "chroma.sqlite3"
-    if not chroma_db_file.exists():
-        try:
-            from src.rag.pipeline import ingest_property
+    #
+    # SAFETY: Only ingest when VECTOR_DB=chroma (local dev). Production uses
+    # pre-built Firestore/Vertex AI indexes — startup ingestion would cause
+    # race conditions when multiple Cloud Run instances start simultaneously
+    # (concurrent SQLite writes corrupt ChromaDB, duplicate chunks).
+    if settings.VECTOR_DB == "chroma":
+        chroma_db_file = Path(settings.CHROMA_PERSIST_DIR) / "chroma.sqlite3"
+        if not chroma_db_file.exists():
+            try:
+                from src.rag.pipeline import ingest_property
 
-            await asyncio.to_thread(ingest_property)
-            logger.info("Property data ingested into ChromaDB.")
-        except Exception:
-            logger.exception("Failed to ingest property data.")
+                await asyncio.to_thread(ingest_property)
+                logger.info("Property data ingested into ChromaDB.")
+            except Exception:
+                logger.exception("Failed to ingest property data.")
+    else:
+        logger.info(
+            "Skipping startup RAG ingestion (VECTOR_DB=%s, not chroma)",
+            settings.VECTOR_DB,
+        )
 
     # Load property metadata for /property endpoint
     property_path = Path(settings.PROPERTY_DATA_PATH)
@@ -114,20 +124,21 @@ def create_app() -> FastAPI:
     # Pure ASGI middleware — Starlette executes in REVERSE add order.
     # Add order (top to bottom) vs execution order (bottom to top):
     #   RateLimit        (added 1st, executes last / innermost)
-    #   BodyLimit        (added 2nd)
-    #   ApiKey           (added 3rd)
-    #   Security         (added 4th)
-    #   Logging          (added 5th)
-    #   ErrorHandling    (added 6th, executes first / outermost)
-    # This ensures ErrorHandling wraps ALL other middleware, so unhandled
-    # exceptions from any layer are caught and returned as structured 500s
-    # with security headers.
+    #   ApiKey           (added 2nd)
+    #   Security         (added 3rd)
+    #   Logging          (added 4th)
+    #   ErrorHandling    (added 5th)
+    #   BodyLimit        (added 6th, executes first / outermost)
+    # BodyLimit is outermost so oversized payloads are rejected before any
+    # middleware processes the request body (prevents memory consumption from
+    # malicious oversized payloads). ErrorHandling wraps all inner middleware
+    # so unhandled exceptions are caught and returned as structured 500s.
     app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(RequestBodyLimitMiddleware)
     app.add_middleware(ApiKeyMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
+    app.add_middleware(RequestBodyLimitMiddleware)
 
     # ------------------------------------------------------------------
     # POST /chat — SSE streaming response (real token streaming)
@@ -155,6 +166,13 @@ def create_app() -> FastAPI:
         async def event_generator():
             try:
                 async with asyncio.timeout(sse_timeout):
+                    # SSE heartbeat: send periodic pings to prevent client-side
+                    # EventSource timeouts during long LLM generations (30s+).
+                    # Without heartbeats, browsers close the connection and auto-
+                    # reconnect, creating duplicate requests.
+                    _HEARTBEAT_INTERVAL = 15  # seconds
+                    last_event_time = asyncio.get_event_loop().time()
+
                     async for event in chat_stream(
                         agent, body.message, body.thread_id,
                         request_id=request_id,
@@ -162,6 +180,10 @@ def create_app() -> FastAPI:
                         if await request.is_disconnected():
                             logger.info("Client disconnected, cancelling stream")
                             return
+                        now = asyncio.get_event_loop().time()
+                        if now - last_event_time >= _HEARTBEAT_INTERVAL:
+                            yield {"event": "ping", "data": ""}
+                        last_event_time = now
                         yield event
             except TimeoutError:
                 logger.warning("SSE stream timed out after %ds", sse_timeout)

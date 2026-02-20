@@ -16,7 +16,7 @@ class TestSettings:
         assert s.RAG_TOP_K == 5
         assert s.RAG_CHUNK_SIZE == 800
         assert s.RATE_LIMIT_CHAT == 20
-        assert s.VERSION == "0.1.0"
+        assert s.VERSION == "1.0.0"
 
     def test_env_var_overrides(self):
         """Environment variables override default settings."""
@@ -113,3 +113,33 @@ class TestSettings:
             s = Settings()
             assert s.RAG_CHUNK_OVERLAP == 100
             assert s.RAG_CHUNK_SIZE == 800
+
+    def test_consent_hmac_rejects_default_when_sms_enabled(self):
+        """SMS_ENABLED=True with default HMAC secret raises ValueError."""
+        import pytest
+
+        from src.config import Settings
+
+        with patch.dict(os.environ, {"SMS_ENABLED": "true"}):
+            with pytest.raises(ValueError, match="CONSENT_HMAC_SECRET must be set"):
+                Settings()
+
+    def test_consent_hmac_accepts_custom_when_sms_enabled(self):
+        """SMS_ENABLED=True with custom HMAC secret passes validation."""
+        from src.config import Settings
+
+        with patch.dict(os.environ, {
+            "SMS_ENABLED": "true",
+            "CONSENT_HMAC_SECRET": "my-secure-production-secret",
+        }):
+            s = Settings()
+            assert s.SMS_ENABLED is True
+            assert s.CONSENT_HMAC_SECRET.get_secret_value() == "my-secure-production-secret"
+
+    def test_consent_hmac_allows_default_when_sms_disabled(self):
+        """SMS_ENABLED=False (default) allows the default HMAC secret."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.SMS_ENABLED is False
+        assert s.CONSENT_HMAC_SECRET.get_secret_value() == "change-me-in-production"

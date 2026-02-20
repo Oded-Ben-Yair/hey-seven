@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     # --- Observability ---
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
-    VERSION: str = "0.1.0"
+    VERSION: str = "1.0.0"
     LANGFUSE_PUBLIC_KEY: str = ""
     LANGFUSE_SECRET_KEY: SecretStr = SecretStr("")
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"
@@ -107,18 +107,21 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_consent_hmac(self) -> "Settings":
-        """Warn if CONSENT_HMAC_SECRET is using the default insecure value."""
+        """Reject default CONSENT_HMAC_SECRET when SMS is enabled.
+
+        SMS consent hashes use HMAC-SHA256 with this secret. The default
+        placeholder is trivially forgeable — an attacker could fabricate
+        valid consent records, causing TCPA violations and regulatory fines.
+        Hard-fail prevents accidental deployment with insecure defaults.
+        """
         if (
             self.SMS_ENABLED
             and self.CONSENT_HMAC_SECRET.get_secret_value() == "change-me-in-production"
         ):
-            import warnings
-
-            warnings.warn(
-                "CONSENT_HMAC_SECRET is using the default value. "
-                "Set a secure secret via environment variable before enabling SMS in production.",
-                UserWarning,
-                stacklevel=2,
+            raise ValueError(
+                "CONSENT_HMAC_SECRET must be set to a secure value when SMS_ENABLED=True. "
+                "The default 'change-me-in-production' is insecure and would allow "
+                "SMS consent hash forgery. Set CONSENT_HMAC_SECRET via environment variable."
             )
         return self
 

@@ -45,5 +45,12 @@ def get_checkpointer() -> Any:
 
     from langgraph.checkpoint.memory import MemorySaver
 
+    if settings.ENVIRONMENT == "production":
+        logger.warning(
+            "ENVIRONMENT=production but using MemorySaver (in-memory). "
+            "Conversation state will be lost on container recycle and is not "
+            "shared across Cloud Run instances. Set VECTOR_DB=firestore for "
+            "durable checkpointing."
+        )
     logger.info("Using MemorySaver checkpointer (in-memory, dev mode).")
     return MemorySaver()

@@ -50,6 +50,7 @@ steps:
       - '--set-env-vars=ENVIRONMENT=production,LOG_LEVEL=WARNING'
       - '--cpu-boost'  # Full CPU during startup for faster cold start
       - '--min-instances=1'  # Keep one warm instance to avoid cold-start latency
+      - '--max-instances=10'  # Cap scaling to prevent DDoS-driven cost runaway
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'

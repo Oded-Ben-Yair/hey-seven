@@ -55,7 +55,7 @@ class TestHealthEndpoint:
             assert resp.status_code == 200
             data = resp.json()
             assert data["status"] == "healthy"
-            assert data["version"] == "0.1.0"
+            assert data["version"] == "1.0.0"
             assert data["agent_ready"] is True
             assert data["property_loaded"] is True
 

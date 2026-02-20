@@ -67,7 +67,12 @@ class PropertyQAState(TypedDict):
     # v2 fields
     extracted_fields: dict[str, Any]  # structured fields from guest message
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
-    responsible_gaming_count: Annotated[int, _keep_max]  # session-level escalation counter (persists across turns via _keep_max reducer)
+    # _keep_max reducer: preserves the maximum value across state updates.
+    # When _initial_state() resets this to 0, max(existing, 0) preserves
+    # the accumulated count. When compliance_gate increments, the new value
+    # is preserved. This prevents accidental reset of the escalation counter
+    # when per-turn fields are reset via _initial_state().
+    responsible_gaming_count: Annotated[int, _keep_max]
 
 
 # Deprecated alias — use PropertyQAState directly.

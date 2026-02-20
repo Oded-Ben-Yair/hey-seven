@@ -73,8 +73,12 @@ class CircuitBreaker:
             self._cooldown_seconds = cooldown_seconds
             self._rolling_window_seconds = rolling_window_seconds
 
+        # maxlen set high enough to avoid dropping failure records during
+        # burst failures within the rolling window. Previous maxlen of
+        # threshold*2 could overflow during bursts, causing the deque to
+        # silently drop oldest entries and undercount failures.
         self._failure_timestamps: collections.deque[float] = collections.deque(
-            maxlen=self._failure_threshold * 2
+            maxlen=max(100, self._failure_threshold * 10)
         )
         self._last_failure_time: float | None = None
         self._state = "closed"

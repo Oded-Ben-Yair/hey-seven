@@ -254,10 +254,23 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
     # Use schedule-focused search for hours/schedule queries.
     # ChromaDB is sync-only in LangChain; wrap in asyncio.to_thread to avoid
     # blocking the event loop.  Production path (Vertex AI) has native async.
-    if query_type == "hours_schedule":
-        results = await asyncio.to_thread(search_hours, query)
-    else:
-        results = await asyncio.to_thread(search_knowledge_base, query)
+    # Timeout guard: prevents a hung ChromaDB query (e.g., corrupted SQLite)
+    # from permanently blocking the event loop thread pool.
+    _RETRIEVAL_TIMEOUT = 10  # seconds
+    try:
+        if query_type == "hours_schedule":
+            results = await asyncio.wait_for(
+                asyncio.to_thread(search_hours, query),
+                timeout=_RETRIEVAL_TIMEOUT,
+            )
+        else:
+            results = await asyncio.wait_for(
+                asyncio.to_thread(search_knowledge_base, query),
+                timeout=_RETRIEVAL_TIMEOUT,
+            )
+    except TimeoutError:
+        logger.warning("Retrieval timed out after %ds for query: %s", _RETRIEVAL_TIMEOUT, query[:80])
+        results = []
 
     return {"retrieved_context": results}
 

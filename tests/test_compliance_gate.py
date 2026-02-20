@@ -342,6 +342,7 @@ class TestConfigExpansion:
             "CASINO_ID": "mgm_grand",
             "SMS_ENABLED": "true",
             "PERSONA_MAX_CHARS": "160",
+            "CONSENT_HMAC_SECRET": "test-secure-secret-for-sms",  # Required when SMS_ENABLED=True
         }):
             s = Settings()
             assert s.VECTOR_DB == "firestore"
