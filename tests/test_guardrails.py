@@ -264,3 +264,48 @@ class TestSemanticInjectionClassifier:
         assert result is not None
         assert result.is_injection is False
         assert result.confidence == 0.1
+
+    @pytest.mark.asyncio
+    async def test_timeout_error_from_llm_fn_fails_closed(self):
+        """TimeoutError from llm_fn itself returns fail-closed classification."""
+        from src.agent.guardrails import InjectionClassification, classify_injection_semantic
+
+        def timeout_llm():
+            raise TimeoutError("LLM timed out")
+
+        result = await classify_injection_semantic("test query", llm_fn=timeout_llm)
+        assert result is not None
+        assert isinstance(result, InjectionClassification)
+        assert result.is_injection is True
+        assert result.confidence == 1.0
+
+    @pytest.mark.asyncio
+    async def test_runtime_error_from_llm_fn_fails_closed(self):
+        """RuntimeError from llm_fn returns fail-closed classification."""
+        from src.agent.guardrails import InjectionClassification, classify_injection_semantic
+
+        def runtime_llm():
+            raise RuntimeError("API unavailable")
+
+        result = await classify_injection_semantic("test query", llm_fn=runtime_llm)
+        assert result is not None
+        assert isinstance(result, InjectionClassification)
+        assert result.is_injection is True
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_timeout_fails_closed(self):
+        """TimeoutError during ainvoke returns fail-closed classification."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from src.agent.guardrails import InjectionClassification, classify_injection_semantic
+
+        mock_llm = MagicMock()
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(side_effect=TimeoutError("Request timed out"))
+        mock_llm.with_structured_output.return_value = mock_classifier
+
+        result = await classify_injection_semantic("test query", llm_fn=lambda: mock_llm)
+        assert result is not None
+        assert result.is_injection is True
+        assert result.confidence == 1.0
+        assert "fail-closed" in result.reason.lower()

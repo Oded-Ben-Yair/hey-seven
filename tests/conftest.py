@@ -25,7 +25,9 @@ def _clear_singleton_caches():
     CircuitBreaker singletons leaking state across test modules.
     """
     yield
-    # Clear all singleton caches after each test
+    # Clear all singleton caches after each test.
+    # Uses (ImportError, AttributeError) consistently to handle both missing
+    # modules and renamed cache attributes without misleading test failures.
     from src.config import get_settings
 
     get_settings.cache_clear()
@@ -35,35 +37,35 @@ def _clear_singleton_caches():
 
         _llm_cache.clear()
         _validator_cache.clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.agent.nodes import _build_greeting_categories
 
         _build_greeting_categories.cache_clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.agent.whisper_planner import _whisper_cache
 
         _whisper_cache.clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.agent.circuit_breaker import _get_circuit_breaker
 
         _get_circuit_breaker.cache_clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.rag.embeddings import get_embeddings
 
         get_embeddings.cache_clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
@@ -77,7 +79,7 @@ def _clear_singleton_caches():
         from src.agent.memory import get_checkpointer
 
         get_checkpointer.cache_clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
@@ -85,35 +87,35 @@ def _clear_singleton_caches():
 
         clear_memory_store()
         clear_firestore_client_cache()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.casino.config import clear_config_cache
 
         clear_config_cache()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.casino.feature_flags import _flag_cache
 
         _flag_cache.clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.cms.webhook import _content_hashes
 
         _content_hashes.clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.sms import webhook as _sms_webhook
 
         _sms_webhook._idempotency_tracker = None
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
@@ -121,21 +123,21 @@ def _clear_singleton_caches():
 
         # Remove all handlers to prevent handler accumulation across tests
         _access_logger.handlers.clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.sms.webhook import _DELIVERY_LOG
 
         _DELIVERY_LOG.clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     try:
         from src.observability.langfuse_client import _get_langfuse_client
 
         _get_langfuse_client.cache_clear()
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
 

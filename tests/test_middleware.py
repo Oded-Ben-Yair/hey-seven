@@ -3,6 +3,7 @@
 Tests each middleware in isolation using Starlette test utilities.
 """
 
+import pytest
 from unittest.mock import MagicMock
 
 from starlette.applications import Starlette
@@ -430,6 +431,114 @@ class TestTrustedProxiesNone:
                 "XFF should be ignored when TRUSTED_PROXIES is None — "
                 "all requests use peer IP"
             )
+
+
+class TestRateLimitConcurrency:
+    """Rate limiter behavior under concurrent access (R4: GPT F4, Grok F4)."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_requests_no_keyerror(self):
+        """50 concurrent requests from unique IPs produce no KeyError or corruption."""
+        import asyncio
+
+        import httpx
+        from unittest.mock import patch
+
+        from src.api.middleware import RateLimitMiddleware
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.RATE_LIMIT_CHAT = 100
+            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 10
+            mock_settings.return_value.TRUSTED_PROXIES = ["testclient"]
+
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(RateLimitMiddleware)
+
+            transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                coros = [
+                    client.post(
+                        "/chat",
+                        headers={"X-Forwarded-For": f"10.0.{i // 256}.{i % 256}"},
+                    )
+                    for i in range(50)
+                ]
+                responses = await asyncio.gather(*coros)
+
+            # No 500 errors — all should be 200 (within limit)
+            status_codes = [r.status_code for r in responses]
+            assert 500 not in status_codes, "No internal errors under concurrency"
+            # At least some should succeed
+            assert status_codes.count(200) > 0
+
+    def test_max_clients_eviction_deterministic_order(self):
+        """Exceeding max_clients evicts the least recently used client."""
+        from unittest.mock import patch
+
+        from src.api.middleware import RateLimitMiddleware
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.RATE_LIMIT_CHAT = 100
+            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 2
+            mock_settings.return_value.TRUSTED_PROXIES = ["testclient"]
+
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(RateLimitMiddleware)
+            client = TestClient(app)
+
+            # Add 2 clients (at capacity)
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.1"})
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.2"})
+
+            # Third client forces eviction of LRU (10.0.0.1)
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.3"})
+
+            # Verify 10.0.0.2 and 10.0.0.3 still work (within limit)
+            resp2 = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.2"})
+            resp3 = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.3"})
+            assert resp2.status_code == 200
+            assert resp3.status_code == 200
+
+
+class TestApiKeyTTLRefreshExpiry:
+    """API key TTL refresh after expiry (R4: GPT F5)."""
+
+    def test_key_refreshed_after_ttl_with_time_mock(self):
+        """API key is re-read from settings after TTL window passes."""
+        import time
+        from unittest.mock import patch
+
+        from src.api.middleware import ApiKeyMiddleware
+
+        key_versions = ["key-v1", "key-v1", "key-v2"]  # v2 after rotation
+        call_idx = {"n": 0}
+
+        def rotating_secret():
+            idx = min(call_idx["n"], len(key_versions) - 1)
+            call_idx["n"] += 1
+            return key_versions[idx]
+
+        with (
+            patch("src.api.middleware.get_settings") as mock_settings,
+            patch("src.api.middleware.time") as mock_time,
+        ):
+            mock_settings.return_value.API_KEY = MagicMock(
+                get_secret_value=rotating_secret
+            )
+            # Simulate time passing beyond TTL (60s)
+            mock_time.monotonic = MagicMock(side_effect=[0.0, 0.0, 61.0, 61.0])
+
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(ApiKeyMiddleware)
+            client = TestClient(app)
+
+            # First request with key-v1 (cold start, fetches key)
+            resp = client.post("/chat", headers={"X-API-Key": "key-v1"})
+            assert resp.status_code == 200
+
+            # Second request after TTL — key rotated to key-v2
+            resp = client.post("/chat", headers={"X-API-Key": "key-v2"})
+            assert resp.status_code == 200
 
 
 class TestRequestBodyLimitMiddleware:

@@ -1,5 +1,7 @@
 """Tests for the 8 graph node functions (src/agent/nodes.py)."""
 
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import AIMessage, HumanMessage
@@ -1413,3 +1415,120 @@ class TestHotelCategoryDispatch:
         from src.agent.graph import _CATEGORY_TO_AGENT
 
         assert _CATEGORY_TO_AGENT.get("hotel") == "hotel"
+
+
+# ---------------------------------------------------------------------------
+# Circuit breaker concurrency tests (R4 Finding: GPT F3, Grok F2)
+# ---------------------------------------------------------------------------
+
+
+class TestCircuitBreakerConcurrency:
+    """Verify circuit breaker behavior under concurrent async access."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_allow_request_all_pass_when_closed(self):
+        """50 concurrent allow_request() calls all return True when closed."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=1.0)
+        results = await asyncio.gather(*[cb.allow_request() for _ in range(50)])
+        assert all(results), "All requests should be allowed when closed"
+        assert cb.state == "closed"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_allow_request_all_blocked_when_open(self):
+        """50 concurrent allow_request() calls all return False when open (cooldown not expired)."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=999.0)  # Long cooldown
+        # Trip the breaker
+        await cb.record_failure()
+        await cb.record_failure()
+        assert cb.state == "open"
+
+        results = await asyncio.gather(*[cb.allow_request() for _ in range(50)])
+        assert not any(results), "All requests should be blocked when open"
+
+    @pytest.mark.asyncio
+    async def test_exactly_one_probe_in_half_open(self):
+        """In half-open state, exactly one probe request is allowed through."""
+        import time
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0.01)  # Very short cooldown
+        await cb.record_failure()
+        await cb.record_failure()
+        assert cb.state == "open"
+
+        # Wait for cooldown to expire
+        await asyncio.sleep(0.05)
+        assert cb.state == "half_open"
+
+        # Send 20 concurrent requests — only 1 should be allowed (probe)
+        results = await asyncio.gather(*[cb.allow_request() for _ in range(20)])
+        allowed = sum(1 for r in results if r)
+        assert allowed == 1, f"Expected exactly 1 probe, got {allowed}"
+
+    @pytest.mark.asyncio
+    async def test_probe_success_closes_breaker(self):
+        """Successful probe transitions breaker from half_open back to closed."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0.01)
+        await cb.record_failure()
+        await cb.record_failure()
+        await asyncio.sleep(0.05)
+
+        # Allow one probe
+        assert await cb.allow_request() is True
+        # Record success → should close
+        await cb.record_success()
+        assert cb.state == "closed"
+
+        # All subsequent requests should pass
+        results = await asyncio.gather(*[cb.allow_request() for _ in range(10)])
+        assert all(results)
+
+    @pytest.mark.asyncio
+    async def test_probe_failure_reopens_breaker(self):
+        """Failed probe transitions from half_open back to open."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0.01)
+        await cb.record_failure()
+        await cb.record_failure()
+        await asyncio.sleep(0.05)
+
+        # Allow one probe
+        assert await cb.allow_request() is True
+        # Record failure → should re-open
+        await cb.record_failure()
+        state = await cb.get_state()
+        assert state == "open"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_record_failure_trips_breaker_once(self):
+        """Concurrent record_failure() calls trip breaker exactly once."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60.0)
+        # Send 10 concurrent failures — breaker should trip after 5
+        await asyncio.gather(*[cb.record_failure() for _ in range(10)])
+        assert cb.state == "open"
+        # Failure count should be 10 (all recorded, not lost to races)
+        assert cb.failure_count == 10
+
+    @pytest.mark.asyncio
+    async def test_interleaved_success_and_failure(self):
+        """Mixed success/failure calls don't corrupt state."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60.0)
+
+        async def mixed_calls():
+            await cb.record_failure()
+            await cb.record_success()
+
+        await asyncio.gather(*[mixed_calls() for _ in range(20)])
+        # After all mixed calls, state should be closed (success resets)
+        assert cb.state == "closed"

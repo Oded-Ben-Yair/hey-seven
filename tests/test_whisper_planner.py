@@ -412,3 +412,43 @@ class TestFailureCounterThreshold:
         assert counter.value == 2
         await counter.reset()
         assert counter.value == 0
+
+    async def test_threshold_then_success_then_failures_no_second_alert(self, caplog):
+        """10 failures (alert) -> 1 success (reset) -> 9 failures: no second alert."""
+        import logging
+        from src.agent.whisper_planner import _FailureCounter
+
+        counter = _FailureCounter(alert_threshold=10)
+        with caplog.at_level(logging.ERROR):
+            # 10 failures → alert triggered
+            for _ in range(10):
+                await counter.increment()
+            first_count = caplog.text.count("systematic_failure")
+            assert first_count == 1
+
+            # 1 success → counter and alert state reset
+            await counter.reset()
+
+            # 9 more failures (below threshold) → no second alert
+            for _ in range(9):
+                await counter.increment()
+            second_count = caplog.text.count("systematic_failure")
+            assert second_count == first_count, "Alert should not fire again below threshold"
+
+    async def test_reset_then_re_trigger_fires_alert_again(self, caplog):
+        """After reset, reaching threshold again DOES fire a new alert."""
+        import logging
+        from src.agent.whisper_planner import _FailureCounter
+
+        counter = _FailureCounter(alert_threshold=3)
+        with caplog.at_level(logging.ERROR):
+            # First alert cycle
+            for _ in range(3):
+                await counter.increment()
+            assert caplog.text.count("systematic_failure") == 1
+
+            # Reset and re-trigger
+            await counter.reset()
+            for _ in range(3):
+                await counter.increment()
+            assert caplog.text.count("systematic_failure") == 2
