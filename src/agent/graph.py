@@ -377,15 +377,16 @@ def _initial_state(message: str) -> dict[str, Any]:
 
 
 # Parity check: ensure _initial_state covers all non-messages fields.
-# Guarded behind __debug__ so it is stripped in optimized mode (python -O),
-# avoiding a production crash if state schema drifts between deploys.
-if __debug__:
-    _PARITY_FIELDS = set(PropertyQAState.__annotations__) - {"messages"}
-    _INITIAL_FIELDS = set(_initial_state("test").keys()) - {"messages"}
-    assert _PARITY_FIELDS == _INITIAL_FIELDS, (
+# R10 fix (Gemini F10, GPT P2-F5): converted from `assert` (vanishes with
+# `python -O`) to a runtime ValueError that fires regardless of optimization
+# mode. This catches state schema drift at import time in ALL environments.
+_EXPECTED_FIELDS = frozenset(PropertyQAState.__annotations__) - frozenset({"messages"})
+_INITIAL_FIELDS = frozenset(_initial_state("test").keys()) - frozenset({"messages"})
+if _EXPECTED_FIELDS != _INITIAL_FIELDS:
+    raise ValueError(
         f"_initial_state parity mismatch: "
-        f"missing={_PARITY_FIELDS - _INITIAL_FIELDS}, "
-        f"extra={_INITIAL_FIELDS - _PARITY_FIELDS}"
+        f"missing={_EXPECTED_FIELDS - _INITIAL_FIELDS}, "
+        f"extra={_INITIAL_FIELDS - _EXPECTED_FIELDS}"
     )
 
 
@@ -553,11 +554,19 @@ async def chat_stream(
                     # for PII patterns (phone numbers, SSNs, card numbers) to be
                     # detected, or until a sentence boundary clears the buffer.
                     has_digits = bool(_PII_DIGIT_RE.search(_pii_buffer))
-                    if not has_digits:
+                    # R10 fix (DeepSeek F2): restructured PII buffer flush conditions.
+                    # Previously _PII_MAX_BUFFER (500) was in an `or` with _PII_FLUSH_LEN (80),
+                    # making it unreachable dead code. Now the hard cap is an unconditional
+                    # first check (defense-in-depth against unbounded growth).
+                    if len(_pii_buffer) >= _PII_MAX_BUFFER:
+                        # Unconditional hard cap — force-flush regardless of content
+                        async for tok_event in _flush_pii_buffer():
+                            yield tok_event
+                    elif not has_digits:
                         # No digits in buffer — flush immediately (no PII risk)
                         async for tok_event in _flush_pii_buffer():
                             yield tok_event
-                    elif len(_pii_buffer) >= _PII_MAX_BUFFER or len(_pii_buffer) >= _PII_FLUSH_LEN or _pii_buffer.endswith(("\n", ". ", "! ", "? ")):
+                    elif len(_pii_buffer) >= _PII_FLUSH_LEN or _pii_buffer.endswith(("\n", ". ", "! ", "? ")):
                         # Digits present — wait for enough chars to detect patterns
                         async for tok_event in _flush_pii_buffer():
                             yield tok_event
@@ -613,9 +622,14 @@ async def chat_stream(
                 }
 
     except asyncio.CancelledError:
-        # Client disconnect during SSE stream — normal, not an error.
-        # Re-raise to let ASGI server handle cleanup.
-        logger.info("SSE stream cancelled (client disconnect)")
+        # Intentionally NOT flushing _pii_buffer on cancel: dropping buffered
+        # tokens is safer than emitting potentially unredacted PII to a
+        # disconnecting client. The partial tokens are lost (fail-safe).
+        # R10 documentation fix (DeepSeek F6).
+        logger.info(
+            "SSE stream cancelled (client disconnect), dropping %d buffered chars",
+            len(_pii_buffer),
+        )
         raise
     except Exception:
         logger.exception("Error during SSE stream")

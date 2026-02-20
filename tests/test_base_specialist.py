@@ -279,7 +279,11 @@ class TestValueTypeErrorFallback:
 
 
 class TestCancelledErrorReRaised:
-    """CancelledError from LLM is re-raised, not swallowed."""
+    """CancelledError from LLM is re-raised after recording CB failure.
+
+    R10 fix (DeepSeek F1): CancelledError now calls cb.record_failure()
+    before re-raising to prevent circuit breaker getting stuck in half_open.
+    """
 
     @pytest.mark.asyncio
     async def test_cancelled_error_propagates(self):
@@ -291,6 +295,7 @@ class TestCancelledErrorReRaised:
         mock_cb = MagicMock()
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_failure = AsyncMock()
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
@@ -305,6 +310,60 @@ class TestCancelledErrorReRaised:
 
         with pytest.raises(asyncio.CancelledError):
             await execute_specialist(state, **kwargs)
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_records_cb_failure(self):
+        """CancelledError calls record_failure() to unblock half_open CB (R10 DeepSeek F1)."""
+        from src.agent.agents._base import execute_specialist
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=asyncio.CancelledError())
+        mock_cb = MagicMock()
+        mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_failure = AsyncMock()
+
+        kwargs = _make_execute_kwargs(
+            get_llm_fn=AsyncMock(return_value=mock_llm),
+            get_cb_fn=MagicMock(return_value=mock_cb),
+        )
+        state = _state(
+            messages=[HumanMessage(content="Question")],
+            retrieved_context=[
+                {"content": "data", "metadata": {"category": "faq"}, "score": 1.0}
+            ],
+        )
+
+        with pytest.raises(asyncio.CancelledError):
+            await execute_specialist(state, **kwargs)
+
+        mock_cb.record_failure.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_half_open_to_open(self):
+        """CancelledError during half_open probe transitions CB back to open (R10 DeepSeek F1).
+
+        This is the critical production scenario: CB in half_open allows one probe,
+        client disconnects (CancelledError), CB must transition to open (not stuck).
+        """
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0)
+        # Trip the breaker
+        await cb.record_failure()
+        await cb.record_failure()
+        assert cb.state == "half_open"
+
+        # Allow the probe request
+        allowed = await cb.allow_request()
+        assert allowed is True
+
+        # Simulate CancelledError by calling record_failure (what _base.py now does)
+        await cb.record_failure()
+
+        # CB should be back to open, NOT stuck in half_open
+        assert cb._state == "open"
+        assert cb._half_open_in_progress is False
 
 
 class TestHttpErrorFallback:
@@ -340,6 +399,85 @@ class TestHttpErrorFallback:
         assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
         mock_cb.record_failure.assert_awaited_once()
+
+
+class TestRetryCountIncrement:
+    """R10 fix (DeepSeek F3): retry_count increments on ValueError, not hard-coded to 1."""
+
+    @pytest.mark.asyncio
+    async def test_retry_count_increments_from_zero(self):
+        """ValueError on first attempt sets retry_count to 1."""
+        from src.agent.agents._base import execute_specialist
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad"))
+        mock_cb = MagicMock()
+        mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_failure = AsyncMock()
+
+        kwargs = _make_execute_kwargs(
+            get_llm_fn=AsyncMock(return_value=mock_llm),
+            get_cb_fn=MagicMock(return_value=mock_cb),
+        )
+        state = _state(
+            messages=[HumanMessage(content="Q")],
+            retrieved_context=[{"content": "d", "metadata": {"category": "faq"}, "score": 1.0}],
+            retry_count=0,
+        )
+
+        result = await execute_specialist(state, **kwargs)
+        assert result["retry_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_retry_count_increments_from_one(self):
+        """ValueError when retry_count is already 1 sets it to 2 (not back to 1)."""
+        from src.agent.agents._base import execute_specialist
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad"))
+        mock_cb = MagicMock()
+        mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_failure = AsyncMock()
+
+        kwargs = _make_execute_kwargs(
+            get_llm_fn=AsyncMock(return_value=mock_llm),
+            get_cb_fn=MagicMock(return_value=mock_cb),
+        )
+        state = _state(
+            messages=[HumanMessage(content="Q")],
+            retrieved_context=[{"content": "d", "metadata": {"category": "faq"}, "score": 1.0}],
+            retry_count=1,
+        )
+
+        result = await execute_specialist(state, **kwargs)
+        assert result["retry_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_count_increments_on_type_error(self):
+        """TypeError also increments retry_count (same code path as ValueError)."""
+        from src.agent.agents._base import execute_specialist
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=TypeError("bad"))
+        mock_cb = MagicMock()
+        mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_failure = AsyncMock()
+
+        kwargs = _make_execute_kwargs(
+            get_llm_fn=AsyncMock(return_value=mock_llm),
+            get_cb_fn=MagicMock(return_value=mock_cb),
+        )
+        state = _state(
+            messages=[HumanMessage(content="Q")],
+            retrieved_context=[{"content": "d", "metadata": {"category": "faq"}, "score": 1.0}],
+            retry_count=3,
+        )
+
+        result = await execute_specialist(state, **kwargs)
+        assert result["retry_count"] == 4
 
 
 class TestBroadExceptionFallback:

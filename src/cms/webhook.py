@@ -219,6 +219,14 @@ async def handle_cms_webhook(
         return {"status": "unchanged", "item_id": item_id}
 
     # Step 5: Mark for re-indexing (store new hash)
+    # NOTE (R10 fix — Gemini F16): This only updates the in-memory content hash
+    # store for change detection. Actual re-ingestion into the vector DB happens
+    # on the next container restart (which triggers full ingestion via
+    # src.rag.pipeline.ingest_property in app lifespan). Real-time re-indexing
+    # would require calling pipeline.ingest() here, but that creates a startup-
+    # time dependency and concurrent ChromaDB write risks that are not yet wired.
+    # Tracked as future work for production (Vertex AI Vector Search supports
+    # online updates; ChromaDB does not safely support concurrent writes).
     _content_hashes[hash_key] = new_hash
 
     logger.info(

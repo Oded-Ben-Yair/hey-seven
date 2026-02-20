@@ -204,6 +204,94 @@ class TestCircuitBreakerNoMaxlen:
 
 
 # ---------------------------------------------------------------------------
+# R10 Circuit Breaker Fixes
+# ---------------------------------------------------------------------------
+
+
+class TestCircuitBreakerFailureCountReadOnly:
+    """R10 fix (DeepSeek F5): failure_count is read-only (no mutation)."""
+
+    @pytest.mark.asyncio
+    async def test_failure_count_no_mutation(self):
+        """failure_count does not call _prune_old_failures (no deque mutation)."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=10, rolling_window_seconds=300)
+        for _ in range(5):
+            await cb.record_failure()
+
+        # Reading failure_count should not modify the deque
+        count_before = len(cb._failure_timestamps)
+        _ = cb.failure_count
+        count_after = len(cb._failure_timestamps)
+        assert count_before == count_after
+
+    @pytest.mark.asyncio
+    async def test_failure_count_filters_by_window(self):
+        """failure_count only counts failures within the rolling window."""
+        from src.agent.circuit_breaker import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=100, rolling_window_seconds=0.05)
+        for _ in range(3):
+            await cb.record_failure()
+
+        assert cb.failure_count == 3
+        await asyncio.sleep(0.1)
+        # After window expires, count should be 0 (without pruning the deque)
+        assert cb.failure_count == 0
+
+
+class TestCircuitBreakerTTLCache:
+    """R10 fix (DeepSeek F4): CB factory uses TTLCache instead of @lru_cache."""
+
+    def test_cb_cache_is_ttl_cache(self):
+        """_cb_cache is a TTLCache instance (not @lru_cache)."""
+        from src.agent.circuit_breaker import _cb_cache
+        from cachetools import TTLCache
+
+        assert isinstance(_cb_cache, TTLCache)
+
+    def test_cb_factory_returns_circuit_breaker(self):
+        """_get_circuit_breaker returns a CircuitBreaker instance."""
+        from src.agent.circuit_breaker import CircuitBreaker, _cb_cache, _get_circuit_breaker
+
+        _cb_cache.clear()
+        cb = _get_circuit_breaker()
+        assert isinstance(cb, CircuitBreaker)
+        _cb_cache.clear()
+
+    def test_cb_factory_caches(self):
+        """Repeated calls return the same instance."""
+        from src.agent.circuit_breaker import _cb_cache, _get_circuit_breaker
+
+        _cb_cache.clear()
+        cb1 = _get_circuit_breaker()
+        cb2 = _get_circuit_breaker()
+        assert cb1 is cb2
+        _cb_cache.clear()
+
+
+class TestCBRollingWindowConfigurable:
+    """R10 fix (DeepSeek F8): rolling_window_seconds is configurable via Settings."""
+
+    def test_settings_has_cb_rolling_window(self):
+        """Settings includes CB_ROLLING_WINDOW_SECONDS with default 300."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.CB_ROLLING_WINDOW_SECONDS == 300.0
+
+    def test_cb_factory_passes_rolling_window(self):
+        """_get_circuit_breaker passes rolling_window_seconds from settings."""
+        from src.agent.circuit_breaker import _cb_cache, _get_circuit_breaker
+
+        _cb_cache.clear()
+        cb = _get_circuit_breaker()
+        assert cb._rolling_window_seconds == 300.0
+        _cb_cache.clear()
+
+
+# ---------------------------------------------------------------------------
 # Feature Flag Cache Lock
 # ---------------------------------------------------------------------------
 

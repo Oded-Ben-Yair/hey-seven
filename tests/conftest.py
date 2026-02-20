@@ -63,9 +63,9 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.agent.circuit_breaker import _get_circuit_breaker
+        from src.agent.circuit_breaker import _cb_cache
 
-        _get_circuit_breaker.cache_clear()
+        _cb_cache.clear()
     except (ImportError, AttributeError):
         pass
 

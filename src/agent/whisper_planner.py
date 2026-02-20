@@ -80,8 +80,10 @@ async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 
 # Simple failure counter for monitoring whisper planner health.
 # Tracks consecutive failures; logs ERROR when threshold is exceeded.
-# No async lock needed: counter is only modified inside whisper_planner_node()
-# which runs sequentially within a single graph invocation.
+# Benign race: concurrent graph invocations (different thread_ids) may
+# increment simultaneously, losing counts (read-modify-write without lock).
+# Acceptable for alerting: off-by-one delays alert by one failure, never
+# suppresses it. R10 documentation fix (DeepSeek F9, Gemini F19).
 _failure_count: int = 0
 _FAILURE_ALERT_THRESHOLD: int = 10
 _failure_alerted: bool = False

@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     GRAPH_RECURSION_LIMIT: int = 10  # LangGraph recursion limit (validate->retry loop bound)
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
+    CB_ROLLING_WINDOW_SECONDS: float = 300.0  # circuit breaker: failure counting window (R10 fix — DeepSeek F8)
     COMP_COMPLETENESS_THRESHOLD: float = 0.60  # minimum profile completeness for comp agent
     SEMANTIC_INJECTION_ENABLED: bool = True  # enable/disable semantic injection classifier (LLM second layer)
     SEMANTIC_INJECTION_THRESHOLD: float = 0.8  # confidence threshold for semantic injection classifier

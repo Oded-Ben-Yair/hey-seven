@@ -12,7 +12,8 @@ import asyncio
 import collections
 import logging
 import time
-from functools import lru_cache
+
+from cachetools import TTLCache
 
 from src.config import get_settings
 
@@ -75,9 +76,19 @@ class CircuitBreaker:
 
     @property
     def failure_count(self) -> int:
-        """Number of failures within the rolling window."""
-        self._prune_old_failures()
-        return len(self._failure_timestamps)
+        """Approximate failure count within the rolling window (no lock, no mutation).
+
+        For monitoring and health checks only. Does NOT call _prune_old_failures()
+        because that mutates the deque without the asyncio.Lock, which would race
+        with concurrent record_failure()/allow_request() calls under free-threaded
+        Python (PEP 703) or asyncio concurrency.
+
+        R10 fix (DeepSeek F5): replaced mutation-based count with read-only
+        iteration. Under CPython's GIL this was safe but technically a
+        concurrency bug; now correct regardless of GIL status.
+        """
+        cutoff = time.monotonic() - self._rolling_window_seconds
+        return sum(1 for t in self._failure_timestamps if t > cutoff)
 
     @property
     def state(self) -> str:
@@ -211,12 +222,18 @@ class CircuitBreaker:
                 )
 
 
-@lru_cache(maxsize=1)
-def _get_circuit_breaker() -> CircuitBreaker:
-    """Get or create the circuit breaker singleton (lazy, cached).
+# R10 fix (DeepSeek F4): converted from @lru_cache to TTLCache to match
+# the consistent TTL-cache pattern used by _get_llm(), _get_validator_llm(),
+# and _get_whisper_llm(). TTL ensures settings changes (CB_FAILURE_THRESHOLD,
+# CB_COOLDOWN_SECONDS, CB_ROLLING_WINDOW_SECONDS) are picked up within 1 hour.
+_cb_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
 
-    Uses ``@lru_cache`` consistent with ``_get_llm()`` / ``get_settings()``
-    pattern. Lazy initialization avoids reading settings at import time.
+
+def _get_circuit_breaker() -> CircuitBreaker:
+    """Get or create the circuit breaker singleton (TTL-cached, 1-hour refresh).
+
+    Lazy initialization avoids reading settings at import time.
+    TTL cache refreshes hourly, consistent with LLM singleton caching pattern.
 
     Production note: Circuit breaker state is process-scoped (in-memory).
     In multi-container deployments (Cloud Run), each container maintains
@@ -225,8 +242,14 @@ def _get_circuit_breaker() -> CircuitBreaker:
     use Redis-backed state with ``CB_BACKEND=redis`` config (not yet
     implemented -- current single-container deployment uses in-memory).
     """
+    cached = _cb_cache.get("cb")
+    if cached is not None:
+        return cached
     settings = get_settings()
-    return CircuitBreaker(
+    cb = CircuitBreaker(
         failure_threshold=settings.CB_FAILURE_THRESHOLD,
         cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
+        rolling_window_seconds=settings.CB_ROLLING_WINDOW_SECONDS,
     )
+    _cb_cache["cb"] = cb
+    return cb

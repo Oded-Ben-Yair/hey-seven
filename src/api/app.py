@@ -208,10 +208,18 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     # Separated from /health to prevent instance flapping. /live confirms
     # the process is alive and the event loop is responsive. /health is
-    # used as the startup probe (gated on agent + RAG + property data).
+    # used as the READINESS probe (gated on agent + RAG + property data).
     # Cloud Run liveness probes that return 503 cause instance replacement,
     # amplifying outages when downstream deps (LLM API, vector store) are
     # temporarily degraded. /live avoids this by always returning 200.
+    #
+    # Cloud Run probe configuration (R10 fix — Gemini F18, GPT P0-F6):
+    #   startupProbe:  /live  (is the process booting?)
+    #   livenessProbe: /live  (is the process alive? — always 200)
+    #   readinessProbe: /health (can the instance serve? — 503 on CB open)
+    # WARNING: Do NOT use /health as livenessProbe. When CB is open (LLM
+    # outage), /health returns 503 which would cause Cloud Run to replace
+    # the instance in a loop, amplifying the outage.
     @app.get("/live", response_model=LiveResponse)
     async def liveness():
         return LiveResponse()

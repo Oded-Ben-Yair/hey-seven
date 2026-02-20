@@ -159,16 +159,23 @@ async def execute_specialist(
         await cb.record_failure()
         logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
         # ValueError/TypeError may produce malformed content that still
-        # warrants validation.  Setting retry_count=1 ensures the validator
-        # runs but does NOT trigger a second generate attempt (retry budget
-        # already consumed).  Only circuit-breaker-open and network-error
-        # paths use skip_validation=True.
+        # warrants validation.  Incrementing retry_count ensures the
+        # validator runs; the validate_node's "retry_count < 1" check
+        # prevents unbounded retries.  Only circuit-breaker-open and
+        # network-error paths use skip_validation=True.
+        # R10 fix (DeepSeek F3): was hard-coded to 1 which reset the
+        # retry budget when retry_count was already >= 1.
         return {
             "messages": [AIMessage(content=_fallback_message("trouble processing that response"))],
             "skip_validation": False,
-            "retry_count": 1,
+            "retry_count": retry_count + 1,
         }
     except asyncio.CancelledError:
+        # Treat cancellation as failure to unblock the circuit breaker.
+        # Without this, a CancelledError during a half_open probe leaves
+        # _half_open_in_progress=True permanently, blocking ALL subsequent
+        # LLM requests for the lifetime of the process (DeepSeek R10 F1).
+        await cb.record_failure()
         raise
     except Exception:
         # Broad catch: httpx.HTTPError, asyncio.TimeoutError, ConnectionError,
