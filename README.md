@@ -16,13 +16,13 @@ docker compose up --build
 # Open http://localhost:8080
 ```
 
-## What I Built & Why
+## Overview
 
 Casino guests need quick, reliable answers about dining, entertainment, rooms, and amenities. This agent retrieves answers from a curated knowledge base using RAG and streams responses token-by-token via Server-Sent Events.
 
-I chose to build a **custom 11-node StateGraph** rather than using `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (73 regex patterns across 4 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) gives me control that a generic ReAct loop cannot.
+The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (73 regex patterns across 4 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
 
-The generate node now delegates to **specialist agents** (host, dining, entertainment, comp) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
+The generate node delegates to **specialist agents** (host, dining, entertainment, comp) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
 
 The frontend includes a **real-time graph trace panel** that visualizes LangGraph node execution with timing — every query shows which nodes fired, how long each took, and what metadata they produced.
 
@@ -123,12 +123,12 @@ Additionally, 7 PII redaction patterns protect logs and traces: phone, email, cr
 ## Testing
 
 ```bash
-make test-ci       # 976 tests, no API key needed
+make test-ci       # 1090 tests, no API key needed
 make test-eval     # 14 live eval tests (requires GOOGLE_API_KEY)
 make lint          # ruff + mypy
 ```
 
-**976 tests passed, 14 skipped, 93.26% coverage** across 26 test files and 5 layers:
+**1090 tests passed, 14 skipped** across 34 test files and 5 layers:
 
 | Layer | Tests | Description |
 |-------|-------|-------------|
@@ -193,34 +193,24 @@ Settings span 9 categories: Google API, property, LLM tuning, embeddings, RAG pi
 
 Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planner adds ~$0.0003/request. Compliance gate and persona envelope are zero-cost (no LLM calls).
 
-## Trade-offs I'd Revisit
+## Planned Improvements
 
-| Component | Current | Production Alternative |
-|-----------|---------|----------------------|
-| Vector DB | ChromaDB (in-process) | Vertex AI Vector Search or Firestore vector search (RRF multi-strategy now implemented for both) |
+| Component | Current | Production Target |
+|-----------|---------|-------------------|
+| Vector DB | ChromaDB (in-process) | Vertex AI Vector Search or Firestore vector search (RRF multi-strategy implemented for both) |
 | Checkpointing | MemorySaver (lost on restart) | FirestoreSaver (wired, config-driven toggle) |
 | Rate limiting | In-memory per-IP | Redis-backed distributed limiter |
-| Monitoring | Structured logging (LangFuse scaffolded, not yet wired to graph) | LangFuse + Cloud Monitoring + alerting |
-| Frontend | Single HTML file | Next.js with React 19 |
 | Circuit breaker | In-memory (reset on restart) | Redis-backed with persistence |
+| Monitoring | Structured logging (LangFuse scaffolded) | LangFuse + Cloud Monitoring + alerting |
+| Frontend | Single HTML file | Next.js with React 19 |
 | Guest profiles | In-memory fallback for dev | Firestore with CCPA cascade delete (wired) |
 | Multi-tenant config | Firestore with 5-min TTL cache | Firestore with pub/sub invalidation |
 | SMS delivery | Telnyx raw HTTP (httpx) | Telnyx SDK with delivery receipts and retry queue |
 | CMS | Google Sheets + webhook | Dedicated headless CMS with versioning |
-| A/B testing | SHA-256 hash-based splitting (scaffolded, not yet wired to graph) | Feature flag service (LaunchDarkly / Statsig) |
-| Error responses | Structured ErrorCode enum (7 codes) across all middleware and endpoints | Consistent -- no change needed |
-
-## Production Backlog
-
-Remaining items for production hardening:
-
-| Item | Description |
-|------|-------------|
-| Load/concurrency testing | Locust or Artillery load testing to validate throughput and latency under concurrent traffic |
-| Blue-green/canary deployment | Cloud Run traffic splitting for zero-downtime rollouts |
-| Redis-backed rate limiter and circuit breaker | Shared state across multiple Cloud Run instances (current in-memory state is per-instance) |
-| FirestoreSaver default | Conversation persistence via FirestoreSaver (code ready and config-driven, not yet default) |
-| Expanded adversarial guardrail testing | OWASP prompt injection benchmarks, red-team testing against multilingual injection vectors |
+| A/B testing | SHA-256 hash-based splitting (scaffolded) | Feature flag service (LaunchDarkly / Statsig) |
+| Load testing | Not yet implemented | Locust or Artillery for throughput and latency validation |
+| Deployment | Single revision | Blue-green/canary via Cloud Run traffic splitting |
+| Adversarial testing | 73 regex patterns + LLM validation | OWASP prompt injection benchmarks, multilingual red-team testing |
 
 ## Project Structure
 
@@ -278,7 +268,7 @@ hey-seven/
 ├── static/
 │   ├── index.html                # Branded chat UI (gold/dark/cream)
 │   └── assets/                   # Custom logo assets
-├── tests/                        # 976 tests across 26 files
+├── tests/                        # 1090 tests across 34 files
 ├── Dockerfile                    # Multi-stage Python 3.12, non-root, HEALTHCHECK
 ├── docker-compose.yml            # Health check, named volume, 2GB limit
 ├── cloudbuild.yaml               # GCP Cloud Build CI/CD (4-step pipeline)
@@ -286,5 +276,3 @@ hey-seven/
 ```
 
 ---
-
-Built by Oded Ben-Yair | February 2026
