@@ -292,6 +292,13 @@ class RateLimitMiddleware:
     Returns 429 with ``Retry-After`` header when the limit is exceeded.
     Respects ``X-Forwarded-For`` behind reverse proxies (Cloud Run, nginx).
     Caps tracked clients to ``RATE_LIMIT_MAX_CLIENTS`` to bound memory.
+
+    **Cloud Run trade-off (accepted)**: This uses in-memory state, so each
+    Cloud Run instance maintains independent counters.  Effective rate limit
+    across N instances = ``RATE_LIMIT_CHAT * N``.  For the current demo
+    deployment (``min-instances=1``, ``max-instances=10``), this is acceptable.
+    Production hardening path: Cloud Armor rate limiting or Redis
+    (Cloud Memorystore) for distributed enforcement across instances.
     """
 
     def __init__(self, app: ASGIApp) -> None:

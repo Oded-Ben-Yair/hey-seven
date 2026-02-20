@@ -68,6 +68,18 @@ class SSEErrorEvent(BaseModel):
     error: str
 
 
+class LiveResponse(BaseModel):
+    """Lightweight liveness probe response.
+
+    Cloud Run liveness probes should be fast and stable. Unlike /health
+    (which checks agent, RAG, CB state and may return 503), /live only
+    confirms the process is alive and the event loop is responsive.
+    This prevents instance flapping when downstream dependencies are degraded.
+    """
+
+    status: str = "alive"
+
+
 class HealthResponse(BaseModel):
     status: str
     version: str
@@ -76,6 +88,7 @@ class HealthResponse(BaseModel):
     rag_ready: bool = False
     observability_enabled: bool = False
     circuit_breaker_state: str = "unknown"
+    environment: str = "development"
 
 
 class FeedbackRequest(BaseModel):

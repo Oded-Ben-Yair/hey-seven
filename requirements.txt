@@ -15,7 +15,7 @@ langchain-google-genai==4.2.0
 
 # --- Observability ---
 langsmith==0.7.1
-langfuse>=2.0
+langfuse==3.14.4
 
 # --- Vector DB (local dev) ---
 chromadb==1.5.0
@@ -27,5 +27,5 @@ langgraph-checkpoint-firestore==0.1.0
 # --- Utilities ---
 sse-starlette==3.2.0
 httpx==0.28.1
-cryptography>=43.0
+cryptography==46.0.5
 cachetools==5.5.2

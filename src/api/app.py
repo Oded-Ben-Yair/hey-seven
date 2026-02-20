@@ -33,6 +33,7 @@ from .models import (
     FeedbackResponse,
     GraphStructureResponse,
     HealthResponse,
+    LiveResponse,
     PropertyInfoResponse,
 )
 
@@ -203,7 +204,20 @@ def create_app() -> FastAPI:
         return EventSourceResponse(event_generator())
 
     # ------------------------------------------------------------------
-    # GET /health — Health check
+    # GET /live — Lightweight liveness probe (Cloud Run)
+    # ------------------------------------------------------------------
+    # Separated from /health to prevent instance flapping. /live confirms
+    # the process is alive and the event loop is responsive. /health is
+    # used as the startup probe (gated on agent + RAG + property data).
+    # Cloud Run liveness probes that return 503 cause instance replacement,
+    # amplifying outages when downstream deps (LLM API, vector store) are
+    # temporarily degraded. /live avoids this by always returning 200.
+    @app.get("/live", response_model=LiveResponse)
+    async def liveness():
+        return LiveResponse()
+
+    # ------------------------------------------------------------------
+    # GET /health — Health check (readiness/startup probe)
     # ------------------------------------------------------------------
     @app.get("/health", response_model=HealthResponse)
     async def health(request: Request):
@@ -244,14 +258,16 @@ def create_app() -> FastAPI:
 
         # CB open means functionally degraded — report as such
         all_healthy = ready and agent_ready and property_loaded and cb_state != "open"
+        settings = get_settings()
         body = HealthResponse(
             status="healthy" if all_healthy else "degraded",
-            version=get_settings().VERSION,
+            version=settings.VERSION,
             agent_ready=agent_ready,
             property_loaded=property_loaded,
             rag_ready=rag_ready,
             observability_enabled=is_observability_enabled(),
             circuit_breaker_state=cb_state,
+            environment=settings.ENVIRONMENT,
         )
         # Return 503 for degraded state so Cloud Run / k8s don't route
         # traffic to unhealthy containers.
@@ -349,8 +365,22 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     @app.post("/sms/webhook")
     async def sms_webhook(request: Request):
-        """Telnyx inbound SMS webhook handler with signature verification."""
+        """Telnyx inbound SMS webhook handler with signature verification.
+
+        Returns 404 when SMS_ENABLED=False to prevent the endpoint from being
+        reachable when the SMS channel is disabled. Without this guard, an
+        attacker could POST to /sms/webhook in production even when SMS is not
+        configured (no TELNYX_PUBLIC_KEY = no signature verification).
+        """
         from fastapi.responses import JSONResponse
+
+        settings = get_settings()
+        if not settings.SMS_ENABLED:
+            return JSONResponse(
+                content=error_response(ErrorCode.NOT_FOUND, "SMS channel is not enabled."),
+                status_code=404,
+            )
+
         from src.sms.webhook import handle_inbound_sms, verify_webhook_signature
 
         try:

@@ -117,27 +117,27 @@ class TestHealthResponseModel:
         assert hr.circuit_breaker_state == "closed"
 
     def test_health_response_field_count(self):
-        """HealthResponse has 7 fields."""
+        """HealthResponse has 8 fields (including environment)."""
         from src.api.models import HealthResponse
 
-        assert len(HealthResponse.model_fields) == 7
+        assert len(HealthResponse.model_fields) == 8
 
 
 class TestErrorTaxonomy:
     """Verify error taxonomy matches documentation."""
 
     def test_error_code_count(self):
-        """ErrorCode enum has 7 codes."""
+        """ErrorCode enum has 8 codes."""
         from src.api.errors import ErrorCode
 
-        assert len(ErrorCode) == 7
+        assert len(ErrorCode) == 8
 
     def test_error_code_values(self):
-        """All 7 documented error codes exist."""
+        """All 8 documented error codes exist."""
         from src.api.errors import ErrorCode
 
         expected = {
-            "unauthorized", "rate_limit_exceeded", "payload_too_large",
+            "unauthorized", "not_found", "rate_limit_exceeded", "payload_too_large",
             "agent_unavailable", "internal_error", "validation_error",
             "service_degraded",
         }

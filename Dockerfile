@@ -37,6 +37,7 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 #   CMD gunicorn src.api.app:app -w ${WEB_CONCURRENCY} -k uvicorn.workers.UvicornWorker
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONHASHSEED=random \
     PORT=8080 \
     WEB_CONCURRENCY=1
 
@@ -51,9 +52,16 @@ USER appuser
 # Data ingestion happens at STARTUP (FastAPI lifespan), not build time.
 # Build-time ingestion would require GOOGLE_API_KEY baked into the image.
 
+# NOTE: Cloud Run ignores Dockerfile HEALTHCHECK — it uses its own HTTP
+# startup/liveness probes configured via gcloud deploy flags (see cloudbuild.yaml).
+# Kept for local docker-compose / Docker Desktop health monitoring.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
+# Graceful shutdown: 15s allows in-flight SSE streams to complete before
+# uvicorn force-terminates connections. Cloud Run sends SIGTERM and allows
+# up to --timeout (180s) for graceful shutdown; uvicorn's own timeout is
+# the actual bound on connection draining.
 CMD ["python", "-m", "uvicorn", "src.api.app:app", \
     "--host", "0.0.0.0", "--port", "8080", "--workers", "1", \
-    "--timeout-graceful-shutdown", "10"]
+    "--timeout-graceful-shutdown", "15"]

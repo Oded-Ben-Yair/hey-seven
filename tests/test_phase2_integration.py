@@ -445,12 +445,15 @@ class TestSMSWebhookEndpoint:
     """Test POST /sms/webhook endpoint."""
 
     @pytest.fixture
-    def client(self):
-        """Create a test client for the FastAPI app."""
+    def client(self, monkeypatch):
+        """Create a test client for the FastAPI app with SMS enabled."""
         from fastapi.testclient import TestClient
 
         from src.api.app import create_app
 
+        # SMS_ENABLED=true so /sms/webhook doesn't return 404
+        monkeypatch.setenv("SMS_ENABLED", "true")
+        monkeypatch.setenv("CONSENT_HMAC_SECRET", "test-secret-for-sms-webhook-tests")
         app = create_app()
         app.state.agent = MagicMock()
         app.state.property_data = {"property": {"name": "Test Casino"}}

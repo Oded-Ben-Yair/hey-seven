@@ -24,6 +24,7 @@ class ErrorCode(str, Enum):
     """
 
     UNAUTHORIZED = "unauthorized"
+    NOT_FOUND = "not_found"
     RATE_LIMITED = "rate_limit_exceeded"
     PAYLOAD_TOO_LARGE = "payload_too_large"
     AGENT_UNAVAILABLE = "agent_unavailable"
