@@ -224,3 +224,43 @@ class TestInjectionFalsePositives:
         from src.agent.guardrails import audit_input
 
         assert audit_input(message) is True
+
+
+class TestSemanticInjectionClassifier:
+    """Semantic injection classifier fail-closed behavior (R2 security fix)."""
+
+    @pytest.mark.asyncio
+    async def test_fail_closed_on_error(self):
+        """Classifier returns synthetic injection=True on error (fail-closed)."""
+        from src.agent.guardrails import InjectionClassification, classify_injection_semantic
+
+        # Provide a broken LLM function that raises
+        async def broken_llm():
+            raise RuntimeError("API key missing")
+
+        result = await classify_injection_semantic("What restaurants do you have?", llm_fn=broken_llm)
+        assert result is not None
+        assert isinstance(result, InjectionClassification)
+        assert result.is_injection is True
+        assert result.confidence == 1.0
+        assert "fail-closed" in result.reason.lower()
+
+    @pytest.mark.asyncio
+    async def test_returns_classification_on_success(self):
+        """Classifier returns real classification when LLM works."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from src.agent.guardrails import InjectionClassification, classify_injection_semantic
+
+        mock_classification = InjectionClassification(
+            is_injection=False, confidence=0.1, reason="Normal restaurant query"
+        )
+        mock_llm = MagicMock()
+        mock_classifier = MagicMock()
+        mock_classifier.ainvoke = AsyncMock(return_value=mock_classification)
+        mock_llm.with_structured_output.return_value = mock_classifier
+
+        result = await classify_injection_semantic("What restaurants?", llm_fn=lambda: mock_llm)
+        assert result is not None
+        assert result.is_injection is False
+        assert result.confidence == 0.1

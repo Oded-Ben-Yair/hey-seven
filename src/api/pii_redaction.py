@@ -47,11 +47,27 @@ _PATTERNS: list[tuple[re.Pattern, str, str]] = [
     (re.compile(r'(?i)(?:player|loyalty|rewards?|member)\s*(?:card\s*(?:number|#|id)?|number|#|id)[:\s]*(\d{6,12})\b'), '[PLAYER_ID]', 'player_card'),
 ]
 
-# Name patterns: more conservative, only match when preceded by identifiers
+# Name patterns: conservative — case-insensitive prefix but the captured
+# name group must start with an actual uppercase letter (proper noun).
+# This prevents false positives like "I'm your concierge" → "[NAME]"
+# when redaction is applied to bot-generated template text.
+# Python's (?i) affects the entire pattern including character classes, so
+# we use a post-match validation lambda instead (see redact_pii / contains_pii).
 _NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r'(?i)\b(?:my\s+name\s+is|i\'?m|this\s+is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)'), 'name_self_id'),
-    (re.compile(r'(?i)\b(?:mr\.?|mrs\.?|ms\.?|dr\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)'), 'name_honorific'),
+    (re.compile(r'(?i)\b(?:my\s+name\s+is|i\'?m|this\s+is)\s+([A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+)?)'), 'name_self_id'),
+    (re.compile(r'(?i)\b(?:mr\.?|mrs\.?|ms\.?|dr\.?)\s+([A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+)?)'), 'name_honorific'),
 ]
+
+
+def _is_proper_name(match: re.Match) -> bool:
+    """Check if captured name group starts with uppercase (proper noun).
+
+    Under (?i) flag, [A-Z] matches both cases. This post-match validation
+    ensures only actual proper nouns are treated as names, preventing
+    false positives on lowercase words like "your" in "I'm your concierge".
+    """
+    name = match.group(1)
+    return bool(name and name[0].isupper())
 
 
 def redact_pii(text: str) -> str:
@@ -77,9 +93,14 @@ def redact_pii(text: str) -> str:
         for pattern, replacement, _name in _PATTERNS:
             result = pattern.sub(replacement, result)
 
-        # Apply name patterns (replace the captured group only)
+        # Apply name patterns (replace the captured group only).
+        # Post-match validation: only redact if captured name starts with uppercase
+        # (proper noun). Prevents "I'm your concierge" → "I'm [NAME]".
         for pattern, _name in _NAME_PATTERNS:
-            result = pattern.sub(lambda m: m.group(0).replace(m.group(1), '[NAME]'), result)
+            result = pattern.sub(
+                lambda m: m.group(0).replace(m.group(1), '[NAME]') if _is_proper_name(m) else m.group(0),
+                result,
+            )
 
         return result
     except Exception:
@@ -131,7 +152,8 @@ def contains_pii(text: str) -> bool:
             return True
 
     for pattern, _ in _NAME_PATTERNS:
-        if pattern.search(text):
+        match = pattern.search(text)
+        if match and _is_proper_name(match):
             return True
 
     return False

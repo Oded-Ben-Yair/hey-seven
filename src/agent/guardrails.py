@@ -376,9 +376,14 @@ async def classify_injection_semantic(
     """Secondary semantic classifier for prompt injection detection.
 
     Runs AFTER regex guardrails pass, providing a second layer of defense
-    using LLM-based semantic understanding. Returns None if the classifier
-    is unavailable (LLM not configured, timeout, etc.) -- fails open to
-    avoid blocking legitimate traffic.
+    using LLM-based semantic understanding.
+
+    **Fail-closed**: On error, returns a synthetic ``InjectionClassification``
+    with ``is_injection=True`` and ``confidence=1.0``.  In a regulated casino
+    environment, blocking a legitimate message on classifier failure is far
+    less harmful than allowing a prompt injection through.  Deterministic
+    regex guardrails (Layer 1) already passed — so the blocked message
+    was not trivially malicious, but we err on the side of caution.
 
     Args:
         message: The user's message to classify.
@@ -386,7 +391,8 @@ async def classify_injection_semantic(
             Defaults to ``_get_llm`` from ``nodes``.
 
     Returns:
-        InjectionClassification or None if classifier unavailable.
+        InjectionClassification (never None). On error, returns a synthetic
+        fail-closed classification.
     """
     try:
         if llm_fn is None:
@@ -406,11 +412,15 @@ async def classify_injection_semantic(
         )
         return result
     except Exception as exc:
-        logger.warning(
-            "Semantic injection classifier failed-open for input (len=%d): %s — "
-            "regex-only protection active. Configure alerting on this log line "
+        logger.error(
+            "Semantic injection classifier failed-CLOSED for input (len=%d): %s — "
+            "blocking request as precaution. Configure alerting on this log line "
             "in production monitoring.",
             len(message),
             str(exc)[:100],
         )
-        return None
+        return InjectionClassification(
+            is_injection=True,
+            confidence=1.0,
+            reason=f"Classifier unavailable (fail-closed): {str(exc)[:80]}",
+        )

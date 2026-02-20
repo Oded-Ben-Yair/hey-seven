@@ -46,7 +46,7 @@ steps:
       - '--allow-unauthenticated'
       - '--memory=2Gi'
       - '--timeout=90s'  # SSE_TIMEOUT(60s) + graceful_shutdown(10s) + buffer(20s)
-      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,API_KEY=hey-seven-api-key:latest,CMS_WEBHOOK_SECRET=cms-webhook-secret:latest,TELNYX_PUBLIC_KEY=telnyx-public-key:latest'
       - '--set-env-vars=ENVIRONMENT=production,LOG_LEVEL=WARNING'
       - '--cpu-boost'  # Full CPU during startup for faster cold start
       - '--min-instances=1'  # Keep one warm instance to avoid cold-start latency

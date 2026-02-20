@@ -1,8 +1,8 @@
 """CMS webhook handler for Google Sheets content updates.
 
 Receives POST from Google Apps Script when a casino staff member edits content.
-Validates the payload, checks HMAC signature, validates the item, and triggers
-re-indexing of the changed item.
+Validates the payload, checks HMAC signature with replay protection, validates
+the item, and triggers re-indexing of the changed item.
 """
 
 from __future__ import annotations
@@ -11,11 +11,15 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from typing import Any
 
 from .validation import validate_details_json, validate_item
 
 logger = logging.getLogger(__name__)
+
+# Replay protection: reject webhooks with timestamps older than this (seconds).
+_REPLAY_TOLERANCE_SECONDS = 300  # 5 minutes
 
 
 # ---------------------------------------------------------------------------
@@ -27,23 +31,44 @@ def verify_webhook_signature(
     payload_bytes: bytes,
     signature: str,
     secret: str,
+    timestamp: str | None = None,
 ) -> bool:
-    """Verify HMAC-SHA256 signature from the CMS webhook.
+    """Verify HMAC-SHA256 signature from the CMS webhook with replay protection.
 
     The Google Apps Script ``onEdit`` trigger signs the POST body with
-    a shared secret using HMAC-SHA256.
+    a shared secret using HMAC-SHA256 and includes a timestamp header.
+
+    Replay protection: if ``timestamp`` is provided, reject requests
+    where ``abs(now - timestamp) > 300 seconds`` (5-minute window).
+    This mirrors the SMS webhook's Ed25519 replay protection pattern.
 
     Args:
         payload_bytes: Raw request body bytes.
         signature: Value of the ``X-Webhook-Signature`` header.
         secret: Shared webhook secret (from ``CMS_WEBHOOK_SECRET`` config).
+        timestamp: Value of the ``X-Webhook-Timestamp`` header (Unix epoch string).
 
     Returns:
-        ``True`` if the signature is valid.
+        ``True`` if the signature is valid and within the replay window.
     """
     if not signature or not secret:
         logger.warning("Missing webhook signature or secret")
         return False
+
+    # Replay protection: validate timestamp freshness
+    if timestamp:
+        try:
+            ts_int = int(timestamp)
+            if abs(int(time.time()) - ts_int) > _REPLAY_TOLERANCE_SECONDS:
+                logger.warning(
+                    "CMS webhook timestamp outside tolerance: ts=%d now=%d",
+                    ts_int,
+                    int(time.time()),
+                )
+                return False
+        except (ValueError, TypeError):
+            logger.warning("CMS webhook invalid timestamp: %r", timestamp)
+            return False
 
     expected = hmac.new(
         secret.encode("utf-8"),
@@ -93,11 +118,13 @@ async def handle_cms_webhook(
     *,
     raw_body: bytes | None = None,
     signature: str | None = None,
+    timestamp: str | None = None,
 ) -> dict[str, Any]:
     """Process a CMS webhook from Google Apps Script.
 
     Workflow:
-        1. Verify HMAC-SHA256 signature (if ``raw_body`` and ``signature`` provided).
+        1. Verify HMAC-SHA256 signature with replay protection
+           (if ``raw_body`` and ``signature`` provided).
         2. Extract ``casino_id``, ``category``, and ``item`` from the payload.
         3. Validate the item via :func:`validate_item`.
         4. Compute SHA-256 content hash and compare with stored hash.
@@ -108,6 +135,7 @@ async def handle_cms_webhook(
         webhook_secret: Shared HMAC secret for signature verification.
         raw_body: Raw request body bytes (for signature verification).
         signature: Value of the ``X-Webhook-Signature`` header.
+        timestamp: Value of the ``X-Webhook-Timestamp`` header (Unix epoch string).
 
     Returns:
         A status dict::
@@ -118,9 +146,9 @@ async def handle_cms_webhook(
                 "errors": [...]  # only when quarantined
             }
     """
-    # Step 1: Signature verification (when raw_body + signature provided)
+    # Step 1: Signature verification with replay protection
     if raw_body is not None and signature is not None:
-        if not verify_webhook_signature(raw_body, signature, webhook_secret):
+        if not verify_webhook_signature(raw_body, signature, webhook_secret, timestamp=timestamp):
             logger.warning("CMS webhook signature verification failed")
             return {"status": "rejected", "item_id": None, "errors": ["invalid signature"]}
 

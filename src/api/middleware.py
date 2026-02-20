@@ -227,7 +227,7 @@ class ApiKeyMiddleware:
     60 seconds.
     """
 
-    _PROTECTED_PATHS = {"/chat", "/graph", "/property"}
+    _PROTECTED_PATHS = {"/chat", "/graph", "/property", "/feedback"}
     _KEY_TTL = 60  # seconds
 
     def __init__(self, app: ASGIApp) -> None:
@@ -295,7 +295,7 @@ class RateLimitMiddleware:
         settings = get_settings()
         self.max_tokens = settings.RATE_LIMIT_CHAT
         self.max_clients = settings.RATE_LIMIT_MAX_CLIENTS
-        self._trusted_proxies = frozenset(settings.TRUSTED_PROXIES)
+        self._trusted_proxies = frozenset(settings.TRUSTED_PROXIES) if settings.TRUSTED_PROXIES is not None else None
         self.window_seconds = 60.0
         # {ip: deque of request timestamps} — OrderedDict for LRU eviction semantics
         self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
@@ -305,9 +305,10 @@ class RateLimitMiddleware:
     def _get_client_ip(self, scope: Scope) -> str:
         """Extract client IP, preferring X-Forwarded-For behind trusted proxies.
 
-        When TRUSTED_PROXIES is empty (default for Cloud Run), XFF is always
-        trusted because Cloud Run guarantees it sets XFF to the real client IP.
-        When TRUSTED_PROXIES is configured, only trust XFF from listed proxies.
+        When TRUSTED_PROXIES is None (default), XFF is NEVER trusted — use
+        direct peer IP only.  This prevents IP spoofing via forged XFF headers.
+        When TRUSTED_PROXIES is explicitly set (e.g., Cloud Run LB IPs),
+        XFF is trusted only from those peers.
         """
         headers = dict(scope.get("headers", []))
         forwarded = headers.get(b"x-forwarded-for", b"").decode()
@@ -315,9 +316,11 @@ class RateLimitMiddleware:
             client = scope.get("client")
             peer_ip = client[0] if client else "unknown"
             trusted = self._trusted_proxies
-            # Trust XFF when: no trusted proxies configured (Cloud Run mode)
-            # or peer IP is in the trusted proxy list.
-            if not trusted or peer_ip in trusted:
+            # None = trust nobody's XFF (default — prevents IP spoofing)
+            if trusted is None:
+                return peer_ip
+            # Explicit list: trust XFF only from listed proxy IPs
+            if peer_ip in trusted:
                 return forwarded.split(",")[0].strip()
             # Untrusted peer sent XFF — ignore it, use peer IP
             return peer_ip
@@ -358,8 +361,8 @@ class RateLimitMiddleware:
 
         path = scope.get("path", "/").rstrip("/") or "/"
 
-        # Only rate-limit /chat
-        if path != "/chat":
+        # Rate-limit mutable endpoints: /chat (LLM cost), /feedback (log/DoS)
+        if path not in ("/chat", "/feedback"):
             await self.app(scope, receive, send)
             return
 

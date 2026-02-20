@@ -55,7 +55,13 @@ class TestComplianceGateNode:
         """All guardrails pass → query_type is None for LLM routing."""
         from src.agent.compliance_gate import compliance_gate_node
 
-        result = await compliance_gate_node(_make_state("What restaurants are open?"))
+        # Disable semantic injection (no API key in tests) to test deterministic path
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = False
+
+        with patch("src.agent.compliance_gate.get_settings", return_value=mock_settings):
+            result = await compliance_gate_node(_make_state("What restaurants are open?"))
         assert result["query_type"] is None
         assert result["router_confidence"] == 0.0
 
@@ -142,14 +148,17 @@ class TestComplianceGateNode:
 
     @pytest.mark.asyncio
     async def test_no_llm_calls(self, _make_state):
-        """Compliance gate makes zero LLM calls for any input."""
+        """Compliance gate makes zero LLM calls when semantic injection disabled."""
         from src.agent.compliance_gate import compliance_gate_node
 
-        # Safe message — should not trigger any LLM
-        result = await compliance_gate_node(_make_state("Tell me about restaurants"))
+        # Disable semantic injection to test deterministic-only path
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = False
+
+        with patch("src.agent.compliance_gate.get_settings", return_value=mock_settings):
+            result = await compliance_gate_node(_make_state("Tell me about restaurants"))
         assert result["query_type"] is None
-        # No LLM mock needed — if it tried to call an LLM it would crash
-        # since no API key is set in test environment
 
 
 # ---------------------------------------------------------------------------
@@ -374,11 +383,15 @@ class TestConfigExpansion:
             assert s.LANGFUSE_SECRET_KEY.get_secret_value() == "sk-secret-123"
 
     def test_semantic_injection_enabled_default(self):
-        """SEMANTIC_INJECTION_ENABLED defaults to True."""
+        """SEMANTIC_INJECTION_ENABLED defaults to True when not overridden."""
         from src.config import Settings
 
-        s = Settings()
-        assert s.SEMANTIC_INJECTION_ENABLED is True
+        # Override the conftest env var to test the real default
+        with patch.dict(os.environ, {"SEMANTIC_INJECTION_ENABLED": ""}, clear=False):
+            # Remove the key entirely so pydantic uses the field default
+            os.environ.pop("SEMANTIC_INJECTION_ENABLED", None)
+            s = Settings()
+            assert s.SEMANTIC_INJECTION_ENABLED is True
 
     def test_semantic_injection_disabled_via_env(self):
         """SEMANTIC_INJECTION_ENABLED can be disabled via env var."""

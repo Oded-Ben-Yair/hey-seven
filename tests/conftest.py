@@ -1,8 +1,20 @@
 """Shared test fixtures for Hey Seven tests."""
 
 import json
+import os
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _disable_semantic_injection_in_tests(monkeypatch):
+    """Disable semantic injection classifier in tests by default.
+
+    The semantic classifier requires a GOOGLE_API_KEY and fails CLOSED
+    (blocks all messages) when unavailable.  Tests that specifically
+    test semantic injection behavior mock the classifier directly.
+    """
+    monkeypatch.setenv("SEMANTIC_INJECTION_ENABLED", "false")
 
 
 @pytest.fixture(autouse=True)

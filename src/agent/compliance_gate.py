@@ -8,10 +8,10 @@ BSA/AML, patron privacy) using 84 compiled regex patterns across 4 languages.
 
 **Layer 2 — Semantic injection classifier (configurable LLM second layer):**
 When ``SEMANTIC_INJECTION_ENABLED=True`` (default), an LLM-based classifier
-runs on messages that pass Layer 1 regex to catch sophisticated injection
-attempts that evade pattern matching.  Fails open (returns None on error).
-Disable via ``SEMANTIC_INJECTION_ENABLED=False`` to eliminate LLM cost/latency
-in this node.
+runs on messages that pass ALL Layer 1 guardrails to catch sophisticated
+injection attempts that evade pattern matching.  **Fails closed** on error
+(returns synthetic injection classification to block suspicious input).
+Disable via ``SEMANTIC_INJECTION_ENABLED=False`` to eliminate LLM cost/latency.
 
 Returns ``query_type`` directly when a guardrail triggers, or ``None`` to
 signal the downstream router should perform LLM classification.
@@ -49,12 +49,20 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     Priority order (first match wins):
     1. Turn-limit guard → off_topic (conversation too long)
     2. Empty message → greeting
-    3. Prompt injection → off_topic
+    3. Prompt injection (regex) → off_topic
     4. Responsible gaming → gambling_advice
     5. Age verification → age_verification
     6. BSA/AML → off_topic
     7. Patron privacy → patron_privacy
-    8. All pass → query_type=None (router does LLM classification)
+    8. Semantic injection (LLM, fail-closed) → off_topic
+    9. All pass → query_type=None (router does LLM classification)
+
+    Semantic injection (step 8) runs AFTER all deterministic guardrails
+    so that safety-critical responses (responsible gaming helplines,
+    age verification, BSA/AML refusal) are never blocked by a semantic
+    classifier failure.  On classifier error, the fail-closed behavior
+    blocks ONLY messages that passed all deterministic checks — a genuine
+    "unknown" that warrants caution.
 
     Args:
         state: The current graph state.
@@ -79,32 +87,9 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if not user_message:
         return {"query_type": "greeting", "router_confidence": 1.0}
 
-    # 3a. Prompt injection — regex (fast deterministic first layer)
+    # 3. Prompt injection — regex (fast deterministic first layer)
     if not audit_input(user_message):
         return {"query_type": "off_topic", "router_confidence": 1.0}
-
-    # 3b. Prompt injection — semantic (LLM second layer, configurable)
-    # Gate: skip semantic classifier when disabled to eliminate LLM cost/latency.
-    # In production high-volume deployments, disable via SEMANTIC_INJECTION_ENABLED=False
-    # and rely on Layer 1 regex alone, or enable selectively for high-risk messages.
-    if not settings.SEMANTIC_INJECTION_ENABLED:
-        semantic_result = None
-    else:
-        semantic_result = await classify_injection_semantic(user_message)
-    if (
-        semantic_result
-        and semantic_result.is_injection
-        and semantic_result.confidence >= settings.SEMANTIC_INJECTION_THRESHOLD
-    ):
-        logger.warning(
-            "Semantic injection detected (confidence=%.2f): %s",
-            semantic_result.confidence,
-            semantic_result.reason[:100],
-        )
-        return {
-            "query_type": "off_topic",
-            "router_confidence": semantic_result.confidence,
-        }
 
     # 4. Responsible gaming (with session-level escalation)
     if detect_responsible_gaming(user_message):
@@ -133,5 +118,27 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if detect_patron_privacy(user_message):
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
 
-    # 8. All guardrails passed — signal LLM router to classify
+    # 8. Semantic injection — LLM second layer (configurable, fail-closed).
+    # Runs AFTER all deterministic guardrails to ensure safety-critical
+    # responses (helplines, age info, BSA/AML refusal) are never blocked
+    # by classifier failure.  On error, returns synthetic injection=True
+    # which blocks only "clean" messages that no deterministic rule caught.
+    if settings.SEMANTIC_INJECTION_ENABLED:
+        semantic_result = await classify_injection_semantic(user_message)
+        if (
+            semantic_result
+            and semantic_result.is_injection
+            and semantic_result.confidence >= settings.SEMANTIC_INJECTION_THRESHOLD
+        ):
+            logger.warning(
+                "Semantic injection detected (confidence=%.2f): %s",
+                semantic_result.confidence,
+                semantic_result.reason[:100],
+            )
+            return {
+                "query_type": "off_topic",
+                "router_confidence": semantic_result.confidence,
+            }
+
+    # 9. All guardrails passed — signal LLM router to classify
     return {"query_type": None, "router_confidence": 0.0}

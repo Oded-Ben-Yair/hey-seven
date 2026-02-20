@@ -403,12 +403,14 @@ def create_app() -> FastAPI:
             raw_body = await request.body()
             body = json.loads(raw_body)
             signature = request.headers.get("X-Webhook-Signature", "")
+            timestamp = request.headers.get("X-Webhook-Timestamp", "")
 
             result = await handle_cms_webhook(
                 payload=body,
                 webhook_secret=get_settings().CMS_WEBHOOK_SECRET.get_secret_value(),
                 raw_body=raw_body,
                 signature=signature,
+                timestamp=timestamp or None,
             )
 
             status_code = 200 if result["status"] != "rejected" else 403

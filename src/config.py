@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = ["http://localhost:8080"]
     RATE_LIMIT_CHAT: int = 20  # requests per minute
     RATE_LIMIT_MAX_CLIENTS: int = 10000  # max tracked client IPs (memory guard)
-    TRUSTED_PROXIES: list[str] = []  # CIDRs/IPs that may set X-Forwarded-For (empty = trust all, for Cloud Run)
+    TRUSTED_PROXIES: list[str] | None = None  # CIDRs/IPs that may set X-Forwarded-For; None = trust direct peer only
     SSE_TIMEOUT_SECONDS: int = 60
     MAX_REQUEST_BODY_SIZE: int = 65536  # 64 KB max request body
 
@@ -103,6 +103,39 @@ class Settings(BaseSettings):
                 f"RAG_CHUNK_OVERLAP ({self.RAG_CHUNK_OVERLAP}) must be less than "
                 f"RAG_CHUNK_SIZE ({self.RAG_CHUNK_SIZE})"
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        """Hard-fail in production if critical secrets are empty.
+
+        In production (ENVIRONMENT != 'development'), API_KEY and
+        CMS_WEBHOOK_SECRET must be explicitly set. Empty defaults
+        silently disable authentication and webhook verification —
+        a catastrophic security bypass in a regulated casino environment.
+        Development mode allows empty values for local testing.
+        """
+        if self.ENVIRONMENT != "development":
+            if not self.API_KEY.get_secret_value():
+                raise ValueError(
+                    "API_KEY must be set when ENVIRONMENT != 'development'. "
+                    "Empty API_KEY disables authentication on all protected endpoints. "
+                    "Set API_KEY via environment variable or Secret Manager."
+                )
+            if not self.CMS_WEBHOOK_SECRET.get_secret_value():
+                raise ValueError(
+                    "CMS_WEBHOOK_SECRET must be set when ENVIRONMENT != 'development'. "
+                    "Empty secret disables CMS webhook signature verification, "
+                    "allowing attackers to inject fake casino content. "
+                    "Set CMS_WEBHOOK_SECRET via environment variable or Secret Manager."
+                )
+            if self.SMS_ENABLED and not self.TELNYX_PUBLIC_KEY:
+                raise ValueError(
+                    "TELNYX_PUBLIC_KEY must be set when SMS_ENABLED=True in production. "
+                    "Missing key disables SMS webhook signature verification, "
+                    "allowing forged inbound SMS events. "
+                    "Set TELNYX_PUBLIC_KEY via environment variable or Secret Manager."
+                )
         return self
 
     @model_validator(mode="after")

@@ -143,3 +143,76 @@ class TestSettings:
         s = Settings()
         assert s.SMS_ENABLED is False
         assert s.CONSENT_HMAC_SECRET.get_secret_value() == "change-me-in-production"
+
+
+class TestProductionSecretValidation:
+    """Tests for production secret hard-fail validation (R2 security fix)."""
+
+    def test_production_rejects_empty_api_key(self):
+        """ENVIRONMENT=production with empty API_KEY raises ValueError."""
+        import pytest
+
+        from src.config import Settings
+
+        with patch.dict(os.environ, {"ENVIRONMENT": "production"}):
+            with pytest.raises(ValueError, match="API_KEY must be set"):
+                Settings()
+
+    def test_production_rejects_empty_cms_webhook_secret(self):
+        """ENVIRONMENT=production with empty CMS_WEBHOOK_SECRET raises ValueError."""
+        import pytest
+
+        from src.config import Settings
+
+        with patch.dict(os.environ, {
+            "ENVIRONMENT": "production",
+            "API_KEY": "test-api-key",
+        }):
+            with pytest.raises(ValueError, match="CMS_WEBHOOK_SECRET must be set"):
+                Settings()
+
+    def test_production_rejects_missing_telnyx_key_when_sms_enabled(self):
+        """ENVIRONMENT=production with SMS_ENABLED=True but no TELNYX_PUBLIC_KEY raises ValueError."""
+        import pytest
+
+        from src.config import Settings
+
+        with patch.dict(os.environ, {
+            "ENVIRONMENT": "production",
+            "API_KEY": "test-api-key",
+            "CMS_WEBHOOK_SECRET": "test-cms-secret",
+            "SMS_ENABLED": "true",
+            "CONSENT_HMAC_SECRET": "secure-hmac-secret",
+        }):
+            with pytest.raises(ValueError, match="TELNYX_PUBLIC_KEY must be set"):
+                Settings()
+
+    def test_production_passes_with_all_secrets_set(self):
+        """ENVIRONMENT=production with all required secrets passes validation."""
+        from src.config import Settings
+
+        with patch.dict(os.environ, {
+            "ENVIRONMENT": "production",
+            "API_KEY": "prod-api-key",
+            "CMS_WEBHOOK_SECRET": "prod-cms-secret",
+        }):
+            s = Settings()
+            assert s.ENVIRONMENT == "production"
+            assert s.API_KEY.get_secret_value() == "prod-api-key"
+            assert s.CMS_WEBHOOK_SECRET.get_secret_value() == "prod-cms-secret"
+
+    def test_development_allows_empty_secrets(self):
+        """ENVIRONMENT=development (default) allows empty secrets for local testing."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.ENVIRONMENT == "development"
+        assert s.API_KEY.get_secret_value() == ""
+        assert s.CMS_WEBHOOK_SECRET.get_secret_value() == ""
+
+    def test_trusted_proxies_defaults_to_none(self):
+        """TRUSTED_PROXIES defaults to None (trust nobody's XFF headers)."""
+        from src.config import Settings
+
+        s = Settings()
+        assert s.TRUSTED_PROXIES is None

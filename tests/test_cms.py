@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -478,6 +479,72 @@ class TestWebhookHandler:
         )
         assert result["status"] == "rejected"
         assert "invalid signature" in result["errors"]
+
+
+class TestWebhookReplayProtection:
+    """CMS webhook replay protection via timestamp validation."""
+
+    def test_valid_timestamp_passes(self):
+        from src.cms.webhook import verify_webhook_signature
+
+        body = b'{"casino_id": "mohegan_sun"}'
+        secret = "test-webhook-secret"
+        signature = hmac.new(
+            secret.encode("utf-8"), body, hashlib.sha256
+        ).hexdigest()
+        timestamp = str(int(time.time()))
+
+        assert verify_webhook_signature(body, signature, secret, timestamp=timestamp) is True
+
+    def test_stale_timestamp_rejected(self):
+        from src.cms.webhook import verify_webhook_signature
+
+        body = b'{"casino_id": "mohegan_sun"}'
+        secret = "test-webhook-secret"
+        signature = hmac.new(
+            secret.encode("utf-8"), body, hashlib.sha256
+        ).hexdigest()
+        # Timestamp from 10 minutes ago (outside 5-minute tolerance)
+        timestamp = str(int(time.time()) - 600)
+
+        assert verify_webhook_signature(body, signature, secret, timestamp=timestamp) is False
+
+    def test_future_timestamp_rejected(self):
+        from src.cms.webhook import verify_webhook_signature
+
+        body = b'{"casino_id": "mohegan_sun"}'
+        secret = "test-webhook-secret"
+        signature = hmac.new(
+            secret.encode("utf-8"), body, hashlib.sha256
+        ).hexdigest()
+        # Timestamp 10 minutes in the future
+        timestamp = str(int(time.time()) + 600)
+
+        assert verify_webhook_signature(body, signature, secret, timestamp=timestamp) is False
+
+    def test_invalid_timestamp_rejected(self):
+        from src.cms.webhook import verify_webhook_signature
+
+        body = b'{"casino_id": "mohegan_sun"}'
+        secret = "test-webhook-secret"
+        signature = hmac.new(
+            secret.encode("utf-8"), body, hashlib.sha256
+        ).hexdigest()
+
+        assert verify_webhook_signature(body, signature, secret, timestamp="not-a-number") is False
+
+    def test_no_timestamp_passes(self):
+        """Backward compatibility: no timestamp still passes if signature is valid."""
+        from src.cms.webhook import verify_webhook_signature
+
+        body = b'{"casino_id": "mohegan_sun"}'
+        secret = "test-webhook-secret"
+        signature = hmac.new(
+            secret.encode("utf-8"), body, hashlib.sha256
+        ).hexdigest()
+
+        assert verify_webhook_signature(body, signature, secret) is True
+        assert verify_webhook_signature(body, signature, secret, timestamp=None) is True
 
 
 class TestWebhookEdgeCases:

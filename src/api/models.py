@@ -73,7 +73,7 @@ class FeedbackRequest(BaseModel):
 
     thread_id: str
     rating: int = Field(..., ge=1, le=5)
-    comment: str | None = None
+    comment: str | None = Field(None, max_length=2000)
 
     @field_validator("thread_id")
     @classmethod

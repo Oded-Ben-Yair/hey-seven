@@ -150,24 +150,34 @@ class TestRateLimitMiddleware:
         assert "retry-after" in resp.headers
 
     def test_respects_x_forwarded_for(self):
-        """Rate limiter uses X-Forwarded-For header for client IP."""
+        """Rate limiter uses X-Forwarded-For header when TRUSTED_PROXIES is configured."""
+        from unittest.mock import patch
+
         from src.api.middleware import RateLimitMiddleware
 
-        app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
-        app.add_middleware(RateLimitMiddleware)
-        client = TestClient(app)
+        # TRUSTED_PROXIES must be explicitly set to trust XFF from specific peers.
+        # TestClient uses "testclient" as peer IP by default, but ASGI scope
+        # uses ("testclient", ...) — mock peer as "testclient" and trust it.
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.RATE_LIMIT_CHAT = 20
+            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 10000
+            mock_settings.return_value.TRUSTED_PROXIES = ["testclient"]
 
-        # Exhaust limit for IP "1.2.3.4"
-        for _ in range(20):
-            client.post("/chat", headers={"X-Forwarded-For": "1.2.3.4"})
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(RateLimitMiddleware)
+            client = TestClient(app)
 
-        # "1.2.3.4" should be rate limited
-        resp = client.post("/chat", headers={"X-Forwarded-For": "1.2.3.4"})
-        assert resp.status_code == 429
+            # Exhaust limit for IP "1.2.3.4"
+            for _ in range(20):
+                client.post("/chat", headers={"X-Forwarded-For": "1.2.3.4"})
 
-        # Different IP should still work
-        resp = client.post("/chat", headers={"X-Forwarded-For": "5.6.7.8"})
-        assert resp.status_code == 200
+            # "1.2.3.4" should be rate limited
+            resp = client.post("/chat", headers={"X-Forwarded-For": "1.2.3.4"})
+            assert resp.status_code == 429
+
+            # Different IP should still work
+            resp = client.post("/chat", headers={"X-Forwarded-For": "5.6.7.8"})
+            assert resp.status_code == 200
 
     def test_health_exempt_from_rate_limit(self):
         """GET /health is not rate limited."""
@@ -341,7 +351,7 @@ class TestRateLimitLRUEviction:
         with patch("src.api.middleware.get_settings") as mock_settings:
             mock_settings.return_value.RATE_LIMIT_CHAT = 100
             mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 3
-            mock_settings.return_value.TRUSTED_PROXIES = []
+            mock_settings.return_value.TRUSTED_PROXIES = ["testclient"]  # Trust test peer to use XFF
 
             app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
             app.add_middleware(RateLimitMiddleware)
@@ -373,7 +383,7 @@ class TestRateLimitLRUEviction:
         with patch("src.api.middleware.get_settings") as mock_settings:
             mock_settings.return_value.RATE_LIMIT_CHAT = 100
             mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 2
-            mock_settings.return_value.TRUSTED_PROXIES = []
+            mock_settings.return_value.TRUSTED_PROXIES = ["testclient"]  # Trust test peer to use XFF
 
             app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
             app.add_middleware(RateLimitMiddleware)
@@ -389,6 +399,37 @@ class TestRateLimitLRUEviction:
             # Client B (was recently used) should still work and retain its history
             resp = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.2"})
             assert resp.status_code == 200
+
+
+class TestTrustedProxiesNone:
+    """TRUSTED_PROXIES=None means XFF is never trusted (R2 security fix)."""
+
+    def test_xff_ignored_when_trusted_proxies_none(self):
+        """When TRUSTED_PROXIES is None, X-Forwarded-For header is ignored."""
+        from unittest.mock import patch
+
+        from src.api.middleware import RateLimitMiddleware
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.RATE_LIMIT_CHAT = 20
+            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 10000
+            mock_settings.return_value.TRUSTED_PROXIES = None  # Default: trust nobody
+
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(RateLimitMiddleware)
+            client = TestClient(app)
+
+            # Even with different XFF IPs, all requests use the same peer IP
+            for _ in range(20):
+                client.post("/chat", headers={"X-Forwarded-For": "1.2.3.4"})
+
+            # This uses a different XFF IP but should still be rate limited
+            # because XFF is ignored — all requests come from same peer
+            resp = client.post("/chat", headers={"X-Forwarded-For": "5.6.7.8"})
+            assert resp.status_code == 429, (
+                "XFF should be ignored when TRUSTED_PROXIES is None — "
+                "all requests use peer IP"
+            )
 
 
 class TestRequestBodyLimitMiddleware:

@@ -566,7 +566,9 @@ async def chat_stream(
                         async for tok_event in _flush_pii_buffer():
                             yield tok_event
 
-            # Capture non-streaming node outputs (greeting, off_topic, fallback)
+            # Capture non-streaming node outputs (greeting, off_topic, fallback).
+            # Apply PII redaction to replace events — these bypass the streaming
+            # PII buffer (which only protects token events from the generate node).
             elif kind == "on_chain_end" and langgraph_node in _NON_STREAM_NODES:
                 output = event.get("data", {}).get("output", {})
                 if isinstance(output, dict):
@@ -574,6 +576,9 @@ async def chat_stream(
                     for msg in msgs:
                         if isinstance(msg, AIMessage) and msg.content:
                             content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                            # PII gate: redact before emitting to client
+                            if contains_pii(content):
+                                content = redact_pii(content)
                             yield {
                                 "event": "replace",
                                 "data": json.dumps({"content": content}),
