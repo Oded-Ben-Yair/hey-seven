@@ -810,7 +810,7 @@ Circuit breaker open state adds 0ms (immediate static fallback, no LLM call).
 
 ## Scope Decisions
 
-The following features from the initial architecture specification (`assignment/architecture.md`) were consciously deferred. Each is a production-readiness enhancement, not a demo requirement.
+The following features were consciously deferred from the initial architecture specification. Each is a production-readiness enhancement, not a demo requirement.
 
 | Feature | Status | Rationale |
 |---------|--------|-----------|

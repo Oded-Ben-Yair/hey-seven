@@ -177,7 +177,7 @@ class SecurityHeadersMiddleware:
     # CSP: 'unsafe-inline' required for single-file demo HTML with inline scripts.
     # Production deployment should externalize scripts and use nonce-based CSP.
     # Trade-off documented: demo simplicity vs strict CSP -- acceptable for
-    # interview demo where the frontend is secondary to the agent architecture.
+    # current deployment where the frontend is a single-file static asset.
     # No user-generated content is rendered as HTML, so XSS surface is minimal.
     # Production path: externalize CSS/JS into separate static files and
     # replace 'unsafe-inline' with nonce-based CSP (generate per-request
