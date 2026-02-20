@@ -6,22 +6,28 @@ Cache has 5-minute TTL per casino_id for hot-reload without redeployment.
 When Firestore is unavailable (local dev, tests), ``DEFAULT_CONFIG`` is
 returned for every casino_id, ensuring the same async API works
 everywhere without mocking infrastructure.
+
+Cache is protected by ``asyncio.Lock`` to prevent thundering herd on
+TTL expiry. R5 fix per DeepSeek F4 analysis.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import time
 from typing import Any, TypedDict
+
+from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Cache: casino_id -> (config_dict, timestamp)
+# Cache: casino_id -> config_dict (TTLCache handles expiry and maxsize)
 # ---------------------------------------------------------------------------
 
-_config_cache: dict[str, tuple[dict, float]] = {}
 _CONFIG_TTL_SECONDS = 300  # 5 minutes
+_config_cache: TTLCache = TTLCache(maxsize=100, ttl=_CONFIG_TTL_SECONDS)
+_config_lock = asyncio.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -163,11 +169,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 
+import threading
+
+_fs_config_client_cache: dict[str, Any] = {}
+_fs_config_client_lock = threading.Lock()
+
+
 def _get_firestore_client() -> Any | None:
-    """Return the Firestore AsyncClient if available, else None.
+    """Return the cached Firestore AsyncClient if available, else None.
 
     Lazy-imports ``google.cloud.firestore`` to avoid import failures when
     the dependency is not installed (local dev without GCP SDK).
+
+    Protected by ``threading.Lock`` to prevent race conditions during
+    concurrent cold-start requests (R5 fix per GPT F5).
 
     Note: A near-identical helper exists in ``src.data.guest_profile``.
     Both are intentionally kept separate: this one uses ``CASINO_ID`` as
@@ -176,24 +191,36 @@ def _get_firestore_client() -> Any | None:
     Extracting a shared utility would save ~10 LOC but add an import
     dependency between unrelated modules.
     """
-    try:
-        from google.cloud.firestore import AsyncClient  # noqa: F401
+    cached = _fs_config_client_cache.get("client")
+    if cached is not None:
+        return cached
 
-        from src.config import get_settings
+    with _fs_config_client_lock:
+        # Double-check after acquiring lock
+        cached = _fs_config_client_cache.get("client")
+        if cached is not None:
+            return cached
 
-        settings = get_settings()
-        if settings.VECTOR_DB == "firestore" and settings.FIRESTORE_PROJECT:
-            return AsyncClient(
-                project=settings.FIRESTORE_PROJECT,
-                database=settings.CASINO_ID,
+        try:
+            from google.cloud.firestore import AsyncClient  # noqa: F401
+
+            from src.config import get_settings
+
+            settings = get_settings()
+            if settings.VECTOR_DB == "firestore" and settings.FIRESTORE_PROJECT:
+                client = AsyncClient(
+                    project=settings.FIRESTORE_PROJECT,
+                    database=settings.CASINO_ID,
+                )
+                _fs_config_client_cache["client"] = client
+                return client
+        except ImportError:
+            logger.debug("google-cloud-firestore not installed; using defaults")
+        except Exception:
+            logger.warning(
+                "Firestore client init failed; falling back to defaults",
+                exc_info=True,
             )
-    except ImportError:
-        logger.debug("google-cloud-firestore not installed; using defaults")
-    except Exception:
-        logger.warning(
-            "Firestore client init failed; falling back to defaults",
-            exc_info=True,
-        )
     return None
 
 
@@ -232,52 +259,60 @@ async def get_casino_config(casino_id: str) -> dict:
     any casino-specific overrides from Firestore, so callers can rely on
     every key being present.
 
+    Cache access is protected by ``asyncio.Lock`` to prevent thundering
+    herd on TTL expiry (R5 fix per DeepSeek F4).
+
     Args:
         casino_id: Casino identifier (e.g., ``"mohegan_sun"``).
 
     Returns:
         A config dict with all sections populated.
     """
-    now = time.monotonic()
+    # Fast path: check cache without lock (TTLCache handles expiry)
+    cached = _config_cache.get(casino_id)
+    if cached is not None:
+        return cached
 
-    # Check cache
-    if casino_id in _config_cache:
-        cached_config, cached_at = _config_cache[casino_id]
-        if now - cached_at < _CONFIG_TTL_SECONDS:
-            return cached_config
+    # Slow path: lock to prevent thundering herd on cache miss
+    async with _config_lock:
+        # Double-check after acquiring lock
+        cached = _config_cache.get(casino_id)
+        if cached is not None:
+            return cached
 
-    # Try Firestore
-    db = _get_firestore_client()
-    if db is not None:
-        try:
-            doc_ref = db.collection("config").document(casino_id)
-            doc = await doc_ref.get()
-            if doc.exists:
-                overrides = doc.to_dict()
-                config = _deep_merge(DEFAULT_CONFIG, overrides)
-                config["_id"] = casino_id
-                _config_cache[casino_id] = (config, now)
-                logger.info("Loaded config for casino %s from Firestore", casino_id)
-                return config
-            logger.debug(
-                "No config document for casino %s; using defaults", casino_id
-            )
-        except Exception:
-            logger.warning(
-                "Firestore config read failed for %s; using defaults",
-                casino_id,
-                exc_info=True,
-            )
+        # Try Firestore
+        db = _get_firestore_client()
+        if db is not None:
+            try:
+                doc_ref = db.collection("config").document(casino_id)
+                doc = await doc_ref.get()
+                if doc.exists:
+                    overrides = doc.to_dict()
+                    config = _deep_merge(DEFAULT_CONFIG, overrides)
+                    config["_id"] = casino_id
+                    _config_cache[casino_id] = config
+                    logger.info("Loaded config for casino %s from Firestore", casino_id)
+                    return config
+                logger.debug(
+                    "No config document for casino %s; using defaults", casino_id
+                )
+            except Exception:
+                logger.warning(
+                    "Firestore config read failed for %s; using defaults",
+                    casino_id,
+                    exc_info=True,
+                )
 
-    # Fallback to defaults
-    import copy
+        # Fallback to defaults
+        import copy
 
-    config = copy.deepcopy(DEFAULT_CONFIG)
-    config["_id"] = casino_id
-    _config_cache[casino_id] = (config, now)
-    return config
+        config = copy.deepcopy(DEFAULT_CONFIG)
+        config["_id"] = casino_id
+        _config_cache[casino_id] = config
+        return config
 
 
 def clear_config_cache() -> None:
-    """Clear the config cache (for testing)."""
+    """Clear the config cache and Firestore client cache (for testing)."""
     _config_cache.clear()
+    _fs_config_client_cache.clear()

@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.agent.graph import build_graph
         from src.agent.memory import get_checkpointer
 
-        app.state.agent = build_graph(checkpointer=get_checkpointer())
+        app.state.agent = build_graph(checkpointer=await get_checkpointer())
         logger.info("Agent initialized successfully.")
     except Exception:
         logger.exception("Failed to initialize agent. /chat will return 503.")

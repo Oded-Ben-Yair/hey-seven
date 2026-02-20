@@ -76,9 +76,9 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.agent.memory import get_checkpointer
+        from src.agent.memory import clear_checkpointer_cache
 
-        get_checkpointer.cache_clear()
+        clear_checkpointer_cache()
     except (ImportError, AttributeError):
         pass
 

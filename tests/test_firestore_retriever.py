@@ -209,43 +209,43 @@ class TestFirestoreRetriever:
 class TestGetCheckpointer:
     """Tests for the checkpointer factory."""
 
-    def test_returns_memory_saver_for_chroma(self):
-        """get_checkpointer returns MemorySaver when VECTOR_DB=chroma."""
-        from src.agent.memory import get_checkpointer
+    @pytest.mark.asyncio
+    async def test_returns_bounded_memory_saver_for_chroma(self):
+        """get_checkpointer returns BoundedMemorySaver when VECTOR_DB=chroma."""
+        from src.agent.memory import BoundedMemorySaver, clear_checkpointer_cache, get_checkpointer
 
-        get_checkpointer.cache_clear()
+        clear_checkpointer_cache()
         with patch.dict(os.environ, {"VECTOR_DB": "chroma"}):
             from src.config import get_settings
             get_settings.cache_clear()
-            cp = get_checkpointer()
-            from langgraph.checkpoint.memory import MemorySaver
-            assert isinstance(cp, MemorySaver)
-            get_checkpointer.cache_clear()
+            cp = await get_checkpointer()
+            assert isinstance(cp, BoundedMemorySaver)
+            clear_checkpointer_cache()
             get_settings.cache_clear()
 
-    def test_returns_memory_saver_by_default(self):
-        """get_checkpointer returns MemorySaver when VECTOR_DB not set."""
-        from src.agent.memory import get_checkpointer
+    @pytest.mark.asyncio
+    async def test_returns_bounded_memory_saver_by_default(self):
+        """get_checkpointer returns BoundedMemorySaver when VECTOR_DB not set."""
+        from src.agent.memory import BoundedMemorySaver, clear_checkpointer_cache, get_checkpointer
 
-        get_checkpointer.cache_clear()
-        cp = get_checkpointer()
-        from langgraph.checkpoint.memory import MemorySaver
-        assert isinstance(cp, MemorySaver)
-        get_checkpointer.cache_clear()
+        clear_checkpointer_cache()
+        cp = await get_checkpointer()
+        assert isinstance(cp, BoundedMemorySaver)
+        clear_checkpointer_cache()
 
-    def test_firestore_saver_import_attempted(self):
+    @pytest.mark.asyncio
+    async def test_firestore_saver_import_attempted(self):
         """get_checkpointer attempts FirestoreSaver when VECTOR_DB=firestore."""
-        from src.agent.memory import get_checkpointer
+        from src.agent.memory import BoundedMemorySaver, clear_checkpointer_cache, get_checkpointer
 
-        get_checkpointer.cache_clear()
+        clear_checkpointer_cache()
         with patch.dict(os.environ, {"VECTOR_DB": "firestore", "FIRESTORE_PROJECT": "test-proj"}):
             from src.config import get_settings
             get_settings.cache_clear()
             # FirestoreSaver import will fail (no real GCP) but should fall back
-            cp = get_checkpointer()
-            from langgraph.checkpoint.memory import MemorySaver
-            assert isinstance(cp, MemorySaver)  # Fallback
-            get_checkpointer.cache_clear()
+            cp = await get_checkpointer()
+            assert isinstance(cp, BoundedMemorySaver)  # Fallback
+            clear_checkpointer_cache()
             get_settings.cache_clear()
 
 

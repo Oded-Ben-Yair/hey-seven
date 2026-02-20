@@ -232,16 +232,20 @@ class ApiKeyMiddleware:
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
-        self._cached_key: str = ""
-        self._cached_at: float = 0.0
+        # Atomic tuple: (key, timestamp) — single read/write prevents torn
+        # pair races where one coroutine sees new key + old timestamp or vice
+        # versa. R5 fix per DeepSeek F5 analysis.
+        self._cached: tuple[str, float] = ("", 0.0)
 
     def _get_api_key(self) -> str:
         """Return the current API key, refreshing from settings if TTL expired."""
         now = time.monotonic()
-        if now - self._cached_at > self._KEY_TTL:
-            self._cached_key = get_settings().API_KEY.get_secret_value()
-            self._cached_at = now
-        return self._cached_key
+        cached = self._cached  # Single atomic read
+        if now - cached[1] > self._KEY_TTL:
+            key = get_settings().API_KEY.get_secret_value()
+            self._cached = (key, now)  # Single atomic write
+            return key
+        return cached[0]
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -328,7 +332,15 @@ class RateLimitMiddleware:
         return client[0] if client else "unknown"
 
     async def _is_allowed(self, client_ip: str) -> bool:
-        """Check if a request from client_ip is within the rate limit."""
+        """Check if a request from client_ip is within the rate limit.
+
+        Only allowed requests are recorded in the deque. Rejected requests
+        do NOT consume deque memory. Per-client deque is bounded to
+        max_tokens entries (the maximum possible within a window when all
+        requests are allowed). This prevents memory exhaustion DoS: even at
+        10K req/s, each client stores at most max_tokens * ~36 bytes.
+        R5 fix: added maxlen per DeepSeek F2 analysis.
+        """
         now = time.monotonic()
         window_start = now - self.window_seconds
 
@@ -338,7 +350,9 @@ class RateLimitMiddleware:
                 self._requests.popitem(last=False)  # LRU eviction
 
             if client_ip not in self._requests:
-                self._requests[client_ip] = collections.deque()
+                # maxlen = max_tokens: only allowed requests are recorded,
+                # so the deque never exceeds the rate limit count.
+                self._requests[client_ip] = collections.deque(maxlen=self.max_tokens)
 
             bucket = self._requests[client_ip]
             # Move to end (most recently used) on access

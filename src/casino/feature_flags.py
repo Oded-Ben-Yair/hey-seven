@@ -3,14 +3,20 @@
 Wraps ``get_casino_config()`` to provide clean boolean flag queries.
 Default flags ensure safe behavior: new/experimental features are off,
 core features are on.
+
+Cache is protected by ``asyncio.Lock`` to prevent thundering herd on
+TTL expiry (multiple concurrent coroutines all miss the cache and
+issue redundant Firestore reads). R5 fix per DeepSeek F3 analysis.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import time
 import types
 from typing import TypedDict
+
+from cachetools import TTLCache
 
 from src.casino.config import get_casino_config
 
@@ -80,10 +86,12 @@ assert set(_DEFAULT_CONFIG["features"].keys()) == set(DEFAULT_FEATURES.keys()), 
 # TTL cache for feature flags (avoids repeated Firestore reads)
 # ---------------------------------------------------------------------------
 
-# Simple TTL cache for feature flags (avoids repeated Firestore reads).
-# 5-minute TTL matches the casino config cache in config.py.
-_flag_cache: dict[str, tuple[dict[str, bool], float]] = {}
-_FLAG_CACHE_TTL = 300.0  # 5 minutes
+# TTLCache with maxsize: prevents unbounded growth under multi-tenant use.
+# asyncio.Lock prevents thundering herd on TTL expiry — only one coroutine
+# fetches from Firestore while others wait on the lock. R5 fix.
+_FLAG_CACHE_TTL = 300  # 5 minutes
+_flag_cache: TTLCache = TTLCache(maxsize=100, ttl=_FLAG_CACHE_TTL)
+_flag_lock = asyncio.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +107,8 @@ async def get_feature_flags(casino_id: str) -> dict[str, bool]:
     config document are preserved (forward-compatible).
 
     Results are cached per casino_id with a 5-minute TTL to avoid
-    repeated Firestore reads on every graph invocation.
+    repeated Firestore reads on every graph invocation. Cache access is
+    protected by ``asyncio.Lock`` to prevent thundering herd on expiry.
 
     Args:
         casino_id: Casino identifier (e.g., ``"mohegan_sun"``).
@@ -107,22 +116,27 @@ async def get_feature_flags(casino_id: str) -> dict[str, bool]:
     Returns:
         A dict of flag_name -> bool with all known flags present.
     """
-    now = time.monotonic()
+    # Fast path: check cache without lock (TTLCache handles expiry)
     cached = _flag_cache.get(casino_id)
     if cached is not None:
-        flags, expires_at = cached
-        if now < expires_at:
-            return flags
+        return cached
 
-    config = await get_casino_config(casino_id)
-    casino_features = config.get("features", {})
+    # Slow path: lock to prevent thundering herd on cache miss
+    async with _flag_lock:
+        # Double-check after acquiring lock (another coroutine may have filled it)
+        cached = _flag_cache.get(casino_id)
+        if cached is not None:
+            return cached
 
-    # Defaults first, then casino overrides
-    merged = dict(DEFAULT_FEATURES)
-    merged.update(casino_features)
+        config = await get_casino_config(casino_id)
+        casino_features = config.get("features", {})
 
-    _flag_cache[casino_id] = (merged, now + _FLAG_CACHE_TTL)
-    return merged
+        # Defaults first, then casino overrides
+        merged = dict(DEFAULT_FEATURES)
+        merged.update(casino_features)
+
+        _flag_cache[casino_id] = merged
+        return merged
 
 
 async def is_feature_enabled(casino_id: str, flag_name: str) -> bool:

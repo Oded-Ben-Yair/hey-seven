@@ -7,12 +7,19 @@ Firestore paths follow the multi-tenant namespace:
 When Firestore is unavailable (local dev, tests), a module-level in-memory
 dict serves as the backing store, ensuring the same async API works
 everywhere without mocking infrastructure.
+
+Production note: ``_memory_store`` is process-scoped. In single-container
+Cloud Run, profiles persist for the container lifetime. Multi-container
+deployments MUST use Firestore (``VECTOR_DB=firestore``) for consistent
+profiles across instances. The in-memory fallback is bounded to
+``_MEMORY_STORE_MAX`` entries to prevent unbounded growth. R5 fix.
 """
 
 from __future__ import annotations
 
 import hashlib
 import logging
+import threading
 from datetime import datetime, timezone
 from typing import Any
 
@@ -30,6 +37,9 @@ logger = logging.getLogger(__name__)
 # In-memory fallback store (keyed by "casino_id:phone")
 # ---------------------------------------------------------------------------
 
+# Bounded to prevent unbounded growth. At 10K profiles x ~5KB each = ~50MB.
+# R5 fix per GPT F2 analysis.
+_MEMORY_STORE_MAX = 10_000
 _memory_store: dict[str, dict] = {}
 
 
@@ -42,7 +52,9 @@ _memory_store: dict[str, dict] = {}
 # Under load, per-request instantiation exhausts file descriptors and SSL
 # handshakes, crashing the app.  The singleton is cleared by
 # ``clear_firestore_client_cache()`` (exposed for tests).
+# Thread lock prevents race during concurrent cold-start creation (GPT F5).
 _firestore_client_cache: dict[str, Any] = {}
+_firestore_client_lock = threading.Lock()
 
 
 def _get_firestore_client() -> Any | None:
@@ -55,6 +67,9 @@ def _get_firestore_client() -> Any | None:
     exhaustion under load.  Creating a new ``AsyncClient`` per CRUD call
     opens new HTTP/2 connections and SSL handshakes — unsustainable at scale.
 
+    Protected by ``threading.Lock`` to prevent race conditions during
+    concurrent cold-start requests (R5 fix per GPT F5).
+
     Note: A near-identical helper exists in ``src.casino.config``.
     Both are intentionally kept separate to avoid coupling the guest
     data layer to the casino config module.  See comment there for
@@ -64,23 +79,29 @@ def _get_firestore_client() -> Any | None:
     if cached is not None:
         return cached
 
-    try:
-        from google.cloud.firestore import AsyncClient  # noqa: F401
+    with _firestore_client_lock:
+        # Double-check after acquiring lock
+        cached = _firestore_client_cache.get("client")
+        if cached is not None:
+            return cached
 
-        from src.config import get_settings
+        try:
+            from google.cloud.firestore import AsyncClient  # noqa: F401
 
-        settings = get_settings()
-        if settings.VECTOR_DB == "firestore" and settings.FIRESTORE_PROJECT:
-            client = AsyncClient(
-                project=settings.FIRESTORE_PROJECT,
-                database=settings.CASINO_ID,
-            )
-            _firestore_client_cache["client"] = client
-            return client
-    except ImportError:
-        logger.debug("google-cloud-firestore not installed; using in-memory store")
-    except Exception:
-        logger.warning("Firestore client init failed; falling back to in-memory store", exc_info=True)
+            from src.config import get_settings
+
+            settings = get_settings()
+            if settings.VECTOR_DB == "firestore" and settings.FIRESTORE_PROJECT:
+                client = AsyncClient(
+                    project=settings.FIRESTORE_PROJECT,
+                    database=settings.CASINO_ID,
+                )
+                _firestore_client_cache["client"] = client
+                return client
+        except ImportError:
+            logger.debug("google-cloud-firestore not installed; using in-memory store")
+        except Exception:
+            logger.warning("Firestore client init failed; falling back to in-memory store", exc_info=True)
     return None
 
 
@@ -219,9 +240,19 @@ async def update_guest_profile(phone: str, casino_id: str, updates: dict) -> dic
             logger.info("Updated guest profile for %s...%s", phone[:4], phone[-4:])
         except Exception:
             logger.warning("Firestore write failed; stored in-memory only", exc_info=True)
-            _memory_store[_store_key(phone, casino_id)] = profile
+            key = _store_key(phone, casino_id)
+            _memory_store[key] = profile
+            while len(_memory_store) > _MEMORY_STORE_MAX:
+                evicted_key = next(iter(_memory_store))
+                del _memory_store[evicted_key]
     else:
-        _memory_store[_store_key(phone, casino_id)] = profile
+        key = _store_key(phone, casino_id)
+        _memory_store[key] = profile
+        # Evict oldest entries if over capacity (FIFO — dict preserves insertion order)
+        while len(_memory_store) > _MEMORY_STORE_MAX:
+            evicted_key = next(iter(_memory_store))
+            del _memory_store[evicted_key]
+            logger.debug("Evicted guest profile %s (memory store at capacity)", evicted_key)
 
     return profile
 

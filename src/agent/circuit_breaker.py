@@ -73,13 +73,13 @@ class CircuitBreaker:
             self._cooldown_seconds = cooldown_seconds
             self._rolling_window_seconds = rolling_window_seconds
 
-        # maxlen set high enough to avoid dropping failure records during
-        # burst failures within the rolling window. Previous maxlen of
-        # threshold*2 could overflow during bursts, causing the deque to
-        # silently drop oldest entries and undercount failures.
-        self._failure_timestamps: collections.deque[float] = collections.deque(
-            maxlen=max(100, self._failure_threshold * 10)
-        )
+        # No maxlen: memory is bounded by _prune_old_failures() which removes
+        # timestamps outside the rolling window. The natural bound is
+        # failure_rate * rolling_window_seconds. Previous maxlen caused silent
+        # undercounting when failures arrived faster than maxlen / window_seconds,
+        # preventing the breaker from tripping under sustained moderate load.
+        # R5 fix: removed maxlen per DeepSeek F1 analysis.
+        self._failure_timestamps: collections.deque[float] = collections.deque()
         self._last_failure_time: float | None = None
         self._state = "closed"
         self._half_open_in_progress = False

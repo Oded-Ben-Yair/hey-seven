@@ -497,6 +497,7 @@ async def chat_stream(
     # preserve real-time streaming UX.
     _pii_buffer = ""
     _PII_FLUSH_LEN = 80  # Flush after accumulating this many chars (covers most PII patterns)
+    _PII_MAX_BUFFER = 500  # Hard cap: force-flush regardless of content (prevents unbounded growth)
     # Digits that could be part of phone/SSN/card patterns trigger buffering
     _PII_DIGIT_RE = re.compile(r"\d")
 
@@ -561,7 +562,7 @@ async def chat_stream(
                         # No digits in buffer — flush immediately (no PII risk)
                         async for tok_event in _flush_pii_buffer():
                             yield tok_event
-                    elif len(_pii_buffer) >= _PII_FLUSH_LEN or _pii_buffer.endswith(("\n", ". ", "! ", "? ")):
+                    elif len(_pii_buffer) >= _PII_MAX_BUFFER or len(_pii_buffer) >= _PII_FLUSH_LEN or _pii_buffer.endswith(("\n", ". ", "! ", "? ")):
                         # Digits present — wait for enough chars to detect patterns
                         async for tok_event in _flush_pii_buffer():
                             yield tok_event

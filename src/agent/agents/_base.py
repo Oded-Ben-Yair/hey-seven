@@ -27,6 +27,14 @@ from src.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# LLM concurrency backpressure: limits concurrent LLM API calls across
+# all specialist agents. Prevents: (1) LLM provider 429 rate limiting
+# cascading into circuit breaker trips, (2) httpx connection pool
+# exhaustion, (3) memory pressure from concurrent response buffering.
+# Gemini API typical QPS limits: 60-300 RPM for Flash, so 20 concurrent
+# is conservative. R5 fix per Gemini F3 analysis.
+_LLM_SEMAPHORE = asyncio.Semaphore(20)
+
 
 async def execute_specialist(
     state: PropertyQAState,
@@ -133,7 +141,8 @@ async def execute_specialist(
     llm = await get_llm_fn()
 
     try:
-        response = await llm.ainvoke(llm_messages)
+        async with _LLM_SEMAPHORE:
+            response = await llm.ainvoke(llm_messages)
         await cb.record_success()
         content = response.content if isinstance(response.content, str) else str(response.content)
         return {"messages": [AIMessage(content=content)]}

@@ -84,12 +84,12 @@ class TestCasinoConfig:
         """After TTL expires, config is re-fetched."""
         config1 = await get_casino_config("mohegan_sun")
 
-        # Manually expire the cache entry
+        # Manually expire the cache entry by clearing it
+        # (TTLCache handles TTL-based expiry automatically; we simulate
+        # expiry by removing the entry so the next call re-fetches.)
         from src.casino.config import _config_cache
 
-        casino_id = "mohegan_sun"
-        cached_config, _ = _config_cache[casino_id]
-        _config_cache[casino_id] = (cached_config, time.monotonic() - _CONFIG_TTL_SECONDS - 1)
+        _config_cache.clear()
 
         config2 = await get_casino_config("mohegan_sun")
         # After expiry, a new deepcopy is returned
