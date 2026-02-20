@@ -36,9 +36,6 @@ def _filter_by_relevance(results: list[tuple], min_score: float) -> list[tuple]:
     return [(doc, score) for doc, score in results if score >= min_score]
 
 
-# Backward compat alias — tests import ``_rerank_by_rrf`` from this module.
-_rerank_by_rrf = rerank_by_rrf
-
 
 def search_knowledge_base(query: str) -> list[RetrievedChunk]:
     """Search the property knowledge base using multi-strategy retrieval with RRF.

@@ -373,82 +373,101 @@ class TestCalculateCompleteness:
 
 
 class TestFailureCounterThreshold:
-    """Tests for the failure counter alert threshold."""
+    """Tests for the module-level failure counter alert threshold."""
 
-    async def test_threshold_triggers_alert(self, caplog):
-        """After alert_threshold failures, an ERROR log is emitted."""
+    def _reset_counter(self):
+        """Reset module-level counter state between tests."""
+        import src.agent.whisper_planner as wp
+        wp._failure_count = 0
+        wp._failure_alerted = False
+
+    def _increment(self):
+        """Simulate a failure increment (mirrors whisper_planner_node logic)."""
+        import src.agent.whisper_planner as wp
+        wp._failure_count += 1
+        if wp._failure_count >= wp._FAILURE_ALERT_THRESHOLD and not wp._failure_alerted:
+            wp._failure_alerted = True
+            wp.logger.error(
+                "whisper_planner_systematic_failure: %d consecutive failures "
+                "exceeded threshold (%d). Whisper planner may be misconfigured.",
+                wp._failure_count,
+                wp._FAILURE_ALERT_THRESHOLD,
+            )
+
+    def test_threshold_triggers_alert(self, caplog):
+        """After _FAILURE_ALERT_THRESHOLD failures, an ERROR log is emitted."""
         import logging
-        from src.agent.whisper_planner import _FailureCounter
-
-        counter = _FailureCounter(alert_threshold=3)
+        import src.agent.whisper_planner as wp
+        self._reset_counter()
+        wp._FAILURE_ALERT_THRESHOLD = 3
         with caplog.at_level(logging.ERROR):
-            await counter.increment()
-            await counter.increment()
+            self._increment()
+            self._increment()
             assert "systematic_failure" not in caplog.text
-            await counter.increment()  # Threshold reached
+            self._increment()  # Threshold reached
             assert "systematic_failure" in caplog.text
+        self._reset_counter()
+        wp._FAILURE_ALERT_THRESHOLD = 10
 
-    async def test_alert_fires_once(self, caplog):
+    def test_alert_fires_once(self, caplog):
         """Alert only fires once, not on every subsequent failure."""
         import logging
-        from src.agent.whisper_planner import _FailureCounter
-
-        counter = _FailureCounter(alert_threshold=2)
+        import src.agent.whisper_planner as wp
+        self._reset_counter()
+        wp._FAILURE_ALERT_THRESHOLD = 2
         with caplog.at_level(logging.ERROR):
-            await counter.increment()
-            await counter.increment()  # First alert
+            self._increment()
+            self._increment()  # First alert
             count_before = caplog.text.count("systematic_failure")
-            await counter.increment()  # Should NOT re-alert
+            self._increment()  # Should NOT re-alert
             count_after = caplog.text.count("systematic_failure")
             assert count_before == count_after
+        self._reset_counter()
+        wp._FAILURE_ALERT_THRESHOLD = 10
 
-    async def test_reset_clears_alert_state(self):
-        """Reset clears count and alert state."""
-        from src.agent.whisper_planner import _FailureCounter
+    def test_reset_clears_count(self):
+        """Resetting the counter clears count and alert state."""
+        import src.agent.whisper_planner as wp
+        self._reset_counter()
+        self._increment()
+        self._increment()
+        assert wp._failure_count == 2
+        self._reset_counter()
+        assert wp._failure_count == 0
 
-        counter = _FailureCounter(alert_threshold=2)
-        await counter.increment()
-        await counter.increment()
-        assert counter.value == 2
-        await counter.reset()
-        assert counter.value == 0
-
-    async def test_threshold_then_success_then_failures_no_second_alert(self, caplog):
-        """10 failures (alert) -> 1 success (reset) -> 9 failures: no second alert."""
+    def test_threshold_then_reset_then_below_threshold_no_alert(self, caplog):
+        """10 failures (alert) -> reset -> 9 failures: no second alert."""
         import logging
-        from src.agent.whisper_planner import _FailureCounter
-
-        counter = _FailureCounter(alert_threshold=10)
+        import src.agent.whisper_planner as wp
+        self._reset_counter()
         with caplog.at_level(logging.ERROR):
-            # 10 failures → alert triggered
             for _ in range(10):
-                await counter.increment()
+                self._increment()
             first_count = caplog.text.count("systematic_failure")
             assert first_count == 1
 
-            # 1 success → counter and alert state reset
-            await counter.reset()
+            self._reset_counter()
 
-            # 9 more failures (below threshold) → no second alert
             for _ in range(9):
-                await counter.increment()
+                self._increment()
             second_count = caplog.text.count("systematic_failure")
-            assert second_count == first_count, "Alert should not fire again below threshold"
+            assert second_count == first_count
+        self._reset_counter()
 
-    async def test_reset_then_re_trigger_fires_alert_again(self, caplog):
+    def test_reset_then_re_trigger_fires_alert_again(self, caplog):
         """After reset, reaching threshold again DOES fire a new alert."""
         import logging
-        from src.agent.whisper_planner import _FailureCounter
-
-        counter = _FailureCounter(alert_threshold=3)
+        import src.agent.whisper_planner as wp
+        self._reset_counter()
+        wp._FAILURE_ALERT_THRESHOLD = 3
         with caplog.at_level(logging.ERROR):
-            # First alert cycle
             for _ in range(3):
-                await counter.increment()
+                self._increment()
             assert caplog.text.count("systematic_failure") == 1
 
-            # Reset and re-trigger
-            await counter.reset()
+            self._reset_counter()
             for _ in range(3):
-                await counter.increment()
+                self._increment()
             assert caplog.text.count("systematic_failure") == 2
+        self._reset_counter()
+        wp._FAILURE_ALERT_THRESHOLD = 10

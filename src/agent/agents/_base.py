@@ -15,14 +15,12 @@ import logging
 from collections.abc import Callable
 from string import Template
 
-import httpx
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.nodes import _format_context_block
 from src.agent.prompts import get_responsible_gaming_helplines
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
-from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -34,6 +32,24 @@ logger = logging.getLogger(__name__)
 # Gemini API typical QPS limits: 60-300 RPM for Flash, so 20 concurrent
 # is conservative. R5 fix per Gemini F3 analysis.
 _LLM_SEMAPHORE = asyncio.Semaphore(20)
+
+
+def _fallback_message(reason: str = "trouble generating a response") -> str:
+    """Build a fallback message with property contact info.
+
+    Single source of truth for all specialist agent fallback messages.
+    Prevents duplication across circuit breaker, ValueError, and network
+    error handlers.
+    """
+    settings = get_settings()
+    return Template(
+        "I apologize, but I'm having $reason. "
+        "Please try again, or contact $property_name directly at $property_phone."
+    ).safe_substitute(
+        reason=reason,
+        property_name=settings.PROPERTY_NAME,
+        property_phone=settings.PROPERTY_PHONE,
+    )
 
 
 async def execute_specialist(
@@ -81,14 +97,7 @@ async def execute_specialist(
     if not await cb.allow_request():
         logger.warning("Circuit breaker open — %s agent returning fallback", agent_name)
         return {
-            "messages": [AIMessage(content=Template(
-                "I'm experiencing temporary technical difficulties. "
-                "Please try again in a minute, or contact "
-                "$property_name directly at $property_phone."
-            ).safe_substitute(
-                property_name=settings.PROPERTY_NAME,
-                property_phone=settings.PROPERTY_PHONE,
-            ))],
+            "messages": [AIMessage(content=_fallback_message("temporary technical difficulties"))],
             "skip_validation": True,
         }
 
@@ -155,52 +164,22 @@ async def execute_specialist(
         # already consumed).  Only circuit-breaker-open and network-error
         # paths use skip_validation=True.
         return {
-            "messages": [AIMessage(content=Template(
-                "I apologize, but I had trouble processing that response. "
-                "Please try again, or contact $property_name directly at $property_phone."
-            ).safe_substitute(
-                property_name=settings.PROPERTY_NAME,
-                property_phone=settings.PROPERTY_PHONE,
-            ))],
+            "messages": [AIMessage(content=_fallback_message("trouble processing that response"))],
             "skip_validation": False,
             "retry_count": 1,
         }
     except asyncio.CancelledError:
         raise
-    except (httpx.HTTPError, asyncio.TimeoutError, ConnectionError):
+    except Exception:
+        # Broad catch: httpx.HTTPError, asyncio.TimeoutError, ConnectionError,
+        # and google-genai SDK exceptions (GoogleAPICallError, ResourceExhausted,
+        # DeadlineExceeded, RuntimeError, AttributeError on malformed responses).
+        # Without this catch, unhandled exceptions bypass record_failure() so the
+        # circuit breaker never trips, and the SSE stream crashes.
+        # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
         await cb.record_failure()
         logger.exception("%s agent LLM call failed", agent_name.capitalize())
-        fallback_msg = Template(
-            "I apologize, but I'm having trouble generating a response right now. "
-            "Please try again, or contact $property_name directly at $property_phone."
-        ).safe_substitute(
-            property_name=settings.PROPERTY_NAME,
-            property_phone=settings.PROPERTY_PHONE,
-        )
         return {
-            "messages": [AIMessage(content=fallback_msg)],
-            "skip_validation": True,
-        }
-    except Exception:
-        # Safety net: google-genai raises various exception types across SDK
-        # versions (GoogleAPICallError, ResourceExhausted, DeadlineExceeded,
-        # RuntimeError, AttributeError on malformed responses). Without this
-        # catch, unhandled exceptions bypass record_failure() so the circuit
-        # breaker never trips, and the SSE stream crashes.
-        # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        # Same pattern as router_node's broad except (see nodes.py:221).
-        await cb.record_failure()
-        logger.exception(
-            "%s agent LLM call failed (unexpected exception)", agent_name.capitalize()
-        )
-        fallback_msg = Template(
-            "I apologize, but I'm having trouble generating a response right now. "
-            "Please try again, or contact $property_name directly at $property_phone."
-        ).safe_substitute(
-            property_name=settings.PROPERTY_NAME,
-            property_phone=settings.PROPERTY_PHONE,
-        )
-        return {
-            "messages": [AIMessage(content=fallback_msg)],
+            "messages": [AIMessage(content=_fallback_message("trouble generating a response right now"))],
             "skip_validation": True,
         }

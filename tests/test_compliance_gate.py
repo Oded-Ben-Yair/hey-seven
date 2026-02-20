@@ -7,7 +7,7 @@ Covers:
 - Empty message → greeting
 - Priority ordering (first match wins)
 - New regex patterns (injection, responsible gaming, BSA/AML, patron privacy)
-- State schema v2 fields and CasinoHostState alias
+- State schema v2 fields
 - Config expansion
 """
 
@@ -271,13 +271,7 @@ class TestEnhancedPatronPrivacyPatterns:
 
 
 class TestStateSchemaV2:
-    """Tests for v2 state fields and CasinoHostState alias."""
-
-    def test_casino_host_state_alias(self):
-        """CasinoHostState is an alias for PropertyQAState."""
-        from src.agent.state import CasinoHostState, PropertyQAState
-
-        assert CasinoHostState is PropertyQAState
+    """Tests for v2 state fields."""
 
     def test_v2_fields_in_type_hints(self):
         """New v2 fields are declared in PropertyQAState annotations."""

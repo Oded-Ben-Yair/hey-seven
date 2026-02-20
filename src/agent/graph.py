@@ -83,12 +83,7 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
     """Extract per-node metadata for graph trace SSE events."""
     if not isinstance(output, dict):
         return {}
-    if node == NODE_COMPLIANCE_GATE:
-        return {
-            "query_type": output.get("query_type"),
-            "confidence": output.get("router_confidence"),
-        }
-    if node == NODE_ROUTER:
+    if node in (NODE_COMPLIANCE_GATE, NODE_ROUTER):
         return {
             "query_type": output.get("query_type"),
             "confidence": output.get("router_confidence"),

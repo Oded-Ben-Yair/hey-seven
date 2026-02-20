@@ -1,6 +1,6 @@
 """Property Q&A agent built on a custom LangGraph StateGraph."""
 
 from .graph import build_graph, chat, chat_stream
-from .state import CasinoHostState, PropertyQAState
+from .state import PropertyQAState
 
-__all__ = ["build_graph", "chat", "chat_stream", "PropertyQAState", "CasinoHostState"]
+__all__ = ["build_graph", "chat", "chat_stream", "PropertyQAState"]

@@ -333,44 +333,27 @@ class TestEmbeddingsTaskType:
 class TestCircuitBreakerEnhancements:
     """Tests for enhanced circuit breaker (rolling window, half_open, config)."""
 
-    def test_circuit_breaker_config_dataclass(self):
-        """CircuitBreakerConfig is a frozen dataclass with defaults."""
-        from src.agent.circuit_breaker import CircuitBreakerConfig
+    def test_circuit_breaker_default_values(self):
+        """CircuitBreaker has sensible defaults."""
+        from src.agent.circuit_breaker import CircuitBreaker
 
-        config = CircuitBreakerConfig()
-        assert config.failure_threshold == 5
-        assert config.cooldown_seconds == 60.0
-        assert config.rolling_window_seconds == 300.0
+        cb = CircuitBreaker()
+        assert cb._failure_threshold == 5
+        assert cb._cooldown_seconds == 60.0
+        assert cb._rolling_window_seconds == 300.0
 
-    def test_circuit_breaker_config_custom_values(self):
-        """CircuitBreakerConfig accepts custom values."""
-        from src.agent.circuit_breaker import CircuitBreakerConfig
+    def test_circuit_breaker_custom_values(self):
+        """CircuitBreaker accepts custom threshold and cooldown values."""
+        from src.agent.circuit_breaker import CircuitBreaker
 
-        config = CircuitBreakerConfig(
+        cb = CircuitBreaker(
             failure_threshold=3,
             cooldown_seconds=30.0,
             rolling_window_seconds=120.0,
         )
-        assert config.failure_threshold == 3
-        assert config.cooldown_seconds == 30.0
-        assert config.rolling_window_seconds == 120.0
-
-    def test_circuit_breaker_config_is_frozen(self):
-        """CircuitBreakerConfig is immutable (frozen)."""
-        from src.agent.circuit_breaker import CircuitBreakerConfig
-
-        config = CircuitBreakerConfig()
-        with pytest.raises(AttributeError):
-            config.failure_threshold = 10
-
-    def test_circuit_breaker_from_config(self):
-        """CircuitBreaker can be created from a CircuitBreakerConfig."""
-        from src.agent.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
-
-        config = CircuitBreakerConfig(failure_threshold=3, cooldown_seconds=10.0)
-        cb = CircuitBreaker(config=config)
         assert cb._failure_threshold == 3
-        assert cb._cooldown_seconds == 10.0
+        assert cb._cooldown_seconds == 30.0
+        assert cb._rolling_window_seconds == 120.0
 
     @pytest.mark.asyncio
     async def test_rolling_window_expiry(self):

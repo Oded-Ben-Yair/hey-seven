@@ -334,11 +334,11 @@ class TestFeatureFlagGating:
         for key, value in DEFAULT_FEATURES.items():
             assert isinstance(value, bool), f"{key} is {type(value)}, expected bool"
 
-    def test_get_default_features_returns_copy(self):
-        """get_default_features returns a copy, not the original."""
-        from src.casino.feature_flags import DEFAULT_FEATURES, get_default_features
+    def test_dict_of_default_features_returns_copy(self):
+        """dict(DEFAULT_FEATURES) returns a mutable copy, not the original."""
+        from src.casino.feature_flags import DEFAULT_FEATURES
 
-        copy = get_default_features()
+        copy = dict(DEFAULT_FEATURES)
         assert copy == DEFAULT_FEATURES
         assert copy is not DEFAULT_FEATURES
 

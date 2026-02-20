@@ -6,9 +6,8 @@ Two routing functions determine conditional edges.
 The ``generate_node`` from v1 has been removed — ``host_agent``
 (from ``agents.host_agent``) is the generate node in v2.
 
-Guardrail functions (``audit_input``, ``detect_responsible_gaming``) live in
-``guardrails.py`` and are re-exported here for backward compatibility with
-test imports.
+Guardrail functions (``audit_input``, ``detect_responsible_gaming``, etc.)
+live in ``guardrails.py``.
 """
 
 import asyncio
@@ -27,13 +26,6 @@ from src.casino.feature_flags import is_feature_enabled
 from src.config import get_settings
 
 from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401 (CircuitBreaker re-exported for tests)
-from .guardrails import (
-    audit_input,
-    detect_age_verification,
-    detect_bsa_aml,
-    detect_patron_privacy,
-    detect_responsible_gaming,
-)
 from .prompts import (
     RESPONSIBLE_GAMING_HELPLINES,
     ROUTER_PROMPT,
@@ -53,12 +45,6 @@ __all__ = [
     "greeting_node",
     "off_topic_node",
     "route_from_router",
-    # Re-exported from guardrails for backward compatibility
-    "audit_input",
-    "detect_responsible_gaming",
-    "detect_age_verification",
-    "detect_bsa_aml",
-    "detect_patron_privacy",
 ]
 
 
@@ -183,19 +169,13 @@ async def _get_validator_llm() -> ChatGoogleGenerativeAI:
 async def router_node(state: PropertyQAState) -> dict[str, Any]:
     """Classify user intent into one of 7 categories.
 
-    Message-limit check: exceeding MAX_MESSAGE_LIMIT forces off_topic to end conversation.
     Uses structured output for reliable JSON parsing.
+    Turn-limit is enforced upstream by compliance_gate_node.
     """
-    settings = get_settings()
     messages = state.get("messages", [])
 
-    # Turn-limit guard (defense-in-depth: also checked by compliance_gate_node upstream).
-    if len(messages) > settings.MAX_MESSAGE_LIMIT:
-        logger.warning("Message limit exceeded (%d messages), forcing off_topic", len(messages))
-        return {
-            "query_type": "off_topic",
-            "router_confidence": 1.0,
-        }
+    # Turn-limit check removed: compliance_gate_node runs upstream and
+    # already enforces MAX_MESSAGE_LIMIT before messages reach the router.
 
     # Get the last human message
     user_message = _get_last_human_message(messages)

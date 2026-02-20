@@ -4,8 +4,7 @@ Defines PropertyQAState as a TypedDict with fields for the graph nodes,
 plus Pydantic models for structured LLM outputs (router + validation).
 
 v2 additions: ``extracted_fields``, ``whisper_plan`` for specialist agent
-routing and background planning.  ``CasinoHostState`` is a
-backward-compatible alias for v2 code.
+routing and background planning.
 """
 
 from typing import Annotated, Any, Literal, TypedDict
@@ -75,10 +74,6 @@ class PropertyQAState(TypedDict):
     responsible_gaming_count: Annotated[int, _keep_max]
 
 
-# Deprecated alias — use PropertyQAState directly.
-CasinoHostState = PropertyQAState
-
-
 class RouterOutput(BaseModel):
     """Structured output from the router node."""
     query_type: Literal[
@@ -103,56 +98,3 @@ class ValidationResult(BaseModel):
     )
 
 
-class ExtractedFields(BaseModel):
-    """Schema for fields extracted from guest messages by specialist agents.
-
-    Validates that extracted fields conform to expected types. Unknown
-    fields are preserved (forward-compatible) via ``model_config``.
-    """
-    guest_name: str | None = None
-    party_size: int | None = Field(None, ge=1, le=100)
-    date_preference: str | None = None
-    cuisine_preference: str | None = None
-    budget_range: str | None = None
-    special_requests: str | None = None
-
-    model_config = {"extra": "allow"}  # Forward-compatible: unknown fields preserved
-
-
-def validate_state_transition(state: dict) -> list[str]:
-    """Validate state field constraints for debugging and monitoring.
-
-    Returns a list of warning messages for any constraint violations.
-    Does NOT raise — callers decide whether to log or abort.
-
-    Checked constraints:
-    - retry_count in [0, 2] (max 1 retry + initial attempt)
-    - router_confidence in [0.0, 1.0]
-    - validation_result in {None, "PASS", "FAIL", "RETRY"}
-    - query_type is a known category or None
-    """
-    warnings: list[str] = []
-
-    retry = state.get("retry_count", 0)
-    if not (0 <= retry <= 2):
-        warnings.append(f"retry_count={retry} outside valid range [0, 2]")
-
-    confidence = state.get("router_confidence", 0.0)
-    if not (0.0 <= confidence <= 1.0):
-        warnings.append(f"router_confidence={confidence} outside valid range [0.0, 1.0]")
-
-    vr = state.get("validation_result")
-    if vr is not None and vr not in ("PASS", "FAIL", "RETRY"):
-        warnings.append(f"validation_result='{vr}' not in {{PASS, FAIL, RETRY}}")
-
-    qt = state.get("query_type")
-    _VALID_QUERY_TYPES = {
-        None, "property_qa", "hours_schedule", "greeting", "off_topic",
-        "gambling_advice", "action_request", "ambiguous",
-        "responsible_gaming", "age_verification", "bsa_aml",
-        "patron_privacy", "injection",
-    }
-    if qt not in _VALID_QUERY_TYPES:
-        warnings.append(f"query_type='{qt}' not a recognized category")
-
-    return warnings

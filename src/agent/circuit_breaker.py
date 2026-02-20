@@ -12,29 +12,11 @@ import asyncio
 import collections
 import logging
 import time
-from dataclasses import dataclass
 from functools import lru_cache
 
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class CircuitBreakerConfig:
-    """Configuration for the circuit breaker.
-
-    Frozen dataclass so it can be used as a dict key or set member if needed.
-
-    Attributes:
-        failure_threshold: Number of failures within the rolling window to trip.
-        cooldown_seconds: Seconds to wait in open state before probing.
-        rolling_window_seconds: Time window for counting failures (seconds).
-    """
-
-    failure_threshold: int = 5
-    cooldown_seconds: float = 60.0
-    rolling_window_seconds: float = 300.0  # 5 min window
 
 
 class CircuitBreaker:
@@ -62,16 +44,10 @@ class CircuitBreaker:
         failure_threshold: int = 5,
         cooldown_seconds: float = 60.0,
         rolling_window_seconds: float = 300.0,
-        config: CircuitBreakerConfig | None = None,
     ) -> None:
-        if config is not None:
-            self._failure_threshold = config.failure_threshold
-            self._cooldown_seconds = config.cooldown_seconds
-            self._rolling_window_seconds = config.rolling_window_seconds
-        else:
-            self._failure_threshold = failure_threshold
-            self._cooldown_seconds = cooldown_seconds
-            self._rolling_window_seconds = rolling_window_seconds
+        self._failure_threshold = failure_threshold
+        self._cooldown_seconds = cooldown_seconds
+        self._rolling_window_seconds = rolling_window_seconds
 
         # No maxlen: memory is bounded by _prune_old_failures() which removes
         # timestamps outside the rolling window. The natural bound is
@@ -102,11 +78,6 @@ class CircuitBreaker:
         """Number of failures within the rolling window."""
         self._prune_old_failures()
         return len(self._failure_timestamps)
-
-    @property
-    def _failure_count(self) -> int:
-        """Alias for failure_count (backward compatibility with existing tests)."""
-        return self.failure_count
 
     @property
     def state(self) -> str:
@@ -259,12 +230,3 @@ def _get_circuit_breaker() -> CircuitBreaker:
         failure_threshold=settings.CB_FAILURE_THRESHOLD,
         cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
     )
-
-
-def clear_circuit_breaker_cache() -> None:
-    """Clear the circuit breaker singleton cache.
-
-    Exposed for tests (``conftest.py``) and production use cases like
-    config hot-reload.  Delegates to ``_get_circuit_breaker.cache_clear()``.
-    """
-    _get_circuit_breaker.cache_clear()

@@ -211,6 +211,34 @@ def _normalize_input(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _check_patterns(
+    message: str,
+    patterns: list[re.Pattern],
+    category: str,
+    log_level: str = "warning",
+) -> bool:
+    """Check message against a list of compiled regex patterns.
+
+    Shared helper for all deterministic guardrail checks.  Each public
+    function delegates here with its pattern list and log configuration.
+
+    Args:
+        message: The user input to check.
+        patterns: List of compiled regex patterns to search.
+        category: Category label for log messages (e.g., "BSA/AML").
+        log_level: Log level for detections ("info" or "warning").
+
+    Returns:
+        True if any pattern matches, False otherwise.
+    """
+    log_fn = getattr(logger, log_level, logger.warning)
+    for pattern in patterns:
+        if pattern.search(message):
+            log_fn("%s detected (pattern: %s)", category, pattern.pattern[:60])
+            return True
+    return False
+
+
 def audit_input(message: str) -> bool:
     """Check user input for prompt injection patterns.
 
@@ -226,102 +254,34 @@ def audit_input(message: str) -> bool:
         True if the input looks safe, False if injection detected.
     """
     # First pass: raw input catches zero-width chars and encoding markers
-    for pattern in _INJECTION_PATTERNS:
-        if pattern.search(message):
-            logger.warning("Prompt injection detected (pattern: %s)", pattern.pattern[:60])
-            return False
+    if _check_patterns(message, _INJECTION_PATTERNS, "Prompt injection"):
+        return False
     # Second pass: normalized input catches Unicode homoglyph attacks
     normalized = _normalize_input(message)
     if normalized != message:
-        for pattern in _INJECTION_PATTERNS:
-            if pattern.search(normalized):
-                logger.warning(
-                    "Prompt injection detected after normalization (pattern: %s)",
-                    pattern.pattern[:60],
-                )
-                return False
+        if _check_patterns(normalized, _INJECTION_PATTERNS, "Prompt injection (normalized)"):
+            return False
     return True
 
 
 def detect_responsible_gaming(message: str) -> bool:
-    """Check if user message indicates a gambling problem or self-exclusion need.
-
-    Deterministic regex-based safety net that ensures responsible gaming
-    helplines are always provided, regardless of LLM routing.
-
-    Args:
-        message: The raw user input message.
-
-    Returns:
-        True if responsible gaming support is needed.
-    """
-    for pattern in _RESPONSIBLE_GAMING_PATTERNS:
-        if pattern.search(message):
-            logger.info("Responsible gaming query detected (pattern: %s)", pattern.pattern[:60])
-            return True
-    return False
+    """Check if user message indicates a gambling problem or self-exclusion need."""
+    return _check_patterns(message, _RESPONSIBLE_GAMING_PATTERNS, "Responsible gaming", "info")
 
 
 def detect_age_verification(message: str) -> bool:
-    """Check if user message involves underage guests or age verification.
-
-    Casino guests must be 21+ for gaming at Mohegan Sun (CT law). This
-    deterministic guardrail ensures age-related queries always include the
-    legal age requirement, independent of LLM behavior.
-
-    Args:
-        message: The raw user input message.
-
-    Returns:
-        True if age verification information should be included.
-    """
-    for pattern in _AGE_VERIFICATION_PATTERNS:
-        if pattern.search(message):
-            logger.info("Age verification query detected (pattern: %s)", pattern.pattern[:60])
-            return True
-    return False
+    """Check if user message involves underage guests or age verification."""
+    return _check_patterns(message, _AGE_VERIFICATION_PATTERNS, "Age verification", "info")
 
 
 def detect_bsa_aml(message: str) -> bool:
-    """Check if user message relates to money laundering or BSA/AML evasion.
-
-    Casinos are Money Services Businesses (MSBs) under the Bank Secrecy Act.
-    They must file Currency Transaction Reports (CTRs) for cash transactions
-    over $10,000 and Suspicious Activity Reports (SARs) for structuring.
-    The agent must never provide guidance that could facilitate financial crime.
-
-    Args:
-        message: The raw user input message.
-
-    Returns:
-        True if BSA/AML compliance response should be triggered.
-    """
-    for pattern in _BSA_AML_PATTERNS:
-        if pattern.search(message):
-            logger.warning("BSA/AML query detected (pattern: %s)", pattern.pattern[:60])
-            return True
-    return False
+    """Check if user message relates to money laundering or BSA/AML evasion."""
+    return _check_patterns(message, _BSA_AML_PATTERNS, "BSA/AML")
 
 
 def detect_patron_privacy(message: str) -> bool:
-    """Check if user message asks about another guest's presence or identity.
-
-    Casino hosts must NEVER disclose whether a specific person is at the
-    property, their membership status, or personal information.  This is
-    a privacy obligation and a liability safeguard against stalking,
-    celebrity harassment, and domestic-dispute scenarios.
-
-    Args:
-        message: The raw user input message.
-
-    Returns:
-        True if the query involves patron privacy and should be deflected.
-    """
-    for pattern in _PATRON_PRIVACY_PATTERNS:
-        if pattern.search(message):
-            logger.warning("Patron privacy query detected (pattern: %s)", pattern.pattern[:60])
-            return True
-    return False
+    """Check if user message asks about another guest's presence or identity."""
+    return _check_patterns(message, _PATRON_PRIVACY_PATTERNS, "Patron privacy")
 
 
 # ---------------------------------------------------------------------------

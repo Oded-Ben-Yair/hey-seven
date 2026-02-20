@@ -35,7 +35,6 @@ __all__ = [
     "whisper_planner_node",
     "format_whisper_plan",
     "_get_whisper_llm",
-    "_failure_counter",
 ]
 
 
@@ -79,54 +78,13 @@ async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 
 
-class _FailureCounter:
-    """Async-safe failure counter for whisper planner monitoring.
-
-    Uses ``asyncio.Lock`` for formal thread-safety under concurrent
-    coroutine access.  Observable via logging and exportable to metrics
-    systems (Prometheus, LangFuse custom metrics).
-
-    Includes a threshold alert: after ``alert_threshold`` consecutive
-    failures, logs at ERROR level with a structured metric to surface
-    systematic failures (e.g., wrong model name, expired credentials)
-    that would otherwise be invisible because the whisper planner is
-    fail-silent by design.
-    """
-
-    def __init__(self, *, alert_threshold: int = 10) -> None:
-        self._count = 0
-        self._lock = asyncio.Lock()
-        self._alert_threshold = alert_threshold
-        self._alerted = False
-
-    async def increment(self) -> int:
-        """Increment and return the new count.  Logs ERROR when threshold is exceeded."""
-        async with self._lock:
-            self._count += 1
-            if self._count >= self._alert_threshold and not self._alerted:
-                self._alerted = True
-                logger.error(
-                    "whisper_planner_systematic_failure: %d consecutive failures "
-                    "exceeded threshold (%d). Whisper planner may be misconfigured. "
-                    "All responses are proceeding without whisper guidance.",
-                    self._count,
-                    self._alert_threshold,
-                )
-            return self._count
-
-    async def reset(self) -> None:
-        """Reset the counter after a successful call (clears alert state)."""
-        async with self._lock:
-            self._count = 0
-            self._alerted = False
-
-    @property
-    def value(self) -> int:
-        """Current count (non-atomic read, safe for logging)."""
-        return self._count
-
-
-_failure_counter = _FailureCounter()
+# Simple failure counter for monitoring whisper planner health.
+# Tracks consecutive failures; logs ERROR when threshold is exceeded.
+# No async lock needed: counter is only modified inside whisper_planner_node()
+# which runs sequentially within a single graph invocation.
+_failure_count: int = 0
+_FAILURE_ALERT_THRESHOLD: int = 10
+_failure_alerted: bool = False
 
 # ---------------------------------------------------------------------------
 # Profile fields for completeness calculation (placeholder weights)
@@ -169,6 +127,8 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
     returns ``{"whisper_plan": None}`` so the agent proceeds without
     guidance (fail-silent contract).
     """
+    global _failure_count, _failure_alerted
+
     # Runtime feature flag check — skip whisper planning when disabled.
     # This complements the build-time check in build_graph() which removes
     # the node from the graph topology entirely.  The runtime check handles
@@ -202,34 +162,31 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         planner_llm = llm.with_structured_output(WhisperPlan)
         plan: WhisperPlan = await planner_llm.ainvoke(prompt_text)
 
-        # Reset failure counter on success (clears alert state)
-        await _failure_counter.reset()
+        # Reset failure counter on success
+        _failure_count = 0
+        _failure_alerted = False
         return {"whisper_plan": plan.model_dump()}
 
-    except (ValueError, TypeError) as exc:
-        # Structured output parsing failed — planner degrades gracefully
-        count = await _failure_counter.increment()
-        logger.warning(
-            "whisper_planner_failure",
-            extra={
-                "error_type": type(exc).__name__,
-                "error_msg": str(exc)[:200],
-                "failure_count": count,
-            },
-        )
-        return {"whisper_plan": None}
-
     except Exception as exc:
-        # API timeout, rate limit, network error — broad catch is intentional
-        # because google-genai raises various exception types across versions.
+        # Broad catch is intentional: ValueError/TypeError from structured
+        # output parsing AND network errors (google-genai raises various
+        # exception types across SDK versions) all degrade gracefully.
         # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        count = await _failure_counter.increment()
+        _failure_count += 1
+        if _failure_count >= _FAILURE_ALERT_THRESHOLD and not _failure_alerted:
+            _failure_alerted = True
+            logger.error(
+                "whisper_planner_systematic_failure: %d consecutive failures "
+                "exceeded threshold (%d). Whisper planner may be misconfigured.",
+                _failure_count,
+                _FAILURE_ALERT_THRESHOLD,
+            )
         logger.warning(
             "whisper_planner_failure",
             extra={
                 "error_type": type(exc).__name__,
                 "error_msg": str(exc)[:200],
-                "failure_count": count,
+                "failure_count": _failure_count,
             },
         )
         return {"whisper_plan": None}

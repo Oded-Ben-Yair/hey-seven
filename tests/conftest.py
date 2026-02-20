@@ -55,6 +55,14 @@ def _clear_singleton_caches():
         pass
 
     try:
+        import src.agent.whisper_planner as _wp
+
+        _wp._failure_count = 0
+        _wp._failure_alerted = False
+    except (ImportError, AttributeError):
+        pass
+
+    try:
         from src.agent.circuit_breaker import _get_circuit_breaker
 
         _get_circuit_breaker.cache_clear()

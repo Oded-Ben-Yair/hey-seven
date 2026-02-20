@@ -323,14 +323,14 @@ class TestReciprocalRankFusion:
         """Single result list is returned in original order (top_k)."""
         from langchain_core.documents import Document
 
-        from src.agent.tools import _rerank_by_rrf
+        from src.rag.reranking import rerank_by_rrf
 
         results = [
             (Document(page_content="first"), 0.9),
             (Document(page_content="second"), 0.7),
             (Document(page_content="third"), 0.5),
         ]
-        fused = _rerank_by_rrf([results], top_k=3)
+        fused = rerank_by_rrf([results], top_k=3)
         assert len(fused) == 3
         assert fused[0][0].page_content == "first"
 
@@ -338,7 +338,7 @@ class TestReciprocalRankFusion:
         """Document appearing in both lists gets higher RRF score."""
         from langchain_core.documents import Document
 
-        from src.agent.tools import _rerank_by_rrf
+        from src.rag.reranking import rerank_by_rrf
 
         list_a = [
             (Document(page_content="shared"), 0.8),
@@ -348,7 +348,7 @@ class TestReciprocalRankFusion:
             (Document(page_content="only_b"), 0.85),
             (Document(page_content="shared"), 0.7),
         ]
-        fused = _rerank_by_rrf([list_a, list_b], top_k=3)
+        fused = rerank_by_rrf([list_a, list_b], top_k=3)
         # "shared" appears in both lists and should rank first
         assert fused[0][0].page_content == "shared"
 
@@ -356,40 +356,40 @@ class TestReciprocalRankFusion:
         """RRF returns at most top_k results."""
         from langchain_core.documents import Document
 
-        from src.agent.tools import _rerank_by_rrf
+        from src.rag.reranking import rerank_by_rrf
 
         results = [(Document(page_content=f"doc{i}"), 0.5) for i in range(10)]
-        fused = _rerank_by_rrf([results], top_k=3)
+        fused = rerank_by_rrf([results], top_k=3)
         assert len(fused) == 3
 
     def test_empty_input(self):
         """Empty result lists returns empty."""
-        from src.agent.tools import _rerank_by_rrf
+        from src.rag.reranking import rerank_by_rrf
 
-        assert _rerank_by_rrf([], top_k=5) == []
+        assert rerank_by_rrf([], top_k=5) == []
 
     def test_keeps_best_score_for_duplicates(self):
         """When a doc appears in multiple lists, keeps the highest original score."""
         from langchain_core.documents import Document
 
-        from src.agent.tools import _rerank_by_rrf
+        from src.rag.reranking import rerank_by_rrf
 
         list_a = [(Document(page_content="doc"), 0.6)]
         list_b = [(Document(page_content="doc"), 0.9)]
-        fused = _rerank_by_rrf([list_a, list_b], top_k=1)
+        fused = rerank_by_rrf([list_a, list_b], top_k=1)
         assert fused[0][1] == 0.9  # Higher score kept
 
     def test_different_source_not_merged(self):
         """Same content from different sources stays separate (hash includes source)."""
         from langchain_core.documents import Document
 
-        from src.agent.tools import _rerank_by_rrf
+        from src.rag.reranking import rerank_by_rrf
 
         doc_a = Document(page_content="same text", metadata={"source": "restaurants"})
         doc_b = Document(page_content="same text", metadata={"source": "entertainment"})
         list_a = [(doc_a, 0.8)]
         list_b = [(doc_b, 0.7)]
-        fused = _rerank_by_rrf([list_a, list_b], top_k=5)
+        fused = rerank_by_rrf([list_a, list_b], top_k=5)
         assert len(fused) == 2, "Same content from different sources must not merge"
 
 

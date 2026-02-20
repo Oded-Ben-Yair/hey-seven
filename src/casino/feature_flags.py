@@ -154,11 +154,3 @@ async def is_feature_enabled(casino_id: str, flag_name: str) -> bool:
     flags = await get_feature_flags(casino_id)
     return flags.get(flag_name, False)
 
-
-def get_default_features() -> dict[str, bool]:
-    """Return a mutable copy of the default feature flags.
-
-    Returns:
-        A new dict with all default feature flag values.
-    """
-    return dict(DEFAULT_FEATURES)

@@ -25,7 +25,6 @@ from src.casino.config import (
 )
 from src.casino.feature_flags import (
     DEFAULT_FEATURES,
-    get_default_features,
     get_feature_flags,
     is_feature_enabled,
 )
@@ -270,9 +269,9 @@ class TestFeatureFlags:
         result = await is_feature_enabled("mohegan_sun", "sms_enabled")
         assert result is False
 
-    def test_get_default_features_returns_copy(self):
-        """get_default_features returns a copy, not the original dict."""
-        defaults = get_default_features()
+    def test_dict_of_default_features_is_a_copy(self):
+        """dict(DEFAULT_FEATURES) returns a mutable copy, not the original."""
+        defaults = dict(DEFAULT_FEATURES)
         assert defaults == DEFAULT_FEATURES
         defaults["sms_enabled"] = True
         # Original unchanged
@@ -285,14 +284,6 @@ class TestFeatureFlags:
         assert isinstance(DEFAULT_FEATURES, types.MappingProxyType)
         with pytest.raises(TypeError):
             DEFAULT_FEATURES["sms_enabled"] = True
-
-    def test_get_default_features_returns_mutable_dict(self):
-        """get_default_features returns a mutable dict, not a MappingProxyType."""
-        defaults = get_default_features()
-        assert isinstance(defaults, dict)
-        # Should be mutable
-        defaults["test_flag"] = True
-        assert defaults["test_flag"] is True
 
     def test_feature_flags_typeddict_parity(self):
         """FeatureFlags TypedDict declares every key in DEFAULT_FEATURES (and vice versa)."""

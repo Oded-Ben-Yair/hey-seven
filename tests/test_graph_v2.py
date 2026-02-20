@@ -23,7 +23,7 @@ from src.agent.graph import (
     build_graph,
     route_from_compliance,
 )
-from src.agent.state import CasinoHostState, PropertyQAState
+from src.agent.state import PropertyQAState
 
 
 # ---------------------------------------------------------------------------
@@ -322,25 +322,6 @@ class TestInitialStateV2:
         assert state["skip_validation"] is False
         assert state["retry_feedback"] is None
         assert state["sources_used"] == []
-
-
-# ---------------------------------------------------------------------------
-# CasinoHostState alias
-# ---------------------------------------------------------------------------
-
-
-class TestCasinoHostStateAlias:
-    """CasinoHostState is a backward-compatible alias."""
-
-    def test_alias_is_same_type(self):
-        """CasinoHostState is PropertyQAState."""
-        assert CasinoHostState is PropertyQAState
-
-    def test_exported_from_package(self):
-        """CasinoHostState is importable from the agent package."""
-        from src.agent import CasinoHostState as imported
-
-        assert imported is PropertyQAState
 
 
 # ---------------------------------------------------------------------------
