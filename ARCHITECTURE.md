@@ -4,7 +4,7 @@
 
 Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 11-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
 
-The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB. v2 adds a compliance gate (pre-router deterministic guardrails), a Whisper Track Planner (silent background LLM for agent guidance), a persona envelope (SMS truncation layer), 4 specialist agents, SMS/CMS webhooks, and LangFuse observability.
+The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB. v2 adds a compliance gate (pre-router deterministic guardrails), a Whisper Track Planner (silent background LLM for agent guidance), a persona envelope (SMS truncation layer), 5 specialist agents (host, dining, entertainment, comp, hotel), SMS/CMS webhooks, and LangFuse observability.
 
 **Design philosophy:** Build for one property, design for N. Every configuration choice (property name, data paths, model name, prompts) is externalized via `pydantic-settings` so adding a second property requires zero code changes.
 
@@ -23,7 +23,7 @@ Custom 11-node StateGraph (src/agent/graph.py)
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
-    |-- generate (specialist dispatch) -> host/dining/entertainment/comp agent -> Gemini 2.5 Flash
+    |-- generate (specialist dispatch) -> host/dining/entertainment/comp/hotel agent -> Gemini 2.5 Flash
     |-- validate -----> Gemini 2.5 Flash (adversarial review)
     |-- persona_envelope -----> SMS truncation (160-char segments)
     |-- respond / fallback / greeting / off_topic -----> END
@@ -172,13 +172,14 @@ Behavior:
 | `spa` | `entertainment` | Spa services managed by entertainment/amenities team; separate agent would duplicate 90% of logic |
 | `gaming` | `comp` | Gaming areas, table games, loyalty/comp programs |
 | `promotions` | `comp` | Promotions are comp-adjacent (tier benefits, offers) |
+| `hotel` | `hotel` | Hotel rooms, suites, towers, check-in/out, accommodation policies |
 | *(all others)* | `host` | General concierge with whisper planner guidance |
 
 Dispatch tie-breaking: when multiple categories have equal counts, `max(category_counts, key=lambda k: (count, k))` selects alphabetically — deterministic and testable.
 
 ### Specialist Agent Base Pattern (`_base.py`)
 
-All 4 specialist agents (host, dining, entertainment, comp) delegate to a shared
+All 5 specialist agents (host, dining, entertainment, comp, hotel) delegate to a shared
 `execute_specialist()` function that handles:
 - Circuit breaker checks (fail-open with safe fallback)
 - System prompt construction via `string.Template.safe_substitute()`
@@ -264,7 +265,7 @@ Five sub-cases based on `query_type`:
 
 ## State Schema
 
-`PropertyQAState` is a `TypedDict` with 13 fields (`src/agent/state.py:39`). `CasinoHostState` is a backward-compatible alias for v2 code that prefers the domain-specific name.
+`PropertyQAState` is a `TypedDict` with 13 fields (see `PropertyQAState` in `src/agent/state.py`). `CasinoHostState` is a backward-compatible alias for v2 code that prefers the domain-specific name. Three Pydantic models (`RouterOutput`, `ValidationResult`, `ExtractedFields`) define structured LLM outputs.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -284,9 +285,9 @@ Five sub-cases based on `query_type`:
 
 Two Pydantic models for structured LLM output:
 
-- **`RouterOutput`** (`state.py:79`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails in the `compliance_gate` before the LLM router runs, expanding the effective routing space to 9 categories.
-- **`ValidationResult`** (`state.py:93`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
-- **`WhisperPlan`** (`whisper_planner.py:107`): `next_topic` (`Literal` constrained to 10 profiling topics) + `extraction_targets` (list[str]) + `offer_readiness` (float 0.0-1.0) + `conversation_note` (str). Used exclusively by the `whisper_planner` node for silent agent guidance.
+- **`RouterOutput`** (see `RouterOutput` in `src/agent/state.py`): `query_type` (`Literal` constrained to 7 LLM-routable categories: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`) + `confidence` (float, 0.0-1.0). Two additional categories (`age_verification`, `patron_privacy`) are detected by deterministic guardrails in the `compliance_gate` before the LLM router runs, expanding the effective routing space to 9 categories.
+- **`ValidationResult`** (see `ValidationResult` in `src/agent/state.py`): `status` (`Literal["PASS", "FAIL", "RETRY"]`) + `reason` (str). RETRY is a first-class schema value, ensuring the LLM can signal minor issues worth correcting versus serious violations (FAIL).
+- **`WhisperPlan`** (see `WhisperPlan` in `src/agent/whisper_planner.py`): `next_topic` (`Literal` constrained to 10 profiling topics) + `extraction_targets` (list[str]) + `offer_readiness` (float 0.0-1.0) + `conversation_note` (str). Used exclusively by the `whisper_planner` node for silent agent guidance.
 
 ---
 
@@ -466,6 +467,7 @@ Metadata on every chunk: `category`, `item_name`, `source`, `property_id`, `last
 | `replace` | After `greeting`, `off_topic`, `fallback`, `compliance_gate`, `persona_envelope`, or `whisper_planner` node | `{"content": "..."}` (full response) |
 | `sources` | After stream completes (if any) | `{"sources": ["restaurants", ...]}` |
 | `done` | Always last | `{"done": true}` |
+| `ping` | Every 15s during generation (heartbeat) | `""` (empty string). Prevents client-side EventSource timeouts during long LLM generations. Clients should ignore this event. |
 | `error` | On exception | `{"error": "message"}` |
 
 Token streaming uses `on_chat_model_stream` events filtered to the `generate` node only. Non-streaming nodes (`greeting`, `off_topic`, `fallback`, `compliance_gate`, `persona_envelope`, `whisper_planner`) emit `replace` events with the full response via `on_chain_end`.
@@ -499,15 +501,16 @@ Returns 200 when healthy, 503 when degraded (so Cloud Run / k8s don't route traf
 ```json
 {
   "status": "healthy | degraded",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "agent_ready": true,
   "property_loaded": true,
   "rag_ready": true,
-  "observability_enabled": false
+  "observability_enabled": false,
+  "circuit_breaker_state": "closed"
 }
 ```
 
-The `observability_enabled` field indicates whether LangFuse tracing is active (determined by `is_observability_enabled()` from `src/observability/langfuse_client.py`).
+The `observability_enabled` field indicates whether LangFuse tracing is active (determined by `is_observability_enabled()` from `src/observability/langfuse_client.py`). The `circuit_breaker_state` field reports the current circuit breaker state: `closed` (normal), `open` (blocking LLM calls, returning fallbacks), `half_open` (probing after cooldown), or `unknown` (state check failed).
 
 ### GET /graph
 
@@ -563,8 +566,8 @@ Six pure ASGI middleware classes in `src/api/middleware.py` (no `BaseHTTPMiddlew
 |------------|---------|
 | `RequestLoggingMiddleware` | Structured JSON access logs (Cloud Logging compatible), `X-Request-ID` injection, `X-Response-Time-Ms` header |
 | `SecurityHeadersMiddleware` | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, CSP, `Referrer-Policy`, `Strict-Transport-Security` (HSTS with 2-year max-age) |
-| `ApiKeyMiddleware` | `X-API-Key` header validation on `/chat` using `hmac.compare_digest`. Disabled when `API_KEY` is empty. Returns 401 on mismatch |
-| `RateLimitMiddleware` | Sliding-window per client IP on `/chat` only (default: 20 req/min). Respects `X-Forwarded-For` behind reverse proxies (Cloud Run, nginx). Memory-bounded via `RATE_LIMIT_MAX_CLIENTS` cap (default 10,000). Returns 429 with `Retry-After`. `/health` and static files exempt |
+| `ApiKeyMiddleware` | `X-API-Key` header validation on `/chat`, `/graph`, `/property`, `/feedback` using `hmac.compare_digest`. Disabled when `API_KEY` is empty. Returns 401 on mismatch. TTL-cached key refresh (60s) supports secret rotation without restart |
+| `RateLimitMiddleware` | Sliding-window per client IP on `/chat` and `/feedback` (shared bucket, default: 20 req/min). Respects `X-Forwarded-For` only from `TRUSTED_PROXIES` peers (default `None` = never trust XFF). Memory-bounded via `RATE_LIMIT_MAX_CLIENTS` cap (default 10,000). Returns 429 with `Retry-After`. `/health`, `/graph`, `/property`, webhooks, and static files exempt |
 | `RequestBodyLimitMiddleware` | Two-layer enforcement: fast-path `Content-Length` header check + streaming byte counting via `receive_wrapper`. Rejects requests exceeding `MAX_REQUEST_BODY_SIZE` (default 64 KB) with 413 Payload Too Large. Prevents resource exhaustion even when `Content-Length` is missing or spoofed |
 | `ErrorHandlingMiddleware` | Catches unhandled exceptions, returns structured 500 JSON. `CancelledError` (SSE client disconnect) logged at INFO, not ERROR |
 
@@ -708,7 +711,7 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `GOOGLE_SHEETS_ID` | (empty) | Google Sheets spreadsheet ID for CMS content |
 | `SMS_ENABLED` | `false` | Enable SMS channel support |
 | `CONSENT_HMAC_SECRET` | `change-me-in-production` | HMAC key for SMS consent hash chain (validated at startup) |
-| `TRUSTED_PROXIES` | `[]` | CIDRs/IPs that may set X-Forwarded-For (empty = trust all, for Cloud Run) |
+| `TRUSTED_PROXIES` | `None` | CIDRs/IPs that may set X-Forwarded-For. `None` = never trust XFF headers (use direct peer IP). Set explicitly to Cloud Run LB IPs to trust XFF. |
 | `PERSONA_MAX_CHARS` | `0` | SMS persona truncation (0=unlimited, 160=SMS segment) |
 | `TELNYX_API_KEY` | (empty) | Telnyx API key for SMS (`SecretStr`) |
 | `TELNYX_MESSAGING_PROFILE_ID` | (empty) | Telnyx messaging profile ID |
@@ -721,7 +724,7 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `LANGFUSE_HOST` | `https://cloud.langfuse.com` | LangFuse server URL |
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `ENVIRONMENT` | `development` | Environment name |
-| `VERSION` | `0.1.0` | Application version |
+| `VERSION` | `1.0.0` | Application version |
 
 ---
 
@@ -833,10 +836,10 @@ The following features were consciously deferred from the initial architecture s
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~179 |
 | `nodes.py` | 8 async graph nodes (router, retrieve, generate, validate, respond, fallback, greeting, off_topic) + routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~686 |
 | `graph.py` | 11-node StateGraph compilation + node name constants + 3 routing functions + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper, graph trace metadata extraction | ~428 |
-| `state.py` | TypedDict state schema (`PropertyQAState` / `CasinoHostState`, `RetrievedChunk`) + Pydantic structured output models (15 fields) | ~94 |
+| `state.py` | TypedDict state schema (`PropertyQAState` / `CasinoHostState`, 13 fields, `RetrievedChunk`) + 3 Pydantic structured output models (`RouterOutput`, `ValidationResult`, `ExtractedFields`) | ~94 |
 | `prompts.py` | 4 prompt templates (concierge, router, validation, whisper planner) + helpline constant | ~193 |
 | `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~186 |
-| `agents/` | 4 specialist agents (host, dining, entertainment, comp) + registry | ~681 |
+| `agents/` | 5 specialist agents (host, dining, entertainment, comp, hotel) + registry + shared base | ~763 |
 | `persona.py` | SMS/web persona envelope — truncation layer for 160-char SMS segments | ~49 |
 | `whisper_planner.py` | Whisper Track Planner — silent background LLM for agent guidance (fail-silent contract) | ~198 |
 | `memory.py` | Checkpointer factory — `MemorySaver` (dev) / `FirestoreSaver` (prod via `VECTOR_DB` config) | ~49 |

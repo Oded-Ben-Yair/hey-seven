@@ -22,7 +22,7 @@ Casino guests need quick, reliable answers about dining, entertainment, rooms, a
 
 The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (73 regex patterns across 4 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
 
-The generate node delegates to **specialist agents** (host, dining, entertainment, comp) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
+The generate node delegates to **specialist agents** (host, dining, entertainment, comp, hotel) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
 
 The frontend includes a **real-time graph trace panel** that visualizes LangGraph node execution with timing — every query shows which nodes fired, how long each took, and what metadata they produced.
 
@@ -61,12 +61,12 @@ START ──> compliance_gate ──┬──> greeting ────────
 | Structured output routing | `router_node` | `.with_structured_output(RouterOutput)` — no string parsing |
 | Conditional edges with functions | `route_from_compliance`, `route_from_router`, `_route_after_validate_v2` | Explicit, testable routing logic at 3 branch points |
 | Graph-native retry loop | validate → generate | Not Python retry — graph-level state loop with counter |
-| State schema with reducers | `Annotated[list, add_messages]` | Proper LangGraph state management (12 fields, 2 v2 additions) |
+| State schema with reducers | `Annotated[list, add_messages]` | Proper LangGraph state management (see `PropertyQAState` in `src/agent/state.py`) |
 | `astream_events` v2 | `chat_stream()` | Most advanced streaming API with per-node event filtering |
 | Dual LLM strategy | Generator (0.3) vs Validator (0.0) | Different temperatures for creativity vs strictness |
 | HITL interrupt support | `interrupt_before` config | Production pattern for regulated environments |
 | Real-time graph visualization | SSE `graph_node` events | Live node execution visible in UI with timing |
-| Specialist agent registry | `agents/registry.py` | 4 specialist agents (host, dining, entertainment, comp) dispatched by query domain |
+| Specialist agent registry | `agents/registry.py` | 5 specialist agents (host, dining, entertainment, comp, hotel) dispatched by query domain |
 | Whisper planner (silent LLM) | `whisper_planner.py` | Background planning with `WhisperPlan` structured output — fail-silent, per-turn, never guest-facing |
 | Persona envelope | `persona.py` | Channel-aware formatting (web pass-through vs SMS 160-char truncation) |
 | Compliance gate (deterministic) | `compliance_gate.py` | Pre-router node with 73 regex patterns — zero LLM cost, zero latency |
@@ -93,16 +93,16 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 | Embeddings | Google `gemini-embedding-001` | GCP-native, free tier, 768 dimensions |
 | Frontend | Single-file HTML/CSS/JS | No build step, minimal footprint, ships with FastAPI |
 | Validation | Adversarial LLM review (6 criteria) | Catches hallucination, off-topic drift, gambling advice leaks |
-| Config | `pydantic-settings` BaseSettings | 48 env-overridable settings, zero hardcoded values |
+| Config | `pydantic-settings` BaseSettings | 56 env-overridable settings, zero hardcoded values |
 | Retrieval | Multi-strategy RRF reranking | Reciprocal Rank Fusion of semantic + augmented queries, hash-based dedup |
 | Ingestion | Idempotent with deterministic IDs | SHA-256 content+source hash prevents duplicates on re-ingestion |
 | Guardrails | Deterministic regex + LLM validation | Pre-LLM compliance gate blocks injection; 5 categories, 73 patterns, 4 languages |
-| Specialist agents | Registry-based dispatch (4 agents) | Domain-specific prompts and tool selection per query type |
+| Specialist agents | Registry-based dispatch (5 agents) | Domain-specific prompts and tool selection per query type |
 | Guest profiles | Per-field confidence with decay | 90-day decay, weighted completeness, CCPA cascade delete |
 | SMS compliance | TCPA keyword handling + quiet hours | Deterministic STOP/HELP/START, 280+ area-code timezone mappings, HMAC-authenticated consent hash chain |
 | Multi-tenant | Per-casino config with Firestore | Feature flags wired into graph (whisper planner, specialist agents), branding, regulations, 5-min TTL cache, deep-merge defaults |
 | CMS | Google Sheets + webhook | Staff-editable content, HMAC-verified webhooks, schema validation |
-| Observability | LangFuse + evaluation framework | Infrastructure scaffolded: LangFuse callback handler, A/B hash splitting, evaluation framework. Graph wiring TODO |
+| Observability | LangFuse (primary) + LangSmith (optional LangChain tracing) | LangFuse callback handler, A/B hash splitting, evaluation framework. LangSmith pass-through via `LANGCHAIN_TRACING_V2` |
 
 ## Safety & Guardrails
 
@@ -123,12 +123,12 @@ Additionally, 7 PII redaction patterns protect logs and traces: phone, email, cr
 ## Testing
 
 ```bash
-make test-ci       # 1090 tests, no API key needed
+make test-ci       # 1216 tests collected, no API key needed
 make test-eval     # 14 live eval tests (requires GOOGLE_API_KEY)
 make lint          # ruff + mypy
 ```
 
-**1090 tests passed, 14 skipped** across 34 test files and 5 layers:
+**1216 tests collected, 20 skipped** across 35 test files and 5 layers:
 
 | Layer | Tests | Description |
 |-------|-------|-------------|
@@ -142,13 +142,13 @@ make lint          # ruff + mypy
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/chat` | API key + rate limit | Send message, receive SSE token stream |
+| `POST` | `/chat` | API key (when configured) + rate limit | Send message, receive SSE token stream |
 | `GET` | `/health` | None | Health check (200 healthy, 503 degraded) |
-| `GET` | `/property` | None | Property metadata (name, categories, doc count) |
-| `GET` | `/graph` | None | Graph structure (nodes and edges for visualization) |
-| `POST` | `/sms/webhook` | None | Telnyx inbound SMS webhook (TCPA keyword handling) |
-| `POST` | `/cms/webhook` | HMAC signature | Google Sheets CMS content update webhook |
-| `POST` | `/feedback` | None | User feedback on agent responses (PII-redacted logging) |
+| `GET` | `/property` | API key (when configured) | Property metadata (name, categories, doc count) |
+| `GET` | `/graph` | API key (when configured) | Graph structure (nodes and edges for visualization) |
+| `POST` | `/sms/webhook` | Ed25519 signature (`TELNYX_PUBLIC_KEY`) | Telnyx inbound SMS webhook (TCPA keyword handling) |
+| `POST` | `/cms/webhook` | HMAC signature (`CMS_WEBHOOK_SECRET`) | Google Sheets CMS content update webhook |
+| `POST` | `/feedback` | API key (when configured) + rate limit | User feedback on agent responses (PII-redacted logging) |
 | `GET` | `/` | None | Chat UI |
 
 ### SSE Event Types
@@ -160,9 +160,28 @@ event: graph_node   — {"node": "router", "status": "complete", "duration_ms": 
 event: token        — {"content": "Mohegan Sun has "}
 event: sources      — {"sources": ["restaurants"]}
 event: replace      — {"content": "..."} (greeting/off_topic/compliance_gate — replaces streaming)
+event: ping         — "" (heartbeat every 15s during generation — clients should ignore)
 event: error        — {"error": "..."}
 event: done         — {"done": true}
 ```
+
+### Error Responses
+
+All error responses use a canonical JSON shape:
+
+```json
+{"error": {"code": "<error_code>", "message": "Human-readable description"}}
+```
+
+| Code | HTTP Status | Retryable | Description |
+|------|-------------|-----------|-------------|
+| `unauthorized` | 401 | No | Invalid or missing API key / webhook signature |
+| `rate_limit_exceeded` | 429 | Yes (after `Retry-After`) | Too many requests per IP |
+| `payload_too_large` | 413 | No | Request body exceeds 64 KB |
+| `agent_unavailable` | 503 | Yes (after `Retry-After: 30`) | Agent not initialized at startup |
+| `internal_error` | 500 | Yes | Unhandled server error |
+| `validation_error` | 422 | No | Request body validation failed |
+| `service_degraded` | 503 | Yes | Health check reports degraded state |
 
 ## Security & Middleware
 
@@ -170,18 +189,18 @@ event: done         — {"done": true}
 
 | Middleware | Description |
 |-----------|-------------|
-| RequestLogging | Cloud Logging JSON format, `X-Request-ID`, `X-Response-Time-Ms` |
-| SecurityHeaders | `nosniff`, `DENY`, CSP, `Referrer-Policy` |
-| ApiKeyAuth | `X-API-Key` with `hmac.compare_digest` (disabled when empty) |
-| RequestBodyLimit | 64 KB max request body |
-| RateLimit | Token-bucket per IP, 20 req/min on `/chat` |
-| ErrorHandling | `CancelledError` at INFO, structured 500 JSON |
+| RequestLoggingMiddleware | Cloud Logging JSON format, `X-Request-ID`, `X-Response-Time-Ms` |
+| SecurityHeadersMiddleware | `nosniff`, `DENY`, CSP, `Referrer-Policy`, HSTS |
+| ApiKeyMiddleware | `X-API-Key` with `hmac.compare_digest` on `/chat`, `/graph`, `/property`, `/feedback` (disabled when `API_KEY` is empty) |
+| RequestBodyLimitMiddleware | 64 KB max request body (Content-Length + streaming enforcement) |
+| RateLimitMiddleware | Sliding-window per IP, 20 req/min on `/chat` and `/feedback` (shared bucket) |
+| ErrorHandlingMiddleware | `CancelledError` at INFO, structured 500 JSON with security headers |
 
 ## Configuration
 
-All 48 settings configurable via environment variables (`pydantic-settings`). See [.env.example](.env.example) for core settings documentation.
+All 56 settings configurable via environment variables (`pydantic-settings`). See [.env.example](.env.example) for full settings documentation.
 
-Settings span 9 categories: Google API, property, LLM tuning, embeddings, RAG pipeline, API server, agent behavior, vector DB / multi-tenant, SMS / CMS / observability.
+Settings span 11 categories: Google API, property, LLM tuning, embeddings, RAG pipeline, API server, agent behavior, vector DB, multi-tenant, SMS/CMS, and observability.
 
 ## Cost Model
 
@@ -217,11 +236,11 @@ Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planne
 ```
 hey-seven/
 ├── src/
-│   ├── config.py                 # 48 env-overridable settings (pydantic-settings)
+│   ├── config.py                 # 56 env-overridable settings (pydantic-settings)
 │   ├── agent/
 │   │   ├── graph.py              # 11-node StateGraph + chat + chat_stream (SSE)
 │   │   ├── nodes.py              # Node functions + routing logic + circuit breaker
-│   │   ├── state.py              # PropertyQAState (15 fields) + Pydantic models
+│   │   ├── state.py              # PropertyQAState (13 fields) + 3 Pydantic output models
 │   │   ├── prompts.py            # Prompt templates (concierge, whisper planner, VIP tone)
 │   │   ├── guardrails.py         # 5 deterministic guardrails (73 patterns, 4 languages)
 │   │   ├── compliance_gate.py    # Dedicated compliance node (pre-router, zero LLM cost)
@@ -235,7 +254,8 @@ hey-seven/
 │   │       ├── host_agent.py     # General concierge agent
 │   │       ├── dining_agent.py   # Restaurant & dining specialist
 │   │       ├── entertainment_agent.py  # Shows & events specialist
-│   │       └── comp_agent.py     # Comp & rewards specialist
+│   │       ├── comp_agent.py     # Comp & rewards specialist
+│   │       └── hotel_agent.py    # Hotel & accommodations specialist
 │   ├── rag/
 │   │   ├── pipeline.py           # Ingest, chunk (800/120), embed, retrieve (ChromaDB)
 │   │   ├── embeddings.py         # Google gemini-embedding-001
@@ -268,10 +288,10 @@ hey-seven/
 ├── static/
 │   ├── index.html                # Branded chat UI (gold/dark/cream)
 │   └── assets/                   # Custom logo assets
-├── tests/                        # 1090 tests across 34 files
+├── tests/                        # 1216 tests across 35 files
 ├── Dockerfile                    # Multi-stage Python 3.12, non-root, HEALTHCHECK
 ├── docker-compose.yml            # Health check, named volume, 2GB limit
-├── cloudbuild.yaml               # GCP Cloud Build CI/CD (4-step pipeline)
+├── cloudbuild.yaml               # GCP Cloud Build CI/CD (5-step pipeline)
 └── .env.example                  # Core env vars documented
 ```
 

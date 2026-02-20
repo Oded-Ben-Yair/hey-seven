@@ -53,6 +53,15 @@ class SSEDoneEvent(BaseModel):
     done: bool = True
 
 
+class SSEPingEvent(BaseModel):
+    """``event: ping`` — heartbeat sent every 15s during long generations.
+
+    Prevents client-side EventSource timeouts. Clients should ignore this event.
+    """
+
+    pass
+
+
 class SSEErrorEvent(BaseModel):
     """``event: error`` — sent on failure."""
 
@@ -108,6 +117,22 @@ class SSEReplaceEvent(BaseModel):
     """``event: replace`` — full response from non-streaming nodes."""
 
     content: str
+
+
+class SmsWebhookResponse(BaseModel):
+    """Response model for POST /sms/webhook."""
+
+    status: str  # "ignored", "keyword_handled", "received"
+    response: str | None = None  # Keyword response text (when status=keyword_handled)
+    from_: str | None = Field(None, alias="from")  # Sender number (when status=received)
+
+
+class CmsWebhookResponse(BaseModel):
+    """Response model for POST /cms/webhook."""
+
+    status: str  # "success", "rejected", "error"
+    updated_categories: list[str] | None = None
+    error: str | None = None
 
 
 class GraphStructureResponse(BaseModel):
