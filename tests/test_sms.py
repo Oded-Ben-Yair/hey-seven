@@ -6,8 +6,6 @@ consent level checking, webhook signature verification, delivery receipts,
 and idempotency tracking.
 """
 
-import hashlib
-import hmac
 import time
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
@@ -214,55 +212,94 @@ class TestTelnyxSMSClientSend:
 
 
 class TestWebhookSignatureVerification:
-    """ED25519/HMAC signature verification."""
+    """Ed25519 signature verification (Telnyx webhook spec)."""
 
     @pytest.mark.asyncio
-    async def test_valid_signature_passes(self):
+    async def test_verify_webhook_signature_valid_ed25519(self):
+        """Generate a real Ed25519 key pair, sign a payload, verify it passes."""
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
         from src.sms.webhook import verify_webhook_signature
+
+        private_key = Ed25519PrivateKey.generate()
+        public_key = private_key.public_key()
+        public_key_hex = public_key.public_bytes_raw().hex()
 
         body = b'{"data": "test"}'
         timestamp = str(int(time.time()))
-        public_key = "test-secret-key"
+        signed_payload = f"{timestamp}.{body.decode()}".encode()
+        signature_bytes = private_key.sign(signed_payload)
+        signature_hex = signature_bytes.hex()
 
-        signed_payload = f"{timestamp}.{body.decode()}"
-        signature = hmac.new(
-            public_key.encode(), signed_payload.encode(), hashlib.sha256
-        ).hexdigest()
-
-        result = await verify_webhook_signature(body, signature, timestamp, public_key)
+        result = await verify_webhook_signature(body, signature_hex, timestamp, public_key_hex)
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_invalid_signature_fails(self):
+    async def test_verify_webhook_signature_invalid_signature(self):
+        """Valid key but wrong signature returns False."""
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
         from src.sms.webhook import verify_webhook_signature
+
+        private_key = Ed25519PrivateKey.generate()
+        public_key = private_key.public_key()
+        public_key_hex = public_key.public_bytes_raw().hex()
 
         body = b'{"data": "test"}'
         timestamp = str(int(time.time()))
 
-        result = await verify_webhook_signature(body, "bad-signature", timestamp, "test-key")
+        # Sign a DIFFERENT payload to produce an invalid signature for the actual body
+        wrong_payload = b"wrong-payload"
+        wrong_sig = private_key.sign(wrong_payload).hex()
+
+        result = await verify_webhook_signature(body, wrong_sig, timestamp, public_key_hex)
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_expired_timestamp_fails(self):
+    async def test_verify_webhook_signature_expired_timestamp(self):
+        """Timestamp older than 5 minutes returns False."""
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
         from src.sms.webhook import verify_webhook_signature
+
+        private_key = Ed25519PrivateKey.generate()
+        public_key_hex = private_key.public_key().public_bytes_raw().hex()
 
         body = b'{"data": "test"}'
-        old_timestamp = str(int(time.time()) - 600)  # 10 min ago
+        old_timestamp = str(int(time.time()) - 600)  # 10 minutes ago
+        signed_payload = f"{old_timestamp}.{body.decode()}".encode()
+        signature_hex = private_key.sign(signed_payload).hex()
 
-        result = await verify_webhook_signature(body, "any-sig", old_timestamp, "key")
+        result = await verify_webhook_signature(body, signature_hex, old_timestamp, public_key_hex)
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_missing_fields_fails(self):
+    async def test_verify_webhook_signature_missing_params(self):
+        """Empty signature/timestamp/public_key returns False."""
         from src.sms.webhook import verify_webhook_signature
 
-        result = await verify_webhook_signature(b"body", "", "123", "key")
+        result = await verify_webhook_signature(b"body", "", "123", "aabbcc")
         assert result is False
 
-        result = await verify_webhook_signature(b"body", "sig", "", "key")
+        result = await verify_webhook_signature(b"body", "aabbcc", "", "aabbcc")
         assert result is False
 
-        result = await verify_webhook_signature(b"body", "sig", "123", "")
+        result = await verify_webhook_signature(b"body", "aabbcc", "123", "")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_verify_webhook_signature_invalid_hex(self):
+        """Malformed hex in signature or key returns False."""
+        from src.sms.webhook import verify_webhook_signature
+
+        timestamp = str(int(time.time()))
+
+        # Invalid hex in public_key
+        result = await verify_webhook_signature(b"body", "aa" * 32, timestamp, "not-hex!")
+        assert result is False
+
+        # Invalid hex in signature
+        result = await verify_webhook_signature(b"body", "not-hex!", timestamp, "aa" * 32)
         assert result is False
 
     @pytest.mark.asyncio

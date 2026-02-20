@@ -471,9 +471,8 @@ class TestSpecialistDispatch:
         with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
             result = await _dispatch_to_specialist(state)
 
-        # With equal count, max() returns first — "restaurants" → "dining"
-        # but "hotel" maps to "host". The dominant is restaurants (appears first
-        # when counts are equal), so dispatch goes to "dining".
+        # With equal count, max() picks highest alphabetical name as tiebreaker:
+        # "restaurants" > "hotel" > "entertainment", so "restaurants" wins → "dining".
         # This test verifies dispatch works for mixed contexts.
         assert mock_get.called
 
@@ -524,15 +523,15 @@ class TestSpecialistDispatch:
         assert _CATEGORY_TO_AGENT["spa"] == "entertainment"
         assert _CATEGORY_TO_AGENT["gaming"] == "comp"
         assert _CATEGORY_TO_AGENT["promotions"] == "comp"
-        # hotel, amenities, etc. NOT in mapping → defaults to host
-        assert "hotel" not in _CATEGORY_TO_AGENT
+        assert _CATEGORY_TO_AGENT["hotel"] == "hotel"
+        # amenities, etc. NOT in mapping → defaults to host
+        assert "amenities" not in _CATEGORY_TO_AGENT
         # generate should NOT be in non-stream (it streams tokens)
         assert NODE_GENERATE not in _NON_STREAM_NODES
 
     @pytest.mark.asyncio
     async def test_specialist_disabled_flag_routes_to_host(self):
         """When specialist_agents_enabled=False, specialist categories fall back to host."""
-        import types
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -544,15 +543,14 @@ class TestSpecialistDispatch:
             ],
         )
 
-        # Patch DEFAULT_FEATURES to disable specialist agents
-        from src.casino.feature_flags import DEFAULT_FEATURES
+        # Mock is_feature_enabled to return False for specialist_agents_enabled
+        async def _mock_is_feature_enabled(_casino_id, flag_name):
+            if flag_name == "specialist_agents_enabled":
+                return False
+            return True
 
-        disabled_features = types.MappingProxyType({
-            **dict(DEFAULT_FEATURES),
-            "specialist_agents_enabled": False,
-        })
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
-        with mock_patch("src.agent.graph.DEFAULT_FEATURES", disabled_features), \
+        with mock_patch("src.agent.graph.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
              mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
             result = await _dispatch_to_specialist(state)
 
@@ -601,7 +599,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             result = await _dispatch_to_specialist(state)
@@ -641,7 +639,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.agents.entertainment_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.entertainment_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             result = await _dispatch_to_specialist(state)
@@ -676,7 +674,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             result = await _dispatch_to_specialist(state)
@@ -703,7 +701,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             result = await _dispatch_to_specialist(state)
@@ -743,7 +741,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.agents.dining_agent._get_llm", return_value=mock_llm),
+            mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             result = await _dispatch_to_specialist(state)

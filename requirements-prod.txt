@@ -16,15 +16,14 @@ langchain-google-genai==4.2.0
 
 # --- Observability ---
 langsmith==0.7.1
+langfuse>=2.0
 
 # --- GCP / Firestore (production) ---
 google-cloud-firestore==2.20.1
 langgraph-checkpoint-firestore==0.1.0
 
-# --- LangGraph Extensions ---
-langgraph-swarm==0.1.0
-
 # --- Utilities ---
 cachetools==5.5.2
 sse-starlette==3.2.0
 httpx==0.28.1
+cryptography>=43.0

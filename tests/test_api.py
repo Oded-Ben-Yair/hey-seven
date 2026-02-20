@@ -352,6 +352,91 @@ class TestChatReplaceEvent:
             assert replace_event["data"]["content"] == "Welcome to Mohegan Sun!"
 
 
+class TestSSEStreamingContract:
+    """Verify SSE streaming event format and sequence contract."""
+
+    @patch("src.agent.graph.chat_stream")
+    def test_sse_event_format_metadata_tokens_sources_done(self, mock_stream):
+        """Full SSE streaming sequence: metadata -> tokens -> sources -> done."""
+        mock_stream.side_effect = _mock_chat_stream(
+            thread_id="sse-test-001",
+            tokens=["Welcome ", "to ", "Mohegan Sun!"],
+            sources=["restaurants", "hotel"],
+        )
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/chat",
+                json={"message": "Tell me about the resort"},
+            )
+            assert resp.status_code == 200
+            assert "text/event-stream" in resp.headers["content-type"]
+
+            events = _parse_sse_events(resp.text)
+            event_types = [e["event"] for e in events]
+
+            # Verify mandatory sequence: metadata first, done last
+            assert events[0]["event"] == "metadata"
+            assert events[-1]["event"] == "done"
+
+            # Verify metadata has thread_id
+            assert events[0]["data"]["thread_id"] == "sse-test-001"
+
+            # Verify token events contain content
+            token_events = [e for e in events if e["event"] == "token"]
+            assert len(token_events) == 3
+            for tok in token_events:
+                assert "content" in tok["data"]
+
+            # Verify sources event
+            assert "sources" in event_types
+            sources_event = next(e for e in events if e["event"] == "sources")
+            assert sources_event["data"]["sources"] == ["restaurants", "hotel"]
+
+            # Verify done event
+            assert events[-1]["data"]["done"] is True
+
+    @patch("src.agent.graph.chat_stream")
+    def test_sse_replace_event_sequence(self, mock_stream):
+        """SSE stream with replace event: metadata -> replace -> done."""
+
+        async def replace_stream(agent, message, tid=None, request_id=None):
+            yield {"event": "metadata", "data": json.dumps({"thread_id": "replace-sse"})}
+            yield {"event": "replace", "data": json.dumps({"content": "Full replacement text."})}
+            yield {"event": "sources", "data": json.dumps({"sources": ["faq"]})}
+            yield {"event": "done", "data": json.dumps({"done": True})}
+
+        mock_stream.side_effect = replace_stream
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post("/chat", json={"message": "Hello"})
+            assert resp.status_code == 200
+            events = _parse_sse_events(resp.text)
+            event_types = [e["event"] for e in events]
+
+            assert events[0]["event"] == "metadata"
+            assert "replace" in event_types
+            assert "sources" in event_types
+            assert events[-1]["event"] == "done"
+
+    @patch("src.agent.graph.chat_stream")
+    def test_sse_each_event_has_proper_format(self, mock_stream):
+        """Each SSE event line follows 'event:<type>\\ndata:<json>' format."""
+        mock_stream.side_effect = _mock_chat_stream(tokens=["Hi"])
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post("/chat", json={"message": "test"})
+            raw = resp.text.strip()
+            # Each SSE event block should have event: and data: lines
+            blocks = [b.strip() for b in raw.split("\n\n") if b.strip()]
+            for block in blocks:
+                lines = block.split("\n")
+                has_event = any(line.startswith("event:") for line in lines)
+                has_data = any(line.startswith("data:") for line in lines)
+                assert has_event, f"Block missing 'event:' line: {block}"
+                assert has_data, f"Block missing 'data:' line: {block}"
+
+
 class TestGraphEndpoint:
     def test_graph_returns_structure(self):
         """GET /graph returns expected v2.1 nodes and edges."""
@@ -763,7 +848,7 @@ class TestEndToEndGraphIntegration:
         # -- Circuit breaker (fresh, closed state) --
         mock_cb = CircuitBreaker()
 
-        # -- Retrieved context chunks (hotel category → routes to host agent) --
+        # -- Retrieved context chunks (hotel category → routes to hotel agent) --
         mock_chunks = [
             {
                 "content": "Sky Tower - Luxury tower with mountain views, 34 floors",
@@ -786,9 +871,10 @@ class TestEndToEndGraphIntegration:
         ]
 
         with (
-            patch("src.agent.nodes._get_llm", return_value=mock_llm),
-            patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", return_value=mock_validator_llm),
+            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_validator_llm),
             patch(
                 "src.agent.whisper_planner._get_whisper_llm",
                 return_value=mock_whisper_llm,
@@ -803,6 +889,10 @@ class TestEndToEndGraphIntegration:
             ),
             patch(
                 "src.agent.agents.host_agent._get_circuit_breaker",
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.agents.hotel_agent._get_circuit_breaker",
                 return_value=mock_cb,
             ),
         ):

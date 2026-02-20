@@ -53,7 +53,7 @@ def _high_completeness_fields():
 
 
 class TestHostAgent:
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_generates_with_context(self, mock_get_llm):
         """Host agent produces an AIMessage when context is available."""
         from src.agent.agents.host_agent import host_agent
@@ -104,7 +104,7 @@ class TestHostAgent:
         assert result["skip_validation"] is True
         assert "technical difficulties" in result["messages"][0].content
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_llm_error_returns_fallback(self, mock_get_llm):
         """LLM error produces a fallback message with skip_validation=True."""
         from src.agent.agents.host_agent import host_agent
@@ -123,7 +123,7 @@ class TestHostAgent:
         assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_value_error_returns_fallback(self, mock_get_llm):
         """ValueError from LLM parsing returns fallback."""
         from src.agent.agents.host_agent import host_agent
@@ -143,7 +143,7 @@ class TestHostAgent:
         assert result["retry_count"] == 1
         assert "trouble processing" in result["messages"][0].content.lower()
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_retry_injects_feedback(self, mock_get_llm):
         """On retry, host agent injects validation feedback into LLM messages."""
         from src.agent.agents.host_agent import host_agent
@@ -187,7 +187,7 @@ class TestHostAgent:
 
 
 class TestDiningAgent:
-    @patch("src.agent.agents.dining_agent._get_llm")
+    @patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock)
     async def test_generates_dining_response(self, mock_get_llm):
         """Dining agent produces a dining-specific AIMessage."""
         from src.agent.agents.dining_agent import dining_agent
@@ -238,7 +238,7 @@ class TestDiningAgent:
         assert result["skip_validation"] is True
         assert "technical difficulties" in result["messages"][0].content
 
-    @patch("src.agent.agents.dining_agent._get_llm")
+    @patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock)
     async def test_llm_error_returns_fallback(self, mock_get_llm):
         """LLM error in dining agent produces fallback."""
         from src.agent.agents.dining_agent import dining_agent
@@ -277,7 +277,7 @@ class TestDiningAgent:
 
 
 class TestEntertainmentAgent:
-    @patch("src.agent.agents.entertainment_agent._get_llm")
+    @patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock)
     async def test_generates_entertainment_response(self, mock_get_llm):
         """Entertainment agent produces an entertainment-specific AIMessage."""
         from src.agent.agents.entertainment_agent import entertainment_agent
@@ -328,7 +328,7 @@ class TestEntertainmentAgent:
         assert result["skip_validation"] is True
         assert "technical difficulties" in result["messages"][0].content
 
-    @patch("src.agent.agents.entertainment_agent._get_llm")
+    @patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock)
     async def test_llm_error_returns_fallback(self, mock_get_llm):
         """LLM error in entertainment agent produces fallback."""
         from src.agent.agents.entertainment_agent import entertainment_agent
@@ -367,7 +367,7 @@ class TestEntertainmentAgent:
 
 
 class TestCompAgent:
-    @patch("src.agent.agents.comp_agent._get_llm")
+    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
     async def test_generates_comp_response(self, mock_get_llm):
         """Comp agent produces a comp-specific AIMessage."""
         from src.agent.agents.comp_agent import comp_agent
@@ -421,7 +421,7 @@ class TestCompAgent:
         assert result["skip_validation"] is True
         assert "technical difficulties" in result["messages"][0].content
 
-    @patch("src.agent.agents.comp_agent._get_llm")
+    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
     async def test_llm_error_returns_fallback(self, mock_get_llm):
         """LLM error in comp agent produces fallback."""
         from src.agent.agents.comp_agent import comp_agent
@@ -484,7 +484,7 @@ class TestCompAgent:
                 "companions": None,
             },  # 5/8 = 62.5% > 60%
         )
-        with patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm):
+        with patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await comp_agent(state)
         assert isinstance(result["messages"][0], AIMessage)
         mock_llm.ainvoke.assert_called_once()
@@ -501,6 +501,102 @@ class TestCompAgent:
         assert "may be eligible" in prompt_text.lower()
         assert "never promise" in prompt_text.lower()
         assert "never guarantee" in prompt_text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Hotel Agent
+# ---------------------------------------------------------------------------
+
+
+class TestHotelAgent:
+    @patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock)
+    async def test_generates_hotel_response(self, mock_get_llm):
+        """Hotel agent produces a hotel-specific AIMessage."""
+        from src.agent.agents.hotel_agent import hotel_agent
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(
+            content="The Sky Tower King Suite offers stunning mountain views across 34 floors."
+        ))
+        mock_get_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[HumanMessage(content="What hotel rooms do you have?")],
+            retrieved_context=[
+                {"content": "Sky Tower: luxury tower, 34 floors, mountain views", "metadata": {"category": "hotel"}, "score": 0.9}
+            ],
+        )
+        result = await hotel_agent(state)
+        assert len(result["messages"]) == 1
+        assert isinstance(result["messages"][0], AIMessage)
+
+    async def test_empty_context_returns_hotel_fallback(self):
+        """Empty context returns hotel-specific fallback."""
+        from src.agent.agents.hotel_agent import hotel_agent
+
+        state = _state(
+            messages=[HumanMessage(content="Do you have a presidential suite?")],
+            retrieved_context=[],
+        )
+        result = await hotel_agent(state)
+        assert result["skip_validation"] is True
+        assert "hotel" in result["messages"][0].content.lower()
+
+    @patch("src.agent.agents.hotel_agent._get_circuit_breaker")
+    async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
+        """Hotel agent returns fallback when circuit breaker is open."""
+        from src.agent.agents.hotel_agent import hotel_agent
+
+        mock_cb = MagicMock()
+        mock_cb.is_open = True
+        mock_cb.allow_request = AsyncMock(return_value=False)
+        mock_get_cb.return_value = mock_cb
+
+        state = _state(
+            messages=[HumanMessage(content="What rooms are available?")],
+            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
+        )
+        result = await hotel_agent(state)
+        assert result["skip_validation"] is True
+        assert "technical difficulties" in result["messages"][0].content
+
+    @patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock)
+    async def test_llm_error_returns_fallback(self, mock_get_llm):
+        """LLM error in hotel agent produces fallback."""
+        from src.agent.agents.hotel_agent import hotel_agent
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
+        mock_get_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[HumanMessage(content="Question")],
+            retrieved_context=[
+                {"content": "data", "metadata": {"category": "hotel"}, "score": 1.0}
+            ],
+        )
+        result = await hotel_agent(state)
+        assert result["skip_validation"] is True
+        assert "trouble generating" in result["messages"][0].content.lower()
+
+    def test_hotel_prompt_mentions_rooms_and_checkin(self):
+        """Hotel system prompt includes rooms, suites, and check-in guidance."""
+        from src.agent.agents.hotel_agent import HOTEL_SYSTEM_PROMPT
+
+        prompt_text = HOTEL_SYSTEM_PROMPT.safe_substitute(
+            property_name="Test Casino",
+            current_time="Monday 3 PM",
+            responsible_gaming_helplines="1-800-TEST",
+        )
+        assert "room" in prompt_text.lower()
+        assert "suite" in prompt_text.lower()
+        assert "check-in" in prompt_text.lower()
+
+    async def test_hotel_agent_registered(self):
+        """Hotel agent is registered in the agent registry."""
+        from src.agent.agents.registry import list_agents
+
+        assert "hotel" in list_agents()
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +633,13 @@ class TestRegistry:
 
         assert get_agent("comp") is comp_agent
 
+    def test_get_agent_hotel(self):
+        """get_agent('hotel') returns the hotel_agent function."""
+        from src.agent.agents.hotel_agent import hotel_agent
+        from src.agent.agents.registry import get_agent
+
+        assert get_agent("hotel") is hotel_agent
+
     def test_get_agent_nonexistent_raises_key_error(self):
         """get_agent('nonexistent') raises KeyError with helpful message."""
         from src.agent.agents.registry import get_agent
@@ -544,16 +647,17 @@ class TestRegistry:
         with pytest.raises(KeyError, match="Unknown agent: nonexistent"):
             get_agent("nonexistent")
 
-    def test_list_agents_returns_all_four(self):
-        """list_agents() returns all 4 registered agent names."""
+    def test_list_agents_returns_all_five(self):
+        """list_agents() returns all 5 registered agent names."""
         from src.agent.agents.registry import list_agents
 
         agents = list_agents()
-        assert len(agents) == 4
+        assert len(agents) == 5
         assert "host" in agents
         assert "dining" in agents
         assert "entertainment" in agents
         assert "comp" in agents
+        assert "hotel" in agents
 
     def test_list_agents_returns_sorted(self):
         """list_agents() returns names in sorted order."""
@@ -577,12 +681,14 @@ class TestPackageImports:
             entertainment_agent,
             get_agent,
             host_agent,
+            hotel_agent,
         )
 
         assert callable(host_agent)
         assert callable(dining_agent)
         assert callable(entertainment_agent)
         assert callable(comp_agent)
+        assert callable(hotel_agent)
         assert callable(get_agent)
 
     def test_all_exports_match_dunder_all(self):
@@ -603,9 +709,10 @@ class TestPackageImports:
     ("dining_agent", "src.agent.agents.dining_agent"),
     ("entertainment_agent", "src.agent.agents.entertainment_agent"),
     ("comp_agent", "src.agent.agents.comp_agent"),
+    ("hotel_agent", "src.agent.agents.hotel_agent"),
 ])
 class TestSpecialistContract:
-    """Verify all 4 specialist agents follow the same contract via _base.py."""
+    """Verify all 5 specialist agents follow the same contract via _base.py."""
 
     @pytest.mark.asyncio
     async def test_returns_messages_key(self, agent_fn, agent_module):
@@ -633,7 +740,7 @@ class TestSpecialistContract:
             **extra,
         )
 
-        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+        with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await fn(state)
 
         assert "messages" in result
@@ -715,7 +822,7 @@ class TestSpecialistContract:
             **extra,
         )
 
-        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+        with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await fn(state)
 
         assert result.get("skip_validation") is False
@@ -747,7 +854,7 @@ class TestSpecialistContract:
             **extra,
         )
 
-        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+        with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await fn(state)
 
         assert result.get("skip_validation") is True
@@ -776,7 +883,7 @@ class TestSpecialistContract:
             **extra,
         )
 
-        with patch(f"{agent_module}._get_llm", return_value=mock_llm):
+        with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await fn(state)
 
         assert result.get("skip_validation") is True

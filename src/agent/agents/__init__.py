@@ -4,6 +4,7 @@ from .comp_agent import comp_agent
 from .dining_agent import dining_agent
 from .entertainment_agent import entertainment_agent
 from .host_agent import host_agent
+from .hotel_agent import hotel_agent
 from .registry import get_agent
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "dining_agent",
     "entertainment_agent",
     "comp_agent",
+    "hotel_agent",
     "get_agent",
 ]

@@ -26,7 +26,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.casino.feature_flags import DEFAULT_FEATURES
+from src.casino.feature_flags import DEFAULT_FEATURES, is_feature_enabled
 from src.config import get_settings
 from src.observability.langfuse_client import get_langfuse_handler
 
@@ -119,6 +119,7 @@ _CATEGORY_TO_AGENT: dict[str, str] = {
     "spa": "entertainment",
     "gaming": "comp",
     "promotions": "comp",
+    "hotel": "hotel",
 }
 
 
@@ -152,7 +153,8 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         candidate = _CATEGORY_TO_AGENT.get(dominant, "host")
         # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
         # When disabled, all queries route to the general host concierge.
-        if candidate != "host" and not DEFAULT_FEATURES.get("specialist_agents_enabled", True):
+        # Uses async is_feature_enabled() for multi-tenant support (per-casino overrides).
+        if candidate != "host" and not await is_feature_enabled(None, "specialist_agents_enabled"):
             logger.info("Specialist agents disabled; routing %s to host", candidate)
             candidate = "host"
         agent_name = candidate
@@ -276,6 +278,10 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     # (greeting_node, off_topic_node) and in agents/_base.py (execute_specialist).
     # Topology-altering flags must be checked at build time; runtime flags
     # are checked per-invocation inside node functions.
+    # NOTE: whisper_planner_enabled uses DEFAULT_FEATURES (static) because it
+    # controls GRAPH TOPOLOGY which is built once at startup (not in an async
+    # context).  Runtime flags (ai_disclosure_enabled, specialist_agents_enabled)
+    # use the async is_feature_enabled() API for per-casino overrides.
     whisper_enabled = DEFAULT_FEATURES.get("whisper_planner_enabled", True)
     logger.info(
         "Feature flags at graph build: %s",

@@ -26,8 +26,9 @@ COPY data/ ./data/
 COPY static/ ./static/
 COPY src/ ./src/
 
-# Create ChromaDB directory owned by appuser BEFORE switching user
-RUN mkdir -p /app/data/chroma && chown -R appuser:appuser /app/data
+# ChromaDB is dev-only (not in requirements-prod.txt). Production uses Vertex AI Vector Search.
+# Create data directory owned by appuser for property JSON files.
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 # Environment
 # WEB_CONCURRENCY=1 for demo/single-container deployment.
@@ -37,7 +38,6 @@ RUN mkdir -p /app/data/chroma && chown -R appuser:appuser /app/data
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
-    CHROMA_PERSIST_DIR=/app/data/chroma \
     WEB_CONCURRENCY=1
 
 # Cloud Run startup CPU boost: use --cpu-boost in deploy command

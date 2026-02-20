@@ -1,16 +1,12 @@
-"""SMS webhook handler with HMAC-SHA256 signature verification.
+"""SMS webhook handler with Ed25519 signature verification.
 
-Provides webhook signature verification (HMAC-SHA256 placeholder for
-Telnyx Ed25519 -- will be upgraded to Ed25519 when production webhook
-signing keys are provisioned), message parsing, TCPA compliance checking,
-and idempotency tracking.
+Provides webhook signature verification (Ed25519 per Telnyx webhook spec),
+message parsing, TCPA compliance checking, and idempotency tracking.
 """
 
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import hmac
 import logging
 import time
 from typing import Any
@@ -45,25 +41,16 @@ async def verify_webhook_signature(
     timestamp: str,
     public_key: str,
 ) -> bool:
-    """Verify a Telnyx webhook signature.
+    """Verify a Telnyx webhook signature using Ed25519.
 
-    Currently uses HMAC-SHA256 as a placeholder implementation. The Telnyx
-    webhook spec uses ED25519 signatures, but that requires the ``cryptography``
-    package which is not in the dependency list.
-
-    .. todo::
-        Replace with proper Ed25519 verification when the ``cryptography``
-        package or ``telnyx`` SDK is available::
-
-            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-            key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key))
-            key.verify(bytes.fromhex(signature), signed_payload)
+    Telnyx signs webhooks with Ed25519 (RFC 8032). The public key is
+    provided in hex format via the Telnyx dashboard.
 
     Args:
         request_body: Raw webhook request body bytes.
-        signature: Value of the ``telnyx-signature-ed25519`` header.
+        signature: Value of the ``telnyx-signature-ed25519`` header (hex-encoded).
         timestamp: Value of the ``telnyx-timestamp`` header.
-        public_key: Telnyx public key for verification.
+        public_key: Telnyx Ed25519 public key (hex-encoded, 64 hex chars = 32 bytes).
 
     Returns:
         ``True`` if the signature is valid.
@@ -84,15 +71,23 @@ async def verify_webhook_signature(
         logger.warning("Webhook timestamp expired: %s", timestamp)
         return False
 
-    # HMAC-SHA256 verification (placeholder for Ed25519)
-    signed_payload = f"{timestamp}.{request_body.decode('utf-8', errors='replace')}"
-    expected = hmac.new(
-        public_key.encode(),
-        signed_payload.encode(),
-        hashlib.sha256,
-    ).hexdigest()
+    # Ed25519 verification (Telnyx webhook spec)
+    try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-    return hmac.compare_digest(expected, signature)
+        signed_payload = f"{timestamp}.{request_body.decode('utf-8', errors='replace')}".encode()
+        key_bytes = bytes.fromhex(public_key)
+        key = Ed25519PublicKey.from_public_bytes(key_bytes)
+        sig_bytes = bytes.fromhex(signature)
+        key.verify(sig_bytes, signed_payload)
+        return True
+    except ValueError as exc:
+        logger.warning("Invalid key or signature format: %s", exc)
+        return False
+    except Exception as exc:
+        # InvalidSignature (from cryptography) or any other verification error
+        logger.warning("Ed25519 verification failed: %s", exc)
+        return False
 
 
 # ---------------------------------------------------------------------------

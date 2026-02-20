@@ -130,7 +130,7 @@ async def execute_specialist(
     window = history[-settings.MAX_HISTORY_MESSAGES:]
     llm_messages.extend(window)
 
-    llm = get_llm_fn()
+    llm = await get_llm_fn()
 
     try:
         response = await llm.ainvoke(llm_messages)

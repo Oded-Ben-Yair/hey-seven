@@ -103,6 +103,21 @@ def _clear_singleton_caches():
         pass
 
     try:
+        from src.api.middleware import _access_logger
+
+        # Remove all handlers to prevent handler accumulation across tests
+        _access_logger.handlers.clear()
+    except ImportError:
+        pass
+
+    try:
+        from src.sms.webhook import _DELIVERY_LOG
+
+        _DELIVERY_LOG.clear()
+    except ImportError:
+        pass
+
+    try:
         from src.observability.langfuse_client import _get_langfuse_client
 
         _get_langfuse_client.cache_clear()

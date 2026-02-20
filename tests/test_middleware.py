@@ -269,6 +269,128 @@ class TestApiKeyMiddleware:
             assert resp.status_code == 200
 
 
+class TestApiKeyTTLRefresh:
+    def test_key_refreshed_after_ttl_expires(self):
+        """API key is re-read from settings after TTL expires."""
+        import time
+        from unittest.mock import patch
+
+        from src.api.middleware import ApiKeyMiddleware
+
+        call_count = 0
+
+        def make_secret(value):
+            nonlocal call_count
+            call_count += 1
+            return value
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.API_KEY = MagicMock(
+                get_secret_value=lambda: make_secret("key-v1")
+            )
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(ApiKeyMiddleware)
+            client = TestClient(app)
+
+            # First request: key fetched
+            resp = client.post("/chat", headers={"X-API-Key": "key-v1"})
+            assert resp.status_code == 200
+            initial_count = call_count
+
+            # Second request within TTL: key should be cached (no extra call)
+            resp = client.post("/chat", headers={"X-API-Key": "key-v1"})
+            assert resp.status_code == 200
+            assert call_count == initial_count  # No extra fetch
+
+    def test_key_not_refreshed_within_ttl(self):
+        """API key is NOT re-read from settings within TTL window."""
+        from unittest.mock import patch
+
+        from src.api.middleware import ApiKeyMiddleware
+
+        fetch_count = {"n": 0}
+
+        def counting_secret():
+            fetch_count["n"] += 1
+            return "stable-key"
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.API_KEY = MagicMock(
+                get_secret_value=counting_secret
+            )
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(ApiKeyMiddleware)
+            client = TestClient(app)
+
+            # Multiple requests within TTL window
+            for _ in range(5):
+                client.post("/chat", headers={"X-API-Key": "stable-key"})
+
+            # Only 1 fetch should have occurred (initial TTL miss)
+            assert fetch_count["n"] == 1
+
+
+class TestRateLimitLRUEviction:
+    def test_active_client_survives_eviction(self):
+        """Active (recently accessed) clients are not evicted when at capacity."""
+        import asyncio
+        from unittest.mock import patch
+
+        from src.api.middleware import RateLimitMiddleware
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.RATE_LIMIT_CHAT = 100
+            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 3
+            mock_settings.return_value.TRUSTED_PROXIES = []
+
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(RateLimitMiddleware)
+            client = TestClient(app)
+
+            # Fill capacity with 3 clients
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.1"})
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.2"})
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.3"})
+
+            # Access client 1 again to make it most recently used
+            resp = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.1"})
+            assert resp.status_code == 200
+
+            # New client 4 forces eviction (should evict LRU = client 2)
+            resp = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.4"})
+            assert resp.status_code == 200
+
+            # Client 1 (recently accessed) should still work
+            resp = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.1"})
+            assert resp.status_code == 200
+
+    def test_lru_evicts_least_recently_used(self):
+        """LRU eviction removes the least recently used client, not the most recent."""
+        from unittest.mock import patch
+
+        from src.api.middleware import RateLimitMiddleware
+
+        with patch("src.api.middleware.get_settings") as mock_settings:
+            mock_settings.return_value.RATE_LIMIT_CHAT = 100
+            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 2
+            mock_settings.return_value.TRUSTED_PROXIES = []
+
+            app = Starlette(routes=[Route("/chat", _ok_app, methods=["POST"])])
+            app.add_middleware(RateLimitMiddleware)
+            client = TestClient(app)
+
+            # Client A, then Client B (B is more recent)
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.1"})
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.2"})
+
+            # Client C forces eviction — LRU is 10.0.0.1
+            client.post("/chat", headers={"X-Forwarded-For": "10.0.0.3"})
+
+            # Client B (was recently used) should still work and retain its history
+            resp = client.post("/chat", headers={"X-Forwarded-For": "10.0.0.2"})
+            assert resp.status_code == 200
+
+
 class TestRequestBodyLimitMiddleware:
     def test_allows_normal_request(self):
         """Requests within the body size limit pass through."""

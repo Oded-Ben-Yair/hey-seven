@@ -177,7 +177,7 @@ class TestHostAgentWhisperInjection:
         mock_cb.record_success = AsyncMock()
 
         with (
-            patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             await host_agent(state)
@@ -211,7 +211,7 @@ class TestHostAgentWhisperInjection:
         mock_cb.record_success = AsyncMock()
 
         with (
-            patch("src.agent.agents.host_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
         ):
             await host_agent(state)
@@ -343,7 +343,7 @@ class TestCompAgentProfileGate:
 
         with (
             patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
-            patch("src.agent.agents.comp_agent._get_llm", return_value=mock_llm),
+            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
         ):
             result = await comp_agent(state)
 

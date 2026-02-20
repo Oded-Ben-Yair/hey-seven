@@ -27,7 +27,7 @@ def _state(**overrides):
 
 
 class TestRouterNode:
-    @patch("src.agent.nodes._get_llm")
+    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
     async def test_classifies_property_qa(self, mock_get_llm):
         """Router classifies restaurant question as property_qa."""
         from src.agent.nodes import router_node
@@ -45,7 +45,7 @@ class TestRouterNode:
         assert result["query_type"] == "property_qa"
         assert result["router_confidence"] == 0.95
 
-    @patch("src.agent.nodes._get_llm")
+    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
     async def test_classifies_greeting(self, mock_get_llm):
         """Router classifies 'Hello!' as greeting."""
         from src.agent.nodes import router_node
@@ -81,7 +81,7 @@ class TestRouterNode:
         assert result["query_type"] == "greeting"
         assert result["router_confidence"] == 1.0
 
-    @patch("src.agent.nodes._get_llm")
+    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
     async def test_llm_failure_defaults_to_off_topic(self, mock_get_llm):
         """When LLM call raises, router defaults to off_topic (fail-safe)."""
         from src.agent.nodes import router_node
@@ -126,7 +126,7 @@ class TestRetrieveNode:
 class TestHostAgent:
     """Tests for host_agent (v2 generate node, replaces v1 generate_node)."""
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_generates_with_context(self, mock_get_llm):
         """Host agent produces an AIMessage when context is available."""
         from src.agent.agents.host_agent import host_agent
@@ -160,7 +160,7 @@ class TestHostAgent:
         assert len(result["messages"]) == 1
         assert "don't have specific information" in result["messages"][0].content
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_llm_failure_returns_fallback_message(self, mock_get_llm):
         """LLM error produces a fallback message with skip_validation=True."""
         from src.agent.agents.host_agent import host_agent
@@ -180,7 +180,7 @@ class TestHostAgent:
         assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_value_error_returns_fallback(self, mock_get_llm):
         """ValueError from LLM parsing returns fallback (not None)."""
         from src.agent.agents.host_agent import host_agent
@@ -202,7 +202,7 @@ class TestHostAgent:
         assert result["retry_count"] == 1
         assert "trouble processing" in result["messages"][0].content.lower()
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     async def test_type_error_returns_fallback(self, mock_get_llm):
         """TypeError from LLM SDK returns fallback (not None)."""
         from src.agent.agents.host_agent import host_agent
@@ -226,7 +226,7 @@ class TestHostAgent:
 
 
 class TestValidateNode:
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_passes_valid_response(self, mock_get_validator_llm):
         """Validation PASS returns validation_result='PASS'."""
         from src.agent.nodes import validate_node
@@ -248,7 +248,7 @@ class TestValidateNode:
         result = await validate_node(state)
         assert result["validation_result"] == "PASS"
 
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_retry_on_first_failure(self, mock_get_validator_llm):
         """First validation failure returns RETRY and increments retry_count."""
         from src.agent.nodes import validate_node
@@ -272,7 +272,7 @@ class TestValidateNode:
         assert result["validation_result"] == "RETRY"
         assert result["retry_count"] == 1
 
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_fail_after_retry(self, mock_get_validator_llm):
         """Second validation failure returns FAIL (max 1 retry)."""
         from src.agent.nodes import validate_node
@@ -303,7 +303,7 @@ class TestValidateNode:
         result = await validate_node(state)
         assert result["validation_result"] == "PASS"
 
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_llm_failure_fails_closed(self, mock_get_validator_llm):
         """Validation LLM failure returns FAIL on retry (fail-closed for safety)."""
         from src.agent.nodes import validate_node
@@ -747,7 +747,7 @@ class TestCircuitBreaker:
         cb = CircuitBreaker()
         assert isinstance(cb._lock, asyncio.Lock)
 
-    @patch("src.agent.agents.host_agent._get_llm")
+    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
     @patch("src.agent.agents.host_agent._get_circuit_breaker")
     async def test_generate_returns_fallback_when_open(self, mock_get_cb, mock_get_llm):
         """Host agent returns fallback when circuit breaker is open."""
@@ -771,7 +771,7 @@ class TestCircuitBreaker:
 class TestCompetitorDeflection:
     """Tests for competitor deflection behavior."""
 
-    @patch("src.agent.nodes._get_llm")
+    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
     async def test_foxwoods_question_routed_off_topic(self, mock_get_llm):
         """Question about a competitor casino is classified as off_topic."""
         from src.agent.nodes import router_node
@@ -897,7 +897,7 @@ class TestValidationDegradedPass:
     already passed). On retry (retry_count>0), fail-closed for guest safety.
     """
 
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_degraded_pass_on_first_attempt(self, mock_get_validator_llm):
         """When validator LLM fails on first attempt, PASS (degraded-pass)."""
         from src.agent.nodes import validate_node
@@ -919,7 +919,7 @@ class TestValidationDegradedPass:
         result = await validate_node(state)
         assert result["validation_result"] == "PASS"  # degraded-pass on first attempt
 
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_degraded_pass_on_value_error(self, mock_get_validator_llm):
         """ValueError from structured output parsing also degraded-passes on first attempt."""
         from src.agent.nodes import validate_node
@@ -941,7 +941,7 @@ class TestValidationDegradedPass:
         result = await validate_node(state)
         assert result["validation_result"] == "PASS"  # degraded-pass
 
-    @patch("src.agent.nodes._get_validator_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_fail_closed_on_retry_attempt(self, mock_get_validator_llm):
         """When validator LLM fails on retry attempt, FAIL (fail-closed)."""
         from src.agent.nodes import validate_node
@@ -1174,7 +1174,7 @@ class TestAgeVerificationRouting:
         assert "Nevada" in content
         assert "Vegas Casino" in content
 
-    @patch("src.agent.nodes._get_llm")
+    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
     async def test_normal_age_question_not_flagged(self, mock_get_llm):
         """'How old is this casino?' should NOT trigger age verification."""
         from src.agent.nodes import router_node
@@ -1289,8 +1289,8 @@ class TestGetLastHumanMessage:
 class TestValidatorLLMSeparation:
     """Tests that validation uses a separate LLM with temperature=0."""
 
-    @patch("src.agent.nodes._get_validator_llm")
-    @patch("src.agent.nodes._get_llm")
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
+    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
     async def test_validate_uses_validator_llm_not_generate_llm(
         self, mock_get_llm, mock_get_validator_llm
     ):
@@ -1313,3 +1313,28 @@ class TestValidatorLLMSeparation:
 
         mock_get_validator_llm.assert_called_once()
         mock_get_llm.assert_not_called()
+
+
+class TestAsyncLlmLock:
+    """Verify _llm_lock is asyncio.Lock (not threading.Lock)."""
+
+    @pytest.mark.asyncio
+    async def test_get_llm_uses_asyncio_lock(self):
+        """_llm_lock must be asyncio.Lock to avoid blocking the event loop."""
+        import asyncio
+
+        from src.agent.nodes import _llm_lock
+
+        assert isinstance(_llm_lock, asyncio.Lock), (
+            "Must use asyncio.Lock to avoid blocking event loop"
+        )
+
+
+class TestHotelCategoryDispatch:
+    """Verify hotel category routes to hotel specialist agent."""
+
+    def test_dispatch_hotel_category(self):
+        """Hotel category maps to hotel specialist in _CATEGORY_TO_AGENT."""
+        from src.agent.graph import _CATEGORY_TO_AGENT
+
+        assert _CATEGORY_TO_AGENT.get("hotel") == "hotel"

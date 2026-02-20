@@ -220,16 +220,31 @@ class ApiKeyMiddleware:
     When ``API_KEY`` is empty (default), authentication is disabled and all
     requests pass through.  When set, ``/chat`` requires a matching key.
     Uses ``hmac.compare_digest`` to prevent timing attacks.
+
+    The API key is re-read from settings every 60 seconds (TTL) to support
+    secret rotation without container restart. For demo deployments, this
+    means updating the ``API_KEY`` environment variable takes effect within
+    60 seconds.
     """
 
     _PROTECTED_PATHS = {"/chat", "/graph", "/property"}
+    _KEY_TTL = 60  # seconds
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
-        self._api_key = get_settings().API_KEY.get_secret_value()
+        self._cached_key: str = ""
+        self._cached_at: float = 0.0
+
+    def _get_api_key(self) -> str:
+        """Return the current API key, refreshing from settings if TTL expired."""
+        now = time.monotonic()
+        if now - self._cached_at > self._KEY_TTL:
+            self._cached_key = get_settings().API_KEY.get_secret_value()
+            self._cached_at = now
+        return self._cached_key
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not self._api_key:
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
@@ -238,10 +253,15 @@ class ApiKeyMiddleware:
             await self.app(scope, receive, send)
             return
 
+        api_key = self._get_api_key()
+        if not api_key:
+            await self.app(scope, receive, send)
+            return
+
         headers = dict(scope.get("headers", []))
         provided = headers.get(b"x-api-key", b"").decode()
 
-        if not provided or not hmac.compare_digest(provided, self._api_key):
+        if not provided or not hmac.compare_digest(provided, api_key):
             body = json.dumps(
                 error_response(ErrorCode.UNAUTHORIZED, "Invalid or missing API key.")
             ).encode()
@@ -277,8 +297,8 @@ class RateLimitMiddleware:
         self.max_clients = settings.RATE_LIMIT_MAX_CLIENTS
         self._trusted_proxies = frozenset(settings.TRUSTED_PROXIES)
         self.window_seconds = 60.0
-        # {ip: deque of request timestamps} — defaultdict avoids check-then-set race
-        self._requests: dict[str, collections.deque] = collections.defaultdict(collections.deque)
+        # {ip: deque of request timestamps} — OrderedDict for LRU eviction semantics
+        self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
         # Protects _requests mutations under concurrent async requests
         self._lock = asyncio.Lock()
 
@@ -310,12 +330,16 @@ class RateLimitMiddleware:
         window_start = now - self.window_seconds
 
         async with self._lock:
-            # Memory guard: evict oldest client if at capacity
+            # Memory guard: evict LEAST recently used client if at capacity
             if client_ip not in self._requests and len(self._requests) >= self.max_clients:
-                oldest_ip = next(iter(self._requests))
-                del self._requests[oldest_ip]
+                self._requests.popitem(last=False)  # LRU eviction
+
+            if client_ip not in self._requests:
+                self._requests[client_ip] = collections.deque()
 
             bucket = self._requests[client_ip]
+            # Move to end (most recently used) on access
+            self._requests.move_to_end(client_ip)
 
             # Evict expired entries
             while bucket and bucket[0] < window_start:

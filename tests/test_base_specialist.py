@@ -56,7 +56,7 @@ def _make_execute_kwargs(
         mock_llm.ainvoke = AsyncMock(
             return_value=MagicMock(content="Test response.")
         )
-        get_llm_fn = MagicMock(return_value=mock_llm)
+        get_llm_fn = AsyncMock(return_value=mock_llm)
 
     return {
         "agent_name": "test",
@@ -133,7 +133,7 @@ class TestHappyPath:
         mock_cb.record_success = AsyncMock()
 
         kwargs = _make_execute_kwargs(
-            get_llm_fn=MagicMock(return_value=mock_llm),
+            get_llm_fn=AsyncMock(return_value=mock_llm),
             get_cb_fn=MagicMock(return_value=mock_cb),
         )
         state = _state(
@@ -169,7 +169,7 @@ class TestRetryFeedbackInjection:
         mock_cb.record_success = AsyncMock()
 
         kwargs = _make_execute_kwargs(
-            get_llm_fn=MagicMock(return_value=mock_llm),
+            get_llm_fn=AsyncMock(return_value=mock_llm),
             get_cb_fn=MagicMock(return_value=mock_cb),
         )
         state = _state(
@@ -211,7 +211,7 @@ class TestWhisperPlanInjection:
         mock_cb.record_success = AsyncMock()
 
         kwargs = _make_execute_kwargs(
-            get_llm_fn=MagicMock(return_value=mock_llm),
+            get_llm_fn=AsyncMock(return_value=mock_llm),
             get_cb_fn=MagicMock(return_value=mock_cb),
             include_whisper=True,
         )
@@ -260,7 +260,7 @@ class TestValueTypeErrorFallback:
         mock_cb.record_failure = AsyncMock()
 
         kwargs = _make_execute_kwargs(
-            get_llm_fn=MagicMock(return_value=mock_llm),
+            get_llm_fn=AsyncMock(return_value=mock_llm),
             get_cb_fn=MagicMock(return_value=mock_cb),
         )
         state = _state(
@@ -293,7 +293,7 @@ class TestCancelledErrorReRaised:
         mock_cb.allow_request = AsyncMock(return_value=True)
 
         kwargs = _make_execute_kwargs(
-            get_llm_fn=MagicMock(return_value=mock_llm),
+            get_llm_fn=AsyncMock(return_value=mock_llm),
             get_cb_fn=MagicMock(return_value=mock_cb),
         )
         state = _state(
@@ -325,7 +325,7 @@ class TestHttpErrorFallback:
         mock_cb.record_failure = AsyncMock()
 
         kwargs = _make_execute_kwargs(
-            get_llm_fn=MagicMock(return_value=mock_llm),
+            get_llm_fn=AsyncMock(return_value=mock_llm),
             get_cb_fn=MagicMock(return_value=mock_cb),
         )
         state = _state(

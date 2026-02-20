@@ -14,7 +14,6 @@ test imports.
 import asyncio
 import json
 import logging
-import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -24,7 +23,7 @@ from cachetools import TTLCache
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from src.casino.feature_flags import DEFAULT_FEATURES
+from src.casino.feature_flags import is_feature_enabled
 from src.config import get_settings
 
 from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401 (CircuitBreaker re-exported for tests)
@@ -106,20 +105,24 @@ def _get_last_human_message(messages: list) -> str:
 
 # TTL-cached LLM singletons: process-scoped with automatic refresh.
 # TTL=3600s (1 hour) allows credential rotation (e.g., GCP Workload Identity
-# Federation) without process restart.  Thread-safe via _llm_lock.
+# Federation) without process restart.  Coroutine-safe via asyncio.Lock
+# (non-blocking under contention, unlike threading.Lock which blocks the
+# event loop).
 _LLM_CACHE_TTL = 3600
 _llm_cache: TTLCache = TTLCache(maxsize=2, ttl=_LLM_CACHE_TTL)
-_llm_lock = threading.Lock()
+_llm_lock = asyncio.Lock()
 
 
-def _get_llm() -> ChatGoogleGenerativeAI:
+async def _get_llm() -> ChatGoogleGenerativeAI:
     """Get or create the shared LLM instance (TTL-cached singleton).
 
     Cache refreshes every hour to pick up rotated credentials.
-    Thread-safe via ``_llm_lock``.  Tests can ``patch("src.agent.nodes._get_llm")``
-    without interacting with the cache.
+    Coroutine-safe via ``asyncio.Lock`` (non-blocking under contention,
+    unlike the previous ``threading.Lock`` which blocked the event loop).
+    Tests can ``patch("src.agent.nodes._get_llm")`` without interacting
+    with the cache.
     """
-    with _llm_lock:
+    async with _llm_lock:
         cached = _llm_cache.get("llm")
         if cached is not None:
             return cached
@@ -135,7 +138,7 @@ def _get_llm() -> ChatGoogleGenerativeAI:
         return llm
 
 
-def _get_validator_llm() -> ChatGoogleGenerativeAI:
+async def _get_validator_llm() -> ChatGoogleGenerativeAI:
     """Get or create the validation LLM instance (TTL-cached singleton).
 
     Uses temperature=0.0 for deterministic binary classification
@@ -143,8 +146,9 @@ def _get_validator_llm() -> ChatGoogleGenerativeAI:
     configured temperature for creative response generation.
 
     Cache refreshes every hour (same TTL as ``_get_llm``).
+    Coroutine-safe via ``asyncio.Lock``.
     """
-    with _llm_lock:
+    async with _llm_lock:
         cached = _llm_cache.get("validator")
         if cached is not None:
             return cached
@@ -196,7 +200,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
     # upstream compliance_gate_node.  Guardrail-triggered messages never reach
     # the router, so duplicate checks here are unnecessary.
 
-    llm = _get_llm()
+    llm = await _get_llm()
     router_llm = llm.with_structured_output(RouterOutput)
 
     prompt_text = ROUTER_PROMPT.safe_substitute(user_message=user_message)
@@ -296,7 +300,7 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
         generated_response=generated_response,
     )
 
-    validator_llm = _get_validator_llm().with_structured_output(ValidationResult)
+    validator_llm = (await _get_validator_llm()).with_structured_output(ValidationResult)
 
     try:
         result: ValidationResult = await validator_llm.ainvoke(prompt_text)
@@ -462,8 +466,8 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     categories = _build_greeting_categories()
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
 
-    # Feature flag: AI disclosure for regulatory transparency
-    ai_disclosure = DEFAULT_FEATURES.get("ai_disclosure_enabled", True)
+    # Feature flag: AI disclosure for regulatory transparency (async API for multi-tenant)
+    ai_disclosure = await is_feature_enabled(None, "ai_disclosure_enabled")
     disclosure_line = " I'm an AI assistant, " if ai_disclosure else " "
 
     return {
@@ -508,7 +512,7 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         )
     elif query_type == "gambling_advice":
         # Feature flag: ai_disclosure_enabled adds transparency to gambling-advice responses
-        ai_disclosure = DEFAULT_FEATURES.get("ai_disclosure_enabled", True)
+        ai_disclosure = await is_feature_enabled(None, "ai_disclosure_enabled")
         disclosure_suffix = (
             "\n\n*As an AI assistant, I'm required to direct you to these "
             "professional resources rather than provide gambling guidance.*"

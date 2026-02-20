@@ -10,12 +10,14 @@ from .comp_agent import comp_agent
 from .dining_agent import dining_agent
 from .entertainment_agent import entertainment_agent
 from .host_agent import host_agent
+from .hotel_agent import hotel_agent
 
 _AGENT_REGISTRY: dict[str, Callable] = {
     "host": host_agent,
     "dining": dining_agent,
     "entertainment": entertainment_agent,
     "comp": comp_agent,
+    "hotel": hotel_agent,
 }
 
 
