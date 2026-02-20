@@ -66,6 +66,7 @@ class HealthResponse(BaseModel):
     property_loaded: bool
     rag_ready: bool = False
     observability_enabled: bool = False
+    circuit_breaker_state: str = "unknown"
 
 
 class FeedbackRequest(BaseModel):

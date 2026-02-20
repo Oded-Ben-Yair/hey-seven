@@ -229,7 +229,21 @@ def create_app() -> FastAPI:
         except Exception:
             logger.debug("RAG health check failed", exc_info=True)
 
-        all_healthy = ready and agent_ready and property_loaded
+        # Circuit breaker state: use lock-protected get_state() for accurate
+        # reporting.  When CB is open, the system is functionally degraded
+        # (all queries return fallback messages) even though the agent is
+        # initialized and RAG is accessible.
+        cb_state = "unknown"
+        try:
+            from src.agent.circuit_breaker import _get_circuit_breaker
+
+            cb = _get_circuit_breaker()
+            cb_state = await cb.get_state()
+        except Exception:
+            logger.debug("Circuit breaker state check failed", exc_info=True)
+
+        # CB open means functionally degraded — report as such
+        all_healthy = ready and agent_ready and property_loaded and cb_state != "open"
         body = HealthResponse(
             status="healthy" if all_healthy else "degraded",
             version=get_settings().VERSION,
@@ -237,6 +251,7 @@ def create_app() -> FastAPI:
             property_loaded=property_loaded,
             rag_ready=rag_ready,
             observability_enabled=is_observability_enabled(),
+            circuit_breaker_state=cb_state,
         )
         # Return 503 for degraded state so Cloud Run / k8s don't route
         # traffic to unhealthy containers.

@@ -121,11 +121,19 @@ class CircuitBreaker:
 
     @property
     def is_open(self) -> bool:
-        """Whether the breaker is in open state (blocking all requests).
+        """Approximate breaker state for monitoring/health checks only.
 
-        Note: This is a non-atomic read (no lock). Safe in CPython due to GIL
-        for simple attribute reads. Use ``allow_request()`` for the authoritative
-        lock-protected check in production code paths.
+        **WARNING**: This is a non-atomic read (no lock).  The sequence
+        ``read _state -> call _cooldown_expired() -> compare`` is NOT atomic
+        under async concurrency: another coroutine can call ``record_success()``
+        between the reads, causing ``state`` to return ``"half_open"`` when the
+        breaker is actually ``"closed"``.
+
+        For **control flow** (deciding whether to allow a request), always use
+        ``allow_request()`` which performs the state check under ``self._lock``.
+
+        For **monitoring/health checks**, this property is acceptable: a
+        briefly stale reading is harmless for dashboard display.
 
         Returns:
             True if the breaker is open and cooldown has NOT expired.
@@ -134,12 +142,29 @@ class CircuitBreaker:
 
     @property
     def is_half_open(self) -> bool:
-        """Whether the breaker is in half-open state (allowing one probe).
+        """Approximate half-open state for monitoring only.
+
+        Same concurrency caveats as ``is_open`` — use ``allow_request()``
+        for authoritative checks.
 
         Returns:
             True if the breaker is open and cooldown HAS expired.
         """
         return self.state == "half_open"
+
+    async def get_state(self) -> str:
+        """Lock-protected authoritative state read for accurate monitoring.
+
+        Use this instead of ``is_open``/``is_half_open`` when accurate state
+        is required (e.g., health check endpoints, structured metrics).
+
+        Returns:
+            Current state: "closed", "open", or "half_open".
+        """
+        async with self._lock:
+            if self._state == "open" and self._cooldown_expired():
+                return "half_open"
+            return self._state
 
     async def allow_request(self) -> bool:
         """Check if a request should be allowed through.

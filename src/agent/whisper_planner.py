@@ -85,17 +85,40 @@ class _FailureCounter:
     Uses ``asyncio.Lock`` for formal thread-safety under concurrent
     coroutine access.  Observable via logging and exportable to metrics
     systems (Prometheus, LangFuse custom metrics).
+
+    Includes a threshold alert: after ``alert_threshold`` consecutive
+    failures, logs at ERROR level with a structured metric to surface
+    systematic failures (e.g., wrong model name, expired credentials)
+    that would otherwise be invisible because the whisper planner is
+    fail-silent by design.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, alert_threshold: int = 10) -> None:
         self._count = 0
         self._lock = asyncio.Lock()
+        self._alert_threshold = alert_threshold
+        self._alerted = False
 
     async def increment(self) -> int:
-        """Increment and return the new count."""
+        """Increment and return the new count.  Logs ERROR when threshold is exceeded."""
         async with self._lock:
             self._count += 1
+            if self._count >= self._alert_threshold and not self._alerted:
+                self._alerted = True
+                logger.error(
+                    "whisper_planner_systematic_failure: %d consecutive failures "
+                    "exceeded threshold (%d). Whisper planner may be misconfigured. "
+                    "All responses are proceeding without whisper guidance.",
+                    self._count,
+                    self._alert_threshold,
+                )
             return self._count
+
+    async def reset(self) -> None:
+        """Reset the counter after a successful call (clears alert state)."""
+        async with self._lock:
+            self._count = 0
+            self._alerted = False
 
     @property
     def value(self) -> int:
@@ -179,6 +202,8 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         planner_llm = llm.with_structured_output(WhisperPlan)
         plan: WhisperPlan = await planner_llm.ainvoke(prompt_text)
 
+        # Reset failure counter on success (clears alert state)
+        await _failure_counter.reset()
         return {"whisper_plan": plan.model_dump()}
 
     except (ValueError, TypeError) as exc:

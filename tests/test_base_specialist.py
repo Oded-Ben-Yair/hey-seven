@@ -340,3 +340,41 @@ class TestHttpErrorFallback:
         assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
         mock_cb.record_failure.assert_awaited_once()
+
+
+class TestBroadExceptionFallback:
+    """Unexpected exceptions (SDK errors, RuntimeError) caught by broad except."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("exc_cls,exc_msg", [
+        (RuntimeError, "unexpected SDK error"),
+        (AttributeError, "malformed response object"),
+        (KeyError, "missing key in response"),
+    ])
+    async def test_unexpected_exception_returns_fallback(self, exc_cls, exc_msg):
+        """Unexpected exception types trigger CB failure and return fallback."""
+        from src.agent.agents._base import execute_specialist
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=exc_cls(exc_msg))
+        mock_cb = MagicMock()
+        mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_failure = AsyncMock()
+
+        kwargs = _make_execute_kwargs(
+            get_llm_fn=AsyncMock(return_value=mock_llm),
+            get_cb_fn=MagicMock(return_value=mock_cb),
+        )
+        state = _state(
+            messages=[HumanMessage(content="Question")],
+            retrieved_context=[
+                {"content": "data", "metadata": {"category": "faq"}, "score": 1.0}
+            ],
+        )
+
+        result = await execute_specialist(state, **kwargs)
+
+        assert result["skip_validation"] is True
+        assert "trouble generating" in result["messages"][0].content.lower()
+        mock_cb.record_failure.assert_awaited_once()

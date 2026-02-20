@@ -122,6 +122,28 @@ class TestRetrieveNode:
         result = await retrieve_node(state)
         assert result["retrieved_context"] == []
 
+    @patch("src.agent.nodes.search_knowledge_base")
+    async def test_non_timeout_exception_returns_empty(self, mock_search):
+        """Non-timeout retrieval errors degrade gracefully to empty results."""
+        from src.agent.nodes import retrieve_node
+
+        mock_search.side_effect = RuntimeError("ChromaDB corrupted")
+
+        state = _state(messages=[HumanMessage(content="Tell me about dining")])
+        result = await retrieve_node(state)
+        assert result["retrieved_context"] == []
+
+    @patch("src.agent.nodes.search_knowledge_base")
+    async def test_value_error_from_embedding_returns_empty(self, mock_search):
+        """Embedding dimension mismatch ValueError returns empty results."""
+        from src.agent.nodes import retrieve_node
+
+        mock_search.side_effect = ValueError("Embedding dimension mismatch")
+
+        state = _state(messages=[HumanMessage(content="What about the spa?")])
+        result = await retrieve_node(state)
+        assert result["retrieved_context"] == []
+
 
 class TestHostAgent:
     """Tests for host_agent (v2 generate node, replaces v1 generate_node)."""
@@ -1012,6 +1034,38 @@ class TestCircuitBreakerTransitions:
         assert cb.is_open is True
 
 
+class TestCircuitBreakerGetState:
+    """Tests for the lock-protected get_state() method."""
+
+    async def test_get_state_closed(self):
+        """get_state() returns 'closed' for a fresh breaker."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=3, cooldown_seconds=60)
+        state = await cb.get_state()
+        assert state == "closed"
+
+    async def test_get_state_open(self):
+        """get_state() returns 'open' when breaker is tripped and cooldown active."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=9999)
+        await cb.record_failure()
+        await cb.record_failure()
+        state = await cb.get_state()
+        assert state == "open"
+
+    async def test_get_state_half_open(self):
+        """get_state() returns 'half_open' when cooldown has expired."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0)
+        await cb.record_failure()
+        await cb.record_failure()
+        state = await cb.get_state()
+        assert state == "half_open"
+
+
 class TestNewResponsibleGamingPatterns:
     """Tests for additional responsible gaming detection patterns."""
 
@@ -1327,6 +1381,27 @@ class TestAsyncLlmLock:
 
         assert isinstance(_llm_lock, asyncio.Lock), (
             "Must use asyncio.Lock to avoid blocking event loop"
+        )
+
+    @pytest.mark.asyncio
+    async def test_validator_lock_is_separate(self):
+        """Validator LLM uses a separate lock from main LLM to prevent cascading stalls."""
+        import asyncio
+
+        from src.agent.nodes import _llm_lock, _validator_lock
+
+        assert isinstance(_validator_lock, asyncio.Lock)
+        assert _llm_lock is not _validator_lock, (
+            "Validator must use a separate lock to prevent cascading latency"
+        )
+
+    @pytest.mark.asyncio
+    async def test_validator_cache_is_separate(self):
+        """Validator LLM uses a separate cache from main LLM."""
+        from src.agent.nodes import _llm_cache, _validator_cache
+
+        assert _llm_cache is not _validator_cache, (
+            "Validator must use a separate cache to prevent cross-stall"
         )
 
 

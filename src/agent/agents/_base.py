@@ -161,13 +161,37 @@ async def execute_specialist(
     except (httpx.HTTPError, asyncio.TimeoutError, ConnectionError):
         await cb.record_failure()
         logger.exception("%s agent LLM call failed", agent_name.capitalize())
+        fallback_msg = Template(
+            "I apologize, but I'm having trouble generating a response right now. "
+            "Please try again, or contact $property_name directly at $property_phone."
+        ).safe_substitute(
+            property_name=settings.PROPERTY_NAME,
+            property_phone=settings.PROPERTY_PHONE,
+        )
         return {
-            "messages": [AIMessage(content=Template(
-                "I apologize, but I'm having trouble generating a response right now. "
-                "Please try again, or contact $property_name directly at $property_phone."
-            ).safe_substitute(
-                property_name=settings.PROPERTY_NAME,
-                property_phone=settings.PROPERTY_PHONE,
-            ))],
+            "messages": [AIMessage(content=fallback_msg)],
+            "skip_validation": True,
+        }
+    except Exception:
+        # Safety net: google-genai raises various exception types across SDK
+        # versions (GoogleAPICallError, ResourceExhausted, DeadlineExceeded,
+        # RuntimeError, AttributeError on malformed responses). Without this
+        # catch, unhandled exceptions bypass record_failure() so the circuit
+        # breaker never trips, and the SSE stream crashes.
+        # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
+        # Same pattern as router_node's broad except (see nodes.py:221).
+        await cb.record_failure()
+        logger.exception(
+            "%s agent LLM call failed (unexpected exception)", agent_name.capitalize()
+        )
+        fallback_msg = Template(
+            "I apologize, but I'm having trouble generating a response right now. "
+            "Please try again, or contact $property_name directly at $property_phone."
+        ).safe_substitute(
+            property_name=settings.PROPERTY_NAME,
+            property_phone=settings.PROPERTY_PHONE,
+        )
+        return {
+            "messages": [AIMessage(content=fallback_msg)],
             "skip_validation": True,
         }

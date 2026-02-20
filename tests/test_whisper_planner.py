@@ -370,3 +370,45 @@ class TestCalculateCompleteness:
         assert isinstance(_calculate_completeness({}), float)
         assert isinstance(_calculate_completeness(None), float)
         assert isinstance(_calculate_completeness({"name": "Jane"}), float)
+
+
+class TestFailureCounterThreshold:
+    """Tests for the failure counter alert threshold."""
+
+    async def test_threshold_triggers_alert(self, caplog):
+        """After alert_threshold failures, an ERROR log is emitted."""
+        import logging
+        from src.agent.whisper_planner import _FailureCounter
+
+        counter = _FailureCounter(alert_threshold=3)
+        with caplog.at_level(logging.ERROR):
+            await counter.increment()
+            await counter.increment()
+            assert "systematic_failure" not in caplog.text
+            await counter.increment()  # Threshold reached
+            assert "systematic_failure" in caplog.text
+
+    async def test_alert_fires_once(self, caplog):
+        """Alert only fires once, not on every subsequent failure."""
+        import logging
+        from src.agent.whisper_planner import _FailureCounter
+
+        counter = _FailureCounter(alert_threshold=2)
+        with caplog.at_level(logging.ERROR):
+            await counter.increment()
+            await counter.increment()  # First alert
+            count_before = caplog.text.count("systematic_failure")
+            await counter.increment()  # Should NOT re-alert
+            count_after = caplog.text.count("systematic_failure")
+            assert count_before == count_after
+
+    async def test_reset_clears_alert_state(self):
+        """Reset clears count and alert state."""
+        from src.agent.whisper_planner import _FailureCounter
+
+        counter = _FailureCounter(alert_threshold=2)
+        await counter.increment()
+        await counter.increment()
+        assert counter.value == 2
+        await counter.reset()
+        assert counter.value == 0

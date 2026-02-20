@@ -14,6 +14,8 @@ import logging
 import time
 from typing import Any
 
+from cachetools import TTLCache
+
 from .validation import validate_details_json, validate_item
 
 logger = logging.getLogger(__name__)
@@ -84,8 +86,15 @@ def verify_webhook_signature(
 # ---------------------------------------------------------------------------
 
 # In-memory hash store for change detection.  In production this would be
-# backed by Firestore.
-_content_hashes: dict[str, str] = {}
+# backed by Firestore.  Bounded via TTLCache to prevent unbounded memory
+# growth in long-running containers receiving frequent CMS updates.
+# maxsize=10_000 covers ~10K distinct items; TTL=86400 (24h) ensures
+# stale hashes are evicted even without container restart.
+_CONTENT_HASH_MAXSIZE = 10_000
+_CONTENT_HASH_TTL = 86400  # 24 hours
+_content_hashes: TTLCache[str, str] = TTLCache(
+    maxsize=_CONTENT_HASH_MAXSIZE, ttl=_CONTENT_HASH_TTL
+)
 
 
 def _compute_item_hash(item: dict[str, Any], source: str) -> str:

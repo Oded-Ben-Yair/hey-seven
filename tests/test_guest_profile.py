@@ -847,3 +847,35 @@ class TestEdgeCases:
         deserialized = json.loads(serialized)
         assert deserialized["core_identity"]["name"]["value"] == "Maria"
         assert deserialized["_version"] == 3
+
+
+class TestFirestoreClientCaching:
+    """Verify Firestore client is cached as a singleton (not recreated per request)."""
+
+    def test_firestore_client_cache_dict_exists(self):
+        """_firestore_client_cache is a module-level dict for caching."""
+        from src.data.guest_profile import _firestore_client_cache
+
+        assert isinstance(_firestore_client_cache, dict)
+
+    def test_clear_firestore_client_cache(self):
+        """clear_firestore_client_cache() empties the cache dict."""
+        from src.data.guest_profile import (
+            _firestore_client_cache,
+            clear_firestore_client_cache,
+        )
+
+        _firestore_client_cache["client"] = "mock_client"
+        clear_firestore_client_cache()
+        assert _firestore_client_cache == {}
+
+    def test_get_firestore_client_returns_none_without_gcp(self):
+        """Without GCP SDK, _get_firestore_client returns None (in-memory fallback)."""
+        from src.data.guest_profile import (
+            _get_firestore_client,
+            clear_firestore_client_cache,
+        )
+
+        clear_firestore_client_cache()
+        result = _get_firestore_client()
+        assert result is None

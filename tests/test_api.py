@@ -60,6 +60,16 @@ class TestHealthEndpoint:
             assert data["property_loaded"] is True
 
 
+    def test_health_includes_circuit_breaker_state(self):
+        """GET /health includes circuit_breaker_state field."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/health")
+            data = resp.json()
+            assert "circuit_breaker_state" in data
+            assert data["circuit_breaker_state"] in ("closed", "open", "half_open", "unknown")
+
+
 class TestPropertyEndpoint:
     def test_property_returns_metadata(self):
         """GET /property returns correct property metadata."""

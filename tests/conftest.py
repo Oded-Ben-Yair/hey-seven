@@ -31,9 +31,10 @@ def _clear_singleton_caches():
     get_settings.cache_clear()
 
     try:
-        from src.agent.nodes import _llm_cache
+        from src.agent.nodes import _llm_cache, _validator_cache
 
         _llm_cache.clear()
+        _validator_cache.clear()
     except ImportError:
         pass
 
@@ -80,9 +81,10 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.data.guest_profile import clear_memory_store
+        from src.data.guest_profile import clear_firestore_client_cache, clear_memory_store
 
         clear_memory_store()
+        clear_firestore_client_cache()
     except ImportError:
         pass
 

@@ -108,9 +108,16 @@ def _get_last_human_message(messages: list) -> str:
 # Federation) without process restart.  Coroutine-safe via asyncio.Lock
 # (non-blocking under contention, unlike threading.Lock which blocks the
 # event loop).
+#
+# Separate locks per client type (main LLM vs validator LLM): if validator
+# construction stalls (e.g., network hiccup during lazy init), it must NOT
+# block main LLM acquisition.  This prevents cascading latency spikes and
+# request pileups during partial outages.
 _LLM_CACHE_TTL = 3600
-_llm_cache: TTLCache = TTLCache(maxsize=2, ttl=_LLM_CACHE_TTL)
+_llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL)
 _llm_lock = asyncio.Lock()
+_validator_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL)
+_validator_lock = asyncio.Lock()
 
 
 async def _get_llm() -> ChatGoogleGenerativeAI:
@@ -145,11 +152,15 @@ async def _get_validator_llm() -> ChatGoogleGenerativeAI:
     (PASS/RETRY/FAIL). Separate from ``_get_llm()`` which uses the
     configured temperature for creative response generation.
 
+    Uses a **separate lock and cache** from ``_get_llm()`` so that
+    validator construction stalls do not block main LLM acquisition
+    (prevents cascading latency spikes during partial outages).
+
     Cache refreshes every hour (same TTL as ``_get_llm``).
     Coroutine-safe via ``asyncio.Lock``.
     """
-    async with _llm_lock:
-        cached = _llm_cache.get("validator")
+    async with _validator_lock:
+        cached = _validator_cache.get("validator")
         if cached is not None:
             return cached
         settings = get_settings()
@@ -160,7 +171,7 @@ async def _get_validator_llm() -> ChatGoogleGenerativeAI:
             max_retries=settings.MODEL_MAX_RETRIES,
             max_output_tokens=512,  # Validation produces short structured output
         )
-        _llm_cache["validator"] = llm
+        _validator_cache["validator"] = llm
         return llm
 
 
@@ -270,6 +281,15 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
             )
     except TimeoutError:
         logger.warning("Retrieval timed out after %ds for query: %s", _RETRIEVAL_TIMEOUT, query[:80])
+        results = []
+    except Exception:
+        # Broad catch: ChromaDB can raise ChromaError, sqlite3.OperationalError;
+        # Firestore can raise google.api_core.exceptions.*; embedding model can
+        # raise ValueError on dimension mismatch.  Without this, non-timeout
+        # retrieval errors propagate to graph.py's top-level except, aborting
+        # the entire graph execution with no fallback response.  The empty
+        # results path gracefully degrades to the no-context specialist fallback.
+        logger.exception("Retrieval failed for query: %s", query[:80])
         results = []
 
     return {"retrieved_context": results}

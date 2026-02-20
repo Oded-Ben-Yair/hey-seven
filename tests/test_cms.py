@@ -666,3 +666,32 @@ class TestCMSConfigFields:
 
         s = Settings()
         assert isinstance(s.CMS_WEBHOOK_SECRET, SecretStr)
+
+
+# ============================================================================
+# Content hash cache bounding test
+# ============================================================================
+
+
+class TestContentHashCacheBounded:
+    """Verify _content_hashes is bounded (not an unbounded dict)."""
+
+    def test_content_hashes_is_ttl_cache(self):
+        """_content_hashes is a TTLCache (bounded) not a plain dict."""
+        from cachetools import TTLCache
+
+        from src.cms.webhook import _content_hashes
+
+        assert isinstance(_content_hashes, TTLCache)
+
+    def test_content_hashes_has_maxsize(self):
+        """_content_hashes has a maxsize to prevent unbounded memory growth."""
+        from src.cms.webhook import _content_hashes
+
+        assert _content_hashes.maxsize >= 1000
+
+    def test_content_hashes_has_ttl(self):
+        """_content_hashes has a TTL to evict stale entries."""
+        from src.cms.webhook import _content_hashes
+
+        assert _content_hashes.ttl > 0

@@ -38,17 +38,32 @@ _memory_store: dict[str, dict] = {}
 # ---------------------------------------------------------------------------
 
 
+# Cached Firestore client — avoids creating a new AsyncClient per CRUD call.
+# Under load, per-request instantiation exhausts file descriptors and SSL
+# handshakes, crashing the app.  The singleton is cleared by
+# ``clear_firestore_client_cache()`` (exposed for tests).
+_firestore_client_cache: dict[str, Any] = {}
+
+
 def _get_firestore_client() -> Any | None:
-    """Return the Firestore AsyncClient if available, else None.
+    """Return the cached Firestore AsyncClient if available, else None.
 
     Lazy-imports ``google.cloud.firestore`` to avoid import failures when
     the dependency is not installed (local dev without GCP SDK).
+
+    The client is cached as a module-level singleton to prevent connection
+    exhaustion under load.  Creating a new ``AsyncClient`` per CRUD call
+    opens new HTTP/2 connections and SSL handshakes — unsustainable at scale.
 
     Note: A near-identical helper exists in ``src.casino.config``.
     Both are intentionally kept separate to avoid coupling the guest
     data layer to the casino config module.  See comment there for
     the full trade-off rationale.
     """
+    cached = _firestore_client_cache.get("client")
+    if cached is not None:
+        return cached
+
     try:
         from google.cloud.firestore import AsyncClient  # noqa: F401
 
@@ -56,15 +71,22 @@ def _get_firestore_client() -> Any | None:
 
         settings = get_settings()
         if settings.VECTOR_DB == "firestore" and settings.FIRESTORE_PROJECT:
-            return AsyncClient(
+            client = AsyncClient(
                 project=settings.FIRESTORE_PROJECT,
                 database=settings.CASINO_ID,
             )
+            _firestore_client_cache["client"] = client
+            return client
     except ImportError:
         logger.debug("google-cloud-firestore not installed; using in-memory store")
     except Exception:
         logger.warning("Firestore client init failed; falling back to in-memory store", exc_info=True)
     return None
+
+
+def clear_firestore_client_cache() -> None:
+    """Clear the cached Firestore client (for testing and credential rotation)."""
+    _firestore_client_cache.clear()
 
 
 def _store_key(phone: str, casino_id: str) -> str:
@@ -232,28 +254,48 @@ async def delete_guest_profile(phone: str, casino_id: str) -> bool:
                 logger.info("No profile to delete for %s...%s", phone[:4], phone[-4:])
                 return False
 
+            # Collect all document references for batch deletion.
+            # Firestore batches are atomic: either all operations complete or
+            # none do, preventing the partially-deleted zombie state that
+            # violates CCPA when individual deletes fail mid-cascade.
+            # Firestore batch limit is 500 operations; cascade unlikely to
+            # exceed this for a single guest profile.
+            batch = db.batch()
+            ops_count = 0
+
             # Cascade: conversations -> messages
             async for conv in guest_ref.collection("conversations").stream():
                 async for msg in conv.reference.collection("messages").stream():
-                    await msg.reference.delete()
-                await conv.reference.delete()
+                    batch.delete(msg.reference)
+                    ops_count += 1
+                batch.delete(conv.reference)
+                ops_count += 1
 
             # Cascade: behavioral signals
             async for signal in guest_ref.collection("behavioral_signals").stream():
-                await signal.reference.delete()
+                batch.delete(signal.reference)
+                ops_count += 1
 
-            # De-identify audit log references
+            # De-identify audit log references (update, not delete — regulatory requirement)
             hashed = hashlib.sha256(phone.encode()).hexdigest()[:16]
             audit_entries = db.collection("audit_log").where("entity_phone", "==", phone).stream()
             async for entry in audit_entries:
-                await entry.reference.update({
+                batch.update(entry.reference, {
                     "entity_phone": f"deleted:{hashed}",
                     "entity_name": "[deleted]",
                 })
+                ops_count += 1
 
             # Delete guest document
-            await guest_ref.delete()
-            logger.info("CCPA cascade delete completed for %s...%s", phone[:4], phone[-4:])
+            batch.delete(guest_ref)
+            ops_count += 1
+
+            # Commit atomically — all-or-nothing
+            await batch.commit()
+            logger.info(
+                "CCPA cascade delete completed for %s...%s (%d batch ops)",
+                phone[:4], phone[-4:], ops_count,
+            )
             return True
 
         except Exception:
