@@ -13,7 +13,6 @@ live in ``guardrails.py``.
 import asyncio
 import json
 import logging
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -434,23 +433,34 @@ _KNOWN_CATEGORY_LABELS: dict[str, str] = {
 """Curated labels for known property-data categories."""
 
 
-@lru_cache(maxsize=1)
-def _build_greeting_categories() -> dict[str, str]:
+_greeting_cache: TTLCache = TTLCache(maxsize=8, ttl=3600)
+"""Per-casino greeting categories cache (multi-tenant safe, 1-hour TTL)."""
+
+
+def _build_greeting_categories(casino_id: str | None = None) -> dict[str, str]:
     """Derive greeting categories from the actual property data file.
 
-    Reads the property JSON at startup (cached), so adding a new category
-    to the data file automatically surfaces it in the greeting.  Falls back
-    to ``_KNOWN_CATEGORY_LABELS`` if the file cannot be read.
+    Reads the property JSON at startup (cached per casino_id), so adding a
+    new category to the data file automatically surfaces it in the greeting.
+    Falls back to ``_KNOWN_CATEGORY_LABELS`` if the file cannot be read.
     """
+    cache_key = casino_id or get_settings().CASINO_ID
+    if cache_key in _greeting_cache:
+        return _greeting_cache[cache_key]
+
     settings = get_settings()
     try:
         path = Path(settings.PROPERTY_DATA_PATH)
         if not path.exists():
-            return dict(_KNOWN_CATEGORY_LABELS)
+            result = dict(_KNOWN_CATEGORY_LABELS)
+            _greeting_cache[cache_key] = result
+            return result
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         if not isinstance(data, dict):
-            return dict(_KNOWN_CATEGORY_LABELS)
+            result = dict(_KNOWN_CATEGORY_LABELS)
+            _greeting_cache[cache_key] = result
+            return result
         categories: dict[str, str] = {}
         for key in data:
             if key == "property":
@@ -459,10 +469,14 @@ def _build_greeting_categories() -> dict[str, str]:
                 categories[key] = _KNOWN_CATEGORY_LABELS[key]
             else:
                 categories[key] = f"{key.replace('_', ' ').title()} — information and details"
-        return categories if categories else dict(_KNOWN_CATEGORY_LABELS)
+        result = categories if categories else dict(_KNOWN_CATEGORY_LABELS)
+        _greeting_cache[cache_key] = result
+        return result
     except Exception:
         logger.warning("Could not load property data for greeting categories, using defaults")
-        return dict(_KNOWN_CATEGORY_LABELS)
+        result = dict(_KNOWN_CATEGORY_LABELS)
+        _greeting_cache[cache_key] = result
+        return result
 
 
 async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
@@ -476,7 +490,7 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     best practice for automated guest interactions.
     """
     settings = get_settings()
-    categories = _build_greeting_categories()
+    categories = _build_greeting_categories(casino_id=settings.CASINO_ID)
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
 
     # Feature flag: AI disclosure for regulatory transparency (async API for multi-tenant)

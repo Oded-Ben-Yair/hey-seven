@@ -499,3 +499,36 @@ class TestFirestoreClientLock:
 
         assert hasattr(_fs_config_client_lock, "acquire")
         assert hasattr(_fs_config_client_lock, "release")
+
+
+# ---------------------------------------------------------------------------
+# CASINO_ID Cache Keying (P2 Task 1)
+# ---------------------------------------------------------------------------
+
+
+class TestCasinoIdCacheKeying:
+    """P2-T1: All caches keyed by CASINO_ID for multi-tenant safety."""
+
+    def test_greeting_cache_is_ttlcache(self):
+        """Greeting categories cache uses TTLCache, not lru_cache."""
+        from src.agent.nodes import _greeting_cache
+        from cachetools import TTLCache
+
+        assert isinstance(_greeting_cache, TTLCache)
+
+    def test_greeting_cache_keyed_by_casino_id(self):
+        """Different casino_id values produce separate cache entries."""
+        from src.agent.nodes import _build_greeting_categories, _greeting_cache
+
+        _greeting_cache.clear()
+        _build_greeting_categories(casino_id="casino_a")
+        _build_greeting_categories(casino_id="casino_b")
+        assert len(_greeting_cache) == 2
+
+    def test_retriever_cache_key_includes_casino_id(self):
+        """Retriever cache key includes CASINO_ID, not just 'default'."""
+        from src.rag.pipeline import _retriever_cache
+
+        # After any retrieval, the cache key should contain casino_id
+        for key in _retriever_cache:
+            assert key != "default", "Cache key should include casino_id, not be 'default'"

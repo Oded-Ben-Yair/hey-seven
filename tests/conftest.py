@@ -41,9 +41,9 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.agent.nodes import _build_greeting_categories
+        from src.agent.nodes import _greeting_cache
 
-        _build_greeting_categories.cache_clear()
+        _greeting_cache.clear()
     except (ImportError, AttributeError):
         pass
 

@@ -768,13 +768,13 @@ def _get_retriever_cached() -> AbstractRetriever:
     """
     import time
 
-    cache_key = "default"
+    settings = get_settings()
+    cache_key = f"{settings.CASINO_ID}:default"
     now = time.monotonic()
     if cache_key in _retriever_cache:
         if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
             return _retriever_cache[cache_key]
         logger.info("Retriever TTL expired, recreating (credential rotation safety).")
-    settings = get_settings()
 
     if settings.VECTOR_DB == "firestore":
         try:
