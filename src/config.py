@@ -96,6 +96,19 @@ class Settings(BaseSettings):
     model_config = {"env_prefix": "", "case_sensitive": True}
 
     @model_validator(mode="after")
+    def normalize_embedding_model(self) -> "Settings":
+        """Strip ``models/`` prefix from EMBEDDING_MODEL if present.
+
+        Google's SDK sometimes expects the bare model name, sometimes with
+        the ``models/`` prefix.  Normalizing to bare name prevents
+        ingestion-vs-retrieval vector space mismatch when ``.env`` and
+        ``config.py`` defaults disagree on the prefix.
+        """
+        if self.EMBEDDING_MODEL.startswith("models/"):
+            object.__setattr__(self, "EMBEDDING_MODEL", self.EMBEDDING_MODEL.removeprefix("models/"))
+        return self
+
+    @model_validator(mode="after")
     def validate_rag_config(self) -> "Settings":
         """Validate RAG chunk parameters are consistent."""
         if self.RAG_CHUNK_OVERLAP >= self.RAG_CHUNK_SIZE:

@@ -1,15 +1,16 @@
 """RAG pipeline: ingestion and retrieval for property knowledge base.
 
-Loads a property JSON file, chunks the content, embeds with Google GenAI,
-and stores in ChromaDB for local vector search.
+Loads a property JSON file and knowledge-base markdown files, chunks the
+content, embeds with Google GenAI, and stores in ChromaDB for local
+vector search.
 """
 
 import hashlib
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -81,7 +82,12 @@ def _format_hotel(item: dict[str, Any]) -> str:
 
 
 def _format_generic(item: dict[str, Any]) -> str:
-    """Convert a generic JSON object to a readable text chunk."""
+    """Convert a generic JSON object to a readable text chunk.
+
+    Applies human-readable formatting for boolean and numeric values:
+    booleans become "Available"/"Not Available", large numbers get
+    comma formatting with contextual units.
+    """
     parts = []
     name = item.get("name", item.get("title", ""))
     if name:
@@ -92,6 +98,123 @@ def _format_generic(item: dict[str, Any]) -> str:
     skip_keys = {"name", "title", "description"}
     for key, value in item.items():
         if key in skip_keys:
+            continue
+        label = key.replace("_", " ").title()
+        if isinstance(value, bool):
+            parts.append(f"{label}: {'Available' if value else 'Not Available'}.")
+        elif isinstance(value, int) and value > 9999:
+            # Large numbers: comma-format with contextual unit
+            unit = " sq ft" if "sqft" in key.lower() or "area" in key.lower() else ""
+            parts.append(f"{label}: {value:,}{unit}.")
+        elif isinstance(value, (str, int, float)) and value:
+            parts.append(f"{label}: {value}.")
+        elif isinstance(value, list) and value:
+            parts.append(f"{label}: {', '.join(str(v) for v in value)}.")
+    return " ".join(parts)
+
+
+def _format_faq(item: dict[str, Any]) -> str:
+    """Convert an FAQ JSON object to a Q&A text chunk.
+
+    Leads with the question text for better cosine alignment with user
+    queries (which are themselves questions).
+    """
+    question = item.get("question", "")
+    answer = item.get("answer", "")
+    if question and answer:
+        return f"{question} {answer}"
+    # Fall back to generic if missing Q&A structure
+    return _format_generic(item)
+
+
+def _format_gaming(item: dict[str, Any]) -> str:
+    """Convert a gaming JSON object to a readable text chunk."""
+    parts = []
+    name = item.get("name", "")
+    if name:
+        parts.append(f"{name}:")
+    if item.get("description"):
+        parts.append(item["description"])
+    # Boolean features rendered as available/not available
+    for key in ("poker_room", "sportsbook", "high_limit_area"):
+        if key in item:
+            label = key.replace("_", " ").title()
+            val = item[key]
+            if isinstance(val, bool):
+                parts.append(f"{label}: {'Available' if val else 'Not Available'}.")
+            elif isinstance(val, dict):
+                # Sub-dict: include details inline
+                details = ", ".join(f"{k}: {v}" for k, v in val.items() if v)
+                parts.append(f"{label}: {details}.")
+    # Numeric stats with comma formatting
+    for key in ("slot_machines", "table_games", "casino_size_sqft"):
+        if key in item and isinstance(item[key], (int, float)):
+            label = key.replace("_", " ").title()
+            unit = " sq ft" if "sqft" in key else ""
+            parts.append(f"{label}: {item[key]:,}{unit}.")
+    if item.get("hours"):
+        parts.append(f"Hours: {item['hours']}.")
+    # Catch remaining keys not yet covered
+    covered = {"name", "description", "poker_room", "sportsbook", "high_limit_area",
+               "slot_machines", "table_games", "casino_size_sqft", "hours"}
+    for key, value in item.items():
+        if key in covered:
+            continue
+        if isinstance(value, (str, int, float)) and value:
+            parts.append(f"{key.replace('_', ' ').title()}: {value}.")
+        elif isinstance(value, list) and value:
+            parts.append(f"{key.replace('_', ' ').title()}: {', '.join(str(v) for v in value)}.")
+    return " ".join(parts)
+
+
+def _format_amenity(item: dict[str, Any]) -> str:
+    """Convert an amenity JSON object to a readable text chunk."""
+    parts = []
+    name = item.get("name", item.get("title", ""))
+    if name:
+        parts.append(f"{name}:")
+    if item.get("type"):
+        parts.append(f"{item['type']}.")
+    if item.get("description"):
+        parts.append(item["description"])
+    if item.get("hours"):
+        parts.append(f"Hours: {item['hours']}.")
+    if item.get("location"):
+        parts.append(f"Location: {item['location']}.")
+    # Remaining fields
+    covered = {"name", "title", "type", "description", "hours", "location"}
+    for key, value in item.items():
+        if key in covered:
+            continue
+        if isinstance(value, (str, int, float)) and value:
+            parts.append(f"{key.replace('_', ' ').title()}: {value}.")
+        elif isinstance(value, list) and value:
+            parts.append(f"{key.replace('_', ' ').title()}: {', '.join(str(v) for v in value)}.")
+    return " ".join(parts)
+
+
+def _format_promotion(item: dict[str, Any]) -> str:
+    """Convert a promotion/loyalty program JSON object to a readable text chunk."""
+    parts = []
+    name = item.get("name", item.get("tier", item.get("title", "")))
+    if name:
+        parts.append(f"{name}:")
+    if item.get("description"):
+        parts.append(item["description"])
+    if item.get("benefits"):
+        benefits = item["benefits"]
+        if isinstance(benefits, list):
+            parts.append(f"Benefits: {', '.join(str(b) for b in benefits)}.")
+        else:
+            parts.append(f"Benefits: {benefits}.")
+    if item.get("requirements"):
+        parts.append(f"Requirements: {item['requirements']}.")
+    if item.get("how_to_join"):
+        parts.append(f"How to join: {item['how_to_join']}.")
+    # Remaining fields
+    covered = {"name", "tier", "title", "description", "benefits", "requirements", "how_to_join"}
+    for key, value in item.items():
+        if key in covered:
             continue
         if isinstance(value, (str, int, float)) and value:
             parts.append(f"{key.replace('_', ' ').title()}: {value}.")
@@ -108,6 +231,10 @@ _FORMATTERS = {
     "hotel": _format_hotel,
     "rooms": _format_hotel,
     "hotel_rooms": _format_hotel,
+    "faq": _format_faq,
+    "gaming": _format_gaming,
+    "amenities": _format_amenity,
+    "promotions": _format_promotion,
 }
 
 
@@ -199,7 +326,7 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                             "source": path.name,
                             "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
                             "last_updated": datetime.now(tz=timezone.utc).isoformat(),
-                            "ingestion_version": "2.1",
+                            "_schema_version": "2.1",
                         },
                     })
 
@@ -220,6 +347,85 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                 })
 
     logger.info("Loaded %d items from %s", len(documents), path.name)
+    return documents
+
+
+# ---------------------------------------------------------------------------
+# Markdown category mapping: directory name -> metadata category
+# ---------------------------------------------------------------------------
+
+_MD_CATEGORY_MAP: dict[str, str] = {
+    "casino-operations": "casino_operations",
+    "regulations": "regulations",
+    "player-psychology": "player_psychology",
+    "company-context": "company_context",
+}
+
+
+def _load_knowledge_base_markdown(
+    kb_dir: str | Path = "knowledge-base",
+) -> list[dict[str, Any]]:
+    """Load all markdown files from the knowledge-base directory.
+
+    Splits each file by ``## `` headings so each section becomes its own
+    chunk (preserving heading-level context).  Falls back to
+    ``RecursiveCharacterTextSplitter`` for files without headings.
+
+    Markdown domain documents (regulations, comp formulas, host workflows)
+    complement the structured JSON property data.  They are ingested with
+    ``doc_type=markdown`` metadata for provenance tracking.
+
+    Args:
+        kb_dir: Path to the knowledge-base directory.
+
+    Returns:
+        List of document dicts with keys: content, metadata.
+    """
+    settings = get_settings()
+    base_path = Path(kb_dir)
+    if not base_path.exists():
+        logger.warning("Knowledge base directory not found: %s", base_path)
+        return []
+
+    property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
+    documents: list[dict[str, Any]] = []
+
+    for md_file in sorted(base_path.rglob("*.md")):
+        text = md_file.read_text(encoding="utf-8").strip()
+        if not text:
+            continue
+
+        # Determine category from parent directory
+        parent_name = md_file.parent.name
+        category = _MD_CATEGORY_MAP.get(parent_name, parent_name.replace("-", "_"))
+
+        # Split by ## headings to preserve section-level context
+        sections = re.split(r"\n(?=## )", text)
+
+        for i, section in enumerate(sections):
+            section = section.strip()
+            if not section:
+                continue
+
+            # Extract heading for item_name
+            heading_match = re.match(r"^##?\s+(.+?)(?:\n|$)", section)
+            item_name = heading_match.group(1).strip() if heading_match else md_file.stem
+
+            documents.append({
+                "content": section,
+                "metadata": {
+                    "category": category,
+                    "item_name": item_name,
+                    "source": md_file.name,
+                    "property_id": property_id,
+                    "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+                    "_schema_version": "2.1",
+                    "doc_type": "markdown",
+                },
+            })
+
+    logger.info("Loaded %d sections from %d markdown files in %s",
+                len(documents), len(list(base_path.rglob("*.md"))), base_path)
     return documents
 
 
@@ -297,12 +503,15 @@ def _chunk_documents(
 def ingest_property(
     data_path: str | None = None,
     persist_dir: str | None = None,
+    knowledge_base_dir: str | None = None,
 ) -> Any:
-    """Load property JSON, chunk, embed, and store in ChromaDB.
+    """Load property JSON and knowledge-base markdown, chunk, embed, and store in ChromaDB.
 
     Args:
         data_path: Path to the property JSON file.
         persist_dir: Directory to persist ChromaDB data.
+        knowledge_base_dir: Path to the knowledge-base markdown directory.
+            Defaults to ``"knowledge-base"`` relative to the working directory.
 
     Returns:
         A Chroma vectorstore instance.
@@ -322,11 +531,25 @@ def ingest_property(
     settings = get_settings()
     data_path = data_path or settings.PROPERTY_DATA_PATH
     persist_dir = persist_dir or settings.CHROMA_PERSIST_DIR
+    kb_dir = knowledge_base_dir or "knowledge-base"
 
+    # Phase 1: Load structured JSON property data
     documents = _load_property_json(data_path)
+
+    # Phase 2: Load knowledge-base markdown files (domain knowledge)
+    md_documents = _load_knowledge_base_markdown(kb_dir)
+    documents.extend(md_documents)
+
     if not documents:
-        logger.warning("No documents to ingest.")
+        logger.warning("No documents to ingest (JSON + markdown both empty).")
         return None
+
+    logger.info(
+        "Total documents to ingest: %d (JSON: %d, markdown: %d)",
+        len(documents),
+        len(documents) - len(md_documents),
+        len(md_documents),
+    )
 
     chunks = _chunk_documents(documents)
 
@@ -351,7 +574,10 @@ def ingest_property(
         for text, meta in zip(texts, metadatas)
     ]
 
-    embeddings = get_embeddings()
+    # Use RETRIEVAL_DOCUMENT task_type for ingestion embeddings.
+    # Google's gemini-embedding-001 produces optimized embeddings when told
+    # whether the input is a document or a query (asymmetric search).
+    embeddings = get_embeddings(task_type="RETRIEVAL_DOCUMENT")
     property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
 
     vectorstore = Chroma.from_texts(
@@ -520,17 +746,34 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
 
 
 # ---------------------------------------------------------------------------
-# Global Retriever Instance (lazy singleton via @lru_cache)
+# Global Retriever Instance (TTLCache singleton, 1-hour refresh for
+# GCP Workload Identity credential rotation — consistent with _llm_cache
+# and _validator_cache in nodes.py)
 # ---------------------------------------------------------------------------
 
+_retriever_cache: dict[str, AbstractRetriever] = {}
+_retriever_cache_time: dict[str, float] = {}
+_RETRIEVER_TTL_SECONDS = 3600  # 1 hour
 
-@lru_cache(maxsize=1)
+
 def _get_retriever_cached() -> AbstractRetriever:
     """Return a cached retriever using default settings.
+
+    Uses a dict-based TTL cache (1 hour) consistent with LLM singletons.
+    Credential rotation in GCP Workload Identity requires periodic
+    recreation of Firestore clients.
 
     Internal helper for ``get_retriever()`` — separated so that the
     ``persist_dir`` override path does not pollute the cache key.
     """
+    import time
+
+    cache_key = "default"
+    now = time.monotonic()
+    if cache_key in _retriever_cache:
+        if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
+            return _retriever_cache[cache_key]
+        logger.info("Retriever TTL expired, recreating (credential rotation safety).")
     settings = get_settings()
 
     if settings.VECTOR_DB == "firestore":
@@ -540,9 +783,11 @@ def _get_retriever_cached() -> AbstractRetriever:
             retriever = FirestoreRetriever(
                 project=settings.FIRESTORE_PROJECT,
                 collection=settings.FIRESTORE_COLLECTION,
-                embeddings=get_embeddings(),
+                embeddings=get_embeddings(task_type="RETRIEVAL_QUERY"),
             )
             logger.info("Using Firestore retriever (project=%s)", settings.FIRESTORE_PROJECT)
+            _retriever_cache[cache_key] = retriever
+            _retriever_cache_time[cache_key] = now
             return retriever
         except Exception:
             logger.warning(
@@ -556,9 +801,10 @@ def _get_retriever_cached() -> AbstractRetriever:
     # from requirements-prod.txt (~200MB). If running in production without
     # chromadb, fail with a clear message instead of an opaque ImportError.
     if settings.ENVIRONMENT == "production" and settings.VECTOR_DB == "chroma":
-        logger.error(
+        raise RuntimeError(
             "VECTOR_DB=chroma in production environment. chromadb is excluded "
-            "from requirements-prod.txt. Set VECTOR_DB=firestore for production."
+            "from requirements-prod.txt and loses all data on container restart. "
+            "Set VECTOR_DB=firestore for production."
         )
 
     try:
@@ -567,7 +813,7 @@ def _get_retriever_cached() -> AbstractRetriever:
 
         vectorstore = Chroma(
             collection_name="property_knowledge",
-            embedding_function=get_embeddings(),
+            embedding_function=get_embeddings(task_type="RETRIEVAL_QUERY"),
             persist_directory=chroma_dir,
             collection_metadata={"hnsw:space": "cosine"},
         )
@@ -581,13 +827,15 @@ def _get_retriever_cached() -> AbstractRetriever:
         )
         retriever = CasinoKnowledgeRetriever()
 
+    _retriever_cache[cache_key] = retriever
+    _retriever_cache_time[cache_key] = now
     return retriever
 
 
 def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
     """Get or create the global retriever singleton.
 
-    Uses ``@lru_cache`` internally for consistency with other singletons
+    Uses a TTL cache internally for consistency with other singletons
     (``get_settings``, ``get_embeddings``).
 
     When ``VECTOR_DB=firestore``, returns a ``FirestoreRetriever`` (same
@@ -613,7 +861,7 @@ def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
 
         vectorstore = Chroma(
             collection_name="property_knowledge",
-            embedding_function=get_embeddings(),
+            embedding_function=get_embeddings(task_type="RETRIEVAL_QUERY"),
             persist_directory=persist_dir,
             collection_metadata={"hnsw:space": "cosine"},
         )
@@ -633,10 +881,11 @@ def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
 def clear_retriever_cache() -> None:
     """Clear the retriever singleton cache.
 
-    Delegates to ``_get_retriever_cached.cache_clear()``.
+    Clears the TTL-based retriever cache dict.
     Call from tests or after re-ingestion to force fresh retriever creation.
     """
-    _get_retriever_cached.cache_clear()
+    _retriever_cache.clear()
+    _retriever_cache_time.clear()
 
 
 # Backward-compatible attribute: callers using ``get_retriever.cache_clear()``

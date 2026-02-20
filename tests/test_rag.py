@@ -39,33 +39,43 @@ def _mock_embeddings():
 def _reset_retriever_singleton():
     """Reset the global retriever singleton between tests.
 
-    Uses cache_clear() on the @lru_cache-based get_retriever singleton,
+    Uses clear_retriever_cache() on the TTL-cache-based retriever singleton,
     consistent with conftest.py's _clear_singleton_caches fixture.
     """
-    from src.rag.pipeline import get_retriever
+    from src.rag.pipeline import clear_retriever_cache
 
-    get_retriever.cache_clear()
+    clear_retriever_cache()
     yield
-    get_retriever.cache_clear()
+    clear_retriever_cache()
+
+
+@pytest.fixture
+def no_kb_dir(tmp_path):
+    """Return a path to a nonexistent knowledge-base directory.
+
+    Prevents tests from accidentally ingesting the real knowledge-base/
+    markdown files when only testing JSON ingestion.
+    """
+    return str(tmp_path / "no_kb")
 
 
 class TestIngestion:
-    def test_ingestion_creates_collection(self, test_property_file, tmp_path):
+    def test_ingestion_creates_collection(self, test_property_file, tmp_path, no_kb_dir):
         """Data loads and indexes into ChromaDB without error."""
         from src.rag.pipeline import ingest_property
 
         persist_dir = str(tmp_path / "chroma_test")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         assert vectorstore is not None
         collection = vectorstore._collection
         assert collection.count() > 0
 
-    def test_ingestion_indexes_all_categories(self, test_property_file, tmp_path):
+    def test_ingestion_indexes_all_categories(self, test_property_file, tmp_path, no_kb_dir):
         """All non-property categories are indexed."""
         from src.rag.pipeline import ingest_property
 
         persist_dir = str(tmp_path / "chroma_test2")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         results = vectorstore._collection.get(include=["metadatas"])
         categories = {m.get("category") for m in results["metadatas"] if m}
         # At minimum restaurants and entertainment should be present
@@ -73,22 +83,22 @@ class TestIngestion:
 
 
 class TestRetrieval:
-    def test_retrieval_returns_results(self, test_property_file, tmp_path):
+    def test_retrieval_returns_results(self, test_property_file, tmp_path, no_kb_dir):
         """Query for 'steakhouse' returns results from the vectorstore."""
         from src.rag.pipeline import CasinoKnowledgeRetriever, ingest_property
 
         persist_dir = str(tmp_path / "chroma_retrieval")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
         docs = retriever.retrieve("steakhouse")
         assert len(docs) > 0
 
-    def test_empty_query_returns_gracefully(self, test_property_file, tmp_path):
+    def test_empty_query_returns_gracefully(self, test_property_file, tmp_path, no_kb_dir):
         """Empty query does not raise an exception."""
         from src.rag.pipeline import CasinoKnowledgeRetriever, ingest_property
 
         persist_dir = str(tmp_path / "chroma_empty")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
         # Should not raise
         docs = retriever.retrieve("")
@@ -96,12 +106,12 @@ class TestRetrieval:
 
 
 class TestCategoryMetadata:
-    def test_documents_have_category_metadata(self, test_property_file, tmp_path):
+    def test_documents_have_category_metadata(self, test_property_file, tmp_path, no_kb_dir):
         """Each indexed document carries its source category in metadata."""
         from src.rag.pipeline import ingest_property
 
         persist_dir = str(tmp_path / "chroma_meta")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         results = vectorstore._collection.get(include=["metadatas"])
         for metadata in results["metadatas"]:
             assert "category" in metadata, f"Document missing 'category' metadata: {metadata}"
@@ -111,21 +121,26 @@ class TestCategoryMetadata:
         from src.rag.pipeline import ingest_property
 
         persist_dir = str(tmp_path / "chroma_cat_values")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        # Use nonexistent kb_dir to test JSON categories only
+        vectorstore = ingest_property(
+            test_property_file,
+            persist_dir=persist_dir,
+            knowledge_base_dir=str(tmp_path / "no_kb"),
+        )
         results = vectorstore._collection.get(include=["metadatas"])
         categories = {m["category"] for m in results["metadatas"] if "category" in m}
-        expected = {"restaurants", "entertainment", "hotel", "gaming", "faq", "property"}
+        expected = {"restaurants", "entertainment", "hotel", "gaming", "faq", "property", "amenities", "promotions"}
         # All discovered categories should be a subset of expected
         assert categories.issubset(expected), f"Unexpected categories: {categories - expected}"
 
 
 class TestCategoryFilter:
-    def test_filter_by_category(self, test_property_file, tmp_path):
+    def test_filter_by_category(self, test_property_file, tmp_path, no_kb_dir):
         """Retrieval with filter_category only returns matching category."""
         from src.rag.pipeline import CasinoKnowledgeRetriever, ingest_property
 
         persist_dir = str(tmp_path / "chroma_filter")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
         docs = retriever.retrieve("food", filter_category="restaurants")
         for doc in docs:
@@ -133,12 +148,12 @@ class TestCategoryFilter:
 
 
 class TestNestedDictFlattening:
-    def test_hotel_nested_dict_produces_documents(self, test_property_file, tmp_path):
+    def test_hotel_nested_dict_produces_documents(self, test_property_file, tmp_path, no_kb_dir):
         """Hotel data (nested dict with towers/room_types) produces indexed docs."""
         from src.rag.pipeline import ingest_property
 
         persist_dir = str(tmp_path / "chroma_nested")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         results = vectorstore._collection.get(include=["metadatas"])
         hotel_docs = [m for m in results["metadatas"] if m.get("category") == "hotel"]
         assert len(hotel_docs) >= 2  # at least towers + room_types
@@ -226,13 +241,14 @@ class TestFlattenNestedDictUnit:
 
 
 class TestMissingDataFile:
-    def test_missing_file_returns_empty(self, tmp_path):
-        """Ingest with non-existent file returns None (no crash)."""
+    def test_missing_file_returns_empty(self, tmp_path, no_kb_dir):
+        """Ingest with non-existent JSON file AND no KB returns None (no crash)."""
         from src.rag.pipeline import ingest_property
 
         result = ingest_property(
             str(tmp_path / "nonexistent.json"),
             persist_dir=str(tmp_path / "chroma_missing"),
+            knowledge_base_dir=no_kb_dir,
         )
         assert result is None
 
@@ -378,12 +394,12 @@ class TestReciprocalRankFusion:
 
 
 class TestChunkCount:
-    def test_chunk_count_greater_or_equal_to_doc_count(self, test_property_file, tmp_path):
+    def test_chunk_count_greater_or_equal_to_doc_count(self, test_property_file, tmp_path, no_kb_dir):
         """Total chunks >= total input documents (chunking splits, never removes)."""
         from src.rag.pipeline import ingest_property
 
         persist_dir = str(tmp_path / "chroma_chunks")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         collection = vectorstore._collection
         # We have at least restaurants(2) + entertainment(1) + hotel + gaming + faq = 5+
         assert collection.count() >= 5
@@ -392,12 +408,12 @@ class TestChunkCount:
 class TestPropertyIdIsolation:
     """Tests for cross-property leakage prevention via property_id metadata filter."""
 
-    def test_retrieve_with_scores_filters_by_property_id(self, test_property_file, tmp_path):
+    def test_retrieve_with_scores_filters_by_property_id(self, test_property_file, tmp_path, no_kb_dir):
         """retrieve_with_scores only returns docs matching the configured PROPERTY_NAME."""
         from src.rag.pipeline import CasinoKnowledgeRetriever, ingest_property
 
         persist_dir = str(tmp_path / "chroma_prop_id")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
 
         # Normal retrieval returns results for the configured property
@@ -408,12 +424,12 @@ class TestPropertyIdIsolation:
         for doc, score in results:
             assert doc.metadata.get("property_id") == "mohegan_sun"
 
-    def test_cross_property_returns_empty(self, test_property_file, tmp_path):
+    def test_cross_property_returns_empty(self, test_property_file, tmp_path, no_kb_dir):
         """Queries with a different PROPERTY_NAME return no results (isolation)."""
         from src.rag.pipeline import CasinoKnowledgeRetriever, ingest_property
 
         persist_dir = str(tmp_path / "chroma_cross_prop")
-        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir)
+        vectorstore = ingest_property(test_property_file, persist_dir=persist_dir, knowledge_base_dir=no_kb_dir)
         retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
 
         # Change property name — simulates a different tenant querying the same collection
@@ -733,3 +749,288 @@ class TestLoadPropertyJsonEdgeCases:
 
         docs = _load_property_json(str(path))
         assert len(docs) >= 1
+
+
+class TestMarkdownIngestion:
+    """Tests for _load_knowledge_base_markdown."""
+
+    def test_loads_markdown_files(self, tmp_path):
+        """Markdown files are loaded and split by heading."""
+        from src.rag.pipeline import _load_knowledge_base_markdown
+
+        kb_dir = tmp_path / "knowledge-base" / "regulations"
+        kb_dir.mkdir(parents=True)
+        md_file = kb_dir / "state-requirements.md"
+        md_file.write_text(
+            "# State Requirements\n\n## Nevada\nGaming rules for NV.\n\n"
+            "## New Jersey\nGaming rules for NJ.\n"
+        )
+
+        docs = _load_knowledge_base_markdown(str(tmp_path / "knowledge-base"))
+        assert len(docs) >= 2
+        categories = {d["metadata"]["category"] for d in docs}
+        assert "regulations" in categories
+        # All docs should have doc_type=markdown
+        for doc in docs:
+            assert doc["metadata"]["doc_type"] == "markdown"
+
+    def test_missing_directory_returns_empty(self, tmp_path):
+        """Non-existent directory returns empty list."""
+        from src.rag.pipeline import _load_knowledge_base_markdown
+
+        docs = _load_knowledge_base_markdown(str(tmp_path / "nonexistent"))
+        assert docs == []
+
+    def test_empty_markdown_skipped(self, tmp_path):
+        """Empty markdown files are skipped."""
+        from src.rag.pipeline import _load_knowledge_base_markdown
+
+        kb_dir = tmp_path / "knowledge-base" / "empty"
+        kb_dir.mkdir(parents=True)
+        (kb_dir / "empty.md").write_text("")
+
+        docs = _load_knowledge_base_markdown(str(tmp_path / "knowledge-base"))
+        assert docs == []
+
+    def test_markdown_metadata_has_property_id(self, tmp_path):
+        """Markdown chunks carry property_id for multi-tenant isolation."""
+        from src.rag.pipeline import _load_knowledge_base_markdown
+
+        kb_dir = tmp_path / "knowledge-base" / "casino-operations"
+        kb_dir.mkdir(parents=True)
+        (kb_dir / "comp-system.md").write_text("# Comp System\n\nADT formula details.")
+
+        docs = _load_knowledge_base_markdown(str(tmp_path / "knowledge-base"))
+        assert len(docs) >= 1
+        assert docs[0]["metadata"]["property_id"] == "mohegan_sun"
+        assert docs[0]["metadata"]["source"] == "comp-system.md"
+        assert docs[0]["metadata"]["category"] == "casino_operations"
+
+    def test_ingest_property_includes_markdown(self, tmp_path):
+        """ingest_property ingests both JSON and markdown documents."""
+        import json as json_mod
+
+        from src.rag.pipeline import ingest_property
+
+        # Create minimal JSON
+        json_file = tmp_path / "test.json"
+        json_file.write_text(json_mod.dumps({
+            "restaurants": [{"name": "Test Grill", "cuisine": "American"}]
+        }))
+
+        # Create minimal markdown
+        kb_dir = tmp_path / "knowledge-base" / "regulations"
+        kb_dir.mkdir(parents=True)
+        (kb_dir / "rules.md").write_text("# Rules\n\nSelf-exclusion rules apply.")
+
+        persist_dir = str(tmp_path / "chroma_md")
+        vectorstore = ingest_property(
+            str(json_file),
+            persist_dir=persist_dir,
+            knowledge_base_dir=str(tmp_path / "knowledge-base"),
+        )
+        assert vectorstore is not None
+        collection = vectorstore._collection
+        results = collection.get(include=["metadatas"])
+        doc_types = {m.get("doc_type") for m in results["metadatas"]}
+        # Should have both JSON (no doc_type) and markdown docs
+        assert "markdown" in doc_types
+        assert None in doc_types or len(results["ids"]) > 1
+
+    def test_schema_version_replaces_ingestion_version(self, tmp_path):
+        """Metadata uses _schema_version instead of old ingestion_version."""
+        import json as json_mod
+
+        from src.rag.pipeline import _load_property_json
+
+        data = {"faq": [{"question": "Test?", "answer": "Yes"}]}
+        path = tmp_path / "test.json"
+        path.write_text(json_mod.dumps(data))
+
+        docs = _load_property_json(str(path))
+        assert len(docs) >= 1
+        meta = docs[0]["metadata"]
+        assert "_schema_version" in meta
+        assert "ingestion_version" not in meta
+
+
+class TestNewFormatters:
+    """Tests for category-specific formatters added in R7."""
+
+    def test_format_faq_qa_pair(self):
+        """FAQ formatter leads with question for better embedding alignment."""
+        from src.rag.pipeline import _format_faq
+
+        item = {"question": "Is there free parking?", "answer": "Yes, free self-parking available."}
+        text = _format_faq(item)
+        assert text.startswith("Is there free parking?")
+        assert "free self-parking" in text
+
+    def test_format_faq_fallback_to_generic(self):
+        """FAQ formatter falls back to generic for non-Q&A items."""
+        from src.rag.pipeline import _format_faq
+
+        item = {"name": "General Info", "description": "Some info"}
+        text = _format_faq(item)
+        assert "General Info" in text
+
+    def test_format_gaming_boolean_values(self):
+        """Gaming formatter renders booleans as Available/Not Available."""
+        from src.rag.pipeline import _format_gaming
+
+        item = {"name": "Main Casino", "poker_room": True, "sportsbook": False}
+        text = _format_gaming(item)
+        assert "Poker Room: Available" in text
+        assert "Sportsbook: Not Available" in text
+
+    def test_format_gaming_numeric_values(self):
+        """Gaming formatter comma-formats large numbers."""
+        from src.rag.pipeline import _format_gaming
+
+        item = {"name": "Floor Stats", "slot_machines": 5000, "casino_size_sqft": 364000}
+        text = _format_gaming(item)
+        assert "5,000" in text
+        assert "364,000 sq ft" in text
+
+    def test_format_amenity(self):
+        """Amenity formatter includes type, hours, and location."""
+        from src.rag.pipeline import _format_amenity
+
+        item = {
+            "name": "Elemis Spa",
+            "type": "Full-service spa",
+            "description": "Luxury treatments.",
+            "hours": "9 AM - 9 PM",
+            "location": "Level 2",
+        }
+        text = _format_amenity(item)
+        assert "Elemis Spa" in text
+        assert "Full-service spa" in text
+        assert "9 AM - 9 PM" in text
+        assert "Level 2" in text
+
+    def test_format_promotion(self):
+        """Promotion formatter includes benefits and how-to-join."""
+        from src.rag.pipeline import _format_promotion
+
+        item = {
+            "name": "Momentum Rewards",
+            "description": "Loyalty program.",
+            "benefits": ["Free play", "Dining discounts"],
+            "how_to_join": "Sign up at any desk.",
+        }
+        text = _format_promotion(item)
+        assert "Momentum Rewards" in text
+        assert "Free play" in text
+        assert "Dining discounts" in text
+        assert "Sign up" in text
+
+    def test_format_generic_boolean_human_readable(self):
+        """Generic formatter renders booleans as Available/Not Available."""
+        from src.rag.pipeline import _format_generic
+
+        item = {"name": "Poker Room", "poker_room": True, "high_stakes": False}
+        text = _format_generic(item)
+        assert "Available" in text
+        assert "Not Available" in text
+
+    def test_format_generic_large_numbers_comma(self):
+        """Generic formatter comma-formats large numbers."""
+        from src.rag.pipeline import _format_generic
+
+        item = {"name": "Casino", "casino_size_sqft": 364000}
+        text = _format_generic(item)
+        assert "364,000" in text
+        assert "sq ft" in text
+
+    def test_formatters_registered_for_all_categories(self):
+        """All 10+ categories have registered formatters."""
+        from src.rag.pipeline import _FORMATTERS
+
+        required = {"restaurants", "dining", "entertainment", "shows", "hotel",
+                     "rooms", "hotel_rooms", "faq", "gaming", "amenities", "promotions"}
+        assert required.issubset(set(_FORMATTERS.keys()))
+
+
+class TestIngestionWithAllCategories:
+    """Tests that ingestion handles all categories including amenities and promotions."""
+
+    def test_all_categories_indexed(self, test_property_file, tmp_path):
+        """Verify amenities and promotions categories are indexed."""
+        from src.rag.pipeline import ingest_property
+
+        persist_dir = str(tmp_path / "chroma_all_cats")
+        vectorstore = ingest_property(
+            test_property_file,
+            persist_dir=persist_dir,
+            knowledge_base_dir=str(tmp_path / "nonexistent_kb"),
+        )
+        results = vectorstore._collection.get(include=["metadatas"])
+        categories = {m.get("category") for m in results["metadatas"] if m}
+        assert "amenities" in categories, f"amenities missing. Found: {categories}"
+        assert "promotions" in categories, f"promotions missing. Found: {categories}"
+
+
+class TestProductionChromaGuard:
+    """Test that VECTOR_DB=chroma in production raises RuntimeError."""
+
+    def test_chroma_in_production_raises(self, monkeypatch):
+        """Production + chroma must hard-fail, not silently log."""
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("VECTOR_DB", "chroma")
+        monkeypatch.setenv("API_KEY", "test-key")
+        monkeypatch.setenv("CMS_WEBHOOK_SECRET", "test-secret")
+
+        from src.rag.pipeline import _get_retriever_cached, clear_retriever_cache
+
+        clear_retriever_cache()
+
+        with pytest.raises(RuntimeError, match="VECTOR_DB=chroma in production"):
+            _get_retriever_cached()
+
+
+class TestEmbeddingModelNormalization:
+    """Test that Settings strips models/ prefix from EMBEDDING_MODEL."""
+
+    def test_strips_models_prefix(self, monkeypatch):
+        """EMBEDDING_MODEL with models/ prefix is normalized."""
+        monkeypatch.setenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
+        from src.config import Settings
+
+        settings = Settings()
+        assert settings.EMBEDDING_MODEL == "gemini-embedding-001"
+
+    def test_bare_name_unchanged(self, monkeypatch):
+        """EMBEDDING_MODEL without models/ prefix stays unchanged."""
+        monkeypatch.setenv("EMBEDDING_MODEL", "gemini-embedding-001")
+        from src.config import Settings
+
+        settings = Settings()
+        assert settings.EMBEDDING_MODEL == "gemini-embedding-001"
+
+
+class TestTaskTypeWiring:
+    """Test that task_type is passed through to get_embeddings."""
+
+    def test_ingestion_uses_retrieval_document(self, test_property_file, tmp_path):
+        """ingest_property passes task_type=RETRIEVAL_DOCUMENT to embeddings."""
+        from unittest.mock import MagicMock, call
+
+        from src.rag.pipeline import ingest_property
+
+        mock_embeddings = FakeEmbeddings()
+        calls = []
+
+        def tracking_get_embeddings(task_type=None):
+            calls.append(task_type)
+            return mock_embeddings
+
+        with patch("src.rag.pipeline.get_embeddings", side_effect=tracking_get_embeddings):
+            persist_dir = str(tmp_path / "chroma_task_type")
+            ingest_property(
+                test_property_file,
+                persist_dir=persist_dir,
+                knowledge_base_dir=str(tmp_path / "nonexistent_kb"),
+            )
+
+        assert "RETRIEVAL_DOCUMENT" in calls, f"Expected RETRIEVAL_DOCUMENT in calls: {calls}"

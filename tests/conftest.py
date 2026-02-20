@@ -69,9 +69,9 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.rag.pipeline import _get_retriever_cached
+        from src.rag.pipeline import clear_retriever_cache
 
-        _get_retriever_cached.cache_clear()
+        clear_retriever_cache()
     except (ImportError, AttributeError):
         pass
 
@@ -195,6 +195,35 @@ def test_property_data():
             "table_games": 300,
         },
         "faq": [{"question": "What are the hours?", "answer": "Open 24/7"}],
+        "amenities": [
+            {
+                "name": "Elemis Spa",
+                "type": "Full-service spa",
+                "description": "Luxury day spa offering massages, facials, and body treatments.",
+                "hours": "9 AM - 9 PM daily",
+                "location": "Level 2, Casino of the Earth",
+            },
+            {
+                "name": "Swimming Pool",
+                "type": "Indoor pool",
+                "description": "Heated indoor pool with lounge seating.",
+                "hours": "6 AM - 10 PM daily",
+            },
+        ],
+        "promotions": [
+            {
+                "name": "Momentum Rewards",
+                "description": "Mohegan Sun's loyalty program with four tiers of benefits.",
+                "benefits": ["Free play", "Dining discounts", "Hotel upgrades", "Event access"],
+                "how_to_join": "Sign up at any Momentum desk with valid photo ID.",
+            },
+            {
+                "name": "Ascend Tier",
+                "description": "Premium tier for frequent players with enhanced benefits.",
+                "requirements": "Earn 25,000 tier credits within a calendar year.",
+                "benefits": ["Priority check-in", "Dedicated host", "Complimentary valet"],
+            },
+        ],
     }
 
 
