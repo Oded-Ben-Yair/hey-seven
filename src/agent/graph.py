@@ -154,7 +154,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
         # When disabled, all queries route to the general host concierge.
         # Uses async is_feature_enabled() for multi-tenant support (per-casino overrides).
-        if candidate != "host" and not await is_feature_enabled(None, "specialist_agents_enabled"):
+        if candidate != "host" and not await is_feature_enabled(get_settings().CASINO_ID, "specialist_agents_enabled"):
             logger.info("Specialist agents disabled; routing %s to host", candidate)
             candidate = "host"
         agent_name = candidate

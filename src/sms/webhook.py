@@ -259,6 +259,8 @@ class WebhookIdempotencyTracker:
         ttl_seconds: How long to remember a message ID (default 3600 = 1h).
     """
 
+    _MAX_ENTRIES: int = 10_000  # Hard cap to prevent OOM under webhook floods
+
     def __init__(self, ttl_seconds: int = 3600) -> None:
         self._ttl = ttl_seconds
         self._processed: dict[str, float] = {}
@@ -280,6 +282,11 @@ class WebhookIdempotencyTracker:
             if message_id in self._processed:
                 logger.debug("Duplicate webhook detected: %s", message_id[:12])
                 return True
+            # Enforce hard cap to prevent OOM under webhook floods
+            if len(self._processed) >= self._MAX_ENTRIES:
+                # Evict oldest entry (FIFO)
+                oldest_key = min(self._processed, key=self._processed.get)
+                del self._processed[oldest_key]
             self._processed[message_id] = time.time()
             return False
 

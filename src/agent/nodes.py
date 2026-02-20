@@ -467,7 +467,7 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
 
     # Feature flag: AI disclosure for regulatory transparency (async API for multi-tenant)
-    ai_disclosure = await is_feature_enabled(None, "ai_disclosure_enabled")
+    ai_disclosure = await is_feature_enabled(get_settings().CASINO_ID, "ai_disclosure_enabled")
     disclosure_line = " I'm an AI assistant, " if ai_disclosure else " "
 
     return {
@@ -512,7 +512,7 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         )
     elif query_type == "gambling_advice":
         # Feature flag: ai_disclosure_enabled adds transparency to gambling-advice responses
-        ai_disclosure = await is_feature_enabled(None, "ai_disclosure_enabled")
+        ai_disclosure = await is_feature_enabled(get_settings().CASINO_ID, "ai_disclosure_enabled")
         disclosure_suffix = (
             "\n\n*As an AI assistant, I'm required to direct you to these "
             "professional resources rather than provide gambling guidance.*"
