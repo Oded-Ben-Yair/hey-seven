@@ -131,7 +131,7 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
     """
     global _failure_count, _failure_alerted
 
-    # Runtime feature flag check — skip whisper planning when disabled.
+    # Runtime behavior flag (Layer 2) — see graph.py dual-layer docs.
     # This complements the build-time check in build_graph() which removes
     # the node from the graph topology entirely.  The runtime check handles
     # dynamic flag changes without requiring a graph rebuild.

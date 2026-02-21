@@ -46,11 +46,16 @@ class FeatureFlags(TypedDict, total=False):
 # Default feature flags
 # ---------------------------------------------------------------------------
 
-# Trade-off: Graph nodes read DEFAULT_FEATURES directly (synchronous) rather than
-# calling the async get_feature_flags(casino_id) API.  This is intentional for
-# Phase 1 single-tenant deployment — avoids async overhead in every node.
-# The async API (get_feature_flags / is_feature_enabled) is ready for Phase 2
-# multi-tenant support when per-casino overrides are needed from Firestore.
+# Dual-layer feature flag design — full documentation in src/agent/graph.py
+# (search "Feature Flag Architecture").
+#
+# Layer 1 (build-time): Flags that alter GRAPH TOPOLOGY (e.g. whisper_planner_enabled)
+#   are read synchronously from this dict at startup.  Changing them requires a
+#   container restart (Cloud Run rolling restart for zero downtime).
+#
+# Layer 2 (runtime): Flags that alter BEHAVIOR WITHIN NODES (e.g. specialist_agents_enabled,
+#   ai_disclosure_enabled) are read per-request via the async is_feature_enabled() API
+#   below, which merges these defaults with per-casino Firestore overrides.
 DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "ai_disclosure_enabled": True,
     "whisper_planner_enabled": True,

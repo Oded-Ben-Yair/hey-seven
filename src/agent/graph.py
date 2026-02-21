@@ -288,14 +288,41 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         NODE_OFF_TOPIC: NODE_OFF_TOPIC,
     })
 
-    # Feature flags consumed here (graph topology) and in nodes
-    # (greeting_node, off_topic_node) and in agents/_base.py (execute_specialist).
-    # Topology-altering flags must be checked at build time; runtime flags
-    # are checked per-invocation inside node functions.
-    # NOTE: whisper_planner_enabled uses DEFAULT_FEATURES (static) because it
-    # controls GRAPH TOPOLOGY which is built once at startup (not in an async
-    # context).  Runtime flags (ai_disclosure_enabled, specialist_agents_enabled)
-    # use the async is_feature_enabled() API for per-casino overrides.
+    # -------------------------------------------------------------------
+    # Feature Flag Architecture (Dual-Layer Design)
+    # -------------------------------------------------------------------
+    # LAYER 1 — BUILD TIME (graph topology):
+    #   Feature flags that control GRAPH TOPOLOGY (which nodes exist,
+    #   which edges connect them) are evaluated once at startup via
+    #   DEFAULT_FEATURES (sync).  This is mandatory because LangGraph
+    #   compiles the graph once — per-request graph compilation would
+    #   be expensive (~40ms+ per request) and fragile.
+    #   Example: whisper_planner_enabled removes the whisper_planner
+    #   node entirely.
+    #
+    # LAYER 2 — RUNTIME (per-request behavior):
+    #   Feature flags that control BEHAVIOR WITHIN NODES are evaluated
+    #   per-request via the async is_feature_enabled(casino_id, flag)
+    #   API, supporting per-casino overrides stored in Firestore.
+    #   Examples: ai_disclosure_enabled, specialist_agents_enabled,
+    #   comp_agent_enabled.
+    #
+    # WHY NOT ALL RUNTIME?
+    #   Topology flags cannot be runtime without per-request graph
+    #   compilation.  Per-request compilation adds ~40ms+ latency and
+    #   breaks LangGraph's checkpointer assumptions (checkpoint
+    #   references specific node names).
+    #
+    # EMERGENCY DISABLE:
+    #   To disable whisper_planner during an incident: restart the
+    #   container with FEATURE_FLAGS='{"whisper_planner_enabled": false}'
+    #   env var.  Cloud Run supports rolling restarts with zero downtime.
+    #
+    # See also:
+    #   - src/casino/feature_flags.py  (DEFAULT_FEATURES, async API)
+    #   - src/agent/whisper_planner.py (runtime flag guard)
+    #   - src/agent/agents/_base.py    (runtime specialist dispatch)
+    # -------------------------------------------------------------------
     whisper_enabled = DEFAULT_FEATURES.get("whisper_planner_enabled", True)
     logger.info(
         "Feature flags at graph build: %s",
