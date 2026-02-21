@@ -17,9 +17,9 @@ profiles across instances. The in-memory fallback is bounded to
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
-import threading
 from datetime import datetime, timezone
 from typing import Any
 
@@ -52,12 +52,16 @@ _memory_store: dict[str, dict] = {}
 # Under load, per-request instantiation exhausts file descriptors and SSL
 # handshakes, crashing the app.  The singleton is cleared by
 # ``clear_firestore_client_cache()`` (exposed for tests).
-# Thread lock prevents race during concurrent cold-start creation (GPT F5).
+#
+# R16 fix: converted from threading.Lock to asyncio.Lock (Gemini F-001).
+# threading.Lock blocks the event loop under contention; asyncio.Lock
+# yields control to other coroutines.  All callers are async, so asyncio.Lock
+# is the correct primitive.
 _firestore_client_cache: dict[str, Any] = {}
-_firestore_client_lock = threading.Lock()
+_firestore_client_lock = asyncio.Lock()
 
 
-def _get_firestore_client() -> Any | None:
+async def _get_firestore_client() -> Any | None:
     """Return the cached Firestore AsyncClient if available, else None.
 
     Lazy-imports ``google.cloud.firestore`` to avoid import failures when
@@ -67,19 +71,22 @@ def _get_firestore_client() -> Any | None:
     exhaustion under load.  Creating a new ``AsyncClient`` per CRUD call
     opens new HTTP/2 connections and SSL handshakes — unsustainable at scale.
 
-    Protected by ``threading.Lock`` to prevent race conditions during
-    concurrent cold-start requests (R5 fix per GPT F5).
+    Protected by ``asyncio.Lock`` to prevent race conditions during
+    concurrent cold-start requests.  R16: converted from ``threading.Lock``
+    (which blocks the event loop) to ``asyncio.Lock`` (non-blocking).
 
     Note: A near-identical helper exists in ``src.casino.config``.
     Both are intentionally kept separate to avoid coupling the guest
     data layer to the casino config module.  See comment there for
     the full trade-off rationale.
     """
+    # Fast path outside lock (safe: dict.get is atomic under GIL,
+    # and we only ever SET the value under the lock).
     cached = _firestore_client_cache.get("client")
     if cached is not None:
         return cached
 
-    with _firestore_client_lock:
+    async with _firestore_client_lock:
         # Double-check after acquiring lock
         cached = _firestore_client_cache.get("client")
         if cached is not None:
@@ -135,7 +142,7 @@ async def get_guest_profile(phone: str, casino_id: str) -> dict:
     Returns:
         The guest profile dict, or an empty profile skeleton if not found.
     """
-    db = _get_firestore_client()
+    db = await _get_firestore_client()
     if db is not None:
         try:
             doc_ref = db.collection(_collection_path(casino_id)).document(phone)
@@ -232,7 +239,7 @@ async def update_guest_profile(phone: str, casino_id: str, updates: dict) -> dic
     profile["engagement"]["profile_completeness"] = round(completeness, 4)
 
     # Persist
-    db = _get_firestore_client()
+    db = await _get_firestore_client()
     if db is not None:
         try:
             doc_ref = db.collection(_collection_path(casino_id)).document(phone)
@@ -276,7 +283,7 @@ async def delete_guest_profile(phone: str, casino_id: str) -> bool:
     Returns:
         True if deletion succeeded, False if the profile did not exist.
     """
-    db = _get_firestore_client()
+    db = await _get_firestore_client()
     if db is not None:
         try:
             guest_ref = db.collection(_collection_path(casino_id)).document(phone)

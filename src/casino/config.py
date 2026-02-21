@@ -169,20 +169,19 @@ DEFAULT_CONFIG: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 
-import threading
-
 _fs_config_client_cache: dict[str, Any] = {}
-_fs_config_client_lock = threading.Lock()
+_fs_config_client_lock = asyncio.Lock()
 
 
-def _get_firestore_client() -> Any | None:
+async def _get_firestore_client() -> Any | None:
     """Return the cached Firestore AsyncClient if available, else None.
 
     Lazy-imports ``google.cloud.firestore`` to avoid import failures when
     the dependency is not installed (local dev without GCP SDK).
 
-    Protected by ``threading.Lock`` to prevent race conditions during
-    concurrent cold-start requests (R5 fix per GPT F5).
+    Protected by ``asyncio.Lock`` to prevent race conditions during
+    concurrent cold-start requests.  R16: converted from ``threading.Lock``
+    (which blocks the event loop) to ``asyncio.Lock`` (non-blocking).
 
     Note: A near-identical helper exists in ``src.data.guest_profile``.
     Both are intentionally kept separate: this one uses ``CASINO_ID`` as
@@ -191,11 +190,13 @@ def _get_firestore_client() -> Any | None:
     Extracting a shared utility would save ~10 LOC but add an import
     dependency between unrelated modules.
     """
+    # Fast path outside lock (safe: dict.get is atomic under GIL,
+    # and we only ever SET the value under the lock).
     cached = _fs_config_client_cache.get("client")
     if cached is not None:
         return cached
 
-    with _fs_config_client_lock:
+    async with _fs_config_client_lock:
         # Double-check after acquiring lock
         cached = _fs_config_client_cache.get("client")
         if cached is not None:
@@ -281,7 +282,7 @@ async def get_casino_config(casino_id: str) -> dict:
             return cached
 
         # Try Firestore
-        db = _get_firestore_client()
+        db = await _get_firestore_client()
         if db is not None:
             try:
                 doc_ref = db.collection("config").document(casino_id)

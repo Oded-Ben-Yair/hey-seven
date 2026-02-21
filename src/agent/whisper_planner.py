@@ -78,15 +78,17 @@ async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 
 
-# Simple failure counter for monitoring whisper planner health.
+# Failure counter for monitoring whisper planner health.
 # Tracks consecutive failures; logs ERROR when threshold is exceeded.
-# Benign race: concurrent graph invocations (different thread_ids) may
-# increment simultaneously, losing counts (read-modify-write without lock).
-# Acceptable for alerting: off-by-one delays alert by one failure, never
-# suppresses it. R10 documentation fix (DeepSeek F9, Gemini F19).
+#
+# R16 fix: DeepSeek F-003, Gemini F-016 (2/3 consensus).  Previous "benign
+# race" comment was incorrect — the success-reset race suppresses alerts
+# entirely under mixed traffic (not just off-by-one).  asyncio.Lock protects
+# the read-modify-write cycle so the "consecutive" semantic is maintained.
 _failure_count: int = 0
 _FAILURE_ALERT_THRESHOLD: int = 10
 _failure_alerted: bool = False
+_failure_lock = asyncio.Lock()
 
 # ---------------------------------------------------------------------------
 # Profile fields for completeness calculation (placeholder weights)
@@ -164,9 +166,11 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         planner_llm = llm.with_structured_output(WhisperPlan)
         plan: WhisperPlan = await planner_llm.ainvoke(prompt_text)
 
-        # Reset failure counter on success
-        _failure_count = 0
-        _failure_alerted = False
+        # Reset failure counter on success (under lock to prevent race
+        # with concurrent failure increment — R16 fix).
+        async with _failure_lock:
+            _failure_count = 0
+            _failure_alerted = False
         return {"whisper_plan": plan.model_dump()}
 
     except Exception as exc:
@@ -174,21 +178,23 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         # output parsing AND network errors (google-genai raises various
         # exception types across SDK versions) all degrade gracefully.
         # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        _failure_count += 1
-        if _failure_count >= _FAILURE_ALERT_THRESHOLD and not _failure_alerted:
-            _failure_alerted = True
-            logger.error(
-                "whisper_planner_systematic_failure: %d consecutive failures "
-                "exceeded threshold (%d). Whisper planner may be misconfigured.",
-                _failure_count,
-                _FAILURE_ALERT_THRESHOLD,
-            )
+        async with _failure_lock:
+            _failure_count += 1
+            current_count = _failure_count
+            if _failure_count >= _FAILURE_ALERT_THRESHOLD and not _failure_alerted:
+                _failure_alerted = True
+                logger.error(
+                    "whisper_planner_systematic_failure: %d consecutive failures "
+                    "exceeded threshold (%d). Whisper planner may be misconfigured.",
+                    _failure_count,
+                    _FAILURE_ALERT_THRESHOLD,
+                )
         logger.warning(
             "whisper_planner_failure",
             extra={
                 "error_type": type(exc).__name__,
                 "error_msg": str(exc)[:200],
-                "failure_count": _failure_count,
+                "failure_count": current_count,
             },
         )
         return {"whisper_plan": None}

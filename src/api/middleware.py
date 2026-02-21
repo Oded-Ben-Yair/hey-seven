@@ -322,6 +322,9 @@ class RateLimitMiddleware:
         self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
         # Protects _requests mutations under concurrent async requests
         self._lock = asyncio.Lock()
+        # Stale-client sweep counter. R16 fix: initialized in __init__
+        # instead of lazy getattr (Gemini F-009, Grok M-006 consensus).
+        self._request_counter: int = 0
 
     def _get_client_ip(self, scope: Scope) -> str:
         """Extract client IP, preferring X-Forwarded-For behind trusted proxies.
@@ -366,7 +369,7 @@ class RateLimitMiddleware:
             # whose deques are fully expired. Prevents slow memory growth from
             # transient IPs that made one request and never returned.
             # R11 fix: DeepSeek F-006, Gemini F-001, GPT F-002 (3/3 consensus).
-            self._request_counter = getattr(self, "_request_counter", 0) + 1
+            self._request_counter += 1
             if self._request_counter % 100 == 0:
                 stale = [
                     ip for ip, dq in self._requests.items()

@@ -889,10 +889,17 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
 # Global Retriever Instance (TTLCache singleton, 1-hour refresh for
 # GCP Workload Identity credential rotation — consistent with _llm_cache
 # and _validator_cache in nodes.py)
+#
+# Uses threading.Lock (not asyncio.Lock) because this runs inside
+# asyncio.to_thread() from retrieve_node — i.e., in a thread pool worker.
+# R16 fix: DeepSeek F-001, Gemini F-004, Grok C-001 (3/3 consensus).
 # ---------------------------------------------------------------------------
+
+import threading as _threading
 
 _retriever_cache: dict[str, AbstractRetriever] = {}
 _retriever_cache_time: dict[str, float] = {}
+_retriever_lock = _threading.Lock()
 _RETRIEVER_TTL_SECONDS = 3600  # 1 hour
 
 
@@ -903,6 +910,11 @@ def _get_retriever_cached() -> AbstractRetriever:
     Credential rotation in GCP Workload Identity requires periodic
     recreation of Firestore clients.
 
+    Protected by ``threading.Lock`` because this function is called from
+    ``asyncio.to_thread()`` in ``retrieve_node`` — it runs in a thread
+    pool, not the event loop.  All other singletons use ``asyncio.Lock``
+    because they run in coroutines.  R16 fix (3/3 reviewer consensus).
+
     Internal helper for ``get_retriever()`` — separated so that the
     ``persist_dir`` override path does not pollute the cache key.
     """
@@ -911,65 +923,72 @@ def _get_retriever_cached() -> AbstractRetriever:
     settings = get_settings()
     cache_key = f"{settings.CASINO_ID}:default"
     now = time.monotonic()
-    if cache_key in _retriever_cache:
-        if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
-            return _retriever_cache[cache_key]
-        logger.info("Retriever TTL expired, recreating (credential rotation safety).")
 
-    if settings.VECTOR_DB == "firestore":
-        try:
-            from src.rag.firestore_retriever import FirestoreRetriever
+    # Full lock: prevents concurrent to_thread workers from racing on
+    # TTL expiry and both creating new retriever instances (resource leak,
+    # duplicate Firestore/ChromaDB connections).  Matches the double-check
+    # pattern used by _get_llm, _get_circuit_breaker, get_checkpointer.
+    with _retriever_lock:
+        # Double-check after acquiring lock (another thread may have filled it)
+        if cache_key in _retriever_cache:
+            if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
+                return _retriever_cache[cache_key]
+            logger.info("Retriever TTL expired, recreating (credential rotation safety).")
 
-            retriever = FirestoreRetriever(
-                project=settings.FIRESTORE_PROJECT,
-                collection=settings.FIRESTORE_COLLECTION,
-                embeddings=get_embeddings(task_type="RETRIEVAL_QUERY"),
+        if settings.VECTOR_DB == "firestore":
+            try:
+                from src.rag.firestore_retriever import FirestoreRetriever
+
+                retriever = FirestoreRetriever(
+                    project=settings.FIRESTORE_PROJECT,
+                    collection=settings.FIRESTORE_COLLECTION,
+                    embeddings=get_embeddings(task_type="RETRIEVAL_QUERY"),
+                )
+                logger.info("Using Firestore retriever (project=%s)", settings.FIRESTORE_PROJECT)
+                _retriever_cache[cache_key] = retriever
+                _retriever_cache_time[cache_key] = now
+                return retriever
+            except Exception:
+                logger.warning(
+                    "Failed to create Firestore retriever. Falling back to ChromaDB.",
+                    exc_info=True,
+                )
+
+        chroma_dir = settings.CHROMA_PERSIST_DIR
+
+        # Guard: VECTOR_DB=chroma requires the chromadb package, which is excluded
+        # from requirements-prod.txt (~200MB). If running in production without
+        # chromadb, fail with a clear message instead of an opaque ImportError.
+        if settings.ENVIRONMENT == "production" and settings.VECTOR_DB == "chroma":
+            raise RuntimeError(
+                "VECTOR_DB=chroma in production environment. chromadb is excluded "
+                "from requirements-prod.txt and loses all data on container restart. "
+                "Set VECTOR_DB=firestore for production."
             )
-            logger.info("Using Firestore retriever (project=%s)", settings.FIRESTORE_PROJECT)
-            _retriever_cache[cache_key] = retriever
-            _retriever_cache_time[cache_key] = now
-            return retriever
+
+        try:
+            # Lazy import: see ingest_property() for rationale.
+            from langchain_community.vectorstores import Chroma
+
+            vectorstore = Chroma(
+                collection_name="property_knowledge",
+                embedding_function=get_embeddings(task_type="RETRIEVAL_QUERY"),
+                persist_directory=chroma_dir,
+                collection_metadata={"hnsw:space": "cosine"},
+            )
+            retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
+            logger.info("Loaded ChromaDB retriever from %s", chroma_dir)
         except Exception:
             logger.warning(
-                "Failed to create Firestore retriever. Falling back to ChromaDB.",
+                "Could not load ChromaDB from %s. Retriever returns empty results.",
+                chroma_dir,
                 exc_info=True,
             )
+            retriever = CasinoKnowledgeRetriever()
 
-    chroma_dir = settings.CHROMA_PERSIST_DIR
-
-    # Guard: VECTOR_DB=chroma requires the chromadb package, which is excluded
-    # from requirements-prod.txt (~200MB). If running in production without
-    # chromadb, fail with a clear message instead of an opaque ImportError.
-    if settings.ENVIRONMENT == "production" and settings.VECTOR_DB == "chroma":
-        raise RuntimeError(
-            "VECTOR_DB=chroma in production environment. chromadb is excluded "
-            "from requirements-prod.txt and loses all data on container restart. "
-            "Set VECTOR_DB=firestore for production."
-        )
-
-    try:
-        # Lazy import: see ingest_property() for rationale.
-        from langchain_community.vectorstores import Chroma
-
-        vectorstore = Chroma(
-            collection_name="property_knowledge",
-            embedding_function=get_embeddings(task_type="RETRIEVAL_QUERY"),
-            persist_directory=chroma_dir,
-            collection_metadata={"hnsw:space": "cosine"},
-        )
-        retriever = CasinoKnowledgeRetriever(vectorstore=vectorstore)
-        logger.info("Loaded ChromaDB retriever from %s", chroma_dir)
-    except Exception:
-        logger.warning(
-            "Could not load ChromaDB from %s. Retriever returns empty results.",
-            chroma_dir,
-            exc_info=True,
-        )
-        retriever = CasinoKnowledgeRetriever()
-
-    _retriever_cache[cache_key] = retriever
-    _retriever_cache_time[cache_key] = now
-    return retriever
+        _retriever_cache[cache_key] = retriever
+        _retriever_cache_time[cache_key] = now
+        return retriever
 
 
 def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
@@ -1021,11 +1040,13 @@ def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
 def clear_retriever_cache() -> None:
     """Clear the retriever singleton cache.
 
-    Clears the TTL-based retriever cache dict.
+    Clears the TTL-based retriever cache dict under the threading lock
+    to prevent races with concurrent ``_get_retriever_cached()`` calls.
     Call from tests or after re-ingestion to force fresh retriever creation.
     """
-    _retriever_cache.clear()
-    _retriever_cache_time.clear()
+    with _retriever_lock:
+        _retriever_cache.clear()
+        _retriever_cache_time.clear()
 
 
 # Backward-compatible attribute: callers using ``get_retriever.cache_clear()``
