@@ -222,3 +222,180 @@ class TestCategoryToAgentMapping:
 
         assert "hotel" in _CATEGORY_TO_AGENT
         assert _CATEGORY_TO_AGENT["hotel"] == "hotel"
+
+
+class TestGraphNodeCount:
+    """Verify the documented graph node count matches code."""
+
+    def test_graph_has_expected_nodes(self):
+        """StateGraph has the documented number of nodes (excluding __start__, __end__)."""
+        from src.agent.graph import build_graph
+
+        graph = build_graph()
+        g = graph.get_graph()
+        # g.nodes may be a dict (keyed by node ID) or iterable of node objects.
+        # Handle both: if dict, use keys; if iterable with .id, extract IDs.
+        if isinstance(g.nodes, dict):
+            nodes = [n for n in g.nodes if n not in ("__start__", "__end__")]
+        else:
+            nodes = [
+                (n.id if hasattr(n, "id") else str(n))
+                for n in g.nodes
+                if (n.id if hasattr(n, "id") else str(n)) not in ("__start__", "__end__")
+            ]
+        assert len(nodes) == 11, (
+            f"Graph has {len(nodes)} nodes, expected 11. "
+            f"Nodes: {nodes}"
+        )
+
+    def test_known_nodes_frozenset_matches_graph(self):
+        """_KNOWN_NODES frozenset has same count as actual graph nodes."""
+        from src.agent.graph import _KNOWN_NODES, build_graph
+
+        graph = build_graph()
+        g = graph.get_graph()
+        if isinstance(g.nodes, dict):
+            actual = {n for n in g.nodes if n not in ("__start__", "__end__")}
+        else:
+            actual = {
+                (n.id if hasattr(n, "id") else str(n))
+                for n in g.nodes
+                if (n.id if hasattr(n, "id") else str(n)) not in ("__start__", "__end__")
+            }
+        assert _KNOWN_NODES == actual, (
+            f"_KNOWN_NODES mismatch: "
+            f"missing_from_frozenset={actual - _KNOWN_NODES}, "
+            f"extra_in_frozenset={_KNOWN_NODES - actual}"
+        )
+
+
+class TestGuardrailPatternCount:
+    """Verify the documented guardrail pattern count matches code."""
+
+    def test_total_guardrail_patterns(self):
+        """guardrails.py has the expected total number of re.compile() patterns."""
+        import inspect
+        from src.agent import guardrails
+
+        source = inspect.getsource(guardrails)
+        patterns = re.findall(r"re\.compile\(", source)
+        assert len(patterns) == 84, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 84. "
+            f"Update docs if patterns were added/removed."
+        )
+
+    def test_five_guardrail_categories(self):
+        """guardrails.py defines exactly 5 guardrail pattern categories."""
+        from src.agent import guardrails
+
+        category_lists = [
+            guardrails._INJECTION_PATTERNS,
+            guardrails._RESPONSIBLE_GAMING_PATTERNS,
+            guardrails._AGE_VERIFICATION_PATTERNS,
+            guardrails._BSA_AML_PATTERNS,
+            guardrails._PATRON_PRIVACY_PATTERNS,
+        ]
+        assert len(category_lists) == 5, (
+            f"Expected 5 guardrail categories, found {len(category_lists)}."
+        )
+        # Each category must have at least 1 pattern
+        for i, cat in enumerate(category_lists):
+            assert len(cat) > 0, f"Category {i} is empty"
+
+    def test_injection_pattern_count(self):
+        """Prompt injection has 11 patterns."""
+        from src.agent.guardrails import _INJECTION_PATTERNS
+
+        assert len(_INJECTION_PATTERNS) == 11, (
+            f"_INJECTION_PATTERNS has {len(_INJECTION_PATTERNS)}, expected 11."
+        )
+
+    def test_responsible_gaming_pattern_count(self):
+        """Responsible gaming has 31 patterns (English + Spanish + Portuguese + Mandarin)."""
+        from src.agent.guardrails import _RESPONSIBLE_GAMING_PATTERNS
+
+        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 31, (
+            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 31."
+        )
+
+    def test_bsa_aml_pattern_count(self):
+        """BSA/AML has 25 patterns (English + Spanish + Portuguese + Mandarin)."""
+        from src.agent.guardrails import _BSA_AML_PATTERNS
+
+        assert len(_BSA_AML_PATTERNS) == 25, (
+            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 25."
+        )
+
+
+class TestMiddlewareCount:
+    """Verify the documented middleware count matches code."""
+
+    def test_middleware_all_exports(self):
+        """middleware.py __all__ exports exactly 6 middleware classes."""
+        from src.api import middleware
+
+        assert len(middleware.__all__) == 6, (
+            f"middleware.__all__ has {len(middleware.__all__)} entries, expected 6. "
+            f"Entries: {middleware.__all__}"
+        )
+
+    def test_middleware_names(self):
+        """All 6 documented middleware classes are exported."""
+        from src.api.middleware import __all__ as mw_all
+
+        expected = {
+            "RequestLoggingMiddleware",
+            "ErrorHandlingMiddleware",
+            "SecurityHeadersMiddleware",
+            "ApiKeyMiddleware",
+            "RateLimitMiddleware",
+            "RequestBodyLimitMiddleware",
+        }
+        assert set(mw_all) == expected, (
+            f"Middleware mismatch: "
+            f"missing={expected - set(mw_all)}, "
+            f"extra={set(mw_all) - expected}"
+        )
+
+
+class TestEndpointCount:
+    """Verify the documented endpoint count matches code."""
+
+    # FastAPI adds built-in routes (/docs, /redoc, /openapi.json, /docs/oauth2-redirect).
+    # Exclude them to count only application-defined endpoints.
+    _FASTAPI_BUILTIN = {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+
+    def test_app_has_expected_endpoints(self):
+        """FastAPI app has exactly 8 application-defined endpoints."""
+        from src.api.app import create_app
+
+        app = create_app()
+        endpoints = [
+            route.path
+            for route in app.routes
+            if hasattr(route, "endpoint") and route.path not in self._FASTAPI_BUILTIN
+        ]
+        assert len(endpoints) == 8, (
+            f"App has {len(endpoints)} app endpoints, expected 8. "
+            f"Endpoints: {endpoints}"
+        )
+
+    def test_expected_endpoint_paths(self):
+        """All 8 documented endpoint paths exist."""
+        from src.api.app import create_app
+
+        app = create_app()
+        paths = {
+            route.path
+            for route in app.routes
+            if hasattr(route, "endpoint") and route.path not in self._FASTAPI_BUILTIN
+        }
+        expected = {
+            "/chat", "/live", "/health", "/property",
+            "/graph", "/sms/webhook", "/cms/webhook", "/feedback",
+        }
+        assert paths == expected, (
+            f"Endpoint mismatch: "
+            f"missing={expected - paths}, "
+            f"extra={paths - expected}"
+        )
