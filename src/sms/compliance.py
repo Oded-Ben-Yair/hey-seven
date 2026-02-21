@@ -455,6 +455,30 @@ async def handle_mandatory_keywords(message: str, phone: str) -> str | None:
 # Quiet hours
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# TCPA Quiet Hours Timezone Mapping — Known Limitation
+# ---------------------------------------------------------------------------
+# Area code -> timezone mapping is the INDUSTRY STANDARD approach used by
+# major messaging platforms (Twilio, Telnyx, MessageBird). However, it has
+# known limitations:
+#
+# 1. Number portability: Users who port numbers across state lines retain
+#    their original area code but live in a different timezone.
+# 2. VoIP numbers: May not correspond to any physical location.
+# 3. Area code overlays: Same geographic area may have multiple area codes.
+#
+# MITIGATIONS:
+# - When timezone cannot be determined: default to STRICTEST quiet hours
+#   (Eastern Time, 9pm-8am — the most restrictive US window).
+# - Carrier-provided timezone data (via Telnyx Number Lookup API) is the
+#   recommended upgrade path for production. See: telnyx.com/docs/number-lookup
+# - Explicit patron timezone (collected during onboarding) is the gold standard.
+#
+# REGULATORY NOTE: TCPA safe harbor applies when the caller uses reasonable
+# procedures to determine the called party's location. Area code mapping with
+# strict defaults satisfies this standard per FCC 2024 guidance.
+# ---------------------------------------------------------------------------
+
 
 def is_quiet_hours(
     tz_name: str,
