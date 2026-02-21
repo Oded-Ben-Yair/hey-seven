@@ -13,8 +13,11 @@ RUN pip install --no-cache-dir --target=/build/deps -r requirements-prod.txt
 # Stage 2: Production
 FROM python:3.12.8-slim-bookworm
 
+# Install curl for HEALTHCHECK (slim image has neither curl nor wget)
 # Security: non-root user
-RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
 WORKDIR /app
 
@@ -56,7 +59,7 @@ USER appuser
 # startup/liveness probes configured via gcloud deploy flags (see cloudbuild.yaml).
 # Kept for local docker-compose / Docker Desktop health monitoring.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # Graceful shutdown: 15s allows in-flight SSE streams to complete before
 # uvicorn force-terminates connections. Cloud Run sends SIGTERM and allows
