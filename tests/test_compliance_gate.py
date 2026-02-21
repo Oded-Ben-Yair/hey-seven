@@ -103,12 +103,12 @@ class TestComplianceGateNode:
         assert result["router_confidence"] == 1.0
 
     @pytest.mark.asyncio
-    async def test_bsa_aml_returns_off_topic(self, _make_state):
-        """BSA/AML → off_topic."""
+    async def test_bsa_aml_returns_bsa_aml(self, _make_state):
+        """BSA/AML → bsa_aml (specialized type, not generic off_topic)."""
         from src.agent.compliance_gate import compliance_gate_node
 
         result = await compliance_gate_node(_make_state("How do I launder money?"))
-        assert result["query_type"] == "off_topic"
+        assert result["query_type"] == "bsa_aml"
         assert result["router_confidence"] == 1.0
 
     @pytest.mark.asyncio

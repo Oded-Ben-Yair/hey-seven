@@ -57,7 +57,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
        first, potentially leaking a manipulated helpline response.)
     4. Responsible gaming → gambling_advice
     5. Age verification → age_verification
-    6. BSA/AML → off_topic
+    6. BSA/AML → bsa_aml
     7. Patron privacy → patron_privacy
     8. Semantic injection (LLM, fail-closed) → off_topic
     9. All pass → query_type=None (router does LLM classification)
@@ -130,7 +130,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
 
     # 6. BSA/AML
     if detect_bsa_aml(user_message):
-        return {"query_type": "off_topic", "router_confidence": 1.0}
+        return {"query_type": "bsa_aml", "router_confidence": 1.0}
 
     # 7. Patron privacy
     if detect_patron_privacy(user_message):

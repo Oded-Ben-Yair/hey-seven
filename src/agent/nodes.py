@@ -528,7 +528,15 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     query_type = state.get("query_type", "off_topic")
     settings = get_settings()
 
-    if query_type == "patron_privacy":
+    if query_type == "bsa_aml":
+        content = (
+            "Thank you for your question. Matters related to financial compliance "
+            "and reporting requirements are handled by our dedicated compliance team. "
+            "For assistance, please speak with a casino host or contact our compliance "
+            "department directly. Is there anything else about our resort amenities "
+            "I can help you with?"
+        )
+    elif query_type == "patron_privacy":
         content = (
             "I'm not able to share information about other guests, including whether "
             "someone is a member, their presence at the property, or any personal details. "
@@ -633,7 +641,7 @@ def route_from_router(state: PropertyQAState) -> str:
     if query_type == "greeting":
         return "greeting"
 
-    if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification", "patron_privacy"):
+    if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification", "patron_privacy", "bsa_aml"):
         return "off_topic"
 
     if confidence < 0.3:

@@ -1291,26 +1291,45 @@ class TestFormatContextBlock:
 
 
 class TestBsaAmlRouting:
-    """Tests that BSA/AML detection routes to off_topic via compliance gate.
+    """Tests that BSA/AML detection routes to off_topic node via compliance gate.
 
     BSA/AML guardrails fire in compliance_gate_node (not router_node).
+    Returns specialized 'bsa_aml' query_type which routes to off_topic node
+    but produces a compliance-team-specific response.
     """
 
-    async def test_money_laundering_routes_to_off_topic(self):
-        """BSA/AML query is routed to off_topic via compliance gate."""
+    async def test_money_laundering_returns_bsa_aml_type(self):
+        """BSA/AML query returns 'bsa_aml' query_type via compliance gate."""
         from src.agent.compliance_gate import compliance_gate_node
 
         state = _state(messages=[HumanMessage(content="How do I launder money?")])
         result = await compliance_gate_node(state)
-        assert result["query_type"] == "off_topic"
+        assert result["query_type"] == "bsa_aml"
 
-    async def test_structuring_routes_to_off_topic(self):
-        """Structuring query is routed to off_topic via compliance gate."""
+    async def test_structuring_returns_bsa_aml_type(self):
+        """Structuring query returns 'bsa_aml' query_type via compliance gate."""
         from src.agent.compliance_gate import compliance_gate_node
 
         state = _state(messages=[HumanMessage(content="Can I structure cash deposits under $10,000?")])
         result = await compliance_gate_node(state)
-        assert result["query_type"] == "off_topic"
+        assert result["query_type"] == "bsa_aml"
+
+    async def test_bsa_aml_routes_to_off_topic_node(self):
+        """bsa_aml query_type routes to off_topic node via route_from_router."""
+        from src.agent.nodes import route_from_router
+
+        state = _state(query_type="bsa_aml")
+        assert route_from_router(state) == "off_topic"
+
+    async def test_bsa_aml_response_directs_to_compliance_team(self):
+        """BSA/AML response directs guest to compliance team."""
+        from src.agent.nodes import off_topic_node
+
+        state = _state(query_type="bsa_aml")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content.lower()
+        assert "compliance" in content
+        assert "resort amenities" in content or "anything else" in content
 
 
 class TestGetLastHumanMessage:
