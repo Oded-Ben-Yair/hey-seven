@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     SEMANTIC_INJECTION_THRESHOLD: float = 0.8  # confidence threshold for semantic injection classifier
     SEMANTIC_INJECTION_MODEL: str = ""  # override model for semantic classifier (empty = use default)
 
+    # --- State Backend ---
+    STATE_BACKEND: str = "memory"  # "memory" | "redis"
+    REDIS_URL: str = ""  # Redis connection URL for distributed state
+
     # --- Vector DB ---
     VECTOR_DB: str = "chroma"  # "chroma" (local dev) or "firestore" (GCP prod)
     FIRESTORE_PROJECT: str = ""  # GCP project ID for Firestore

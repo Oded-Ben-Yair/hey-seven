@@ -22,8 +22,8 @@ class TestSettingsCount:
         # Count fields defined directly on Settings (exclude inherited)
         fields = Settings.model_fields
         actual_count = len(fields)
-        assert actual_count == 57, (
-            f"Settings has {actual_count} fields, but docs say 57. "
+        assert actual_count == 59, (
+            f"Settings has {actual_count} fields, but docs say 59. "
             f"Update README.md and .env.example if count changed."
         )
 

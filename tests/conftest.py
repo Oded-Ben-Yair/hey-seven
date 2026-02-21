@@ -142,6 +142,13 @@ def _clear_singleton_caches():
         pass
 
     try:
+        from src.state_backend import get_state_backend
+
+        get_state_backend.cache_clear()
+    except (ImportError, AttributeError):
+        pass
+
+    try:
         from src.observability.langfuse_client import _get_langfuse_client
 
         _get_langfuse_client.cache_clear()
