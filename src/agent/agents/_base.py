@@ -88,8 +88,9 @@ async def execute_specialist(
     retry_count = state.get("retry_count", 0)
     retry_feedback = state.get("retry_feedback")
 
-    # Cache circuit breaker instance — avoids repeated get_cb_fn() calls
-    cb = get_cb_fn()
+    # Cache circuit breaker instance — avoids repeated get_cb_fn() calls.
+    # R15 fix: await for async _get_circuit_breaker() with lock protection.
+    cb = await get_cb_fn()
 
     # Circuit breaker check -- early exit before building prompts.
     # Uses lock-protected allow_request() instead of is_open property

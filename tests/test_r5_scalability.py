@@ -251,22 +251,24 @@ class TestCircuitBreakerTTLCache:
 
         assert isinstance(_cb_cache, TTLCache)
 
-    def test_cb_factory_returns_circuit_breaker(self):
+    @pytest.mark.asyncio
+    async def test_cb_factory_returns_circuit_breaker(self):
         """_get_circuit_breaker returns a CircuitBreaker instance."""
         from src.agent.circuit_breaker import CircuitBreaker, _cb_cache, _get_circuit_breaker
 
         _cb_cache.clear()
-        cb = _get_circuit_breaker()
+        cb = await _get_circuit_breaker()
         assert isinstance(cb, CircuitBreaker)
         _cb_cache.clear()
 
-    def test_cb_factory_caches(self):
+    @pytest.mark.asyncio
+    async def test_cb_factory_caches(self):
         """Repeated calls return the same instance."""
         from src.agent.circuit_breaker import _cb_cache, _get_circuit_breaker
 
         _cb_cache.clear()
-        cb1 = _get_circuit_breaker()
-        cb2 = _get_circuit_breaker()
+        cb1 = await _get_circuit_breaker()
+        cb2 = await _get_circuit_breaker()
         assert cb1 is cb2
         _cb_cache.clear()
 
@@ -281,12 +283,13 @@ class TestCBRollingWindowConfigurable:
         s = Settings()
         assert s.CB_ROLLING_WINDOW_SECONDS == 300.0
 
-    def test_cb_factory_passes_rolling_window(self):
+    @pytest.mark.asyncio
+    async def test_cb_factory_passes_rolling_window(self):
         """_get_circuit_breaker passes rolling_window_seconds from settings."""
         from src.agent.circuit_breaker import _cb_cache, _get_circuit_breaker
 
         _cb_cache.clear()
-        cb = _get_circuit_breaker()
+        cb = await _get_circuit_breaker()
         assert cb._rolling_window_seconds == 300.0
         _cb_cache.clear()
 

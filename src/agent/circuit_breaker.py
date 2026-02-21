@@ -270,13 +270,23 @@ class CircuitBreaker:
 # response, use clear_circuit_breaker_cache() for immediate config reload
 # rather than waiting for the 1-hour TTL to expire.
 _cb_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_cb_lock = asyncio.Lock()
 
 
-def _get_circuit_breaker() -> CircuitBreaker:
+async def _get_circuit_breaker() -> CircuitBreaker:
     """Get or create the circuit breaker singleton (TTL-cached, 1-hour refresh).
 
     Lazy initialization avoids reading settings at import time.
     TTL cache refreshes hourly, consistent with LLM singleton caching pattern.
+    Coroutine-safe via ``asyncio.Lock`` (matches ``_get_llm()`` and
+    ``_get_validator_llm()`` patterns).
+
+    R15 fix (3/3 consensus: DeepSeek F-002, Gemini M2, GPT F1): added
+    asyncio.Lock for pattern consistency with other singleton caches.
+    Without the lock, two concurrent coroutines hitting a TTL expiry could
+    both create separate CircuitBreaker instances, splitting failure state.
+    While the function body is fully synchronous (no yield points in asyncio),
+    the lock ensures correctness if future changes add async operations.
 
     For immediate config changes during incidents, call
     ``clear_circuit_breaker_cache()`` which forces the next call to
@@ -289,17 +299,18 @@ def _get_circuit_breaker() -> CircuitBreaker:
     use Redis-backed state with ``CB_BACKEND=redis`` config (not yet
     implemented -- current single-container deployment uses in-memory).
     """
-    cached = _cb_cache.get("cb")
-    if cached is not None:
-        return cached
-    settings = get_settings()
-    cb = CircuitBreaker(
-        failure_threshold=settings.CB_FAILURE_THRESHOLD,
-        cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
-        rolling_window_seconds=settings.CB_ROLLING_WINDOW_SECONDS,
-    )
-    _cb_cache["cb"] = cb
-    return cb
+    async with _cb_lock:
+        cached = _cb_cache.get("cb")
+        if cached is not None:
+            return cached
+        settings = get_settings()
+        cb = CircuitBreaker(
+            failure_threshold=settings.CB_FAILURE_THRESHOLD,
+            cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
+            rolling_window_seconds=settings.CB_ROLLING_WINDOW_SECONDS,
+        )
+        _cb_cache["cb"] = cb
+        return cb
 
 
 def clear_circuit_breaker_cache() -> None:

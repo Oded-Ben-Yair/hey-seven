@@ -1148,16 +1148,17 @@ class TestCircuitBreakerRecordCancellation:
 class TestClearCircuitBreakerCache:
     """Tests for clear_circuit_breaker_cache() (R11 fix)."""
 
-    def test_clear_forces_fresh_instance(self):
+    @pytest.mark.asyncio
+    async def test_clear_forces_fresh_instance(self):
         """Clearing cache causes next call to create new CircuitBreaker."""
         from src.agent.circuit_breaker import (
             _get_circuit_breaker,
             clear_circuit_breaker_cache,
         )
 
-        cb1 = _get_circuit_breaker()
+        cb1 = await _get_circuit_breaker()
         clear_circuit_breaker_cache()
-        cb2 = _get_circuit_breaker()
+        cb2 = await _get_circuit_breaker()
         assert cb1 is not cb2
 
 

@@ -356,27 +356,17 @@ class TestCompAgentProfileGate:
         """Circuit breaker open returns fallback after passing profile gate."""
         from src.agent.agents.comp_agent import comp_agent
 
-        # Fill enough fields to pass the profile completeness gate (>=60%),
-        # so execution reaches execute_specialist where CB is checked.
-        # core=10 + visit=4.5 + dining.dietary=1.0 = 15.5/25 = 62%
+        # R15 fix: use flat _PROFILE_FIELDS keys to pass the completeness gate
+        # (>=60%). 5/8 flat fields filled = 62.5% > 60% threshold.
         extracted_fields = {
-            "core_identity": {
-                "name": {"value": "Test", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "email": {"value": "test@example.com", "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "language": {"value": "en", "confidence": 0.95, "source": "contextual_extraction", "collected_at": "2026-01-01T00:00:00Z"},
-                "full_name": {"value": "Test User", "confidence": 0.85, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "date_of_birth": {"value": "1990-01-01", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-            },
-            "visit_context": {
-                "planned_visit_date": {"value": "2026-03-01", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "party_size": {"value": 2, "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "occasion": {"value": "anniversary", "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-            },
-            "preferences": {
-                "dining": {
-                    "dietary_restrictions": {"value": "none", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                },
-            },
+            "name": "Test User",
+            "visit_date": "2026-03-01",
+            "party_size": 2,
+            "dining": "steakhouse",
+            "entertainment": "comedy show",
+            "gaming": None,
+            "occasions": None,
+            "companions": None,
         }
         state = _base_state(
             messages=[HumanMessage(content="What promotions?")],
@@ -398,25 +388,17 @@ class TestCompAgentProfileGate:
         """Empty retrieved context returns no-info fallback after passing profile gate."""
         from src.agent.agents.comp_agent import comp_agent
 
-        # Fill enough fields to pass profile gate (>=60%) but provide no context
+        # R15 fix: use flat _PROFILE_FIELDS keys to pass the completeness gate
+        # (>=60%). 5/8 flat fields filled = 62.5% > 60% threshold.
         extracted_fields = {
-            "core_identity": {
-                "name": {"value": "John", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "email": {"value": "john@test.com", "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "language": {"value": "en", "confidence": 0.95, "source": "contextual_extraction", "collected_at": "2026-01-01T00:00:00Z"},
-                "full_name": {"value": "John Doe", "confidence": 0.85, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "date_of_birth": {"value": "1985-06-15", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-            },
-            "visit_context": {
-                "planned_visit_date": {"value": "2026-03-01", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "party_size": {"value": 4, "confidence": 0.85, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                "occasion": {"value": "birthday", "confidence": 0.8, "source": "contextual_extraction", "collected_at": "2026-01-01T00:00:00Z"},
-            },
-            "preferences": {
-                "dining": {
-                    "dietary_restrictions": {"value": "none", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01T00:00:00Z"},
-                },
-            },
+            "name": "John Doe",
+            "visit_date": "2026-03-01",
+            "party_size": 4,
+            "dining": "steakhouse",
+            "entertainment": "comedy show",
+            "gaming": None,
+            "occasions": None,
+            "companions": None,
         }
 
         state = _base_state(

@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage
 from src.agent.circuit_breaker import _get_circuit_breaker
 from src.agent.nodes import _get_llm
 from src.agent.state import PropertyQAState
+from src.agent.whisper_planner import _PROFILE_FIELDS
 from src.config import get_settings
 from ._base import execute_specialist
 
@@ -76,13 +77,13 @@ async def comp_agent(state: PropertyQAState) -> dict:
     settings = get_settings()
 
     # Profile completeness gate (unique to comp_agent).
-    # Uses flat extracted_fields dict (guest_name, party_size, date_preference),
-    # NOT the GuestProfile dotted-path schema from models.calculate_completeness().
+    # R15 fix (DeepSeek F-006, Gemini F2): use _PROFILE_FIELDS as denominator
+    # to match whisper_planner._calculate_completeness(). Previous code used
+    # len(extracted_fields) which gave 100% completeness with just 1 field.
     # CB check is handled by execute_specialist() — no duplicate needed here.
     extracted_fields = state.get("extracted_fields", {})
-    filled = sum(1 for v in extracted_fields.values() if v is not None and v != "")
-    total = max(len(extracted_fields), 1)
-    completeness = filled / total
+    filled = sum(1 for f in _PROFILE_FIELDS if extracted_fields.get(f))
+    completeness = filled / len(_PROFILE_FIELDS)
     if completeness < settings.COMP_COMPLETENESS_THRESHOLD:
         return {
             "messages": [AIMessage(content=(

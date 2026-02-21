@@ -272,7 +272,7 @@ def create_app() -> FastAPI:
         try:
             from src.agent.circuit_breaker import _get_circuit_breaker
 
-            cb = _get_circuit_breaker()
+            cb = await _get_circuit_breaker()
             cb_state = await cb.get_state()
         except Exception:
             logger.debug("Circuit breaker state check failed", exc_info=True)

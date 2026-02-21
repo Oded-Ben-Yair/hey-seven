@@ -34,7 +34,7 @@ from src.casino.feature_flags import DEFAULT_FEATURES, is_feature_enabled
 from src.config import get_settings
 from src.observability.langfuse_client import get_langfuse_handler
 
-from .agents.registry import get_agent
+from .agents.registry import _AGENT_REGISTRY, get_agent
 from .compliance_gate import compliance_gate_node
 from .whisper_planner import whisper_planner_node
 from .circuit_breaker import _get_circuit_breaker
@@ -199,9 +199,11 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     dispatch_method = "keyword_fallback"
 
     # --- Try structured LLM dispatch first ---
+    # R15 fix (DeepSeek F-001, GPT F1): acquire CB before try block to prevent
+    # UnboundLocalError in except handlers if _get_circuit_breaker() itself raises.
     agent_name = None
+    cb = await _get_circuit_breaker()
     try:
-        cb = _get_circuit_breaker()
         if await cb.allow_request():
             llm = await _get_llm()
             dispatch_llm = llm.with_structured_output(DispatchOutput)
@@ -223,7 +225,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
             await cb.record_success()
 
             # Validate that the specialist name is in the registry
-            if result.specialist in {"dining", "entertainment", "comp", "hotel", "host"}:
+            if result.specialist in _AGENT_REGISTRY:
                 agent_name = result.specialist
                 dispatch_method = "structured_output"
                 logger.info(
@@ -236,8 +238,11 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
             logger.info("Circuit breaker not allowing requests; using keyword fallback")
     except (ValueError, TypeError) as exc:
         # Structured output parsing failed — LLM returned unparseable JSON.
-        # Record failure so the circuit breaker tracks dispatch LLM health.
-        await cb.record_failure()
+        # R15 fix (Gemini F7): do NOT record CB failure for parse errors.
+        # Parse failure means the LLM IS reachable (network healthy) but
+        # returned bad JSON (prompt engineering issue). Recording failures
+        # here would conflate parse quality with LLM availability, potentially
+        # tripping the CB on prompt issues rather than actual outages.
         logger.warning("Structured dispatch parsing failed: %s", exc)
     except Exception:
         # Network errors, API failures, timeouts — broad catch is intentional

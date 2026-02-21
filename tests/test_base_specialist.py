@@ -49,7 +49,7 @@ def _make_execute_kwargs(
         mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
         mock_cb.record_failure = AsyncMock()
-        get_cb_fn = MagicMock(return_value=mock_cb)
+        get_cb_fn = AsyncMock(return_value=mock_cb)
 
     if get_llm_fn is None:
         mock_llm = MagicMock()
@@ -80,7 +80,7 @@ class TestCircuitBreakerOpen:
         mock_cb = MagicMock()
         mock_cb.is_open = True
         mock_cb.allow_request = AsyncMock(return_value=False)
-        get_cb_fn = MagicMock(return_value=mock_cb)
+        get_cb_fn = AsyncMock(return_value=mock_cb)
 
         kwargs = _make_execute_kwargs(get_cb_fn=get_cb_fn)
         state = _state(
@@ -134,7 +134,7 @@ class TestHappyPath:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="When does the steakhouse open?")],
@@ -170,7 +170,7 @@ class TestRetryFeedbackInjection:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="What restaurants?")],
@@ -212,7 +212,7 @@ class TestWhisperPlanInjection:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
             include_whisper=True,
         )
         state = _state(
@@ -261,7 +261,7 @@ class TestValueTypeErrorFallback:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Question")],
@@ -299,7 +299,7 @@ class TestCancelledErrorReRaised:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Question")],
@@ -331,7 +331,7 @@ class TestCancelledErrorReRaised:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Question")],
@@ -399,7 +399,7 @@ class TestHttpErrorFallback:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Question")],
@@ -432,7 +432,7 @@ class TestRetryCountIncrement:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Q")],
@@ -457,7 +457,7 @@ class TestRetryCountIncrement:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Q")],
@@ -482,7 +482,7 @@ class TestRetryCountIncrement:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Q")],
@@ -516,7 +516,7 @@ class TestBroadExceptionFallback:
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
-            get_cb_fn=MagicMock(return_value=mock_cb),
+            get_cb_fn=AsyncMock(return_value=mock_cb),
         )
         state = _state(
             messages=[HumanMessage(content="Question")],

@@ -621,6 +621,13 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
 # Routing Functions (used as conditional edges)
 # ---------------------------------------------------------------------------
 
+# R15 fix (DeepSeek F-004, GPT F3): use node name constants instead of bare
+# strings in routing functions. Defined locally to avoid circular imports
+# (graph.py imports from nodes.py). Must match NODE_* constants in graph.py.
+_NODE_GREETING = "greeting"
+_NODE_OFF_TOPIC = "off_topic"
+_NODE_RETRIEVE = "retrieve"
+
 
 def route_from_router(state: PropertyQAState) -> str:
     """Route after the router node based on query_type and confidence.
@@ -639,16 +646,16 @@ def route_from_router(state: PropertyQAState) -> str:
     confidence = state.get("router_confidence", 0.5)
 
     if query_type == "greeting":
-        return "greeting"
+        return _NODE_GREETING
 
     if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification", "patron_privacy", "bsa_aml"):
-        return "off_topic"
+        return _NODE_OFF_TOPIC
 
     if confidence < 0.3:
-        return "off_topic"
+        return _NODE_OFF_TOPIC
 
     # property_qa, hours_schedule, and ambiguous all route to retrieve.
     # See docstring for ambiguous rationale.
-    return "retrieve"
+    return _NODE_RETRIEVE
 
 

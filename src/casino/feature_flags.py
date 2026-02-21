@@ -68,23 +68,27 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "sms_enabled": False,  # Requires Telnyx setup
 })
 
-# Parity assertion: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.
+# Parity check: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.
 # Catches schema drift at import time (same pattern as _initial_state parity in graph.py).
-assert set(FeatureFlags.__annotations__) == set(DEFAULT_FEATURES.keys()), (
-    f"FeatureFlags TypedDict drift: "
-    f"missing={set(DEFAULT_FEATURES.keys()) - set(FeatureFlags.__annotations__)}, "
-    f"extra={set(FeatureFlags.__annotations__) - set(DEFAULT_FEATURES.keys())}"
-)
+# R15 fix (DeepSeek F-008): converted from `assert` (vanishes with `python -O`) to
+# a runtime ValueError that fires regardless of optimization mode.
+if set(FeatureFlags.__annotations__) != set(DEFAULT_FEATURES.keys()):
+    raise ValueError(
+        f"FeatureFlags TypedDict drift: "
+        f"missing={set(DEFAULT_FEATURES.keys()) - set(FeatureFlags.__annotations__)}, "
+        f"extra={set(FeatureFlags.__annotations__) - set(DEFAULT_FEATURES.keys())}"
+    )
 
 # Cross-module parity: DEFAULT_CONFIG["features"] (config.py) must match DEFAULT_FEATURES.
 # Prevents drift between the two sources of truth for feature flags.
 from src.casino.config import DEFAULT_CONFIG as _DEFAULT_CONFIG  # noqa: E402
 
-assert set(_DEFAULT_CONFIG["features"].keys()) == set(DEFAULT_FEATURES.keys()), (
-    f"DEFAULT_CONFIG['features'] drift from DEFAULT_FEATURES: "
-    f"missing={set(DEFAULT_FEATURES.keys()) - set(_DEFAULT_CONFIG['features'].keys())}, "
-    f"extra={set(_DEFAULT_CONFIG['features'].keys()) - set(DEFAULT_FEATURES.keys())}"
-)
+if set(_DEFAULT_CONFIG["features"].keys()) != set(DEFAULT_FEATURES.keys()):
+    raise ValueError(
+        f"DEFAULT_CONFIG['features'] drift from DEFAULT_FEATURES: "
+        f"missing={set(DEFAULT_FEATURES.keys()) - set(_DEFAULT_CONFIG['features'].keys())}, "
+        f"extra={set(_DEFAULT_CONFIG['features'].keys()) - set(DEFAULT_FEATURES.keys())}"
+    )
 
 
 # ---------------------------------------------------------------------------
