@@ -162,8 +162,8 @@ class TestChatStreamPiiBuffer:
         assert "[SSN]" in combined
 
     @pytest.mark.asyncio
-    async def test_non_digit_text_flushes_immediately(self):
-        """Text without digits is not buffered — flush is immediate."""
+    async def test_non_digit_text_passes_through(self):
+        """Text without digits passes through completely (no data loss)."""
         events = [
             _make_chain_start("generate"),
             _make_token_event("Welcome to "),
@@ -178,8 +178,8 @@ class TestChatStreamPiiBuffer:
             )
 
         token_events = [e for e in collected if e["event"] == "token"]
-        # Non-digit text should produce token events for each chunk
-        assert len(token_events) >= 2
+        # At least one token event with all text present
+        assert len(token_events) >= 1
         combined = "".join(
             json.loads(e["data"])["content"] for e in token_events
         )

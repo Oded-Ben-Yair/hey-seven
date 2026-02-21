@@ -268,9 +268,14 @@ class TestChatStream:
             events.append(event)
 
         token_events = [e for e in events if e["event"] == "token"]
-        assert len(token_events) == 2
-        assert json.loads(token_events[0]["data"])["content"] == "Hello "
-        assert json.loads(token_events[1]["data"])["content"] == "world!"
+        # StreamingPIIRedactor may combine short chunks in the lookahead buffer.
+        # Verify content integrity (no data loss) rather than per-chunk emission.
+        assert len(token_events) >= 1
+        combined = "".join(
+            json.loads(e["data"])["content"] for e in token_events
+        )
+        assert "Hello " in combined
+        assert "world!" in combined
 
     @pytest.mark.asyncio
     async def test_stream_replace_event_for_greeting(self):

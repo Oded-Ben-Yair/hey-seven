@@ -396,18 +396,25 @@ class TestApiKeyAtomicTuple:
 
 
 class TestPIIBufferMaxSize:
-    """R5 fix: PII buffer has hard cap at 500 chars (Gemini F10)."""
+    """R5 fix: PII buffer has hard cap at 500 chars (Gemini F10).
+
+    Updated for StreamingPIIRedactor: the cap is now defined as
+    ``StreamingPIIRedactor.MAX_BUFFER`` and chat_stream creates
+    an instance per request.
+    """
 
     def test_max_buffer_constant_exists(self):
-        """Verify _PII_MAX_BUFFER is defined in graph module."""
-        import src.agent.graph as graph_module
+        """Verify StreamingPIIRedactor has MAX_BUFFER cap and graph uses it."""
+        from src.agent.streaming_pii import StreamingPIIRedactor
 
-        # The constant is used inside chat_stream as a local variable,
-        # but we can verify the code references it by searching the source
+        assert hasattr(StreamingPIIRedactor, "MAX_BUFFER")
+        assert StreamingPIIRedactor.MAX_BUFFER == 500
+
+        # Verify chat_stream creates a StreamingPIIRedactor
         import inspect
+        import src.agent.graph as graph_module
         source = inspect.getsource(graph_module.chat_stream)
-        assert "_PII_MAX_BUFFER" in source
-        assert "500" in source  # The cap value
+        assert "StreamingPIIRedactor" in source
 
 
 # ---------------------------------------------------------------------------

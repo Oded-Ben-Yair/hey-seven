@@ -14,7 +14,6 @@ node name ``"generate"`` is preserved for SSE streaming compatibility.
 import asyncio
 import json
 import logging
-import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -27,6 +26,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from src.api.pii_redaction import contains_pii, redact_pii
+from src.agent.streaming_pii import StreamingPIIRedactor
 from src.casino.feature_flags import DEFAULT_FEATURES, is_feature_enabled
 from src.config import get_settings
 from src.observability.langfuse_client import get_langfuse_handler
@@ -513,29 +513,10 @@ async def chat_stream(
     sources: list[str] = []
     node_start_times: dict[str, float] = {}
     errored = False
-    # PII buffer: accumulate streamed tokens and check for PII patterns
-    # before emitting. Tokens are small fragments; PII patterns (phone,
-    # SSN, card numbers) span multiple tokens. Buffer when digits are
-    # detected (potential PII), flush immediately for non-digit text to
-    # preserve real-time streaming UX.
-    _pii_buffer = ""
-    _PII_FLUSH_LEN = 80  # Flush after accumulating this many chars (covers most PII patterns)
-    _PII_MAX_BUFFER = 500  # Hard cap: force-flush regardless of content (prevents unbounded growth)
-    # Digits that could be part of phone/SSN/card patterns trigger buffering
-    _PII_DIGIT_RE = re.compile(r"\d")
-
-    async def _flush_pii_buffer() -> AsyncGenerator[dict[str, str], None]:
-        """Flush the PII buffer, redacting any detected PII before yielding tokens."""
-        nonlocal _pii_buffer
-        if not _pii_buffer:
-            return
-        # Only run the (more expensive) redaction if PII is detected
-        flushed = redact_pii(_pii_buffer) if contains_pii(_pii_buffer) else _pii_buffer
-        _pii_buffer = ""
-        yield {
-            "event": "token",
-            "data": json.dumps({"content": flushed}),
-        }
+    # Streaming PII redactor: buffers incoming tokens and applies regex-based
+    # PII redaction before emitting to the client. Created fresh per request
+    # to avoid cross-request state leakage.
+    _pii_redactor = StreamingPIIRedactor()
 
     try:
         async for event in graph.astream_events(
@@ -559,9 +540,10 @@ async def chat_stream(
                 }
 
             # Stream tokens from generate node only — with inline PII redaction.
-            # Tokens are buffered and flushed at sentence boundaries or max length
-            # to allow PII patterns (phone numbers, SSNs, card numbers) that span
-            # multiple tokens to be caught before reaching the client.
+            # Tokens are fed to StreamingPIIRedactor which buffers and applies
+            # regex-based PII redaction before releasing safe text. The redactor
+            # retains a trailing lookahead window to catch PII patterns (phone
+            # numbers, SSNs, card numbers) that span multiple tokens.
             if kind == "on_chat_model_stream" and langgraph_node == NODE_GENERATE:
                 chunk = event.get("data", {}).get("chunk")
                 if (
@@ -574,29 +556,11 @@ async def chat_stream(
                         if isinstance(chunk.content, str)
                         else str(chunk.content)
                     )
-                    _pii_buffer += content
-                    # Strategy: buffer only when digits are present (potential PII).
-                    # Non-digit text flushes immediately to preserve streaming UX.
-                    # When digits accumulate, hold until buffer is large enough
-                    # for PII patterns (phone numbers, SSNs, card numbers) to be
-                    # detected, or until a sentence boundary clears the buffer.
-                    has_digits = bool(_PII_DIGIT_RE.search(_pii_buffer))
-                    # R10 fix (DeepSeek F2): restructured PII buffer flush conditions.
-                    # Previously _PII_MAX_BUFFER (500) was in an `or` with _PII_FLUSH_LEN (80),
-                    # making it unreachable dead code. Now the hard cap is an unconditional
-                    # first check (defense-in-depth against unbounded growth).
-                    if len(_pii_buffer) >= _PII_MAX_BUFFER:
-                        # Unconditional hard cap — force-flush regardless of content
-                        async for tok_event in _flush_pii_buffer():
-                            yield tok_event
-                    elif not has_digits:
-                        # No digits in buffer — flush immediately (no PII risk)
-                        async for tok_event in _flush_pii_buffer():
-                            yield tok_event
-                    elif len(_pii_buffer) >= _PII_FLUSH_LEN or _pii_buffer.endswith(("\n", ". ", "! ", "? ")):
-                        # Digits present — wait for enough chars to detect patterns
-                        async for tok_event in _flush_pii_buffer():
-                            yield tok_event
+                    for safe_chunk in _pii_redactor.feed(content):
+                        yield {
+                            "event": "token",
+                            "data": json.dumps({"content": safe_chunk}),
+                        }
 
             # Capture non-streaming node outputs (greeting, off_topic, fallback).
             # Apply PII redaction to replace events — these bypass the streaming
@@ -649,13 +613,13 @@ async def chat_stream(
                 }
 
     except asyncio.CancelledError:
-        # Intentionally NOT flushing _pii_buffer on cancel: dropping buffered
-        # tokens is safer than emitting potentially unredacted PII to a
-        # disconnecting client. The partial tokens are lost (fail-safe).
-        # R10 documentation fix (DeepSeek F6).
+        # Intentionally NOT flushing _pii_redactor on cancel: dropping
+        # buffered tokens is safer than emitting potentially unredacted
+        # PII to a disconnecting client. The partial tokens are lost
+        # (fail-safe). R10 documentation fix (DeepSeek F6).
         logger.info(
             "SSE stream cancelled (client disconnect), dropping %d buffered chars",
-            len(_pii_buffer),
+            len(_pii_redactor._buffer),
         )
         raise
     except Exception:
@@ -666,10 +630,13 @@ async def chat_stream(
             "data": json.dumps({"error": "An error occurred while generating the response."}),
         }
 
-    # Flush remaining PII buffer (tokens accumulated but not yet emitted)
-    if _pii_buffer and not errored:
-        async for tok_event in _flush_pii_buffer():
-            yield tok_event
+    # Flush remaining PII redactor buffer (tokens accumulated but not yet emitted)
+    if not errored:
+        for safe_chunk in _pii_redactor.flush():
+            yield {
+                "event": "token",
+                "data": json.dumps({"content": safe_chunk}),
+            }
 
     # After an error, sources may contain stale/partial data from a partially-
     # completed graph execution — suppress to avoid confusing the client.
