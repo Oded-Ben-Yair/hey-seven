@@ -238,6 +238,108 @@ _FORMATTERS = {
 }
 
 
+def format_item_for_embedding(category: str, content: dict[str, Any]) -> str:
+    """Format a single item for embedding using category-specific logic.
+
+    Routes to the appropriate formatter (``_format_restaurant``,
+    ``_format_entertainment``, etc.) based on the ``category`` key.
+    Falls back to ``_format_generic`` for unknown categories.
+
+    This is the public entry point used by ``reingest_item()`` and the CMS
+    webhook to format individual items outside of bulk ingestion.
+
+    Args:
+        category: Content category (e.g., ``"restaurants"``, ``"dining"``).
+        content: Item dict with category-specific fields.
+
+    Returns:
+        Human-readable text suitable for embedding.
+    """
+    formatter = _FORMATTERS.get(category, _format_generic)
+    return formatter(content)
+
+
+async def reingest_item(
+    category: str,
+    item_id: str,
+    content: dict[str, Any],
+    casino_id: str | None = None,
+) -> bool:
+    """Re-ingest a single item into the vector store after a CMS update.
+
+    Formats the item using category-specific formatters, computes a
+    deterministic SHA-256 document ID (matching ``ingest_property``), and
+    upserts the chunk into the retriever's vectorstore.
+
+    Args:
+        category: Content category (e.g., ``"restaurants"``, ``"entertainment"``).
+        item_id: Unique item identifier from the CMS.
+        content: Updated content dict with category-specific fields.
+        casino_id: Casino identifier for multi-tenant metadata.  Defaults to
+            ``get_settings().CASINO_ID``.
+
+    Returns:
+        ``True`` if re-ingestion succeeded, ``False`` otherwise.
+    """
+    try:
+        retriever = get_retriever()
+        text = format_item_for_embedding(category, content)
+        if not text.strip():
+            logger.warning(
+                "Empty text after formatting for %s/%s — skipping re-ingestion",
+                category,
+                item_id,
+            )
+            return False
+
+        settings = get_settings()
+        property_id = (casino_id or settings.CASINO_ID).lower().replace(" ", "_")
+        source = f"cms:{category}/{item_id}"
+        metadata = {
+            "category": category,
+            "item_name": content.get("name", content.get("title", item_id)),
+            "item_id": item_id,
+            "source": source,
+            "property_id": property_id,
+            "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+            "_schema_version": "2.1",
+        }
+        # Deterministic ID matching ingest_property: SHA-256 of content + source.
+        doc_id = hashlib.sha256(
+            (text + source).encode()
+        ).hexdigest()
+
+        if hasattr(retriever, "vectorstore") and retriever.vectorstore is not None:
+            retriever.vectorstore.add_texts(
+                texts=[text],
+                metadatas=[metadata],
+                ids=[doc_id],
+            )
+        else:
+            logger.warning(
+                "Retriever has no vectorstore — cannot re-index %s/%s",
+                category,
+                item_id,
+            )
+            return False
+
+        logger.info(
+            "CMS item re-indexed in vector store: %s/%s (doc_id=%s)",
+            category,
+            item_id,
+            doc_id[:12],
+        )
+        return True
+    except Exception:
+        logger.warning(
+            "Re-ingestion failed for %s/%s",
+            category,
+            item_id,
+            exc_info=True,
+        )
+        return False
+
+
 def _flatten_nested_dict(d: dict[str, Any], category: str) -> list[dict[str, Any]]:
     """Flatten a nested dict into a list of document-friendly dicts.
 

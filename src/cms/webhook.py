@@ -218,22 +218,31 @@ async def handle_cms_webhook(
         )
         return {"status": "unchanged", "item_id": item_id}
 
-    # Step 5: Mark for re-indexing (store new hash)
-    # NOTE (R10 fix — Gemini F16): This only updates the in-memory content hash
-    # store for change detection. Actual re-ingestion into the vector DB happens
-    # on the next container restart (which triggers full ingestion via
-    # src.rag.pipeline.ingest_property in app lifespan). Real-time re-indexing
-    # would require calling pipeline.ingest() here, but that creates a startup-
-    # time dependency and concurrent ChromaDB write risks that are not yet wired.
-    # Tracked as future work for production (Vertex AI Vector Search supports
-    # online updates; ChromaDB does not safely support concurrent writes).
+    # Step 5: Store new hash and trigger live re-indexing into the vector store.
     _content_hashes[hash_key] = new_hash
 
-    logger.info(
-        "CMS item indexed: casino=%s category=%s item_id=%s hash=%s",
-        casino_id,
-        category,
-        item_id,
-        new_hash[:12],
-    )
+    # Trigger live vector store upsert.  Re-ingestion failure is non-critical:
+    # the item will be picked up on the next full ingestion at container restart.
+    from src.rag.pipeline import reingest_item
+
+    reindexed = await reingest_item(category, item_id, item, casino_id=casino_id)
+    if reindexed:
+        logger.info(
+            "CMS item indexed and re-indexed in vector store: "
+            "casino=%s category=%s item_id=%s hash=%s",
+            casino_id,
+            category,
+            item_id,
+            new_hash[:12],
+        )
+    else:
+        logger.warning(
+            "CMS item indexed (hash updated) but vector store re-indexing failed: "
+            "casino=%s category=%s item_id=%s hash=%s",
+            casino_id,
+            category,
+            item_id,
+            new_hash[:12],
+        )
+
     return {"status": "indexed", "item_id": item_id}

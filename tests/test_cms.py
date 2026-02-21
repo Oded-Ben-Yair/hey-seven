@@ -695,3 +695,132 @@ class TestContentHashCacheBounded:
         from src.cms.webhook import _content_hashes
 
         assert _content_hashes.ttl > 0
+
+
+# ============================================================================
+# Live re-indexing tests
+# ============================================================================
+
+
+class TestWebhookLiveReindexing:
+    """CMS webhook triggers live vector store upsert on content change."""
+
+    def _make_valid_payload(self, **item_overrides):
+        """Create a valid webhook payload."""
+        item = {
+            "id": "dining-reindex-001",
+            "name": "Reindex Test Restaurant",
+            "description": "Restaurant for reindex testing",
+            "active": "true",
+            "cuisine": "Italian",
+            "price_range": "$$$",
+        }
+        item.update(item_overrides)
+        return {
+            "casino_id": "mohegan_sun",
+            "category": "dining",
+            "item": item,
+        }
+
+    @pytest.mark.asyncio
+    async def test_webhook_calls_reingest_item_on_change(self):
+        """When content changes, webhook calls reingest_item with correct args."""
+        from unittest.mock import AsyncMock, patch
+
+        from src.cms.webhook import _content_hashes, handle_cms_webhook
+
+        _content_hashes.clear()
+
+        payload = self._make_valid_payload()
+
+        with patch(
+            "src.rag.pipeline.reingest_item",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_reingest:
+            result = await handle_cms_webhook(payload, webhook_secret="secret")
+
+        assert result["status"] == "indexed"
+        mock_reingest.assert_called_once_with(
+            "dining",
+            "dining-reindex-001",
+            payload["item"],
+            casino_id="mohegan_sun",
+        )
+
+    @pytest.mark.asyncio
+    async def test_webhook_indexed_even_when_reingest_fails(self):
+        """Hash is updated even if reingest_item fails (non-critical failure)."""
+        from unittest.mock import AsyncMock, patch
+
+        from src.cms.webhook import _content_hashes, handle_cms_webhook
+
+        _content_hashes.clear()
+
+        payload = self._make_valid_payload()
+
+        with patch(
+            "src.rag.pipeline.reingest_item",
+            new_callable=AsyncMock,
+            return_value=False,
+        ):
+            result = await handle_cms_webhook(payload, webhook_secret="secret")
+
+        # Status is still "indexed" (hash updated) even though re-indexing failed
+        assert result["status"] == "indexed"
+        # Hash was stored (subsequent identical call returns "unchanged")
+        result2 = await handle_cms_webhook(payload, webhook_secret="secret")
+        assert result2["status"] == "unchanged"
+
+    @pytest.mark.asyncio
+    async def test_webhook_does_not_call_reingest_for_unchanged(self):
+        """Unchanged content does not trigger re-indexing."""
+        from unittest.mock import AsyncMock, patch
+
+        from src.cms.webhook import _content_hashes, handle_cms_webhook
+
+        _content_hashes.clear()
+
+        payload = self._make_valid_payload()
+
+        with patch(
+            "src.rag.pipeline.reingest_item",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_reingest:
+            # First call: indexed
+            await handle_cms_webhook(payload, webhook_secret="secret")
+            mock_reingest.assert_called_once()
+            mock_reingest.reset_mock()
+
+            # Second call: unchanged — should NOT call reingest
+            result = await handle_cms_webhook(payload, webhook_secret="secret")
+            assert result["status"] == "unchanged"
+            mock_reingest.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_webhook_does_not_call_reingest_for_quarantined(self):
+        """Quarantined items do not trigger re-indexing."""
+        from unittest.mock import AsyncMock, patch
+
+        from src.cms.webhook import handle_cms_webhook
+
+        payload = {
+            "casino_id": "mohegan_sun",
+            "category": "dining",
+            "item": {
+                "id": "bad-item",
+                "name": "Bad Item",
+                # Missing required fields -> quarantined
+            },
+        }
+
+        with patch(
+            "src.rag.pipeline.reingest_item",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_reingest:
+            result = await handle_cms_webhook(payload, webhook_secret="secret")
+
+        assert result["status"] == "quarantined"
+        mock_reingest.assert_not_called()
