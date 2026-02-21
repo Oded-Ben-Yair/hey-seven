@@ -1067,6 +1067,100 @@ class TestCircuitBreakerGetState:
         assert state == "half_open"
 
 
+class TestCircuitBreakerGetFailureCount:
+    """Tests for the lock-protected get_failure_count() method (R11 fix)."""
+
+    async def test_get_failure_count_empty(self):
+        """get_failure_count() returns 0 for a fresh breaker."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60)
+        count = await cb.get_failure_count()
+        assert count == 0
+
+    async def test_get_failure_count_with_failures(self):
+        """get_failure_count() returns accurate count after failures."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60)
+        await cb.record_failure()
+        await cb.record_failure()
+        await cb.record_failure()
+        count = await cb.get_failure_count()
+        assert count == 3
+
+    async def test_get_failure_count_prunes_stale(self):
+        """get_failure_count() prunes entries outside rolling window."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(
+            failure_threshold=5,
+            cooldown_seconds=60,
+            rolling_window_seconds=0.01,  # Very short window
+        )
+        await cb.record_failure()
+        await cb.record_failure()
+
+        import time
+        time.sleep(0.02)
+
+        count = await cb.get_failure_count()
+        assert count == 0  # All pruned
+
+
+class TestCircuitBreakerRecordCancellation:
+    """Tests for record_cancellation() method (R11 fix: DeepSeek F-005)."""
+
+    async def test_cancellation_does_not_increment_failure_count(self):
+        """record_cancellation() does not add to failure timestamps."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60)
+        await cb.record_cancellation()
+        assert cb.failure_count == 0
+
+    async def test_cancellation_resets_half_open_probe(self):
+        """record_cancellation() resets half_open_in_progress flag."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0)
+        await cb.record_failure()
+        await cb.record_failure()
+        # Now half_open after cooldown=0
+        allowed = await cb.allow_request()
+        assert allowed is True
+        assert cb._half_open_in_progress is True
+
+        await cb.record_cancellation()
+        assert cb._half_open_in_progress is False
+        assert cb._state == "half_open"
+
+    async def test_cancellation_noop_when_closed(self):
+        """record_cancellation() is a no-op when CB is closed."""
+        from src.agent.nodes import CircuitBreaker
+
+        cb = CircuitBreaker(failure_threshold=5, cooldown_seconds=60)
+        await cb.record_cancellation()
+        assert cb._state == "closed"
+        assert cb.failure_count == 0
+
+
+class TestClearCircuitBreakerCache:
+    """Tests for clear_circuit_breaker_cache() (R11 fix)."""
+
+    def test_clear_forces_fresh_instance(self):
+        """Clearing cache causes next call to create new CircuitBreaker."""
+        from src.agent.circuit_breaker import (
+            _get_circuit_breaker,
+            clear_circuit_breaker_cache,
+        )
+
+        cb1 = _get_circuit_breaker()
+        clear_circuit_breaker_cache()
+        cb2 = _get_circuit_breaker()
+        assert cb1 is not cb2
+
+
 class TestNewResponsibleGamingPatterns:
     """Tests for additional responsible gaming detection patterns."""
 

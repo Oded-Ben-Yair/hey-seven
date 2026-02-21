@@ -76,16 +76,18 @@ class CircuitBreaker:
 
     @property
     def failure_count(self) -> int:
-        """Approximate failure count within the rolling window (no lock, no mutation).
+        """Failure count within the rolling window (read-only, no mutation).
 
-        For monitoring and health checks only. Does NOT call _prune_old_failures()
-        because that mutates the deque without the asyncio.Lock, which would race
-        with concurrent record_failure()/allow_request() calls under free-threaded
-        Python (PEP 703) or asyncio concurrency.
+        For monitoring, health checks, and observability. Uses read-only
+        iteration without calling _prune_old_failures() to avoid mutating
+        the deque without the asyncio.Lock.
 
         R10 fix (DeepSeek F5): replaced mutation-based count with read-only
-        iteration. Under CPython's GIL this was safe but technically a
-        concurrency bug; now correct regardless of GIL status.
+        iteration for concurrency safety.
+
+        Note: This count filters by cutoff on read, so it is always accurate
+        even if the deque contains stale entries. Stale entries are pruned
+        on the next record_failure() call under the lock.
         """
         cutoff = time.monotonic() - self._rolling_window_seconds
         return sum(1 for t in self._failure_timestamps if t > cutoff)
@@ -148,6 +150,19 @@ class CircuitBreaker:
                 return "half_open"
             return self._state
 
+    async def get_failure_count(self) -> int:
+        """Lock-protected authoritative failure count with pruning.
+
+        Use this for accurate monitoring/health checks. Unlike the
+        ``failure_count`` property (which is read-only and approximate),
+        this method prunes stale entries under the lock before counting.
+
+        R11 fix: GPT F-005 (failure_count drift without pruning).
+        """
+        async with self._lock:
+            self._prune_old_failures()
+            return len(self._failure_timestamps)
+
     async def allow_request(self) -> bool:
         """Check if a request should be allowed through.
 
@@ -190,6 +205,29 @@ class CircuitBreaker:
                     prev_state,
                 )
 
+    async def record_cancellation(self) -> None:
+        """Handle a cancelled request (client disconnect) without counting as failure.
+
+        Resets the ``_half_open_in_progress`` flag so a cancelled half-open
+        probe does not permanently block subsequent requests. Does NOT
+        record a failure or affect the failure threshold.
+
+        R11 fix: DeepSeek F-005 — CancelledError (SSE client disconnect) is
+        not an LLM failure and should not count toward the circuit breaker
+        threshold. The previous approach (record_failure on CancelledError)
+        caused artificially inflated failure counts under normal SSE traffic.
+        """
+        async with self._lock:
+            if self._state == "half_open" and self._half_open_in_progress:
+                # Probe was cancelled (client disconnected). Reset probe flag
+                # so the next request can try another probe, but do NOT
+                # re-open the breaker (cancellation is not a LLM failure).
+                self._half_open_in_progress = False
+                logger.info(
+                    "Circuit breaker half_open probe cancelled (client disconnect) — "
+                    "probe flag reset, state remains half_open"
+                )
+
     async def record_failure(self) -> None:
         """Record a failed LLM call and potentially trip the breaker.
 
@@ -226,6 +264,11 @@ class CircuitBreaker:
 # the consistent TTL-cache pattern used by _get_llm(), _get_validator_llm(),
 # and _get_whisper_llm(). TTL ensures settings changes (CB_FAILURE_THRESHOLD,
 # CB_COOLDOWN_SECONDS, CB_ROLLING_WINDOW_SECONDS) are picked up within 1 hour.
+#
+# R11 fix: 3/3 reviewer consensus on CB TTL issues. The TTL serves two
+# purposes: (1) config refresh and (2) implicit state reset. For incident
+# response, use clear_circuit_breaker_cache() for immediate config reload
+# rather than waiting for the 1-hour TTL to expire.
 _cb_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
 
 
@@ -234,6 +277,10 @@ def _get_circuit_breaker() -> CircuitBreaker:
 
     Lazy initialization avoids reading settings at import time.
     TTL cache refreshes hourly, consistent with LLM singleton caching pattern.
+
+    For immediate config changes during incidents, call
+    ``clear_circuit_breaker_cache()`` which forces the next call to
+    create a fresh CircuitBreaker with current settings.
 
     Production note: Circuit breaker state is process-scoped (in-memory).
     In multi-container deployments (Cloud Run), each container maintains
@@ -253,3 +300,17 @@ def _get_circuit_breaker() -> CircuitBreaker:
     )
     _cb_cache["cb"] = cb
     return cb
+
+
+def clear_circuit_breaker_cache() -> None:
+    """Force-clear the circuit breaker cache for immediate config reload.
+
+    Use during incidents when CB thresholds/cooldowns need immediate tuning
+    without waiting for the 1-hour TTL to expire. The next call to
+    ``_get_circuit_breaker()`` will create a fresh instance with current
+    settings.
+
+    R11 fix: DeepSeek F-010, Gemini F-003, GPT F-004 (3/3 consensus).
+    """
+    _cb_cache.clear()
+    logger.info("Circuit breaker cache cleared — next call creates fresh instance")

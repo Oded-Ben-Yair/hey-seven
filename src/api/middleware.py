@@ -297,12 +297,18 @@ class RateLimitMiddleware:
     Respects ``X-Forwarded-For`` behind reverse proxies (Cloud Run, nginx).
     Caps tracked clients to ``RATE_LIMIT_MAX_CLIENTS`` to bound memory.
 
-    **Cloud Run trade-off (accepted)**: This uses in-memory state, so each
-    Cloud Run instance maintains independent counters.  Effective rate limit
-    across N instances = ``RATE_LIMIT_CHAT * N``.  For the current demo
-    deployment (``min-instances=1``, ``max-instances=10``), this is acceptable.
-    Production hardening path: Cloud Armor rate limiting or Redis
-    (Cloud Memorystore) for distributed enforcement across instances.
+    **Cloud Run scaling limitation (accepted for demo, must fix for production)**:
+    This uses in-memory state, so each Cloud Run instance maintains independent
+    counters.  Effective rate limit across N instances = ``RATE_LIMIT_CHAT * N``.
+    For the current demo deployment (``min-instances=1``, ``max-instances=10``),
+    this is acceptable.
+
+    **TODO (pre-production)**: Migrate to distributed rate limiting via one of:
+    1. Cloud Armor rate limiting (zero-code, GCP-native) -- recommended
+    2. Redis (Cloud Memorystore) sliding window via ``StateBackend``
+    3. API Gateway quotas (if using Apigee or similar)
+    Without this, bot storms can bypass limits by hitting different instances.
+    Tracked as a known limitation per R11 review (3/3 reviewer consensus).
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -356,6 +362,19 @@ class RateLimitMiddleware:
         window_start = now - self.window_seconds
 
         async with self._lock:
+            # Periodic stale-client sweep: every 100 requests, remove clients
+            # whose deques are fully expired. Prevents slow memory growth from
+            # transient IPs that made one request and never returned.
+            # R11 fix: DeepSeek F-006, Gemini F-001, GPT F-002 (3/3 consensus).
+            self._request_counter = getattr(self, "_request_counter", 0) + 1
+            if self._request_counter % 100 == 0:
+                stale = [
+                    ip for ip, dq in self._requests.items()
+                    if not dq or dq[-1] < window_start
+                ]
+                for ip in stale:
+                    del self._requests[ip]
+
             # Memory guard: evict LEAST recently used client if at capacity
             if client_ip not in self._requests and len(self._requests) >= self.max_clients:
                 self._requests.popitem(last=False)  # LRU eviction

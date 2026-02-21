@@ -295,7 +295,7 @@ class TestCancelledErrorReRaised:
         mock_cb = MagicMock()
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
-        mock_cb.record_failure = AsyncMock()
+        mock_cb.record_cancellation = AsyncMock()
 
         kwargs = _make_execute_kwargs(
             get_llm_fn=AsyncMock(return_value=mock_llm),
@@ -312,8 +312,13 @@ class TestCancelledErrorReRaised:
             await execute_specialist(state, **kwargs)
 
     @pytest.mark.asyncio
-    async def test_cancelled_error_records_cb_failure(self):
-        """CancelledError calls record_failure() to unblock half_open CB (R10 DeepSeek F1)."""
+    async def test_cancelled_error_records_cancellation_not_failure(self):
+        """CancelledError calls record_cancellation() (R11 fix), not record_failure().
+
+        R11 (DeepSeek F-005): CancelledError is a client disconnect, not an
+        LLM failure. record_cancellation() resets the half_open probe flag
+        without counting toward the failure threshold.
+        """
         from src.agent.agents._base import execute_specialist
 
         mock_llm = MagicMock()
@@ -321,6 +326,7 @@ class TestCancelledErrorReRaised:
         mock_cb = MagicMock()
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_cancellation = AsyncMock()
         mock_cb.record_failure = AsyncMock()
 
         kwargs = _make_execute_kwargs(
@@ -337,14 +343,17 @@ class TestCancelledErrorReRaised:
         with pytest.raises(asyncio.CancelledError):
             await execute_specialist(state, **kwargs)
 
-        mock_cb.record_failure.assert_awaited_once()
+        mock_cb.record_cancellation.assert_awaited_once()
+        mock_cb.record_failure.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_cancelled_error_half_open_to_open(self):
-        """CancelledError during half_open probe transitions CB back to open (R10 DeepSeek F1).
+    async def test_cancelled_error_half_open_resets_probe_flag(self):
+        """CancelledError during half_open probe resets probe flag (R11 fix).
 
-        This is the critical production scenario: CB in half_open allows one probe,
-        client disconnects (CancelledError), CB must transition to open (not stuck).
+        Critical production scenario: CB in half_open allows one probe,
+        client disconnects (CancelledError). record_cancellation() resets
+        the probe flag so the next request can try again, without recording
+        a failure (client disconnect is not an LLM failure).
         """
         from src.agent.circuit_breaker import CircuitBreaker
 
@@ -357,13 +366,18 @@ class TestCancelledErrorReRaised:
         # Allow the probe request
         allowed = await cb.allow_request()
         assert allowed is True
+        assert cb._half_open_in_progress is True
 
-        # Simulate CancelledError by calling record_failure (what _base.py now does)
-        await cb.record_failure()
+        # Simulate CancelledError via record_cancellation (R11 fix)
+        await cb.record_cancellation()
 
-        # CB should be back to open, NOT stuck in half_open
-        assert cb._state == "open"
+        # CB should remain half_open with probe flag reset (NOT stuck)
+        assert cb._state == "half_open"
         assert cb._half_open_in_progress is False
+
+        # Next probe request should be allowed
+        allowed_again = await cb.allow_request()
+        assert allowed_again is True
 
 
 class TestHttpErrorFallback:

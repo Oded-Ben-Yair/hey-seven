@@ -171,11 +171,12 @@ async def execute_specialist(
             "retry_count": retry_count + 1,
         }
     except asyncio.CancelledError:
-        # Treat cancellation as failure to unblock the circuit breaker.
-        # Without this, a CancelledError during a half_open probe leaves
-        # _half_open_in_progress=True permanently, blocking ALL subsequent
-        # LLM requests for the lifetime of the process (DeepSeek R10 F1).
-        await cb.record_failure()
+        # Client disconnect (normal for SSE) — NOT an LLM failure.
+        # R11 fix (DeepSeek F-005): use record_cancellation() instead of
+        # record_failure() to avoid inflating CB failure count from normal
+        # SSE disconnects. record_cancellation() resets the half_open probe
+        # flag (R10 DeepSeek F1 concern) without counting toward threshold.
+        await cb.record_cancellation()
         raise
     except Exception:
         # Broad catch: httpx.HTTPError, asyncio.TimeoutError, ConnectionError,
