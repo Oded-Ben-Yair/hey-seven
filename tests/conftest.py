@@ -70,9 +70,9 @@ def _clear_singleton_caches():
         pass
 
     try:
-        from src.rag.embeddings import get_embeddings
+        from src.rag.embeddings import _embeddings_cache
 
-        get_embeddings.cache_clear()
+        _embeddings_cache.clear()
     except (ImportError, AttributeError):
         pass
 

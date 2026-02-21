@@ -12,6 +12,9 @@ _mock_vector_module = MagicMock()
 _mock_base_vector_query_module = MagicMock()
 
 
+_mock_field_path_module = MagicMock()
+
+
 @pytest.fixture(autouse=True)
 def _mock_firestore_imports():
     """Mock google.cloud.firestore modules for all tests in this file."""
@@ -20,15 +23,28 @@ def _mock_firestore_imports():
         "google.cloud.firestore_v1": MagicMock(),
         "google.cloud.firestore_v1.vector": _mock_vector_module,
         "google.cloud.firestore_v1.base_vector_query": _mock_base_vector_query_module,
+        "google.cloud.firestore_v1.field_path": _mock_field_path_module,
     }):
         yield
+        # Reset module-level state for server filter warning
+        try:
+            import src.rag.firestore_retriever as _fr
+            _fr._server_filter_warned = False
+        except (ImportError, AttributeError):
+            pass
 
 
 class TestFirestoreRetriever:
     """Tests for FirestoreRetriever with mock Firestore client."""
 
-    def _make_retriever(self, mock_client=None):
-        """Create a FirestoreRetriever with optional mock client."""
+    def _make_retriever(self, mock_client=None, use_server_filter=False):
+        """Create a FirestoreRetriever with optional mock client.
+
+        Args:
+            mock_client: Mock Firestore client.
+            use_server_filter: Whether to attempt server-side property_id
+                filtering. Default False in tests (no composite index).
+        """
         from src.rag.firestore_retriever import FirestoreRetriever
 
         embeddings = MagicMock()
@@ -39,6 +55,7 @@ class TestFirestoreRetriever:
             collection="test_collection",
             embeddings=embeddings,
         )
+        retriever._use_server_filter = use_server_filter
         if mock_client is not None:
             retriever._client = mock_client
         return retriever
@@ -73,7 +90,7 @@ class TestFirestoreRetriever:
         assert isinstance(doc, Document)
         assert doc.page_content == "Steakhouse info"
         assert doc.metadata["category"] == "restaurants"
-        assert score == pytest.approx(0.8)  # 1.0 - 0.2
+        assert score == pytest.approx(0.9)  # 1.0 - (0.2 / 2)
 
     def test_retrieve_with_scores_filters_by_property_id(self):
         """retrieve_with_scores filters out docs with wrong property_id."""
@@ -189,21 +206,85 @@ class TestFirestoreRetriever:
             "metadata": {"property_id": "mohegan_sun"},
             "distance": 0.0,
         })
-        # distance=1.0 => similarity=0.0 (orthogonal)
+        # distance=1.0 => similarity=0.5 (orthogonal, using LangChain formula 1 - d/2)
         snap_orthogonal = self._mock_doc_snapshot({
             "content": "orthogonal",
             "metadata": {"property_id": "mohegan_sun"},
             "distance": 1.0,
         }, doc_id="doc2")
+        # distance=2.0 => similarity=0.0 (opposite, using LangChain formula 1 - d/2)
+        snap_opposite = self._mock_doc_snapshot({
+            "content": "opposite",
+            "metadata": {"property_id": "mohegan_sun"},
+            "distance": 2.0,
+        }, doc_id="doc3")
         mock_vector_query = MagicMock()
-        mock_vector_query.get.return_value = [snap_identical, snap_orthogonal]
+        mock_vector_query.get.return_value = [snap_identical, snap_orthogonal, snap_opposite]
         mock_collection.find_nearest.return_value = mock_vector_query
 
         retriever = self._make_retriever(mock_client)
         results = retriever.retrieve_with_scores("test")
 
-        assert results[0][1] == pytest.approx(1.0)
-        assert results[1][1] == pytest.approx(0.0)
+        assert results[0][1] == pytest.approx(1.0)   # distance=0 => 1.0
+        assert results[1][1] == pytest.approx(0.5)    # distance=1 => 0.5
+        assert results[2][1] == pytest.approx(0.0)    # distance=2 => 0.0
+
+    def test_server_side_filter_used_when_available(self):
+        """Server-side property_id filter calls where() before find_nearest()."""
+        mock_client = MagicMock()
+        mock_collection = MagicMock()
+        mock_filtered_ref = MagicMock()
+        mock_client.collection.return_value = mock_collection
+        mock_collection.where.return_value = mock_filtered_ref
+
+        snapshot = self._mock_doc_snapshot({
+            "content": "Filtered result",
+            "metadata": {"category": "restaurants", "property_id": "mohegan_sun"},
+            "distance": 0.2,
+        })
+        mock_vector_query = MagicMock()
+        mock_vector_query.get.return_value = [snapshot]
+        mock_filtered_ref.find_nearest.return_value = mock_vector_query
+
+        retriever = self._make_retriever(mock_client, use_server_filter=True)
+        results = retriever.retrieve_with_scores("steakhouse")
+
+        # Verify where() was called with property_id filter
+        mock_collection.where.assert_called_once_with(
+            "metadata.property_id", "==", "mohegan_sun"
+        )
+        # find_nearest called on filtered ref, not raw collection
+        mock_filtered_ref.find_nearest.assert_called_once()
+        mock_collection.find_nearest.assert_not_called()
+        assert len(results) == 1
+
+    def test_server_side_filter_fallback_on_error(self):
+        """Falls back to Python-side filtering when server filter fails."""
+        mock_client = MagicMock()
+        mock_collection = MagicMock()
+        mock_client.collection.return_value = mock_collection
+
+        # Server-side filter raises (composite index missing)
+        mock_collection.where.side_effect = Exception("Index not found")
+
+        # Fallback path: find_nearest on raw collection
+        snapshot = self._mock_doc_snapshot({
+            "content": "Fallback result",
+            "metadata": {"category": "restaurants", "property_id": "mohegan_sun"},
+            "distance": 0.3,
+        })
+        mock_vector_query = MagicMock()
+        mock_vector_query.get.return_value = [snapshot]
+        mock_collection.find_nearest.return_value = mock_vector_query
+
+        retriever = self._make_retriever(mock_client, use_server_filter=True)
+        results = retriever.retrieve_with_scores("steakhouse")
+
+        # Should fall back and still return results
+        assert len(results) == 1
+        assert results[0][0].page_content == "Fallback result"
+        # After fallback, server filter is disabled for future calls
+        assert retriever._use_server_filter is False
 
 
 class TestGetCheckpointer:

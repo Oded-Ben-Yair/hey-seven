@@ -293,16 +293,26 @@ async def reingest_item(
             return False
 
         settings = get_settings()
-        property_id = (casino_id or settings.CASINO_ID).lower().replace(" ", "_")
+        # R14 fix (DeepSeek F-006): Use PROPERTY_NAME for property_id derivation,
+        # consistent with ingest_property() and CasinoKnowledgeRetriever.retrieve().
+        # Previously used CASINO_ID, which could diverge from PROPERTY_NAME in
+        # multi-tenant deployments, making CMS-updated chunks invisible to retrieval.
+        property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
         source = f"cms:{category}/{item_id}"
+        # R14 fix (Gemini F2, Grok F-003 — 2/3 consensus): Add _ingestion_version
+        # metadata for stale chunk purging.  Without it, bulk ingest_property()
+        # purges CMS-updated chunks (missing version stamp matches "!= current"),
+        # and repeated CMS updates accumulate ghost chunks (old content, new ID).
+        version_stamp = datetime.now(tz=timezone.utc).isoformat()
         metadata = {
             "category": category,
             "item_name": content.get("name", content.get("title", item_id)),
             "item_id": item_id,
             "source": source,
             "property_id": property_id,
-            "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+            "last_updated": version_stamp,
             "_schema_version": "2.1",
+            "_ingestion_version": version_stamp,
         }
         # Deterministic ID matching ingest_property: SHA-256 of content + source.
         doc_id = hashlib.sha256(
@@ -315,6 +325,34 @@ async def reingest_item(
                 metadatas=[metadata],
                 ids=[doc_id],
             )
+            # Purge stale CMS chunks for the same source with a different
+            # ingestion version (edited content creates new IDs; old chunks
+            # linger as ghost data).  Non-critical — log and continue on failure.
+            try:
+                if hasattr(retriever.vectorstore, "_collection"):
+                    collection = retriever.vectorstore._collection
+                    old_docs = collection.get(
+                        where={
+                            "$and": [
+                                {"property_id": {"$eq": property_id}},
+                                {"source": {"$eq": source}},
+                                {"_ingestion_version": {"$ne": version_stamp}},
+                            ]
+                        }
+                    )
+                    if old_docs and old_docs["ids"]:
+                        collection.delete(ids=old_docs["ids"])
+                        logger.info(
+                            "Purged %d stale CMS chunks for %s",
+                            len(old_docs["ids"]),
+                            source,
+                        )
+            except Exception:
+                logger.warning(
+                    "Failed to purge stale CMS chunks for %s (non-critical).",
+                    source,
+                    exc_info=True,
+                )
         else:
             logger.warning(
                 "Retriever has no vectorstore — cannot re-index %s/%s",
