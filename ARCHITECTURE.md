@@ -19,7 +19,7 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     v
 Custom 11-node StateGraph (src/agent/graph.py)
     |
-    |-- compliance_gate (73 regex patterns) --> greeting / off_topic / router
+    |-- compliance_gate (84 regex patterns) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
@@ -101,7 +101,7 @@ Priority order (first match wins):
 7. Patron privacy (`detect_patron_privacy()`): 11 patterns — routes to `patron_privacy`.
 8. All pass: `query_type=None` signals the downstream router to classify via LLM.
 
-All guardrail patterns are defined in `src/agent/guardrails.py` (73 total patterns). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
+All guardrail patterns are defined in `src/agent/guardrails.py` (84 total patterns). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
 
 ### 2. router (`src/agent/nodes.py`)
 
@@ -175,7 +175,7 @@ Behavior:
 | `hotel` | `hotel` | Hotel rooms, suites, towers, check-in/out, accommodation policies |
 | *(all others)* | `host` | General concierge with whisper planner guidance |
 
-Dispatch tie-breaking: when multiple categories have equal counts, `max(category_counts, key=lambda k: (count, k))` selects alphabetically — deterministic and testable.
+Dispatch tie-breaking uses a three-tuple key: `(count, business_priority, alphabetical)`. Business priority from `_CATEGORY_PRIORITY` in `graph.py`: dining/restaurants (4) > hotel (3) > entertainment/spa (2) > gaming/promotions (1). Unmapped categories default to 0. Deterministic and testable.
 
 ### Specialist Agent Base Pattern (`_base.py`)
 
@@ -207,7 +207,7 @@ this adds ~$0.0003 per turn. The planner can be disabled via the
 
 6 criteria: grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming.
 
-Uses a **separate validator LLM** (`_get_validator_llm()`) with `temperature=0.0` for deterministic binary classification (PASS/RETRY/FAIL). This is distinct from the `_get_llm()` singleton (temperature 0.3) used for creative response generation. Both are `@lru_cache` singletons.
+Uses a **separate validator LLM** (`_get_validator_llm()`) with `temperature=0.0` for deterministic binary classification (PASS/RETRY/FAIL). This is distinct from the `_get_llm()` singleton (temperature 0.3) used for creative response generation. Both are TTL-cached singletons (1-hour expiry via `cachetools.TTLCache` with `asyncio.Lock`) for automatic GCP credential rotation.
 
 Behavior:
 - If `skip_validation` is True (empty context, circuit breaker open, or generate error), auto-PASS (these paths produce deterministic safe responses, not LLM-generated content).
@@ -265,7 +265,7 @@ Five sub-cases based on `query_type`:
 
 ## State Schema
 
-`PropertyQAState` is a `TypedDict` with 13 fields (see `PropertyQAState` in `src/agent/state.py`). `CasinoHostState` is a backward-compatible alias for v2 code that prefers the domain-specific name. Three Pydantic models (`RouterOutput`, `ValidationResult`, `ExtractedFields`) define structured LLM outputs.
+`PropertyQAState` is a `TypedDict` with 13 fields (see `PropertyQAState` in `src/agent/state.py`). Three Pydantic models (`RouterOutput`, `ValidationResult`, `DispatchOutput`) and a `WhisperPlan` model define structured LLM outputs.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -371,7 +371,7 @@ Used by the `whisper_planner` node to produce structured guidance for the speaki
 
 ## Guardrails
 
-Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **73 regex patterns** across all deterministic guardrails.
+Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **84 regex patterns** across all deterministic guardrails.
 
 ### Deterministic: audit_input (`src/agent/guardrails.py`)
 
@@ -389,7 +389,7 @@ Pre-LLM regex-based age verification guardrail. Checks **6 patterns** for undera
 
 ### Deterministic: detect_bsa_aml (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based BSA/AML detection. Checks **14 patterns** for money laundering, structuring, and CTR/SAR evasion queries — including chip walking and multiple buy-in structuring. Casinos are MSBs under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
+Pre-LLM regex-based BSA/AML detection. Checks **25 patterns** across English (14), Spanish (5), Portuguese (3), and Mandarin (3) for money laundering, structuring, and CTR/SAR evasion queries — including chip walking and multiple buy-in structuring. Casinos are MSBs under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
 
 ### Deterministic: detect_patron_privacy (`src/agent/guardrails.py`)
 
@@ -643,11 +643,9 @@ Several in-memory data structures (rate limiter, circuit breaker, retriever sing
 | `CircuitBreaker` singleton | Per-worker circuit state (failures not shared) | Redis or shared-memory state |
 | `get_retriever()` singleton | Multiple ChromaDB instances (memory waste, no data conflict) | Vertex AI Vector Search (stateless client) |
 
-### CSP ``unsafe-inline``
+### CSP (Nonce-Based)
 
-The security headers middleware uses ``script-src 'self' 'unsafe-inline'`` and ``style-src 'self' 'unsafe-inline'`` because the demo serves a single-file chat UI (``static/index.html``) with embedded ``<style>`` and ``<script>`` blocks. No user-generated content is rendered as HTML, so the XSS attack surface is minimal.
-
-**Production path**: Externalize CSS/JS into separate static files and replace ``'unsafe-inline'`` with nonce-based CSP — generate a per-request nonce in middleware and inject it into ``<script nonce="...">`` tags.
+The security headers middleware generates per-request cryptographic nonces (16 bytes via ``secrets.token_bytes``, base64-encoded) for ``script-src`` and ``style-src`` directives. CSS and JS are served as separate static files (``styles.css``, ``app.js``), and the CSP uses ``'nonce-{nonce}'`` instead of ``'unsafe-inline'``. See ``SecurityHeadersMiddleware`` in ``src/api/middleware.py`` for implementation.
 
 ### Demo vs Production
 
@@ -749,12 +747,15 @@ Single-service setup with:
 
 ### Cloud Build
 
-`cloudbuild.yaml` defines a 5-step CI/CD pipeline:
+`cloudbuild.yaml` defines an 8-step CI/CD pipeline with canary deployment and automatic rollback:
 1. Install dev dependencies (`requirements-dev.txt`), lint (`ruff`), type-check (`mypy`), and run tests with coverage (`pytest --cov --cov-fail-under=90`).
 2. Build Docker image tagged with commit SHA.
 3. **Trivy container vulnerability scan** — scans for CRITICAL and HIGH severity CVEs (`--exit-code=1` fails the build on findings, `--ignore-unfixed` skips unpatched OS-level CVEs).
 4. Push to Artifact Registry (`us-central1-docker.pkg.dev`).
-5. Deploy to Cloud Run (us-central1, 2Gi memory, 90s timeout, `--allow-unauthenticated` for demo — API key auth is enforced at the app layer via `ApiKeyMiddleware`).
+5. **Capture current revision** for rollback — records the current live revision before deployment.
+6. Deploy to Cloud Run with `--no-traffic` (canary-safe, 2Gi memory, `--allow-unauthenticated` for demo — API key auth is enforced at the app layer via `ApiKeyMiddleware`).
+7. **Post-deploy smoke test** — validates `/health` returns 200 with version assertion against `$COMMIT_SHA`. On failure, automatically rolls back to the previous revision captured in step 5.
+8. **Route traffic** — routes 100% traffic to the new revision only after the smoke test passes. See `docs/runbook.md` for detailed step documentation.
 
 ---
 
@@ -831,12 +832,12 @@ The following features were consciously deferred from the initial architecture s
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 11 patterns, responsible gaming 31 patterns EN+ES+PT+ZH, age verification 6 patterns, BSA/AML 14 patterns, patron privacy 11 patterns — 73 total) | ~262 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 11 patterns, responsible gaming 31 patterns EN+ES+PT+ZH, age verification 6 patterns, BSA/AML 25 patterns EN+ES+PT+ZH, patron privacy 11 patterns — 84 total) | ~262 |
 | `compliance_gate.py` | Dedicated compliance node — runs all 5 guardrail layers as single pre-router node (zero LLM calls) | ~99 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~179 |
 | `nodes.py` | 8 async graph nodes (router, retrieve, generate, validate, respond, fallback, greeting, off_topic) + routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~686 |
 | `graph.py` | 11-node StateGraph compilation + node name constants + 3 routing functions + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper, graph trace metadata extraction | ~428 |
-| `state.py` | TypedDict state schema (`PropertyQAState` / `CasinoHostState`, 13 fields, `RetrievedChunk`) + 3 Pydantic structured output models (`RouterOutput`, `ValidationResult`, `ExtractedFields`) | ~94 |
+| `state.py` | TypedDict state schema (`PropertyQAState`, 13 fields, `RetrievedChunk`) + 3 Pydantic structured output models (`RouterOutput`, `ValidationResult`, `DispatchOutput`) + `WhisperPlan` | ~94 |
 | `prompts.py` | 4 prompt templates (concierge, router, validation, whisper planner) + helpline constant | ~193 |
 | `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~186 |
 | `agents/` | 5 specialist agents (host, dining, entertainment, comp, hotel) + registry + shared base | ~763 |

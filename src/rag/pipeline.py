@@ -444,7 +444,7 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                         "source": path.name,
                         "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
                         "last_updated": datetime.now(tz=timezone.utc).isoformat(),
-                        "ingestion_version": "2.1",
+                        "_schema_version": "2.1",
                     },
                 })
 

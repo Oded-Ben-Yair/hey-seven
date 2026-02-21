@@ -16,7 +16,7 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 ## Current State (Updated 2026-02-20)
 
 - **Codebase**: 23K LOC, 51 source modules across 10 packages
-- **Tests**: 1070+ tests across 32 test files
+- **Tests**: ~1460 tests across 42 test files (run `make test-ci` for exact count)
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
 - **Review Score**: 92/100 after 20 rounds of hostile multi-model review
 - **Version**: Tagged v1.0.0
