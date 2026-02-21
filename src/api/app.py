@@ -253,11 +253,17 @@ def create_app() -> FastAPI:
         # RAG health check: verify embeddings + vector store are accessible.
         # Uses cached state to stay fast (< 1s).  Catches exceptions to
         # report degraded rather than crashing the health endpoint.
+        #
+        # R17 fix: Gemini H-002.  get_retriever() calls _get_retriever_cached()
+        # which acquires a threading.Lock.  Calling from the event loop blocks
+        # it if a concurrent to_thread worker is initializing the retriever
+        # (ChromaDB/Firestore client creation can take seconds).  Wrapping in
+        # to_thread avoids blocking the event loop on lock contention.
         rag_ready = False
         try:
             from src.rag.pipeline import get_retriever
 
-            retriever = get_retriever()
+            retriever = await asyncio.to_thread(get_retriever)
             # Check that the retriever has a vectorstore (not an empty fallback)
             if hasattr(retriever, "vectorstore") and retriever.vectorstore is not None:
                 rag_ready = True

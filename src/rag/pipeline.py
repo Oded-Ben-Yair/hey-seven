@@ -530,7 +530,9 @@ def _load_knowledge_base_markdown(
     property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
     documents: list[dict[str, Any]] = []
 
-    for md_file in sorted(base_path.rglob("*.md")):
+    # R17 fix: Gemini M-005 — capture file list once to avoid double rglob.
+    md_files = sorted(base_path.rglob("*.md"))
+    for md_file in md_files:
         text = md_file.read_text(encoding="utf-8").strip()
         if not text:
             continue
@@ -565,7 +567,7 @@ def _load_knowledge_base_markdown(
             })
 
     logger.info("Loaded %d sections from %d markdown files in %s",
-                len(documents), len(list(base_path.rglob("*.md"))), base_path)
+                len(documents), len(md_files), base_path)
     return documents
 
 

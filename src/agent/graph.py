@@ -712,7 +712,7 @@ async def chat_stream(
         # (fail-safe). R10 documentation fix (DeepSeek F6).
         logger.info(
             "SSE stream cancelled (client disconnect), dropping %d buffered chars",
-            len(_pii_redactor._buffer),
+            _pii_redactor.buffer_size,
         )
         raise
     except Exception:

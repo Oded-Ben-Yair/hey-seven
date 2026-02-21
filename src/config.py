@@ -179,5 +179,23 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Return a cached Settings instance."""
+    """Return a cached Settings instance.
+
+    Uses ``@lru_cache`` (not TTLCache) because Settings are loaded from
+    environment variables which do not rotate like GCP credentials.
+    For runtime config changes, call ``clear_settings_cache()`` to force
+    re-read from environment on next access.
+    """
     return Settings()
+
+
+def clear_settings_cache() -> None:
+    """Clear the settings cache, forcing re-read from environment on next access.
+
+    Call during incident response to pick up tuned thresholds (CB_FAILURE_THRESHOLD,
+    RATE_LIMIT_CHAT, SEMANTIC_INJECTION_THRESHOLD, etc.) without container restart.
+
+    R17 fix: GPT F-001 — every other singleton has a cache-clear function;
+    Settings was the exception, blocking incident response config changes.
+    """
+    get_settings.cache_clear()

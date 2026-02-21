@@ -78,17 +78,29 @@ async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 # ---------------------------------------------------------------------------
 
 
-# Failure counter for monitoring whisper planner health.
+# Failure telemetry for monitoring whisper planner health.
 # Tracks consecutive failures; logs ERROR when threshold is exceeded.
 #
-# R16 fix: DeepSeek F-003, Gemini F-016 (2/3 consensus).  Previous "benign
-# race" comment was incorrect — the success-reset race suppresses alerts
-# entirely under mixed traffic (not just off-by-one).  asyncio.Lock protects
+# R16 fix: DeepSeek F-003, Gemini F-016 (2/3 consensus).  asyncio.Lock protects
 # the read-modify-write cycle so the "consecutive" semantic is maintained.
-_failure_count: int = 0
-_FAILURE_ALERT_THRESHOLD: int = 10
-_failure_alerted: bool = False
-_failure_lock = asyncio.Lock()
+#
+# R17 fix: Gemini H-001, GPT F-002, DeepSeek F-006 (3/3 consensus).
+# Refactored from module-level globals+`global` keyword to a namespace class.
+# Clearer intent, greppable mutation sites, no `global` statement in async code.
+# Alert fatigue fix: _alerted is NOT reset on success — once the alert fires,
+# it stays fired for the process lifetime.  Prevents repeated alerts under
+# intermittent failures (e.g., 50% success rate triggering alert every ~20 reqs).
+# Reset requires process restart or explicit admin action.
+class _WhisperTelemetry:
+    """Namespace for whisper planner failure tracking (module-level singleton)."""
+
+    count: int = 0
+    ALERT_THRESHOLD: int = 10
+    alerted: bool = False
+    lock: asyncio.Lock = asyncio.Lock()
+
+
+_telemetry = _WhisperTelemetry()
 
 # ---------------------------------------------------------------------------
 # Profile fields for completeness calculation (placeholder weights)
@@ -131,8 +143,6 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
     returns ``{"whisper_plan": None}`` so the agent proceeds without
     guidance (fail-silent contract).
     """
-    global _failure_count, _failure_alerted
-
     # Runtime behavior flag (Layer 2) — see graph.py dual-layer docs.
     # This complements the build-time check in build_graph() which removes
     # the node from the graph topology entirely.  The runtime check handles
@@ -168,9 +178,10 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
 
         # Reset failure counter on success (under lock to prevent race
         # with concurrent failure increment — R16 fix).
-        async with _failure_lock:
-            _failure_count = 0
-            _failure_alerted = False
+        # R17 fix: do NOT reset _telemetry.alerted — once the alert fires,
+        # it stays fired to prevent alert fatigue under intermittent failures.
+        async with _telemetry.lock:
+            _telemetry.count = 0
         return {"whisper_plan": plan.model_dump()}
 
     except Exception as exc:
@@ -178,16 +189,16 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         # output parsing AND network errors (google-genai raises various
         # exception types across SDK versions) all degrade gracefully.
         # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        async with _failure_lock:
-            _failure_count += 1
-            current_count = _failure_count
-            if _failure_count >= _FAILURE_ALERT_THRESHOLD and not _failure_alerted:
-                _failure_alerted = True
+        async with _telemetry.lock:
+            _telemetry.count += 1
+            current_count = _telemetry.count
+            if _telemetry.count >= _telemetry.ALERT_THRESHOLD and not _telemetry.alerted:
+                _telemetry.alerted = True
                 logger.error(
                     "whisper_planner_systematic_failure: %d consecutive failures "
                     "exceeded threshold (%d). Whisper planner may be misconfigured.",
-                    _failure_count,
-                    _FAILURE_ALERT_THRESHOLD,
+                    _telemetry.count,
+                    _telemetry.ALERT_THRESHOLD,
                 )
         logger.warning(
             "whisper_planner_failure",

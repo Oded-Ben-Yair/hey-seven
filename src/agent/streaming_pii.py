@@ -49,6 +49,15 @@ class StreamingPIIRedactor:
     def __init__(self) -> None:
         self._buffer = ""
 
+    @property
+    def buffer_size(self) -> int:
+        """Current buffer length (bytes pending redaction scan).
+
+        Use this instead of accessing ``_buffer`` directly.
+        R17 fix: Gemini M-001 — encapsulation for external inspection.
+        """
+        return len(self._buffer)
+
     def feed(self, chunk: str) -> Iterator[str]:
         """Feed a text chunk, yield safe (redacted) text.
 

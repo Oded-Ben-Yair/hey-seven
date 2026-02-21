@@ -16,6 +16,8 @@ expires, causing embedding calls to fail after credential rotation
 credential-bearing singletons already use TTLCache.
 """
 
+import threading
+
 from cachetools import TTLCache
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -27,6 +29,14 @@ from src.config import get_settings
 # RETRIEVAL_QUERY, RETRIEVAL_DOCUMENT, etc.).
 _embeddings_cache: TTLCache = TTLCache(maxsize=4, ttl=3600)
 
+# R17 fix: DeepSeek F-001 (MEDIUM).  TTLCache is not thread-safe.
+# get_embeddings() is called from both async contexts (lifespan startup)
+# and sync contexts (inside asyncio.to_thread via retriever).  Concurrent
+# TTL expiry could corrupt the cache dict.  Uses threading.Lock (not
+# asyncio.Lock) because the primary contention is with to_thread workers —
+# consistent with _retriever_lock pattern.
+_embeddings_lock = threading.Lock()
+
 
 def get_embeddings(task_type: str | None = None) -> GoogleGenerativeAIEmbeddings:
     """Get or create an embeddings model instance (cached per task_type).
@@ -34,6 +44,10 @@ def get_embeddings(task_type: str | None = None) -> GoogleGenerativeAIEmbeddings
     Uses TTLCache (1-hour TTL) consistent with ``_get_llm()`` and other
     singletons that hold GCP credential references.  Credentials rotate
     under Workload Identity Federation; TTL ensures periodic refresh.
+
+    Protected by ``threading.Lock`` because this function is called from
+    both async contexts and thread pool workers (via ``asyncio.to_thread``
+    in the retriever path).  R17 fix (DeepSeek F-001).
 
     Args:
         task_type: Optional task type for the embedding model (e.g.,
@@ -44,17 +58,18 @@ def get_embeddings(task_type: str | None = None) -> GoogleGenerativeAIEmbeddings
         A GoogleGenerativeAIEmbeddings instance.
     """
     cache_key = task_type or "__default__"
-    cached = _embeddings_cache.get(cache_key)
-    if cached is not None:
-        return cached
+    with _embeddings_lock:
+        cached = _embeddings_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
-    settings = get_settings()
-    kwargs: dict = {"model": settings.EMBEDDING_MODEL}
-    if task_type:
-        kwargs["task_type"] = task_type
-    instance = GoogleGenerativeAIEmbeddings(**kwargs)
-    _embeddings_cache[cache_key] = instance
-    return instance
+        settings = get_settings()
+        kwargs: dict = {"model": settings.EMBEDDING_MODEL}
+        if task_type:
+            kwargs["task_type"] = task_type
+        instance = GoogleGenerativeAIEmbeddings(**kwargs)
+        _embeddings_cache[cache_key] = instance
+        return instance
 
 
 def clear_embeddings_cache() -> None:
