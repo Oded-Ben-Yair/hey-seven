@@ -5,10 +5,12 @@ Topology:
     router -> {greeting, off_topic, retrieve}
     retrieve -> whisper_planner -> generate -> validate -> {persona_envelope -> respond, generate (RETRY), fallback}
 
-The ``generate`` node runs ``_dispatch_to_specialist()`` which examines the
-dominant category in ``retrieved_context`` metadata and routes to the
-appropriate specialist agent via ``get_agent()`` from the registry.  The
-node name ``"generate"`` is preserved for SSE streaming compatibility.
+The ``generate`` node runs ``_dispatch_to_specialist()`` which uses structured
+LLM output (``DispatchOutput``) to classify which specialist agent should handle
+the query.  Falls back to deterministic keyword counting when the LLM is
+unavailable (circuit breaker open, parsing failure, network error).  The agent
+is resolved via ``get_agent()`` from the registry.  The node name ``"generate"``
+is preserved for SSE streaming compatibility.
 """
 
 import asyncio
@@ -18,6 +20,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
+from string import Template as _StrTemplate
 from typing import Any
 
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
@@ -34,7 +37,10 @@ from src.observability.langfuse_client import get_langfuse_handler
 from .agents.registry import get_agent
 from .compliance_gate import compliance_gate_node
 from .whisper_planner import whisper_planner_node
+from .circuit_breaker import _get_circuit_breaker
 from .nodes import (
+    _get_last_human_message,
+    _get_llm,
     fallback_node,
     greeting_node,
     off_topic_node,
@@ -45,7 +51,7 @@ from .nodes import (
     validate_node,
 )
 from .persona import persona_envelope_node
-from .state import PropertyQAState
+from .state import DispatchOutput, PropertyQAState
 
 logger = logging.getLogger(__name__)
 
@@ -132,53 +138,131 @@ _CATEGORY_PRIORITY: dict[str, int] = {
 }
 
 
-async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
-    """Dispatch to the appropriate specialist agent based on retrieved context.
+def _keyword_dispatch(retrieved: list[dict]) -> str:
+    """Determine specialist agent name from retrieved context via keyword counting.
 
-    Examines the dominant category in ``retrieved_context`` metadata and
-    routes to the specialist with domain-specific prompts via the agent
-    registry.  Falls back to ``host_agent`` for general or mixed queries.
+    This is the deterministic fallback used when structured LLM dispatch
+    is unavailable (circuit breaker open, LLM failure, parsing error).
 
-    Dispatch logic:
-    - Count category occurrences across all retrieved chunks.
-    - If a dominant category maps to a specialist, dispatch to it.
-    - Otherwise, use the general ``host`` concierge agent.
-    - ``host_agent`` includes whisper planner guidance; specialists do not.
+    Returns:
+        Agent name from ``_CATEGORY_TO_AGENT`` or ``"host"`` for unmapped categories.
     """
-    retrieved = state.get("retrieved_context", [])
-
-    # Count categories in retrieved context
     category_counts: dict[str, int] = {}
     for chunk in retrieved:
         cat = chunk.get("metadata", {}).get("category", "")
         if cat:
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
-    # Determine specialist from dominant category
-    agent_name = "host"
-    dominant = "none"
-    if category_counts:
-        # Tie-break: business priority (dining > hotel > entertainment > comp),
-        # then alphabetical for categories not in _CATEGORY_PRIORITY.
-        dominant = max(
-            category_counts,
-            key=lambda k: (category_counts[k], _CATEGORY_PRIORITY.get(k, 0), k),
+    if not category_counts:
+        return "host"
+
+    # Tie-break: business priority (dining > hotel > entertainment > comp),
+    # then alphabetical for categories not in _CATEGORY_PRIORITY.
+    dominant = max(
+        category_counts,
+        key=lambda k: (category_counts[k], _CATEGORY_PRIORITY.get(k, 0), k),
+    )
+    return _CATEGORY_TO_AGENT.get(dominant, "host")
+
+
+# Dispatch prompt template — minimal for routing efficiency.
+# Uses string.Template for safe substitution (no crash on user braces).
+_DISPATCH_PROMPT = _StrTemplate("""\
+Route the guest query to the best specialist agent.
+
+Guest query: $query
+Retrieved context categories: $categories
+
+Available specialists:
+- dining: restaurants, food, bars, dining reservations
+- entertainment: shows, events, concerts, comedy, spa, amenities
+- comp: player rewards, comps, loyalty programs, gaming promotions
+- hotel: rooms, reservations, towers, accommodations
+- host: general concierge, mixed topics, or unclear domain""")
+
+
+async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
+    """Route to the best specialist agent using structured LLM output.
+
+    Primary: Uses the LLM with ``DispatchOutput`` structured output to
+    classify which specialist should handle the query.
+
+    Fallback: When the LLM is unavailable (circuit breaker open, parsing
+    failure, network error), falls back to deterministic keyword counting
+    based on retrieved context metadata categories.
+
+    Feature flag: ``specialist_agents_enabled`` controls whether non-host
+    specialists are used. When disabled, all queries route to the general
+    host concierge regardless of dispatch method.
+    """
+    retrieved = state.get("retrieved_context", [])
+    dispatch_method = "keyword_fallback"
+
+    # --- Try structured LLM dispatch first ---
+    agent_name = None
+    try:
+        cb = _get_circuit_breaker()
+        if await cb.allow_request():
+            llm = await _get_llm()
+            dispatch_llm = llm.with_structured_output(DispatchOutput)
+
+            query = _get_last_human_message(state.get("messages", []))
+            # Extract category names from retrieved context for the prompt
+            categories = [
+                c.get("metadata", {}).get("category", "")
+                for c in retrieved
+                if c.get("metadata", {}).get("category", "")
+            ]
+
+            prompt = _DISPATCH_PROMPT.safe_substitute(
+                query=query,
+                categories=categories,
+            )
+
+            result: DispatchOutput = await dispatch_llm.ainvoke(prompt)
+            await cb.record_success()
+
+            # Validate that the specialist name is in the registry
+            if result.specialist in {"dining", "entertainment", "comp", "hotel", "host"}:
+                agent_name = result.specialist
+                dispatch_method = "structured_output"
+                logger.info(
+                    "Structured dispatch → %s (confidence=%.2f, reason=%s)",
+                    agent_name,
+                    result.confidence,
+                    result.reasoning[:80],
+                )
+        else:
+            logger.info("Circuit breaker not allowing requests; using keyword fallback")
+    except (ValueError, TypeError) as exc:
+        # Structured output parsing failed — LLM returned unparseable JSON
+        logger.warning("Structured dispatch parsing failed: %s", exc)
+    except Exception:
+        # Network errors, API failures, timeouts — broad catch is intentional
+        # because google-genai raises various exception types across versions.
+        logger.warning("Structured dispatch LLM call failed, falling back to keyword counting", exc_info=True)
+
+    # --- Fallback: keyword counting ---
+    if agent_name is None:
+        agent_name = _keyword_dispatch(retrieved)
+        logger.info(
+            "Keyword fallback dispatch → %s (categories=%s)",
+            agent_name,
+            {c.get("metadata", {}).get("category", "") for c in retrieved if c.get("metadata", {}).get("category")},
         )
-        candidate = _CATEGORY_TO_AGENT.get(dominant, "host")
-        # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
-        # When disabled, all queries route to the general host concierge.
-        # Uses async is_feature_enabled() for multi-tenant support (per-casino overrides).
-        if candidate != "host" and not await is_feature_enabled(get_settings().CASINO_ID, "specialist_agents_enabled"):
-            logger.info("Specialist agents disabled; routing %s to host", candidate)
-            candidate = "host"
-        agent_name = candidate
+
+    # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
+    # When disabled, all queries route to the general host concierge.
+    # Uses async is_feature_enabled() for multi-tenant support (per-casino overrides).
+    if agent_name != "host" and not await is_feature_enabled(get_settings().CASINO_ID, "specialist_agents_enabled"):
+        logger.info("Specialist agents disabled; routing %s to host", agent_name)
+        agent_name = "host"
 
     agent_fn = get_agent(agent_name)
     logger.info(
-        "Dispatching to %s agent (dominant_category=%s, categories=%s)",
+        "Dispatching to %s agent (method=%s)",
         agent_name,
-        dominant,
-        category_counts,
+        dispatch_method,
     )
     return await agent_fn(state)
 

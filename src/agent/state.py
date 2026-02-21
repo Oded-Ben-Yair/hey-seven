@@ -88,6 +88,27 @@ class RouterOutput(BaseModel):
     )
 
 
+class DispatchOutput(BaseModel):
+    """Structured output for specialist agent dispatch.
+
+    Used by ``_dispatch_to_specialist()`` to route queries to the
+    appropriate specialist agent via LLM classification instead of
+    keyword counting.  Falls back to keyword counting when the LLM
+    is unavailable (circuit breaker open, parsing failure, network error).
+    """
+    specialist: Literal["dining", "entertainment", "comp", "hotel", "host"] = Field(
+        description="Which specialist agent should handle this query"
+    )
+    confidence: float = Field(
+        ge=0.0, le=1.0,
+        description="Confidence in the routing decision (0.0 to 1.0)"
+    )
+    reasoning: str = Field(
+        max_length=200,
+        description="Brief explanation of why this specialist was chosen"
+    )
+
+
 class ValidationResult(BaseModel):
     """Structured output from the validation node."""
     status: Literal["PASS", "FAIL", "RETRY"] = Field(

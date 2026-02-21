@@ -366,12 +366,25 @@ class TestNodeConstantsV2:
 # ---------------------------------------------------------------------------
 
 
+def _mock_cb_blocking():
+    """Return a mock circuit breaker that blocks all requests (forces keyword fallback)."""
+    from unittest.mock import AsyncMock
+    cb = AsyncMock()
+    cb.allow_request = AsyncMock(return_value=False)
+    return cb
+
+
 class TestSpecialistDispatch:
-    """Tests for _dispatch_to_specialist() — v2.2 specialist agent routing."""
+    """Tests for _dispatch_to_specialist() — keyword fallback path.
+
+    These tests verify the deterministic keyword-counting fallback by
+    forcing the circuit breaker to block LLM requests. This isolates
+    the keyword dispatch logic from the structured LLM dispatch.
+    """
 
     @pytest.mark.asyncio
     async def test_restaurant_context_dispatches_to_dining(self):
-        """Dominant 'restaurants' category dispatches to dining_agent."""
+        """Dominant 'restaurants' category dispatches to dining_agent via keyword fallback."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -385,7 +398,8 @@ class TestSpecialistDispatch:
         )
 
         mock_dining = AsyncMock(return_value={"messages": [AIMessage(content="Dining response")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_dining) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_dining) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("dining")
@@ -393,7 +407,7 @@ class TestSpecialistDispatch:
 
     @pytest.mark.asyncio
     async def test_entertainment_context_dispatches_to_entertainment(self):
-        """Dominant 'entertainment' category dispatches to entertainment_agent."""
+        """Dominant 'entertainment' category dispatches to entertainment_agent via keyword fallback."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -407,14 +421,15 @@ class TestSpecialistDispatch:
         )
 
         mock_ent = AsyncMock(return_value={"messages": [AIMessage(content="Entertainment")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_ent) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_ent) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("entertainment")
 
     @pytest.mark.asyncio
     async def test_gaming_context_dispatches_to_comp(self):
-        """Dominant 'gaming' category dispatches to comp_agent."""
+        """Dominant 'gaming' category dispatches to comp_agent via keyword fallback."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -427,14 +442,15 @@ class TestSpecialistDispatch:
         )
 
         mock_comp = AsyncMock(return_value={"messages": [AIMessage(content="Comp")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_comp) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_comp) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("comp")
 
     @pytest.mark.asyncio
     async def test_mixed_context_dispatches_to_host(self):
-        """Mixed categories with no clear dominant → host_agent."""
+        """Mixed categories with no clear dominant → dining via priority tie-break (keyword fallback)."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -449,7 +465,8 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         # With 3 categories each at count=1, tie-break uses _CATEGORY_PRIORITY:
@@ -458,7 +475,7 @@ class TestSpecialistDispatch:
 
     @pytest.mark.asyncio
     async def test_empty_context_dispatches_to_host(self):
-        """Empty retrieved_context dispatches to host_agent (default)."""
+        """Empty retrieved_context dispatches to host_agent (default) via keyword fallback."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -469,14 +486,15 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("host")
 
     @pytest.mark.asyncio
     async def test_unknown_category_dispatches_to_host(self):
-        """Unknown category in context defaults to host_agent."""
+        """Unknown category in context defaults to host_agent via keyword fallback."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -489,7 +507,8 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("host")
@@ -531,7 +550,8 @@ class TestSpecialistDispatch:
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
         with mock_patch("src.agent.graph.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get:
+             mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         # Should dispatch to host, not dining
@@ -550,6 +570,9 @@ class TestSpecialistDispatchIntegration:
     let ``_dispatch_to_specialist()`` → ``get_agent()`` → real agent function
     → ``execute_specialist()`` run unmocked.  Only the LLM and circuit breaker
     are mocked to avoid API calls.
+
+    The graph-level circuit breaker is also mocked to block (forcing keyword
+    fallback), so the specialist agent is selected deterministically.
     """
 
     @pytest.mark.asyncio
@@ -579,6 +602,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
+            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -619,6 +643,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
+            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.entertainment_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -654,6 +679,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
+            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -681,6 +707,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
+            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -721,6 +748,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
+            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -874,7 +902,7 @@ class TestHITLInterrupt:
 
 
 class TestSpecialistDispatchTieBreaking:
-    """Strengthen the mixed-context tie-breaking assertion."""
+    """Strengthen the mixed-context tie-breaking assertion (keyword fallback)."""
 
     @pytest.mark.asyncio
     async def test_mixed_context_routes_to_dining_on_tie(self):
@@ -891,8 +919,361 @@ class TestSpecialistDispatchTieBreaking:
         )
 
         mock_dining = AsyncMock(return_value={"messages": [AIMessage(content="Dining")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_dining) as mock_get:
+        with mock_patch("src.agent.graph.get_agent", return_value=mock_dining) as mock_get, \
+             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         # restaurants (priority 4) > entertainment (priority 2) → dining agent
         mock_get.assert_called_once_with("dining")
+
+
+# ---------------------------------------------------------------------------
+# Structured LLM dispatch (new path)
+# ---------------------------------------------------------------------------
+
+
+class TestStructuredDispatch:
+    """Tests for the structured LLM dispatch path in _dispatch_to_specialist()."""
+
+    @pytest.mark.asyncio
+    async def test_structured_dispatch_uses_llm_output(self):
+        """When LLM dispatch succeeds, the returned specialist is used."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+        from src.agent.state import DispatchOutput
+
+        state = _state(
+            messages=[HumanMessage(content="What shows are on tonight?")],
+            retrieved_context=[
+                {"content": "Arena concerts", "metadata": {"category": "entertainment"}, "score": 0.9},
+            ],
+        )
+
+        # Mock LLM to return structured DispatchOutput for entertainment
+        mock_dispatch_result = DispatchOutput(
+            specialist="entertainment",
+            confidence=0.95,
+            reasoning="Query asks about shows, which is entertainment domain",
+        )
+        mock_dispatch_chain = AsyncMock()
+        mock_dispatch_chain.ainvoke = AsyncMock(return_value=mock_dispatch_result)
+        mock_llm = AsyncMock()
+        mock_llm.with_structured_output = MagicMock(return_value=mock_dispatch_chain)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Entertainment response")]})
+
+        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+            result = await _dispatch_to_specialist(state)
+
+        # Structured dispatch used LLM result
+        mock_get.assert_called_once_with("entertainment")
+        mock_dispatch_chain.ainvoke.assert_called_once()
+        mock_cb.record_success.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_structured_dispatch_falls_back_on_llm_failure(self):
+        """When LLM dispatch fails, keyword counting is used as fallback."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        state = _state(
+            messages=[HumanMessage(content="What restaurants do you have?")],
+            retrieved_context=[
+                {"content": "Todd English's Tuscany", "metadata": {"category": "restaurants"}, "score": 0.9},
+                {"content": "Bobby's Burger Palace", "metadata": {"category": "restaurants"}, "score": 0.8},
+            ],
+        )
+
+        # Mock LLM dispatch to raise an error
+        mock_dispatch_chain = AsyncMock()
+        mock_dispatch_chain.ainvoke = AsyncMock(side_effect=RuntimeError("API timeout"))
+        mock_llm = AsyncMock()
+        mock_llm.with_structured_output = MagicMock(return_value=mock_dispatch_chain)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+
+        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Dining response")]})
+
+        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+            result = await _dispatch_to_specialist(state)
+
+        # Falls back to keyword counting: restaurants dominant → dining
+        mock_get.assert_called_once_with("dining")
+
+    @pytest.mark.asyncio
+    async def test_structured_dispatch_falls_back_on_parsing_error(self):
+        """When structured output parsing fails (ValueError), keyword counting is used."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        state = _state(
+            messages=[HumanMessage(content="Where is the pool?")],
+            retrieved_context=[
+                {"content": "Pool info", "metadata": {"category": "amenities"}, "score": 0.9},
+            ],
+        )
+
+        # Mock LLM dispatch to raise ValueError (invalid structured output)
+        mock_dispatch_chain = AsyncMock()
+        mock_dispatch_chain.ainvoke = AsyncMock(side_effect=ValueError("Invalid JSON"))
+        mock_llm = AsyncMock()
+        mock_llm.with_structured_output = MagicMock(return_value=mock_dispatch_chain)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+
+        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
+
+        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+            result = await _dispatch_to_specialist(state)
+
+        # Falls back to keyword counting: amenities not in mapping → host
+        mock_get.assert_called_once_with("host")
+
+    @pytest.mark.asyncio
+    async def test_structured_dispatch_skipped_when_cb_blocks(self):
+        """When circuit breaker blocks, LLM is not called and keyword fallback is used."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+
+        state = _state(
+            messages=[HumanMessage(content="What restaurants?")],
+            retrieved_context=[
+                {"content": "Steakhouse", "metadata": {"category": "restaurants"}, "score": 0.9},
+            ],
+        )
+
+        mock_llm = AsyncMock()  # Should NOT be called
+
+        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Dining")]})
+
+        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()), \
+             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+            result = await _dispatch_to_specialist(state)
+
+        # Keyword fallback used
+        mock_get.assert_called_once_with("dining")
+        # LLM was never called (CB blocked before we got to LLM)
+        mock_llm.with_structured_output.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_structured_dispatch_feature_flag_overrides_llm_result(self):
+        """specialist_agents_enabled=False overrides structured dispatch result to host."""
+        from unittest.mock import AsyncMock, patch as mock_patch
+
+        from src.agent.graph import _dispatch_to_specialist
+        from src.agent.state import DispatchOutput
+
+        state = _state(
+            messages=[HumanMessage(content="What restaurants?")],
+            retrieved_context=[
+                {"content": "Steakhouse", "metadata": {"category": "restaurants"}, "score": 0.9},
+            ],
+        )
+
+        mock_dispatch_result = DispatchOutput(
+            specialist="dining",
+            confidence=0.9,
+            reasoning="Restaurant query",
+        )
+        mock_dispatch_chain = AsyncMock()
+        mock_dispatch_chain.ainvoke = AsyncMock(return_value=mock_dispatch_result)
+        mock_llm = AsyncMock()
+        mock_llm.with_structured_output = MagicMock(return_value=mock_dispatch_chain)
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        async def _mock_is_feature_enabled(_casino_id, flag_name):
+            if flag_name == "specialist_agents_enabled":
+                return False
+            return True
+
+        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
+
+        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.graph.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
+             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+            result = await _dispatch_to_specialist(state)
+
+        # LLM said "dining" but feature flag forced "host"
+        mock_get.assert_called_once_with("host")
+
+
+# ---------------------------------------------------------------------------
+# _keyword_dispatch unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestKeywordDispatch:
+    """Unit tests for the extracted _keyword_dispatch() deterministic fallback."""
+
+    def test_empty_context_returns_host(self):
+        """No retrieved context → host."""
+        from src.agent.graph import _keyword_dispatch
+
+        assert _keyword_dispatch([]) == "host"
+
+    def test_restaurant_dominant(self):
+        """Dominant restaurants category → dining."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "restaurants"}, "score": 0.9},
+            {"content": "b", "metadata": {"category": "restaurants"}, "score": 0.8},
+        ]
+        assert _keyword_dispatch(retrieved) == "dining"
+
+    def test_entertainment_dominant(self):
+        """Dominant entertainment category → entertainment."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "entertainment"}, "score": 0.9},
+        ]
+        assert _keyword_dispatch(retrieved) == "entertainment"
+
+    def test_gaming_maps_to_comp(self):
+        """Gaming category → comp."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "gaming"}, "score": 0.9},
+        ]
+        assert _keyword_dispatch(retrieved) == "comp"
+
+    def test_hotel_maps_to_hotel(self):
+        """Hotel category → hotel."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "hotel"}, "score": 0.9},
+        ]
+        assert _keyword_dispatch(retrieved) == "hotel"
+
+    def test_unknown_category_returns_host(self):
+        """Unknown category not in mapping → host."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "amenities"}, "score": 0.9},
+        ]
+        assert _keyword_dispatch(retrieved) == "host"
+
+    def test_priority_tiebreak(self):
+        """Equal counts: restaurants (priority 4) beats entertainment (priority 2)."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "restaurants"}, "score": 0.9},
+            {"content": "b", "metadata": {"category": "entertainment"}, "score": 0.8},
+        ]
+        assert _keyword_dispatch(retrieved) == "dining"
+
+    def test_count_beats_priority(self):
+        """Higher count beats higher priority."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "entertainment"}, "score": 0.9},
+            {"content": "b", "metadata": {"category": "entertainment"}, "score": 0.8},
+            {"content": "c", "metadata": {"category": "restaurants"}, "score": 0.7},
+        ]
+        # entertainment has count=2, restaurants has count=1
+        # count is primary sort key, so entertainment wins
+        assert _keyword_dispatch(retrieved) == "entertainment"
+
+    def test_spa_maps_to_entertainment(self):
+        """Spa category → entertainment (shared entertainment/amenities team)."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {"category": "spa"}, "score": 0.9},
+        ]
+        assert _keyword_dispatch(retrieved) == "entertainment"
+
+    def test_missing_category_metadata_ignored(self):
+        """Chunks without category metadata are ignored."""
+        from src.agent.graph import _keyword_dispatch
+
+        retrieved = [
+            {"content": "a", "metadata": {}, "score": 0.9},
+            {"content": "b", "metadata": {"category": "hotel"}, "score": 0.8},
+        ]
+        assert _keyword_dispatch(retrieved) == "hotel"
+
+
+# ---------------------------------------------------------------------------
+# DispatchOutput Pydantic model
+# ---------------------------------------------------------------------------
+
+
+class TestDispatchOutput:
+    """Tests for the DispatchOutput Pydantic model."""
+
+    def test_valid_dispatch_output(self):
+        """Valid DispatchOutput with all fields."""
+        from src.agent.state import DispatchOutput
+
+        result = DispatchOutput(
+            specialist="dining",
+            confidence=0.95,
+            reasoning="Restaurant query about Italian food",
+        )
+        assert result.specialist == "dining"
+        assert result.confidence == 0.95
+        assert "Italian" in result.reasoning
+
+    def test_invalid_specialist_rejected(self):
+        """Invalid specialist name is rejected by Literal type."""
+        from src.agent.state import DispatchOutput
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            DispatchOutput(
+                specialist="invalid_agent",
+                confidence=0.5,
+                reasoning="test",
+            )
+
+    def test_confidence_out_of_range_rejected(self):
+        """Confidence > 1.0 is rejected by Field constraint."""
+        from src.agent.state import DispatchOutput
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            DispatchOutput(
+                specialist="host",
+                confidence=1.5,
+                reasoning="test",
+            )
+
+    def test_all_specialist_names_valid(self):
+        """All 5 specialist names from the registry are valid."""
+        from src.agent.state import DispatchOutput
+
+        for name in ("dining", "entertainment", "comp", "hotel", "host"):
+            result = DispatchOutput(
+                specialist=name,
+                confidence=0.8,
+                reasoning=f"Test {name}",
+            )
+            assert result.specialist == name
