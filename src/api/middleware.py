@@ -5,10 +5,12 @@ Provides request logging, error handling, security headers, and rate limiting.
 """
 
 import asyncio
+import base64
 import collections
 import hmac
 import json
 import logging
+import secrets
 import time
 import uuid
 
@@ -172,28 +174,20 @@ class ErrorHandlingMiddleware:
 
 
 class SecurityHeadersMiddleware:
-    """Add security headers to every HTTP response."""
+    """Add security headers to every HTTP response.
 
-    # CSP: 'unsafe-inline' required for single-file demo HTML with inline scripts.
-    # Production deployment should externalize scripts and use nonce-based CSP.
-    # Trade-off documented: demo simplicity vs strict CSP -- acceptable for
-    # current deployment where the frontend is a single-file static asset.
-    # No user-generated content is rendered as HTML, so XSS surface is minimal.
-    # Production path: externalize CSS/JS into separate static files and
-    # replace 'unsafe-inline' with nonce-based CSP (generate per-request
-    # nonce in middleware, inject into <script nonce="..."> tags).
-    HEADERS = [
+    Uses per-request nonce-based CSP for script-src and style-src.
+    CSS and JS are externalized into separate static files (styles.css, app.js),
+    so 'unsafe-inline' is no longer needed. Each request gets a unique
+    cryptographically random nonce to prevent XSS via injected scripts/styles.
+    """
+
+    # Static security headers (CSP is generated per-request with nonce).
+    _STATIC_HEADERS = [
         (b"x-content-type-options", b"nosniff"),
         (b"x-frame-options", b"DENY"),
         (b"referrer-policy", b"strict-origin-when-cross-origin"),
         (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
-        (
-            b"content-security-policy",
-            b"default-src 'self'; script-src 'self' 'unsafe-inline'; "
-            b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            b"font-src 'self' https://fonts.gstatic.com; "
-            b"img-src 'self' data:; connect-src 'self'",
-        ),
     ]
 
     def __init__(self, app: ASGIApp) -> None:
@@ -204,11 +198,21 @@ class SecurityHeadersMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # Generate a per-request nonce (16 bytes = 128 bits of entropy).
+        nonce = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
+        csp = (
+            f"default-src 'self'; "
+            f"script-src 'self' 'nonce-{nonce}'; "
+            f"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com; "
+            f"font-src 'self' https://fonts.gstatic.com; "
+            f"img-src 'self' data:; connect-src 'self'"
+        ).encode()
+
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
                 message["headers"] = list(message.get("headers", [])) + list(
-                    self.HEADERS
-                )
+                    self._STATIC_HEADERS
+                ) + [(b"content-security-policy", csp)]
             await send(message)
 
         await self.app(scope, receive, send_wrapper)

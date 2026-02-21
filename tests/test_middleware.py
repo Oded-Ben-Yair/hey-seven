@@ -119,6 +119,84 @@ class TestSecurityHeadersMiddleware:
         assert "'self'" in resp.headers["content-security-policy"]
 
 
+class TestCSPNonce:
+    """CSP uses per-request nonce, not unsafe-inline."""
+
+    def test_csp_has_no_unsafe_inline(self):
+        """CSP header must not contain unsafe-inline."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/test", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        resp = client.get("/test")
+        csp = resp.headers["content-security-policy"]
+        assert "unsafe-inline" not in csp, (
+            f"CSP must not contain unsafe-inline, got: {csp}"
+        )
+
+    def test_csp_contains_nonce(self):
+        """CSP header must contain a nonce directive."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/test", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        resp = client.get("/test")
+        csp = resp.headers["content-security-policy"]
+        assert "'nonce-" in csp, f"CSP must contain a nonce directive, got: {csp}"
+
+    def test_csp_nonce_differs_per_request(self):
+        """Each request gets a unique nonce."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/test", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        csp1 = client.get("/test").headers["content-security-policy"]
+        csp2 = client.get("/test").headers["content-security-policy"]
+        # Extract nonce values from script-src
+        import re
+        nonces1 = re.findall(r"'nonce-([^']+)'", csp1)
+        nonces2 = re.findall(r"'nonce-([^']+)'", csp2)
+        assert nonces1, f"No nonce found in CSP: {csp1}"
+        assert nonces2, f"No nonce found in CSP: {csp2}"
+        assert nonces1[0] != nonces2[0], (
+            "Nonces must differ per request to prevent replay attacks"
+        )
+
+    def test_csp_preserves_google_fonts(self):
+        """CSP still allows Google Fonts after nonce migration."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/test", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        csp = resp = client.get("/test").headers["content-security-policy"]
+        assert "https://fonts.googleapis.com" in csp
+        assert "https://fonts.gstatic.com" in csp
+
+    def test_csp_nonce_in_both_script_and_style(self):
+        """Nonce appears in both script-src and style-src directives."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/test", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        csp = client.get("/test").headers["content-security-policy"]
+        # Parse directives
+        directives = {}
+        for part in csp.split(";"):
+            part = part.strip()
+            if part:
+                tokens = part.split()
+                directives[tokens[0]] = " ".join(tokens[1:])
+        assert "script-src" in directives
+        assert "style-src" in directives
+        assert "'nonce-" in directives["script-src"]
+        assert "'nonce-" in directives["style-src"]
+
+
 class TestRateLimitMiddleware:
     def test_allows_requests_within_limit(self):
         """Requests within the rate limit pass through."""
