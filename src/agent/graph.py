@@ -235,11 +235,15 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         else:
             logger.info("Circuit breaker not allowing requests; using keyword fallback")
     except (ValueError, TypeError) as exc:
-        # Structured output parsing failed — LLM returned unparseable JSON
+        # Structured output parsing failed — LLM returned unparseable JSON.
+        # Record failure so the circuit breaker tracks dispatch LLM health.
+        await cb.record_failure()
         logger.warning("Structured dispatch parsing failed: %s", exc)
     except Exception:
         # Network errors, API failures, timeouts — broad catch is intentional
         # because google-genai raises various exception types across versions.
+        # Record failure so the circuit breaker tracks dispatch LLM health.
+        await cb.record_failure()
         logger.warning("Structured dispatch LLM call failed, falling back to keyword counting", exc_info=True)
 
     # --- Fallback: keyword counting ---

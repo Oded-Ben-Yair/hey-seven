@@ -171,21 +171,34 @@ def create_app() -> FastAPI:
                     # EventSource timeouts during long LLM generations (30s+).
                     # Without heartbeats, browsers close the connection and auto-
                     # reconnect, creating duplicate requests.
+                    #
+                    # Uses asyncio.wait_for() on each __anext__() call so that
+                    # heartbeats fire even when the graph is blocked waiting for
+                    # the first LLM token (router + retrieval + specialist can
+                    # take 15-30s). Previous implementation only checked elapsed
+                    # time INSIDE the async-for loop, which never fires while
+                    # awaiting the next event.
                     _HEARTBEAT_INTERVAL = 15  # seconds
-                    last_event_time = asyncio.get_event_loop().time()
-
-                    async for event in chat_stream(
+                    event_iter = chat_stream(
                         agent, body.message, body.thread_id,
                         request_id=request_id,
-                    ):
+                    ).__aiter__()
+
+                    while True:
                         if await request.is_disconnected():
                             logger.info("Client disconnected, cancelling stream")
                             return
-                        now = asyncio.get_event_loop().time()
-                        if now - last_event_time >= _HEARTBEAT_INTERVAL:
+                        try:
+                            event = await asyncio.wait_for(
+                                event_iter.__anext__(),
+                                timeout=_HEARTBEAT_INTERVAL,
+                            )
+                            yield event
+                        except TimeoutError:
+                            # No event within heartbeat interval — send ping
                             yield {"event": "ping", "data": ""}
-                        last_event_time = now
-                        yield event
+                        except StopAsyncIteration:
+                            break
             except TimeoutError:
                 logger.warning("SSE stream timed out after %ds", sse_timeout)
                 yield {
@@ -482,8 +495,11 @@ def create_app() -> FastAPI:
     async def feedback_endpoint(body: FeedbackRequest):
         """Accept user feedback on agent responses.
 
-        Stores feedback for evaluation and model improvement.
-        In production, feedback is forwarded to LangFuse as a score.
+        Currently logs feedback with PII redaction. Feedback data is
+        available in structured logs for analysis.
+
+        TODO(HEYSEVEN-42): Forward feedback to LangFuse as a score
+        for evaluation dashboards and model improvement tracking.
         """
         from src.api.pii_redaction import redact_pii
 

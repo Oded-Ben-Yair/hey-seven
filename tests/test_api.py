@@ -550,6 +550,279 @@ class TestSecurityHeaders:
             assert resp.headers.get("x-content-type-options") == "nosniff"
 
 
+class TestFeedbackEndpoint:
+    """HTTP-level tests for POST /feedback endpoint.
+
+    Complements test_phase4_integration.py with test_api.py-local
+    coverage using the same ``_make_test_app()`` helper and TestClient
+    pattern used by all other endpoint tests in this module.
+    """
+
+    def test_feedback_returns_200(self):
+        """POST /feedback with valid payload returns 200 with 'received' status."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/feedback",
+                json={
+                    "thread_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "rating": 4,
+                    "comment": "Great help!",
+                },
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "received"
+            assert data["thread_id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+    def test_feedback_invalid_rating_returns_422(self):
+        """Rating outside 1-5 range returns 422."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/feedback",
+                json={
+                    "thread_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "rating": 0,
+                },
+            )
+            assert resp.status_code == 422
+
+    def test_feedback_invalid_thread_id_returns_422(self):
+        """Non-UUID thread_id returns 422."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/feedback",
+                json={"thread_id": "not-a-uuid", "rating": 3},
+            )
+            assert resp.status_code == 422
+
+    def test_feedback_without_comment_succeeds(self):
+        """Feedback without optional comment is valid."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/feedback",
+                json={
+                    "thread_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "rating": 5,
+                },
+            )
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "received"
+
+
+class TestCmsWebhookEndpoint:
+    """HTTP-level tests for POST /cms/webhook endpoint.
+
+    Tests the endpoint through TestClient, including signature verification,
+    payload validation, hash-based change detection, and re-indexing.
+    """
+
+    def _make_valid_payload(self):
+        """Create a valid CMS webhook payload."""
+        return {
+            "casino_id": "test_casino",
+            "category": "dining",
+            "item": {
+                "id": "steakhouse-001",
+                "name": "Prime Steakhouse",
+                "description": "Fine dining steakhouse",
+                "active": True,
+                "cuisine": "American",
+                "price_range": "$$$",
+            },
+        }
+
+    def _sign_payload(self, payload_bytes: bytes, secret: str) -> tuple[str, str]:
+        """Create HMAC-SHA256 signature and current timestamp."""
+        import hashlib
+        import hmac as hmac_mod
+        import time
+
+        timestamp = str(int(time.time()))
+        signature = hmac_mod.new(
+            secret.encode("utf-8"),
+            payload_bytes,
+            hashlib.sha256,
+        ).hexdigest()
+        return signature, timestamp
+
+    @patch("src.rag.pipeline.reingest_item", new_callable=AsyncMock, return_value=True)
+    def test_cms_webhook_valid_payload_returns_indexed(self, mock_reingest):
+        """Valid CMS payload with correct signature returns 'indexed' status."""
+        app, _ = _make_test_app()
+        payload = self._make_valid_payload()
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        secret = "test-webhook-secret"
+        signature, timestamp = self._sign_payload(payload_bytes, secret)
+
+        with (
+            patch("src.api.app.get_settings") as mock_settings,
+            TestClient(app) as client,
+        ):
+            from pydantic import SecretStr
+
+            settings = mock_settings.return_value
+            settings.CMS_WEBHOOK_SECRET = SecretStr(secret)
+
+            resp = client.post(
+                "/cms/webhook",
+                content=payload_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Webhook-Signature": signature,
+                    "X-Webhook-Timestamp": timestamp,
+                },
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "indexed"
+            assert data["item_id"] == "steakhouse-001"
+
+    @patch("src.rag.pipeline.reingest_item", new_callable=AsyncMock, return_value=True)
+    def test_cms_webhook_invalid_signature_returns_403(self, mock_reingest):
+        """Invalid HMAC signature returns 403."""
+        app, _ = _make_test_app()
+        payload = self._make_valid_payload()
+        payload_bytes = json.dumps(payload).encode("utf-8")
+
+        with (
+            patch("src.api.app.get_settings") as mock_settings,
+            TestClient(app) as client,
+        ):
+            from pydantic import SecretStr
+
+            settings = mock_settings.return_value
+            settings.CMS_WEBHOOK_SECRET = SecretStr("real-secret")
+
+            resp = client.post(
+                "/cms/webhook",
+                content=payload_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Webhook-Signature": "invalid-signature",
+                    "X-Webhook-Timestamp": str(int(__import__("time").time())),
+                },
+            )
+            assert resp.status_code == 403
+            data = resp.json()
+            assert data["status"] == "rejected"
+
+    @patch("src.rag.pipeline.reingest_item", new_callable=AsyncMock, return_value=True)
+    def test_cms_webhook_missing_required_fields_returns_rejected(self, mock_reingest):
+        """Payload missing casino_id returns rejected status."""
+        app, _ = _make_test_app()
+        payload = {"category": "dining", "item": {"name": "Test"}}
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        secret = "test-secret"
+        signature, timestamp = self._sign_payload(payload_bytes, secret)
+
+        with (
+            patch("src.api.app.get_settings") as mock_settings,
+            TestClient(app) as client,
+        ):
+            from pydantic import SecretStr
+
+            settings = mock_settings.return_value
+            settings.CMS_WEBHOOK_SECRET = SecretStr(secret)
+
+            resp = client.post(
+                "/cms/webhook",
+                content=payload_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Webhook-Signature": signature,
+                    "X-Webhook-Timestamp": timestamp,
+                },
+            )
+            # The endpoint maps "rejected" status to HTTP 403
+            assert resp.status_code == 403
+            data = resp.json()
+            assert data["status"] == "rejected"
+            assert "missing casino_id" in data["errors"]
+
+    @patch("src.rag.pipeline.reingest_item", new_callable=AsyncMock, return_value=True)
+    def test_cms_webhook_quarantined_item(self, mock_reingest):
+        """Item failing validation is quarantined (missing required fields)."""
+        app, _ = _make_test_app()
+        payload = {
+            "casino_id": "test_casino",
+            "category": "dining",
+            "item": {
+                "id": "bad-item",
+                "name": "Incomplete Restaurant",
+                # Missing: description, active, cuisine, price_range
+            },
+        }
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        secret = "test-secret"
+        signature, timestamp = self._sign_payload(payload_bytes, secret)
+
+        with (
+            patch("src.api.app.get_settings") as mock_settings,
+            TestClient(app) as client,
+        ):
+            from pydantic import SecretStr
+
+            settings = mock_settings.return_value
+            settings.CMS_WEBHOOK_SECRET = SecretStr(secret)
+
+            resp = client.post(
+                "/cms/webhook",
+                content=payload_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Webhook-Signature": signature,
+                    "X-Webhook-Timestamp": timestamp,
+                },
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "quarantined"
+            assert len(data["errors"]) > 0
+
+    @patch("src.rag.pipeline.reingest_item", new_callable=AsyncMock, return_value=True)
+    def test_cms_webhook_unchanged_content_returns_unchanged(self, mock_reingest):
+        """Submitting the same content twice returns 'unchanged' on second call."""
+        app, _ = _make_test_app()
+        payload = self._make_valid_payload()
+        payload_bytes = json.dumps(payload).encode("utf-8")
+        secret = "test-secret"
+        signature, timestamp = self._sign_payload(payload_bytes, secret)
+
+        with (
+            patch("src.api.app.get_settings") as mock_settings,
+            TestClient(app) as client,
+        ):
+            from pydantic import SecretStr
+
+            settings = mock_settings.return_value
+            settings.CMS_WEBHOOK_SECRET = SecretStr(secret)
+
+            headers = {
+                "Content-Type": "application/json",
+                "X-Webhook-Signature": signature,
+                "X-Webhook-Timestamp": timestamp,
+            }
+
+            # First call: indexed
+            resp1 = client.post("/cms/webhook", content=payload_bytes, headers=headers)
+            assert resp1.json()["status"] == "indexed"
+
+            # Second call with same content: unchanged
+            # Need fresh signature/timestamp for the second request
+            signature2, timestamp2 = self._sign_payload(payload_bytes, secret)
+            headers2 = {
+                "Content-Type": "application/json",
+                "X-Webhook-Signature": signature2,
+                "X-Webhook-Timestamp": timestamp2,
+            }
+            resp2 = client.post("/cms/webhook", content=payload_bytes, headers=headers2)
+            assert resp2.json()["status"] == "unchanged"
+
+
 class TestLifespanIntegration:
     """Tests exercising the real lifespan function with mocked dependencies."""
 

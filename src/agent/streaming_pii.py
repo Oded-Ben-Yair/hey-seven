@@ -108,11 +108,14 @@ class StreamingPIIRedactor:
             if redacted:
                 yield redacted
         else:
-            # Keep last _MAX_PATTERN_LEN chars of the ORIGINAL buffer
-            # as lookahead (not the redacted text, since redaction may
-            # change lengths). The lookahead will be re-scanned on
-            # next feed() or flush().
+            # Keep last _MAX_PATTERN_LEN chars of the REDACTED buffer
+            # as lookahead so the safe/lookahead split operates on the
+            # same text representation. This prevents misalignment when
+            # redaction changes string lengths (e.g., a phone number
+            # becomes "[PHONE]"). The lookahead will be re-scanned on
+            # next feed() or flush(), which is safe because re-scanning
+            # already-redacted placeholders like "[PHONE]" is a no-op.
             safe = redacted[:-_MAX_PATTERN_LEN]
-            self._buffer = self._buffer[-_MAX_PATTERN_LEN:]
+            self._buffer = redacted[-_MAX_PATTERN_LEN:]
             if safe:
                 yield safe
