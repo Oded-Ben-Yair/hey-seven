@@ -482,6 +482,55 @@ class TestGraphEndpoint:
             assert len(conditional) >= 7  # compliance_gate(3) + router(3) + validate(3)
 
 
+class TestGraphEndpointAuth:
+    """P2-T6: /graph endpoint must require API key authentication."""
+
+    def test_graph_without_api_key_returns_401(self):
+        """GET /graph without API key returns 401 when API_KEY is configured."""
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        with patch.dict("os.environ", {"API_KEY": "test-graph-secret"}):
+            get_settings.cache_clear()
+            app, _ = _make_test_app()
+            with TestClient(app) as client:
+                resp = client.get("/graph")
+                assert resp.status_code == 401
+                assert resp.json()["error"]["code"] == "unauthorized"
+
+    def test_graph_with_valid_api_key_returns_200(self):
+        """GET /graph with valid API key returns 200."""
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        with patch.dict("os.environ", {"API_KEY": "test-graph-secret"}):
+            get_settings.cache_clear()
+            app, _ = _make_test_app()
+            with TestClient(app) as client:
+                resp = client.get(
+                    "/graph", headers={"X-API-Key": "test-graph-secret"}
+                )
+                assert resp.status_code == 200
+                data = resp.json()
+                assert "nodes" in data
+                assert "edges" in data
+
+    def test_graph_with_invalid_api_key_returns_401(self):
+        """GET /graph with wrong API key returns 401."""
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        with patch.dict("os.environ", {"API_KEY": "test-graph-secret"}):
+            get_settings.cache_clear()
+            app, _ = _make_test_app()
+            with TestClient(app) as client:
+                resp = client.get(
+                    "/graph", headers={"X-API-Key": "wrong-key"}
+                )
+                assert resp.status_code == 401
+                assert resp.json()["error"]["code"] == "unauthorized"
+
+
 class TestSecurityHeaders:
     def test_security_headers_on_health(self):
         """GET /health includes security headers."""
