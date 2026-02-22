@@ -270,10 +270,12 @@ async def execute_specialist(
     # (retries add extra AIMessages that inflate the count).
     human_turn_count = sum(1 for m in history if isinstance(m, HumanMessage))
     if human_turn_count > _PERSONA_REINJECT_THRESHOLD // 2:
-        # R23 fix H-003: read persona name from branding config, not hardcoded
+        # R23/R29 fix: read persona name from property-specific profile
         try:
-            from src.casino.config import DEFAULT_CONFIG
-            _persona_name = DEFAULT_CONFIG.get("branding", {}).get("persona_name", "Seven")
+            from src.casino.config import get_casino_profile
+            _persona_name = get_casino_profile(
+                settings.CASINO_ID if hasattr(settings, "CASINO_ID") else ""
+            ).get("branding", {}).get("persona_name", "Seven")
         except Exception:
             _persona_name = "Seven"
         llm_messages.append(SystemMessage(content=(

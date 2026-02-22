@@ -174,7 +174,13 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     content = _validate_output(content)
 
     # Step 2: BrandingConfig enforcement
-    branding = DEFAULT_CONFIG.get("branding", {})
+    # R29 fix: use property-specific profile instead of DEFAULT_CONFIG
+    try:
+        from src.casino.config import get_casino_profile
+        _profile = get_casino_profile(get_settings().CASINO_ID)
+        branding = _profile.get("branding", {})
+    except Exception:
+        branding = DEFAULT_CONFIG.get("branding", {})
     content = _enforce_branding(content, branding)
 
     # Step 3: Guest name injection
