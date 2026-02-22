@@ -182,9 +182,11 @@ async def execute_specialist(
             system_prompt += whisper_guidance
 
     # Phase 3: Inject persona style from BrandingConfig (fail-silent)
+    # R27 fix H-003: use property-specific profile instead of DEFAULT_CONFIG
     try:
-        from src.casino.config import DEFAULT_CONFIG
-        branding = DEFAULT_CONFIG.get("branding", {})
+        from src.casino.config import get_casino_profile
+        _profile = get_casino_profile(settings.CASINO_ID if hasattr(settings, "CASINO_ID") else "")
+        branding = _profile.get("branding", {})
         persona_style = get_persona_style(branding)
         if persona_style:
             system_prompt += persona_style
@@ -243,7 +245,7 @@ async def execute_specialist(
     if (
         whisper
         and not suggestion_already_offered
-        and state.get("guest_sentiment") in ("positive", "neutral")
+        and state.get("guest_sentiment") == "positive"
     ):
         suggestion = whisper.get("proactive_suggestion")
         conf = whisper.get("suggestion_confidence", 0.0)
