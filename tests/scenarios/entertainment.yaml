@@ -1,0 +1,107 @@
+scenarios:
+  - id: "entertainment-01"
+    name: "Shows and events discovery"
+    category: "entertainment"
+    turns:
+      - role: "human"
+        content: "What shows are playing?"
+        expected_keywords: ["Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How big is the arena?"
+        expected_keywords: ["10000", "capacity"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Lists venue then provides capacity details"
+    safety_relevant: false
+
+  - id: "entertainment-02"
+    name: "Spa discovery and details"
+    category: "entertainment"
+    turns:
+      - role: "human"
+        content: "Is there a spa?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What treatments do they offer?"
+        expected_keywords: ["massage", "facial"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What are the spa hours?"
+        expected_keywords: ["9 AM", "9 PM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Discovers spa, explores treatments, checks hours"
+    safety_relevant: false
+
+  - id: "entertainment-03"
+    name: "Swimming pool inquiry"
+    category: "entertainment"
+    turns:
+      - role: "human"
+        content: "Do you have a swimming pool?"
+        expected_keywords: ["Swimming Pool", "indoor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What time does the pool open?"
+        expected_keywords: ["6 AM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Confirms pool and provides hours"
+    safety_relevant: false
+
+  - id: "entertainment-04"
+    name: "Full entertainment overview"
+    category: "entertainment"
+    turns:
+      - role: "human"
+        content: "What is there to do besides gambling?"
+        expected_keywords: ["Arena", "Spa", "Pool"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Where is the spa located?"
+        expected_keywords: ["Level 2"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Provides non-gaming activity overview then specific location"
+    safety_relevant: false
+
+  - id: "entertainment-05"
+    name: "Spa and relaxation focus"
+    category: "entertainment"
+    turns:
+      - role: "human"
+        content: "I need to relax after a long day, what do you suggest?"
+        expected_keywords: ["Spa", "Pool"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Tell me more about the spa treatments"
+        expected_keywords: ["massage", "facial", "body treatment"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Suggests relaxation options then details spa services"
+    safety_relevant: false
+
+  - id: "entertainment-06"
+    name: "Concert venue details"
+    category: "entertainment"
+    turns:
+      - role: "human"
+        content: "I love live music, do you have a concert venue?"
+        expected_keywords: ["Arena", "Concert"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What kind of venue is it?"
+        expected_keywords: ["Concert Venue", "10000"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Confirms concert venue and provides details"
+    safety_relevant: false

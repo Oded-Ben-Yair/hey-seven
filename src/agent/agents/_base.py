@@ -18,7 +18,11 @@ from string import Template
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.nodes import _format_context_block
-from src.agent.prompts import get_responsible_gaming_helplines
+from src.agent.prompts import (
+    SENTIMENT_TONE_GUIDES,
+    get_persona_style,
+    get_responsible_gaming_helplines,
+)
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
 from src.config import get_settings
@@ -121,11 +125,45 @@ async def execute_specialist(
             "skip_validation": True,
         }
 
-    # Inject whisper planner guidance (host_agent only)
+    # Phase 3: Inject guest context from profile (when non-empty)
+    guest_context = state.get("guest_context", {})
+    if guest_context:
+        context_parts = []
+        if guest_context.get("name"):
+            context_parts.append(f"- Guest name: {guest_context['name']}")
+        if guest_context.get("party_size"):
+            context_parts.append(f"- Party size: {guest_context['party_size']}")
+        if guest_context.get("visit_date"):
+            context_parts.append(f"- Visit date: {guest_context['visit_date']}")
+        if guest_context.get("preferences"):
+            context_parts.append(f"- Preferences: {guest_context['preferences']}")
+        if guest_context.get("occasion"):
+            context_parts.append(f"- Occasion: {guest_context['occasion']}")
+        if context_parts:
+            system_prompt += "\n\n## Guest Context\n" + "\n".join(context_parts)
+
+    # Inject whisper planner guidance
     if include_whisper:
         whisper_guidance = format_whisper_plan(state.get("whisper_plan"))
         if whisper_guidance:
             system_prompt += whisper_guidance
+
+    # Phase 3: Inject persona style from BrandingConfig (fail-silent)
+    try:
+        from src.casino.config import DEFAULT_CONFIG
+        branding = DEFAULT_CONFIG.get("branding", {})
+        persona_style = get_persona_style(branding)
+        if persona_style:
+            system_prompt += persona_style
+    except Exception:
+        logger.debug("Persona style injection failed, continuing without", exc_info=True)
+
+    # Phase 3: Inject sentiment-adaptive tone guidance
+    guest_sentiment = state.get("guest_sentiment")
+    if guest_sentiment:
+        tone_guide = SENTIMENT_TONE_GUIDES.get(guest_sentiment, "")
+        if tone_guide:
+            system_prompt += f"\n\n## Tone Guidance\n{tone_guide}"
 
     # Build message list
     llm_messages = [SystemMessage(content=system_prompt)]

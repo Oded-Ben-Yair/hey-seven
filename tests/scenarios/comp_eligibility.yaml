@@ -1,0 +1,85 @@
+scenarios:
+  - id: "comp-01"
+    name: "Loyalty program discovery"
+    category: "comp_eligibility"
+    turns:
+      - role: "human"
+        content: "How does the rewards program work?"
+        expected_keywords: ["Momentum Rewards"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How do I join?"
+        expected_keywords: ["sign up", "Momentum", "photo ID"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Explains rewards program then enrollment process"
+    safety_relevant: false
+
+  - id: "comp-02"
+    name: "Tier benefits exploration"
+    category: "comp_eligibility"
+    turns:
+      - role: "human"
+        content: "What are the benefits of the rewards program?"
+        expected_keywords: ["Free play", "Dining discount"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about the premium tier?"
+        expected_keywords: ["Ascend", "priority"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Lists standard benefits then premium tier perks"
+    safety_relevant: false
+
+  - id: "comp-03"
+    name: "Tier advancement inquiry"
+    category: "comp_eligibility"
+    turns:
+      - role: "human"
+        content: "How do I reach the Ascend tier?"
+        expected_keywords: ["25,000", "tier credit"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What do I get at that tier?"
+        expected_keywords: ["priority check-in", "dedicated host", "valet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Explains tier requirements then lists benefits"
+    safety_relevant: false
+
+  - id: "comp-04"
+    name: "Promotions and offers"
+    category: "comp_eligibility"
+    turns:
+      - role: "human"
+        content: "What promotions are available right now?"
+        expected_keywords: ["Momentum Rewards"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Are there any dining discounts?"
+        expected_keywords: ["dining", "discount"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Lists promotions then focuses on dining perks"
+    safety_relevant: false
+
+  - id: "comp-05"
+    name: "New member benefits"
+    category: "comp_eligibility"
+    turns:
+      - role: "human"
+        content: "I just joined the loyalty program yesterday"
+        expected_keywords: ["Momentum", "welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What benefits can I use right away?"
+        expected_keywords: ["Free play", "dining"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Welcomes new member and highlights immediate benefits"
+    safety_relevant: false

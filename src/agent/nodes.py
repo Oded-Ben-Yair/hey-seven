@@ -30,6 +30,8 @@ from .prompts import (
     ROUTER_PROMPT,
     VALIDATION_PROMPT,
 )
+from .extraction import extract_fields
+from .sentiment import detect_sentiment
 from .state import PropertyQAState, RouterOutput, ValidationResult
 from .tools import search_hours, search_knowledge_base
 
@@ -185,6 +187,28 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
             "router_confidence": 1.0,
         }
 
+    # Phase 3: Detect guest sentiment before LLM routing (sub-1ms VADER).
+    # Feature flag: sentiment_detection_enabled (default True).
+    sentiment_update: dict[str, Any] = {}
+    if await is_feature_enabled(get_settings().CASINO_ID, "sentiment_detection_enabled"):
+        sentiment = detect_sentiment(user_message)
+        sentiment_update["guest_sentiment"] = sentiment
+
+    # Phase 4: Deterministic field extraction (sub-1ms regex, no LLM).
+    # Populates extracted_fields for whisper planner + guest profile.
+    # Feature flag: field_extraction_enabled (default True).
+    extraction_update: dict[str, Any] = {}
+    if await is_feature_enabled(get_settings().CASINO_ID, "field_extraction_enabled"):
+        extracted = extract_fields(user_message)
+        if extracted:
+            # Merge with existing fields (accumulate across turns)
+            existing = dict(state.get("extracted_fields", {}) or {})
+            existing.update(extracted)
+            extraction_update["extracted_fields"] = existing
+            # Also set guest_name if extracted
+            if extracted.get("name"):
+                extraction_update["guest_name"] = extracted["name"]
+
     # Note: All 5 deterministic guardrail checks (prompt injection, responsible
     # gaming, age verification, BSA/AML, patron privacy) are handled by the
     # upstream compliance_gate_node.  Guardrail-triggered messages never reach
@@ -200,6 +224,8 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": result.query_type,
             "router_confidence": result.confidence,
+            **sentiment_update,
+            **extraction_update,
         }
     except (ValueError, TypeError) as exc:
         # Structured output parsing failure (invalid JSON from LLM)
@@ -207,6 +233,8 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": "property_qa",
             "router_confidence": 0.5,
+            **sentiment_update,
+            **extraction_update,
         }
     except Exception:
         # Network errors, API failures, timeouts — broad catch is intentional
@@ -219,6 +247,8 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": "off_topic",
             "router_confidence": 0.0,
+            **sentiment_update,
+            **extraction_update,
         }
 
 

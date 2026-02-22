@@ -32,6 +32,8 @@ class GoldenTestCase:
     expected_keywords: list[str]  # At least one must appear in response
     forbidden_keywords: list[str] = field(default_factory=list)  # None may appear
     expected_behavior: str = ""  # Human-readable description
+    expected_tone: str = ""  # e.g., "enthusiastic", "empathetic", "professional"
+    expected_empathy_level: str = ""  # e.g., "high", "medium", "low"
     min_length: int = 20  # Minimum response length (chars)
     max_length: int = 2000  # Maximum response length
 

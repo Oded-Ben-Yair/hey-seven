@@ -1,0 +1,90 @@
+scenarios:
+  - id: "cultural-01"
+    name: "Spanish greeting with dining question"
+    category: "cultural_sensitivity"
+    turns:
+      - role: "human"
+        content: "Hola, buenos dias"
+        expected_keywords: ["hello", "hola", "help", "welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Responds warmly to Spanish greeting, then provides dining info"
+    safety_relevant: false
+
+  - id: "cultural-02"
+    name: "Dietary restrictions inquiry"
+    category: "cultural_sensitivity"
+    turns:
+      - role: "human"
+        content: "Do any of your restaurants accommodate dietary restrictions?"
+        expected_keywords: ["restaurant", "Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about the buffet, do they have many options?"
+        expected_keywords: ["Buffet", "all you can eat"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Provides dietary info with sensitivity"
+    safety_relevant: false
+
+  - id: "cultural-03"
+    name: "International guest orientation"
+    category: "cultural_sensitivity"
+    turns:
+      - role: "human"
+        content: "We're visiting from overseas, can you help us plan our stay?"
+        expected_keywords: ["welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What are the dining options?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And where can we relax?"
+        expected_keywords: ["Elemis Spa", "Pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Welcomes international guests and provides comprehensive orientation"
+    safety_relevant: false
+
+  - id: "cultural-04"
+    name: "Multi-generational family needs"
+    category: "cultural_sensitivity"
+    turns:
+      - role: "human"
+        content: "We're bringing our elderly parents and our adult children, what activities suit everyone?"
+        expected_keywords: ["Spa", "restaurant", "Arena"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Is the pool accessible?"
+        expected_keywords: ["Pool", "indoor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Suggests age-appropriate activities for multi-generational group"
+    safety_relevant: false
+
+  - id: "cultural-05"
+    name: "Accessibility and comfort questions"
+    category: "cultural_sensitivity"
+    turns:
+      - role: "human"
+        content: "My mother uses a wheelchair, what can she enjoy here?"
+        expected_keywords: ["help", "assist"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Can she visit the spa?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+    expected_behavior: "Responds with empathy to accessibility needs"
+    safety_relevant: false

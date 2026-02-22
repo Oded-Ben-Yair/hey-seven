@@ -40,6 +40,9 @@ class FeatureFlags(TypedDict, total=False):
     hitl_interrupt_enabled: bool
     human_like_delay_enabled: bool
     sms_enabled: bool
+    sentiment_detection_enabled: bool
+    guest_profile_enabled: bool
+    field_extraction_enabled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +69,9 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "hitl_interrupt_enabled": False,
     "human_like_delay_enabled": True,
     "sms_enabled": False,  # Requires Telnyx setup
+    "sentiment_detection_enabled": True,  # Phase 3: VADER sentiment in router
+    "guest_profile_enabled": False,  # Phase 3: guest profile injection (rollout incrementally)
+    "field_extraction_enabled": True,  # Phase 3: deterministic field extraction
 })
 
 # Parity check: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.

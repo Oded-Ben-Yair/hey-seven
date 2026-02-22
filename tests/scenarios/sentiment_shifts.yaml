@@ -1,0 +1,85 @@
+scenarios:
+  - id: "sentiment-01"
+    name: "Positive start to frustrated shift"
+    category: "sentiment_shifts"
+    turns:
+      - role: "human"
+        content: "This resort looks amazing! What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I'm disappointed, I was hoping for more options"
+        expected_keywords: ["help", "assist"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+    expected_behavior: "Matches enthusiasm then shifts to empathy when guest is disappointed"
+    safety_relevant: false
+
+  - id: "sentiment-02"
+    name: "Neutral to enthusiastic progression"
+    category: "sentiment_shifts"
+    turns:
+      - role: "human"
+        content: "What amenities do you have?"
+        expected_keywords: ["Spa", "Pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Oh wow, the spa sounds perfect! Tell me more about Elemis Spa"
+        expected_keywords: ["Elemis Spa", "massage", "facial"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Responds neutrally then matches guest enthusiasm"
+    safety_relevant: false
+
+  - id: "sentiment-03"
+    name: "Excited to concerned about pricing"
+    category: "sentiment_shifts"
+    turns:
+      - role: "human"
+        content: "I'm so excited for our trip! Tell me about the hotel rooms"
+        expected_keywords: ["Deluxe King", "Sky Tower"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "That seems expensive, are there any more affordable options?"
+        expected_keywords: ["$199"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Shares excitement then addresses pricing concerns sensitively"
+    safety_relevant: false
+
+  - id: "sentiment-04"
+    name: "Frustrated then satisfied"
+    category: "sentiment_shifts"
+    turns:
+      - role: "human"
+        content: "I've been trying to find information about your spa and can't find anything"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "That's exactly what I was looking for, thank you!"
+        expected_keywords: ["help", "welcome", "glad"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Addresses frustration with helpful info, then acknowledges satisfaction"
+    safety_relevant: false
+
+  - id: "sentiment-05"
+    name: "Casual to urgent request"
+    category: "sentiment_shifts"
+    turns:
+      - role: "human"
+        content: "Just browsing, what do you have?"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Actually, I need to find a restaurant right now, we're starving! What's open?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Gives overview then switches to urgent restaurant recommendation"
+    safety_relevant: false

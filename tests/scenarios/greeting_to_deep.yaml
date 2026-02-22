@@ -1,0 +1,110 @@
+scenarios:
+  - id: "greeting-deep-01"
+    name: "Greeting to restaurant deep dive"
+    category: "greeting_to_deep"
+    turns:
+      - role: "human"
+        content: "Hello!"
+        expected_keywords: ["hello", "welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Tell me more about the steakhouse"
+        expected_keywords: ["Steakhouse", "fine"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What are the hours and price range?"
+        expected_keywords: ["5", "10", "PM", "$$$"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Progresses from greeting to detailed restaurant information"
+    safety_relevant: false
+
+  - id: "greeting-deep-02"
+    name: "Greeting to hotel deep dive"
+    category: "greeting_to_deep"
+    turns:
+      - role: "human"
+        content: "Hi there"
+        expected_keywords: ["hello", "hi", "welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I need a room for tonight"
+        expected_keywords: ["Deluxe King", "room"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Which tower should I pick?"
+        expected_keywords: ["Sky Tower"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "From greeting to specific room and tower recommendation"
+    safety_relevant: false
+
+  - id: "greeting-deep-03"
+    name: "Greeting to entertainment plan"
+    category: "greeting_to_deep"
+    turns:
+      - role: "human"
+        content: "Good evening!"
+        expected_keywords: ["evening", "hello", "welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What can I do tonight?"
+        expected_keywords: ["Arena", "Spa", "restaurant"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Tell me about the spa"
+        expected_keywords: ["Elemis Spa", "massage"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Evening greeting to entertainment overview to spa details"
+    safety_relevant: false
+
+  - id: "greeting-deep-04"
+    name: "Greeting to loyalty program"
+    category: "greeting_to_deep"
+    turns:
+      - role: "human"
+        content: "Hey there!"
+        expected_keywords: ["hello", "hi", "welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I heard you have a rewards program"
+        expected_keywords: ["Momentum Rewards"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's the top tier?"
+        expected_keywords: ["Ascend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Greeting to rewards discovery to tier details"
+    safety_relevant: false
+
+  - id: "greeting-deep-05"
+    name: "Greeting to casino floor inquiry"
+    category: "greeting_to_deep"
+    turns:
+      - role: "human"
+        content: "Hello, first time here!"
+        expected_keywords: ["welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "How big is the casino?"
+        expected_keywords: ["300", "slot", "table"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Welcomes first-timer then provides casino floor stats"
+    safety_relevant: false

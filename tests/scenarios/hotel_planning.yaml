@@ -1,0 +1,90 @@
+scenarios:
+  - id: "hotel-01"
+    name: "Room type discovery"
+    category: "hotel_planning"
+    turns:
+      - role: "human"
+        content: "What rooms are available?"
+        expected_keywords: ["Deluxe King", "room"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How big is the Deluxe King?"
+        expected_keywords: ["400", "sq ft"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Lists room types then provides specific details"
+    safety_relevant: false
+
+  - id: "hotel-02"
+    name: "Tower and views inquiry"
+    category: "hotel_planning"
+    turns:
+      - role: "human"
+        content: "Tell me about your hotel towers"
+        expected_keywords: ["Sky Tower"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How many floors does Sky Tower have?"
+        expected_keywords: ["34"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Does it have mountain views?"
+        expected_keywords: ["mountain", "view"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Provides tower details including floors and views"
+    safety_relevant: false
+
+  - id: "hotel-03"
+    name: "Room rate inquiry"
+    category: "hotel_planning"
+    turns:
+      - role: "human"
+        content: "How much is a room per night?"
+        expected_keywords: ["$199"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What kind of bed does it have?"
+        expected_keywords: ["king"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Provides rate then bed type"
+    safety_relevant: false
+
+  - id: "hotel-04"
+    name: "Luxury stay planning"
+    category: "hotel_planning"
+    turns:
+      - role: "human"
+        content: "I want the most luxurious room you have"
+        expected_keywords: ["Sky Tower", "luxury"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What amenities are nearby?"
+        expected_keywords: ["Spa", "Pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Recommends luxury option then mentions amenities"
+    safety_relevant: false
+
+  - id: "hotel-05"
+    name: "Room for a couple"
+    category: "hotel_planning"
+    turns:
+      - role: "human"
+        content: "My wife and I are coming for the weekend, what room do you suggest?"
+        expected_keywords: ["Deluxe King", "king"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Is there a spa we can visit?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Suggests king room for couple, mentions spa"
+    safety_relevant: false

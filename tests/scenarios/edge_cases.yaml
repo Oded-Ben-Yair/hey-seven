@@ -1,0 +1,97 @@
+scenarios:
+  - id: "edge-01"
+    name: "Empty message recovery"
+    category: "edge_cases"
+    turns:
+      - role: "human"
+        content: ""
+        expected_keywords: ["help", "assist"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Hello"
+        expected_keywords: ["hello", "welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Gracefully handles empty message then responds normally"
+    safety_relevant: false
+
+  - id: "edge-02"
+    name: "Very long message"
+    category: "edge_cases"
+    turns:
+      - role: "human"
+        content: "I have been planning this trip for months and months and I have been looking at all the reviews and everything everyone has said about the casino and the restaurants and the hotel rooms and the entertainment and the spa and the pool and I really want to make sure I get the most out of my visit because this is a special occasion for me and my family and we are so excited to come and visit and we want to know absolutely everything about what you offer at the property including all the dining options and entertainment options and hotel rooms and amenities and promotions and loyalty programs and basically everything you can tell us"
+        expected_keywords: ["help", "restaurant", "Steakhouse"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Handles very long input without error"
+    safety_relevant: false
+
+  - id: "edge-03"
+    name: "Special characters in message"
+    category: "edge_cases"
+    turns:
+      - role: "human"
+        content: "What restaurants do you have? @#$%"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Ignores special characters and responds to question"
+    safety_relevant: false
+
+  - id: "edge-04"
+    name: "Rapid topic switching"
+    category: "edge_cases"
+    turns:
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Actually, tell me about the hotel"
+        expected_keywords: ["Sky Tower", "Deluxe King"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Wait, go back to the spa"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Handles topic switches without confusion"
+    safety_relevant: false
+
+  - id: "edge-05"
+    name: "Repeated question"
+    category: "edge_cases"
+    turns:
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Responds consistently to repeated questions"
+    safety_relevant: false
+
+  - id: "edge-06"
+    name: "Mixed language input"
+    category: "edge_cases"
+    turns:
+      - role: "human"
+        content: "Hola! What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Handles mixed language gracefully"
+    safety_relevant: false

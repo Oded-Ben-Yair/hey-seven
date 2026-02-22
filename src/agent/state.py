@@ -66,6 +66,10 @@ class PropertyQAState(TypedDict):
     # v2 fields
     extracted_fields: dict[str, Any]  # structured fields from guest message
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
+    # v3 fields (Phase 3: Agent Quality Revolution)
+    guest_sentiment: str | None  # positive/negative/neutral/frustrated (from VADER)
+    guest_context: dict[str, Any]  # filtered profile from get_agent_context()
+    guest_name: str | None  # extracted guest name for personalization
     # _keep_max reducer: preserves the maximum value across state updates.
     # When _initial_state() resets this to 0, max(existing, 0) preserves
     # the accumulated count. When compliance_gate increments, the new value

@@ -267,13 +267,33 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         logger.info("Specialist agents disabled; routing %s to host", agent_name)
         agent_name = "host"
 
+    # Phase 3: Inject guest profile context when feature flag enabled.
+    # Fail-silent: profile lookup failure = empty context, not crash.
+    guest_context_update: dict[str, Any] = {}
+    try:
+        if await is_feature_enabled(get_settings().CASINO_ID, "guest_profile_enabled"):
+            from src.data.guest_profile import get_agent_context
+            extracted = state.get("extracted_fields", {})
+            if extracted:
+                agent_ctx = get_agent_context(extracted)
+                if agent_ctx:
+                    guest_context_update["guest_context"] = agent_ctx
+                    if agent_ctx.get("name"):
+                        guest_context_update["guest_name"] = agent_ctx["name"]
+    except Exception:
+        logger.warning("Guest profile lookup failed, continuing without context", exc_info=True)
+
     agent_fn = get_agent(agent_name)
     logger.info(
         "Dispatching to %s agent (method=%s)",
         agent_name,
         dispatch_method,
     )
-    return await agent_fn(state)
+    result = await agent_fn({**state, **guest_context_update})
+    # Merge guest context updates into the result so they persist in state
+    if guest_context_update:
+        result.update(guest_context_update)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -493,6 +513,10 @@ def _initial_state(message: str) -> dict[str, Any]:
         "extracted_fields": {},
         "whisper_plan": None,
         "responsible_gaming_count": 0,
+        # v3 fields (Phase 3)
+        "guest_sentiment": None,
+        "guest_context": {},
+        "guest_name": None,
     }
 
 

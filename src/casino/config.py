@@ -121,6 +121,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "hitl_interrupt_enabled": False,
         "human_like_delay_enabled": True,
         "sms_enabled": False,
+        "sentiment_detection_enabled": True,
+        "guest_profile_enabled": False,
+        "field_extraction_enabled": True,
     },
     "prompts": {
         "system_prompt_override": None,

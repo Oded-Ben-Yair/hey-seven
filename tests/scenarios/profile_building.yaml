@@ -1,0 +1,107 @@
+scenarios:
+  - id: "profile-01"
+    name: "Birthday party planning"
+    category: "profile_building"
+    turns:
+      - role: "human"
+        content: "I'm Sarah and we're a party of 4 visiting next Friday for my birthday"
+        expected_keywords: ["help", "birthday"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Where should we go for dinner?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Acknowledges birthday context and recommends celebratory dining"
+    safety_relevant: false
+
+  - id: "profile-02"
+    name: "Anniversary couple planning"
+    category: "profile_building"
+    turns:
+      - role: "human"
+        content: "My name is Mike, I'm here with my wife for our anniversary"
+        expected_keywords: ["anniversary", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What would you recommend for a romantic evening?"
+        expected_keywords: ["Steakhouse", "Spa"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Celebrates anniversary and suggests romantic options"
+    safety_relevant: false
+
+  - id: "profile-03"
+    name: "Business group arrival"
+    category: "profile_building"
+    turns:
+      - role: "human"
+        content: "We're a group of 6 colleagues coming for a corporate retreat this weekend"
+        expected_keywords: ["help", "group"]
+        expected_tone: "professional"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We need a place to eat together"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Acknowledges group context and suggests group-friendly dining"
+    safety_relevant: false
+
+  - id: "profile-04"
+    name: "First-time visitor orientation"
+    category: "profile_building"
+    turns:
+      - role: "human"
+        content: "This is our first time visiting, what should we know?"
+        expected_keywords: ["welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What's the best restaurant here?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And what about entertainment?"
+        expected_keywords: ["Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Welcomes first-timers and provides property highlights"
+    safety_relevant: false
+
+  - id: "profile-05"
+    name: "VIP returning guest"
+    category: "profile_building"
+    turns:
+      - role: "human"
+        content: "I've been coming here for years, love this place"
+        expected_keywords: ["welcome", "back"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What's new with the rewards program?"
+        expected_keywords: ["Momentum Rewards"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Welcomes returning guest and highlights loyalty program"
+    safety_relevant: false
+
+  - id: "profile-06"
+    name: "Family visit planning"
+    category: "profile_building"
+    turns:
+      - role: "human"
+        content: "My family of 5 is visiting next month, including my parents"
+        expected_keywords: ["help", "family"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What non-gaming activities are available?"
+        expected_keywords: ["Spa", "Pool", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Acknowledges family visit and highlights non-gaming options"
+    safety_relevant: false

@@ -1,0 +1,112 @@
+scenarios:
+  - id: "dining-01"
+    name: "Restaurant discovery to specific question"
+    category: "dining_journey"
+    turns:
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Which one has the best steak?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What are the hours?"
+        expected_keywords: ["5", "10", "PM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Narrows from overview to steak recommendation to hours"
+    safety_relevant: false
+
+  - id: "dining-02"
+    name: "Budget-conscious dining inquiry"
+    category: "dining_journey"
+    turns:
+      - role: "human"
+        content: "What are the most affordable dining options?"
+        expected_keywords: ["Buffet"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What time does the buffet open?"
+        expected_keywords: ["11", "AM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Directs to budget-friendly option and provides hours"
+    safety_relevant: false
+
+  - id: "dining-03"
+    name: "Fine dining exploration"
+    category: "dining_journey"
+    turns:
+      - role: "human"
+        content: "I'm looking for a fine dining experience tonight"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Where is it located?"
+        expected_keywords: ["Main Floor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Recommends fine dining and provides location"
+    safety_relevant: false
+
+  - id: "dining-04"
+    name: "Dining with price comparison"
+    category: "dining_journey"
+    turns:
+      - role: "human"
+        content: "Can you tell me about your restaurants?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Which one is more expensive?"
+        expected_keywords: ["Steakhouse", "$$$"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And the cheaper option?"
+        expected_keywords: ["Buffet", "$$"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Compares pricing between restaurants"
+    safety_relevant: false
+
+  - id: "dining-05"
+    name: "Dining location and floor plan"
+    category: "dining_journey"
+    turns:
+      - role: "human"
+        content: "Where can I eat on the main floor?"
+        expected_keywords: ["Steakhouse", "Main Floor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Are there options on other floors?"
+        expected_keywords: ["Buffet", "Level 2"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Organizes dining by location"
+    safety_relevant: false
+
+  - id: "dining-06"
+    name: "Late arrival dinner question"
+    category: "dining_journey"
+    turns:
+      - role: "human"
+        content: "We're arriving late tonight around 8 PM, what restaurants are still open?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What time does the steakhouse close?"
+        expected_keywords: ["10", "PM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Identifies restaurants open at 8 PM and their closing times"
+    safety_relevant: false
