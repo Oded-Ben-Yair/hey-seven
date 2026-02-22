@@ -142,13 +142,13 @@ async def execute_specialist(
     # R29 fix: Inject property_description from casino profile for multi-property support.
     # Avoids hardcoding Mohegan Sun description in the system prompt template.
     from src.casino.config import get_casino_profile
-    _casino_profile = get_casino_profile(settings.CASINO_ID if hasattr(settings, "CASINO_ID") else "")
+    _casino_profile = get_casino_profile(settings.CASINO_ID)
     _property_description = _casino_profile.get("property_description", "")
 
     system_prompt = system_prompt_template.safe_substitute(
         property_name=settings.PROPERTY_NAME,
         current_time=current_time,
-        responsible_gaming_helplines=get_responsible_gaming_helplines(),
+        responsible_gaming_helplines=get_responsible_gaming_helplines(casino_id=settings.CASINO_ID),
         property_description=_property_description,
     )
 
@@ -192,7 +192,7 @@ async def execute_specialist(
     # R27 fix H-003: use property-specific profile instead of DEFAULT_CONFIG
     try:
         from src.casino.config import get_casino_profile
-        _profile = get_casino_profile(settings.CASINO_ID if hasattr(settings, "CASINO_ID") else "")
+        _profile = get_casino_profile(settings.CASINO_ID)
         branding = _profile.get("branding", {})
         persona_style = get_persona_style(branding)
         if persona_style:
@@ -281,7 +281,7 @@ async def execute_specialist(
         try:
             from src.casino.config import get_casino_profile
             _persona_name = get_casino_profile(
-                settings.CASINO_ID if hasattr(settings, "CASINO_ID") else ""
+                settings.CASINO_ID
             ).get("branding", {}).get("persona_name", "Seven")
         except Exception:
             _persona_name = "Seven"

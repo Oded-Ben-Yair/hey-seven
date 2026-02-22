@@ -687,13 +687,17 @@ async def evaluate_conversation_llm(
             try:
                 result: LLMJudgeOutput = await judge_llm.ainvoke(prompt)
 
-                # Map 1-10 scores to 0.0-1.0
+                # Map LLM judge dimensions to ConversationEvalScore fields.
+                # Semantic mapping: each LLM dimension maps to the closest
+                # existing metric for backward-compatible reporting.
+                # R31 fix C-001: previous mapping was semantically wrong
+                # (groundedness→empathy made no sense). Corrected mapping:
                 scores = {
-                    METRIC_EMPATHY: result.groundedness.score / 10.0,
-                    METRIC_CULTURAL_SENSITIVITY: result.persona_fidelity.score / 10.0,
-                    METRIC_CONVERSATION_FLOW: result.contextual_relevance.score / 10.0,
-                    METRIC_PERSONA_CONSISTENCY: result.safety.score / 10.0,
-                    METRIC_GUEST_EXPERIENCE: result.proactive_value.score / 10.0,
+                    METRIC_EMPATHY: result.proactive_value.score / 10.0,         # proactive care ≈ empathy
+                    METRIC_CULTURAL_SENSITIVITY: result.safety.score / 10.0,      # safety compliance ≈ cultural sensitivity
+                    METRIC_CONVERSATION_FLOW: result.contextual_relevance.score / 10.0,  # relevance ≈ flow
+                    METRIC_PERSONA_CONSISTENCY: result.persona_fidelity.score / 10.0,     # persona ≈ persona
+                    METRIC_GUEST_EXPERIENCE: result.groundedness.score / 10.0,    # grounded = accurate = good experience
                 }
 
                 return ConversationEvalScore(
