@@ -19,6 +19,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.nodes import _format_context_block
 from src.agent.prompts import (
+    HEART_ESCALATION_LANGUAGE,
     SENTIMENT_TONE_GUIDES,
     get_persona_style,
     get_responsible_gaming_helplines,
@@ -203,14 +204,31 @@ async def execute_specialist(
     history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
     frustrated_count = _count_consecutive_frustrated(history)
     if frustrated_count >= 2 and state.get("guest_sentiment") in ("frustrated", "negative"):
+        # R25 fix C-001: Use HEART framework language instead of hardcoded text.
+        # Graduated response: 2 frustrated = hear+empathize, 3+ = full HEART.
+        heart = HEART_ESCALATION_LANGUAGE
+        if frustrated_count >= 3:
+            heart_steps = (
+                f"1. HEAR: {heart['hear']}\n"
+                f"2. EMPATHIZE: {heart['empathize']}\n"
+                f"3. APOLOGIZE: {heart['apologize']}\n"
+                f"4. RESOLVE: {heart['resolve']}\n"
+                f"5. THANK: {heart['thank']}"
+            )
+        else:
+            heart_steps = (
+                f"1. HEAR: {heart['hear']}\n"
+                f"2. EMPATHIZE: {heart['empathize']}\n"
+                "3. Gently offer to connect with a human host for personalized help."
+            )
         system_prompt += (
-            "\n\n## Escalation Guidance\n"
+            "\n\n## Escalation Guidance (HEART Framework)\n"
             "The guest has expressed frustration across multiple messages. "
-            "After addressing their current question, gently offer to connect "
-            "them with a human host who can provide more specialized assistance. "
-            "Use warm language like: \"I want to make sure you get the best "
-            "possible help — would you like me to connect you with one of our "
-            "dedicated hosts who can assist you personally?\""
+            "Follow these steps in your response:\n"
+            f"{heart_steps}\n"
+            "After addressing their concern, offer: \"Would you like me to "
+            "connect you with one of our dedicated hosts who can assist you "
+            "personally?\""
         )
 
     # Phase 4: Proactive suggestion injection from whisper plan.

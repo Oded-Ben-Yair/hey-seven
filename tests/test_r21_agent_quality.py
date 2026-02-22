@@ -189,7 +189,8 @@ class TestFrustrationEscalation:
         system_msgs = [m for m in call_args if isinstance(m, SystemMessage)]
         system_text = " ".join(m.content for m in system_msgs)
         assert "Escalation Guidance" in system_text
-        assert "human host" in system_text.lower()
+        assert "HEART" in system_text
+        assert "human host" in system_text.lower() or "dedicated hosts" in system_text.lower()
 
     @pytest.mark.asyncio()
     async def test_no_escalation_when_not_frustrated(self, base_state, _disable_features):

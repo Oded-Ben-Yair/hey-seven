@@ -20,7 +20,7 @@
 Players who earn 50,000+ Tier Credits receive a 7,500 TC head start toward next year's qualification. This rewards consistent high-value players and reduces churn risk at year boundary.
 
 ### Network
-Valid across all MGM Resorts properties: Bellagio, ARIA, MGM Grand, Mandalay Bay, Park MGM, Vdara, The Mirage, Luxor, Excalibur, New York-New York, and regional properties.
+Valid across all MGM Resorts properties: Bellagio, ARIA, MGM Grand, Mandalay Bay, Park MGM, Vdara, Luxor, Excalibur, New York-New York, Cosmopolitan, and regional properties. (Note: The Mirage closed July 2024; Hard Rock Las Vegas expected ~2027.)
 
 ---
 

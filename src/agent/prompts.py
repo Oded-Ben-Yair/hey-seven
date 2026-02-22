@@ -29,12 +29,39 @@ RESPONSIBLE_GAMING_HELPLINES_DEFAULT = (
 RESPONSIBLE_GAMING_HELPLINES = RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
 
-def get_responsible_gaming_helplines() -> str:
-    """Return responsible gaming helplines for the current property.
+def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
+    """Return responsible gaming helplines for the specified property.
 
-    Falls back to Connecticut (Mohegan Sun default) helplines if no
-    property-specific configuration is available.
+    Looks up per-state helplines from CASINO_PROFILES when a casino_id
+    is provided. Falls back to Connecticut (Mohegan Sun default) helplines
+    if no casino_id is given or the profile has no helpline data.
+
+    R25 fix C-003: was hardcoded to CT for all properties. NJ properties
+    (Hard Rock AC) need 1-800-GAMBLER per NJ DGE requirements.
+
+    Args:
+        casino_id: Optional casino identifier (e.g., "mohegan_sun", "hard_rock_ac").
+
+    Returns:
+        Multi-line string with relevant helpline numbers.
     """
+    if casino_id:
+        try:
+            from src.casino.config import get_casino_profile
+            profile = get_casino_profile(casino_id)
+            regulations = profile.get("regulations", {})
+            state_helpline = regulations.get("state_helpline", "")
+            rg_helpline = regulations.get("responsible_gaming_helpline", "")
+            state_code = regulations.get("state", "")
+            if state_helpline or rg_helpline:
+                lines = ["- National Problem Gambling Helpline: 1-800-MY-RESET (1-800-699-7378)"]
+                if rg_helpline:
+                    lines.append(f"- {state_code} Problem Gambling Helpline: {rg_helpline}")
+                if state_helpline:
+                    lines.append(f"- {state_code} State Helpline: {state_helpline}")
+                return "\n".join(lines)
+        except Exception:
+            pass  # Fall through to default
     return RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
 # ---------------------------------------------------------------------------
