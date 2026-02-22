@@ -111,6 +111,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "_id": "default",
     "_version": 1,
     "_updated_at": "",
+    "property_description": (
+        "A premier casino resort featuring world-class dining, entertainment, "
+        "gaming, and hotel accommodations."
+    ),
     "features": {
         "ai_disclosure_enabled": True,
         "whisper_planner_enabled": True,
@@ -176,6 +180,12 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
         "_id": "mohegan_sun",
         "_version": 1,
         "_updated_at": "",
+        "property_description": (
+            "Mohegan Sun is a premier tribal casino resort in Uncasville, Connecticut, "
+            "owned by the Mohegan Tribe. It features world-class dining, entertainment, "
+            "gaming, and hotel accommodations. The resort includes multiple towers, over "
+            "40 restaurants and bars, a 10,000-seat arena, and a world-renowned spa."
+        ),
         "features": {
             "ai_disclosure_enabled": True,
             "whisper_planner_enabled": True,
@@ -240,6 +250,12 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
         "_id": "foxwoods",
         "_version": 1,
         "_updated_at": "",
+        "property_description": (
+            "Foxwoods Resort Casino is a tribal casino resort in Mashantucket, Connecticut, "
+            "owned by the Mashantucket Pequot Tribal Nation. It is one of the largest casino "
+            "complexes in North America, featuring multiple gaming floors, diverse dining, "
+            "entertainment venues, and luxury hotel towers."
+        ),
         "features": {
             "ai_disclosure_enabled": True,
             "whisper_planner_enabled": True,
@@ -304,6 +320,12 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
         "_id": "hard_rock_ac",
         "_version": 1,
         "_updated_at": "",
+        "property_description": (
+            "Hard Rock Hotel & Casino Atlantic City is a commercial casino resort on the "
+            "Atlantic City Boardwalk in New Jersey. It features rock-and-roll themed gaming, "
+            "dining, entertainment, and hotel accommodations, including a beach club and "
+            "rooftop pool."
+        ),
         "features": {
             "ai_disclosure_enabled": True,
             "whisper_planner_enabled": True,

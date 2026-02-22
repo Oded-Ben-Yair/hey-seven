@@ -139,10 +139,17 @@ async def execute_specialist(
             "skip_validation": True,
         }
 
+    # R29 fix: Inject property_description from casino profile for multi-property support.
+    # Avoids hardcoding Mohegan Sun description in the system prompt template.
+    from src.casino.config import get_casino_profile
+    _casino_profile = get_casino_profile(settings.CASINO_ID if hasattr(settings, "CASINO_ID") else "")
+    _property_description = _casino_profile.get("property_description", "")
+
     system_prompt = system_prompt_template.safe_substitute(
         property_name=settings.PROPERTY_NAME,
         current_time=current_time,
         responsible_gaming_helplines=get_responsible_gaming_helplines(),
+        property_description=_property_description,
     )
 
     # Format and append retrieved context
