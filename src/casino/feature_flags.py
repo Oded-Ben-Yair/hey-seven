@@ -70,7 +70,7 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "human_like_delay_enabled": True,
     "sms_enabled": False,  # Requires Telnyx setup
     "sentiment_detection_enabled": True,  # Phase 3: VADER sentiment in router
-    "guest_profile_enabled": False,  # Phase 3: guest profile injection (rollout incrementally)
+    "guest_profile_enabled": True,  # Phase 3: guest profile injection (enabled after R19 review)
     "field_extraction_enabled": True,  # Phase 3: deterministic field extraction
 })
 

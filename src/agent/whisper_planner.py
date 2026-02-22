@@ -92,12 +92,19 @@ async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
 # intermittent failures (e.g., 50% success rate triggering alert every ~20 reqs).
 # Reset requires process restart or explicit admin action.
 class _WhisperTelemetry:
-    """Namespace for whisper planner failure tracking (module-level singleton)."""
+    """Namespace for whisper planner failure tracking (module-level singleton).
 
-    count: int = 0
+    Instance attributes (via __init__) ensure each instance gets its own
+    lock and counters. Prevents class-level sharing if a second instance
+    is ever created (e.g., in tests).
+    """
+
     ALERT_THRESHOLD: int = 10
-    alerted: bool = False
-    lock: asyncio.Lock = asyncio.Lock()
+
+    def __init__(self) -> None:
+        self.count: int = 0
+        self.alerted: bool = False
+        self.lock: asyncio.Lock = asyncio.Lock()
 
 
 _telemetry = _WhisperTelemetry()

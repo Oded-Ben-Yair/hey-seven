@@ -119,8 +119,19 @@ def _inject_guest_name(content: str, guest_name: str | None) -> str:
     if len(content) < 50 or "I apologize" in content:
         return content
 
-    # Prepend personalized greeting with guest name
-    return f"{guest_name}, {content[0].lower()}{content[1:]}"
+    # Prepend personalized greeting with guest name.
+    # Only lowercase the first character when it begins a generic sentence
+    # (e.g., "We have great..." → "Sarah, we have great...").
+    # Preserve case for proper nouns (e.g., "Mohegan Sun has..." stays capitalized).
+    first_word = content.split()[0] if content.split() else ""
+    _LOWERCASE_STARTERS = frozenset({
+        "I", "We", "Our", "You", "Your", "The", "There", "Here",
+        "It", "This", "That", "As", "For", "With", "At", "To",
+        "A", "An",
+    })
+    if first_word in _LOWERCASE_STARTERS:
+        return f"{guest_name}, {content[0].lower()}{content[1:]}"
+    return f"{guest_name}, {content}"
 
 
 async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:

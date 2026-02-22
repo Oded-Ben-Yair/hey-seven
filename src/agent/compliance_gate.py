@@ -33,6 +33,7 @@ from .guardrails import (
     detect_age_verification,
     detect_bsa_aml,
     detect_patron_privacy,
+    detect_prompt_injection,
     detect_responsible_gaming,
 )
 from .nodes import _get_last_human_message
@@ -105,8 +106,10 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if not user_message:
         return {"query_type": "greeting", "router_confidence": 1.0}
 
-    # 3. Prompt injection — regex (fast deterministic first layer)
-    if not audit_input(user_message):
+    # 3. Prompt injection — regex (fast deterministic first layer).
+    # Uses detect_prompt_injection() (True=detected) for consistency with
+    # all other detect_* functions in the guardrail suite.
+    if detect_prompt_injection(user_message):
         return {"query_type": "off_topic", "router_confidence": 1.0}
 
     # 4. Responsible gaming (with session-level escalation)

@@ -32,7 +32,11 @@ from src.agent.state import PropertyQAState
 
 
 def _state(**overrides) -> dict:
-    """Build a minimal PropertyQAState dict with defaults."""
+    """Build a minimal PropertyQAState dict with defaults.
+
+    Kept in sync with ``_initial_state()`` in ``graph.py`` — all fields
+    from ``PropertyQAState`` must be present here with matching defaults.
+    """
     base = {
         "messages": [],
         "query_type": None,
@@ -46,6 +50,11 @@ def _state(**overrides) -> dict:
         "sources_used": [],
         "extracted_fields": {},
         "whisper_plan": None,
+        "responsible_gaming_count": 0,
+        # Phase 3 fields
+        "guest_sentiment": None,
+        "guest_context": {},
+        "guest_name": None,
     }
     base.update(overrides)
     return base

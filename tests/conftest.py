@@ -155,6 +155,13 @@ def _clear_singleton_caches():
     except (ImportError, AttributeError):
         pass
 
+    try:
+        import src.agent.sentiment as _sent
+
+        _sent._vader_analyzer = None
+    except (ImportError, AttributeError):
+        pass
+
 
 @pytest.fixture
 def test_property_data():

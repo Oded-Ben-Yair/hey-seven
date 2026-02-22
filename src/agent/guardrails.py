@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "audit_input",
+    "detect_prompt_injection",
     "classify_injection_semantic",
     "detect_responsible_gaming",
     "detect_age_verification",
@@ -262,6 +263,18 @@ def audit_input(message: str) -> bool:
         if _check_patterns(normalized, _INJECTION_PATTERNS, "Prompt injection (normalized)"):
             return False
     return True
+
+
+def detect_prompt_injection(message: str) -> bool:
+    """Check if user message contains prompt injection patterns.
+
+    Consistent API with other ``detect_*`` functions: returns ``True``
+    when injection IS detected (pattern found), ``False`` when safe.
+
+    This is the preferred API — ``audit_input()`` has inverted semantics
+    (True=safe) which is inconsistent with the rest of the guardrail API.
+    """
+    return not audit_input(message)
 
 
 def detect_responsible_gaming(message: str) -> bool:

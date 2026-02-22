@@ -160,9 +160,15 @@ def create_app() -> FastAPI:
 
         sse_timeout = get_settings().SSE_TIMEOUT_SECONDS
         # Thread X-Request-ID from middleware into graph for observability correlation.
-        # RequestLoggingMiddleware injects X-Request-ID into response headers;
-        # we read the header set by the middleware (or generate a fallback).
-        request_id = request.headers.get("x-request-id", None)
+        # Sanitize to prevent log injection / trace poisoning: allow only
+        # alphanumeric chars, hyphens, and underscores (max 64 chars).
+        import re as _re
+
+        _raw_request_id = request.headers.get("x-request-id", None)
+        request_id = None
+        if _raw_request_id:
+            _sanitized = _re.sub(r"[^a-zA-Z0-9\-_]", "", _raw_request_id)[:64]
+            request_id = _sanitized or None
 
         async def event_generator():
             try:

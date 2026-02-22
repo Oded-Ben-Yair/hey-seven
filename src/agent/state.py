@@ -13,6 +13,18 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
 
+def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
+    """Reducer that merges extracted fields across turns.
+
+    New fields from ``b`` are merged into existing ``a``. When
+    ``_initial_state()`` passes ``{}``, ``{**existing, **{}} == existing``
+    so accumulated fields persist. When extraction produces new fields,
+    they are merged in without overwriting existing values (unless the
+    same key is explicitly re-extracted).
+    """
+    return {**a, **b}
+
+
 def _keep_max(a: int, b: int) -> int:
     """Reducer that preserves the maximum value across state updates.
 
@@ -39,10 +51,11 @@ class PropertyQAState(TypedDict):
     """Typed state flowing through the property Q&A graph.
 
     ``messages`` is persisted across turns via the checkpointer's ``add_messages``
-    reducer. ``responsible_gaming_count`` also persists via ``_keep_max`` reducer
-    for session-level escalation tracking. All other fields are **per-turn** —
-    they are reset by ``_initial_state()`` at the start of each ``chat()`` /
-    ``chat_stream()`` call.
+    reducer. ``responsible_gaming_count`` persists via ``_keep_max`` reducer
+    for session-level escalation tracking. ``extracted_fields`` persists via
+    ``_merge_dicts`` reducer for multi-turn guest profiling. All other fields
+    are **per-turn** — they are reset by ``_initial_state()`` at the start of
+    each ``chat()`` / ``chat_stream()`` call.
 
     ``skip_validation`` is set to ``True`` by the generate node (host_agent)
     when the response is a deterministic fallback (empty context, LLM error,
@@ -64,7 +77,7 @@ class PropertyQAState(TypedDict):
     current_time: str               # injected at graph entry
     sources_used: list[str]         # knowledge-base categories cited
     # v2 fields
-    extracted_fields: dict[str, Any]  # structured fields from guest message
+    extracted_fields: Annotated[dict[str, Any], _merge_dicts]  # structured fields from guest message (persists across turns via reducer)
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
     # v3 fields (Phase 3: Agent Quality Revolution)
     guest_sentiment: str | None  # positive/negative/neutral/frustrated (from VADER)

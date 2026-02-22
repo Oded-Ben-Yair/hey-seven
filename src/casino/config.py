@@ -122,7 +122,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "human_like_delay_enabled": True,
         "sms_enabled": False,
         "sentiment_detection_enabled": True,
-        "guest_profile_enabled": False,
+        "guest_profile_enabled": True,
         "field_extraction_enabled": True,
     },
     "prompts": {
