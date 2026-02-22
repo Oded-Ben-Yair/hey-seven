@@ -1,0 +1,56 @@
+{
+  "project": "hey-seven",
+  "currentState": {
+    "summary": "Phase 4 R21-R30 complete. Score: 88/100 (Code 34/40, Agent 53/60). 1839 tests. 9 commits. SHIP GO for single-property. Need Phase 5 to reach 95/100.",
+    "lastModified": "2026-02-22T12:00:00Z",
+    "branch": "main",
+    "commitHash": "4e479b2",
+    "tag": "v1.0.0",
+    "phase": "phase4-complete"
+  },
+  "blockers": [],
+  "nextSteps": [
+    { "priority": 0, "description": "Phase 5: Full-graph E2E test (build_graph + chat() with mocked LLMs) — #1 testing gap flagged by EVERY reviewer" },
+    { "priority": 1, "description": "Parameterize CONCIERGE_SYSTEM_PROMPT from CASINO_PROFILES (currently hardcodes Mohegan Sun description)" },
+    { "priority": 2, "description": "Implement real LLM-as-judge via EVAL_LLM_ENABLED (G-Eval pattern with structured output)" },
+    { "priority": 3, "description": "RAG pipeline improvements: version-stamp purging tests, multi-property isolation, retrieval benchmarks" },
+    { "priority": 4, "description": "API improvements: request validation edge cases, structured error responses, SSE reconnection" },
+    { "priority": 5, "description": "Add entertainment guide knowledge-base file (missing from R25 review), enrich regulations with more states" },
+    { "priority": 6, "description": "Adversarial conversation tests: prompt injection mid-conversation, language switching, Unicode names" }
+  ],
+  "phase4_scores": {
+    "rubric": "40% code quality / 60% agent quality",
+    "trajectory": { "R20": 85.5, "R28": 87, "R30": 88 },
+    "dimensions": {
+      "graph_architecture": { "R20": 9.0, "R30": 9.0, "gap_to_95": -0.5 },
+      "rag_pipeline": { "R20": 8.0, "R30": 8.0, "gap_to_95": -1.5 },
+      "api_design": { "R20": 8.5, "R30": 8.5, "gap_to_95": -1.0 },
+      "testing_strategy": { "R20": 7.0, "R30": 8.5, "gap_to_95": -1.0 },
+      "prompts_guardrails": { "R20": 8.5, "R30": 9.5, "gap_to_95": 0.0 },
+      "eq_emotional_intelligence": { "R20": 8.0, "R30": 9.0, "gap_to_95": -0.5 },
+      "guest_experience": { "R20": 8.0, "R30": 8.5, "gap_to_95": -1.0 },
+      "domain_intelligence": { "R20": 8.0, "R30": 9.0, "gap_to_95": -0.5 },
+      "persona_consistency": { "R20": 8.0, "R30": 8.5, "gap_to_95": -1.0 },
+      "evaluation_framework": { "R20": 8.0, "R30": 8.5, "gap_to_95": -1.0 }
+    },
+    "honestAssessment": {
+      "whatWorked": "Hostile reviews caught 11 critical bugs. Research-informed implementation produced better features. HEART framework, proactive suggestions, frustration escalation all well-received.",
+      "whatDidnt": "Score plateau at 88 — only +2.5 in 10 rounds. RAG and API dimensions untouched. No full-graph E2E tests despite every reviewer flagging it. LLM-as-judge still keyword-based.",
+      "whyNot95": "Phase 4 focused on agent quality (EQ/Guest/Eval) but left code dimensions stagnant. RAG 8.0, API 8.5, Persona 8.5, Guest 8.5, Eval 8.5 all have the same gap. Need to improve ALL dimensions simultaneously, not just agent quality.",
+      "strategyForNext": "Stop chasing agent quality points. Focus on: (1) full-graph E2E tests, (2) system prompt parameterization, (3) RAG pipeline improvements, (4) real LLM-as-judge. These are the 4 concrete deliverables that would push from 88 to 93+."
+    }
+  },
+  "phase4_deliverables": {
+    "commits": 9,
+    "newTests": 189,
+    "totalTests": 1839,
+    "researchFiles": ["research/phase4-casino-host-profiles.md", "research/phase4-ai-agent-practices.md", "research/phase4-casino-regulations.md", "research/phase4-social-intelligence.md"],
+    "knowledgeBaseFiles": ["knowledge-base/casino-operations/loyalty-programs.md", "knowledge-base/casino-operations/dining-guide.md", "knowledge-base/casino-operations/hotel-operations.md"],
+    "reviewReports": ["reviews/r23/", "reviews/r25/", "reviews/r27/", "reviews/r28/"],
+    "criticalBugsFixed": 11
+  },
+  "sessionNotes": {
+    "lastSessionDate": "2026-02-22",
+    "lastSessionId": "hey-seven-session-20260222-06d4f8"
+  }
+}
