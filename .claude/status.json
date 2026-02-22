@@ -1,56 +1,60 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "Phase 4 R21-R30 complete. Score: 88/100 (Code 34/40, Agent 53/60). 1839 tests. 9 commits. SHIP GO for single-property. Need Phase 5 to reach 95/100.",
-    "lastModified": "2026-02-22T12:00:00Z",
+    "summary": "Phase 5 complete. Score: 92/100 (Code 37/40, Agent 55/60). ~1870+ tests. R31 hostile review done. 3 CRITICALs fixed.",
+    "lastModified": "2026-02-22T12:30:00Z",
     "branch": "main",
-    "commitHash": "4e479b2",
+    "commitHash": "8eec82c",
     "tag": "v1.0.0",
-    "phase": "phase4-complete"
+    "phase": "phase5-complete"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "Phase 5: Full-graph E2E test (build_graph + chat() with mocked LLMs) — #1 testing gap flagged by EVERY reviewer" },
-    { "priority": 1, "description": "Parameterize CONCIERGE_SYSTEM_PROMPT from CASINO_PROFILES (currently hardcodes Mohegan Sun description)" },
-    { "priority": 2, "description": "Implement real LLM-as-judge via EVAL_LLM_ENABLED (G-Eval pattern with structured output)" },
-    { "priority": 3, "description": "RAG pipeline improvements: version-stamp purging tests, multi-property isolation, retrieval benchmarks" },
-    { "priority": 4, "description": "API improvements: request validation edge cases, structured error responses, SSE reconnection" },
-    { "priority": 5, "description": "Add entertainment guide knowledge-base file (missing from R25 review), enrich regulations with more states" },
-    { "priority": 6, "description": "Adversarial conversation tests: prompt injection mid-conversation, language switching, Unicode names" }
+    { "priority": 0, "description": "E2E tests: add RETRY loop and circuit-breaker-open paths (+1 testing)" },
+    { "priority": 1, "description": "LLM judge: add rate limiting for production use (+0.5 scalability)" },
+    { "priority": 2, "description": "Add entertainment golden conversation test case (+0.5 domain)" },
+    { "priority": 3, "description": "Cloud Build smoke test: assert version match (+0.5 devops)" },
+    { "priority": 4, "description": "Expand helpline data beyond CT/NJ (PA, MA, NY for Tri-State properties)" }
   ],
-  "phase4_scores": {
+  "phase5_scores": {
     "rubric": "40% code quality / 60% agent quality",
-    "trajectory": { "R20": 85.5, "R28": 87, "R30": 88 },
+    "trajectory": { "R20": 85.5, "R28": 87, "R30": 88, "R31": 92 },
     "dimensions": {
-      "graph_architecture": { "R20": 9.0, "R30": 9.0, "gap_to_95": -0.5 },
-      "rag_pipeline": { "R20": 8.0, "R30": 8.0, "gap_to_95": -1.5 },
-      "api_design": { "R20": 8.5, "R30": 8.5, "gap_to_95": -1.0 },
-      "testing_strategy": { "R20": 7.0, "R30": 8.5, "gap_to_95": -1.0 },
-      "prompts_guardrails": { "R20": 8.5, "R30": 9.5, "gap_to_95": 0.0 },
-      "eq_emotional_intelligence": { "R20": 8.0, "R30": 9.0, "gap_to_95": -0.5 },
-      "guest_experience": { "R20": 8.0, "R30": 8.5, "gap_to_95": -1.0 },
-      "domain_intelligence": { "R20": 8.0, "R30": 9.0, "gap_to_95": -0.5 },
-      "persona_consistency": { "R20": 8.0, "R30": 8.5, "gap_to_95": -1.0 },
-      "evaluation_framework": { "R20": 8.0, "R30": 8.5, "gap_to_95": -1.0 }
-    },
-    "honestAssessment": {
-      "whatWorked": "Hostile reviews caught 11 critical bugs. Research-informed implementation produced better features. HEART framework, proactive suggestions, frustration escalation all well-received.",
-      "whatDidnt": "Score plateau at 88 — only +2.5 in 10 rounds. RAG and API dimensions untouched. No full-graph E2E tests despite every reviewer flagging it. LLM-as-judge still keyword-based.",
-      "whyNot95": "Phase 4 focused on agent quality (EQ/Guest/Eval) but left code dimensions stagnant. RAG 8.0, API 8.5, Persona 8.5, Guest 8.5, Eval 8.5 all have the same gap. Need to improve ALL dimensions simultaneously, not just agent quality.",
-      "strategyForNext": "Stop chasing agent quality points. Focus on: (1) full-graph E2E tests, (2) system prompt parameterization, (3) RAG pipeline improvements, (4) real LLM-as-judge. These are the 4 concrete deliverables that would push from 88 to 93+."
+      "graph_architecture": { "R30": 9.0, "R31": 9.0 },
+      "rag_pipeline": { "R30": 8.0, "R31": 9.0 },
+      "data_model": { "R30": 9.0, "R31": 9.0 },
+      "api_design": { "R30": 8.5, "R31": 9.0 },
+      "testing_strategy": { "R30": 5.0, "R31": 8.0 },
+      "docker_devops": { "R30": 7.5, "R31": 7.5 },
+      "prompts_guardrails": { "R30": 9.5, "R31": 11.0, "max": 12 },
+      "scalability_production": { "R30": 9.0, "R31": 10.5, "max": 12 },
+      "tradeoff_documentation": { "R30": 9.0, "R31": 10.5, "max": 12 },
+      "domain_intelligence": { "R30": 12.0, "R31": 14.0, "max": 16 }
     }
   },
-  "phase4_deliverables": {
-    "commits": 9,
-    "newTests": 189,
-    "totalTests": 1839,
-    "researchFiles": ["research/phase4-casino-host-profiles.md", "research/phase4-ai-agent-practices.md", "research/phase4-casino-regulations.md", "research/phase4-social-intelligence.md"],
-    "knowledgeBaseFiles": ["knowledge-base/casino-operations/loyalty-programs.md", "knowledge-base/casino-operations/dining-guide.md", "knowledge-base/casino-operations/hotel-operations.md"],
-    "reviewReports": ["reviews/r23/", "reviews/r25/", "reviews/r27/", "reviews/r28/"],
-    "criticalBugsFixed": 11
+  "phase5_deliverables": {
+    "commits": 3,
+    "newTests": 31,
+    "totalTests": "1870+",
+    "newFiles": [
+      "tests/test_full_graph_e2e.py (5 E2E graph tests)",
+      "tests/test_prompt_parameterization.py (12 prompt tests)",
+      "tests/test_llm_judge_live.py (12 LLM judge tests)",
+      "tests/test_rag_quality.py (9 RAG quality tests)",
+      "knowledge-base/casino-operations/entertainment-guide.md"
+    ],
+    "modifiedFiles": [
+      "src/agent/prompts.py ($property_description)",
+      "src/agent/agents/_base.py (property_description + helpline fix)",
+      "src/agent/persona.py (DEFAULT_CONFIG removal)",
+      "src/casino/config.py (property_description in profiles)",
+      "src/observability/llm_judge.py (LLM-as-judge G-Eval)"
+    ],
+    "criticalBugsFixed": 3,
+    "reviewReports": ["reviews/round-31/"]
   },
   "sessionNotes": {
     "lastSessionDate": "2026-02-22",
-    "lastSessionId": "hey-seven-session-20260222-06d4f8"
+    "lastSessionId": "hey-seven-phase5-20260222"
   }
 }
