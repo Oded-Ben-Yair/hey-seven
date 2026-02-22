@@ -26,9 +26,9 @@ from src.config import get_settings
 
 from .circuit_breaker import CircuitBreaker, _get_circuit_breaker  # noqa: F401 (CircuitBreaker re-exported for tests)
 from .prompts import (
-    RESPONSIBLE_GAMING_HELPLINES,
     ROUTER_PROMPT,
     VALIDATION_PROMPT,
+    get_responsible_gaming_helplines,
 )
 from .extraction import extract_fields
 from .sentiment import detect_sentiment
@@ -604,7 +604,7 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
             f"about the gaming areas at {settings.PROPERTY_NAME}.\n\n"
             "If you or someone you know needs help with problem gambling, "
             "please reach out to these resources:\n"
-            f"{RESPONSIBLE_GAMING_HELPLINES}"
+            f"{get_responsible_gaming_helplines(casino_id=settings.CASINO_ID)}"
             f"{escalation_msg}\n\n"
             f"Is there anything else about the resort I can help with?{disclosure_suffix}"
         )
