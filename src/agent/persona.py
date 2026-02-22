@@ -119,7 +119,8 @@ def _inject_guest_name(content: str, guest_name: str | None) -> str:
     if len(content) < 50 or "I apologize" in content:
         return content
 
-    return content
+    # Prepend personalized greeting with guest name
+    return f"{guest_name}, {content[0].lower()}{content[1:]}"
 
 
 async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:

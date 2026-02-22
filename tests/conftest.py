@@ -57,8 +57,8 @@ def _clear_singleton_caches():
     try:
         import src.agent.whisper_planner as _wp
 
-        _wp._failure_count = 0
-        _wp._failure_alerted = False
+        _wp._telemetry.count = 0
+        _wp._telemetry.alerted = False
     except (ImportError, AttributeError):
         pass
 
