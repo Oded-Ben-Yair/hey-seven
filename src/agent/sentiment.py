@@ -40,8 +40,10 @@ _SARCASM_PATTERNS: list[str] = [
     r"(?i)\b(?:oh\s+)?great[,!]?\s+another\b",
     # "Oh wonderful, now I have to wait..." (sarcastic wonderful)
     r"(?i)\boh\s+wonderful\b",
-    # "Just great" / "Just wonderful" / "Just fantastic" (standalone sarcasm)
-    r"(?i)\bjust\s+(?:great|wonderful|fantastic|perfect|lovely)\b",
+    # "Just great" / "Just wonderful" / "Just fantastic" (standalone sarcasm).
+    # Anchored to sentence start or post-comma to avoid false positives on
+    # sincere mid-sentence usage like "That was just wonderful, thank you!"
+    r"(?i)(?:^|[.,!?]\s*)\s*just\s+(?:great|wonderful|fantastic|perfect|lovely)\b",
     # "Thanks for nothing" / "Thanks a lot" (sarcastic thanks)
     r"(?i)\bthanks\s+(?:for\s+nothing|a\s+lot)\b",
     # "Yeah right" / "Sure, that helps"

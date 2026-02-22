@@ -114,6 +114,96 @@ class TestFrustrationPatterns:
 
 
 # ---------------------------------------------------------------------------
+# Sarcasm patterns (fire after frustration, before VADER)
+# ---------------------------------------------------------------------------
+
+
+class TestSarcasmPatterns:
+    """Sarcastic positive phrasing should be classified as frustrated."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Great, another 30-minute wait",
+            "Oh great, another broken machine",
+        ],
+    )
+    def test_great_another(self, text):
+        assert detect_sentiment(text) == "frustrated"
+
+    def test_oh_wonderful(self):
+        assert detect_sentiment("Oh wonderful, now I have to wait again") == "frustrated"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Just great.",
+            "Just wonderful, the AC is broken again",
+            "Just fantastic, another delay",
+            "Just perfect, more waiting",
+        ],
+    )
+    def test_just_sarcasm_standalone(self, text):
+        """'Just <positive>' at sentence start is sarcasm."""
+        assert detect_sentiment(text) == "frustrated"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Thanks for nothing",
+            "Thanks a lot for wasting my time",
+        ],
+    )
+    def test_sarcastic_thanks(self, text):
+        assert detect_sentiment(text) == "frustrated"
+
+    def test_yeah_right(self):
+        assert detect_sentiment("Yeah right, like that'll happen") == "frustrated"
+
+    def test_sure_that_helps(self):
+        assert detect_sentiment("Sure, that helps a lot") == "frustrated"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Love waiting for 45 minutes",
+            "Love how slow the service is",
+            "Love how everything takes forever here",
+        ],
+    )
+    def test_sarcastic_love(self, text):
+        assert detect_sentiment(text) == "frustrated"
+
+
+class TestSarcasmFalsePositives:
+    """Sincere positive statements must NOT be classified as frustrated."""
+
+    def test_sincere_just_wonderful(self):
+        """Mid-sentence 'just wonderful' is sincere, not sarcasm."""
+        assert detect_sentiment("That was just wonderful, thank you so much!") == "positive"
+
+    def test_sincere_just_perfect(self):
+        assert detect_sentiment("The dinner was just perfect, the chef outdid himself") == "positive"
+
+    def test_sincere_thanks_a_lot(self):
+        """'Thanks a lot' at sentence END is handled by the pattern, but this
+        is an accepted trade-off — standalone 'Thanks a lot' is almost always
+        sarcastic in spoken English."""
+        # This WILL match the sarcasm pattern — documenting the expected behavior.
+        result = detect_sentiment("Thanks a lot")
+        assert result == "frustrated"
+
+    def test_sincere_love_this_place(self):
+        """'Love this place' should be positive — not matched by sarcasm patterns."""
+        assert detect_sentiment("I love this place, the rooms are amazing") == "positive"
+
+    def test_sincere_oh_great_news(self):
+        """'Oh great' without 'another' should NOT match."""
+        result = detect_sentiment("Oh that's great news about the show!")
+        assert result in ("positive", "neutral")
+
+
+# ---------------------------------------------------------------------------
 # VADER threshold tests
 # ---------------------------------------------------------------------------
 

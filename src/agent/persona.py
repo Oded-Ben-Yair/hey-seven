@@ -25,6 +25,16 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["persona_envelope_node"]
 
+# Common sentence starters that should be lowercased when prepending guest name.
+# e.g., "We have great restaurants" -> "Sarah, we have great restaurants".
+# Proper nouns (Mohegan, Bobby) are NOT in this set, so they stay capitalized.
+_LOWERCASE_STARTERS: frozenset[str] = frozenset({
+    "I", "We", "Our", "You", "Your", "The", "There", "Here",
+    "It", "This", "That", "As", "For", "With", "At", "To",
+    "A", "An", "Yes", "No", "So", "Well", "Now", "Actually",
+    "Absolutely", "Of", "Sure",
+})
+
 
 def _validate_output(response_text: str) -> str:
     """Post-generation output guardrail. Catches accidental PII leakage.
@@ -124,11 +134,6 @@ def _inject_guest_name(content: str, guest_name: str | None) -> str:
     # (e.g., "We have great..." → "Sarah, we have great...").
     # Preserve case for proper nouns (e.g., "Mohegan Sun has..." stays capitalized).
     first_word = content.split()[0] if content.split() else ""
-    _LOWERCASE_STARTERS = frozenset({
-        "I", "We", "Our", "You", "Your", "The", "There", "Here",
-        "It", "This", "That", "As", "For", "With", "At", "To",
-        "A", "An",
-    })
     if first_word in _LOWERCASE_STARTERS:
         return f"{guest_name}, {content[0].lower()}{content[1:]}"
     return f"{guest_name}, {content}"
@@ -173,7 +178,12 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     content = _enforce_branding(content, branding)
 
     # Step 3: Guest name injection
-    guest_name = state.get("guest_name")
+    # Fall back to extracted_fields["name"] when guest_name is None.
+    # guest_name has no reducer so it resets per-turn; extracted_fields
+    # persists via _merge_dicts reducer across turns.
+    guest_name = state.get("guest_name") or (
+        state.get("extracted_fields") or {}
+    ).get("name")
     content = _inject_guest_name(content, guest_name)
 
     # Step 4: SMS truncation (only when max_chars > 0)

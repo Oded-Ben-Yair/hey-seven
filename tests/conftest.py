@@ -1,5 +1,6 @@
 """Shared test fixtures for Hey Seven tests."""
 
+import asyncio
 import json
 import os
 
@@ -159,6 +160,15 @@ def _clear_singleton_caches():
         import src.agent.sentiment as _sent
 
         _sent._vader_analyzer = None
+    except (ImportError, AttributeError):
+        pass
+
+    try:
+        import src.agent.agents._base as _base_mod
+
+        # Recreate the semaphore to reset its internal counter.
+        # Prevents permanent count decrement from crashed test acquisitions.
+        _base_mod._LLM_SEMAPHORE = asyncio.Semaphore(20)
     except (ImportError, AttributeError):
         pass
 
