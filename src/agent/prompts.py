@@ -304,3 +304,32 @@ SENTIMENT_TONE_GUIDES: dict[str, str] = {
     ),
     "neutral": "",  # No additional guidance needed
 }
+
+
+# ---------------------------------------------------------------------------
+# 7. HEART Framework — Escalation & Service Recovery Language
+# ---------------------------------------------------------------------------
+# The HEART framework (Hear, Empathize, Apologize, Resolve, Thank) provides
+# structured language for de-escalation and service recovery.  Inject the
+# relevant step's phrase into system prompts when guest sentiment is
+# frustrated or negative, or when the conversation involves a complaint.
+
+HEART_ESCALATION_LANGUAGE: dict[str, str] = {
+    "hear": (
+        "Walk me through what happened so I can make sure I fully understand "
+        "the situation."
+    ),
+    "empathize": (
+        "I completely understand how frustrating that must be."
+    ),
+    "apologize": (
+        "I'm truly sorry you've had this experience."
+    ),
+    "resolve": (
+        "Here's what I can do for you right now -- which option would feel "
+        "most meaningful to you?"
+    ),
+    "thank": (
+        "Thank you for giving us the opportunity to make this right."
+    ),
+}

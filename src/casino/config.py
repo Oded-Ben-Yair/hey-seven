@@ -168,6 +168,223 @@ DEFAULT_CONFIG: dict[str, Any] = {
 
 
 # ---------------------------------------------------------------------------
+# Multi-property casino profiles (static, real operational data)
+# ---------------------------------------------------------------------------
+
+CASINO_PROFILES: dict[str, dict[str, Any]] = {
+    "mohegan_sun": {
+        "_id": "mohegan_sun",
+        "_version": 1,
+        "_updated_at": "",
+        "features": {
+            "ai_disclosure_enabled": True,
+            "whisper_planner_enabled": True,
+            "specialist_agents_enabled": True,
+            "comp_agent_enabled": True,
+            "spanish_support_enabled": True,
+            "outbound_campaigns_enabled": False,
+            "hitl_interrupt_enabled": False,
+            "human_like_delay_enabled": True,
+            "sms_enabled": False,
+            "sentiment_detection_enabled": True,
+            "guest_profile_enabled": True,
+            "field_extraction_enabled": True,
+        },
+        "branding": {
+            "persona_name": "Seven",
+            "tone": "warm_professional",
+            "formality_level": "casual_respectful",
+            "emoji_allowed": False,
+            "exclamation_limit": 1,
+        },
+        "regulations": {
+            "state": "CT",
+            "gaming_age_minimum": 21,
+            "ai_disclosure_required": True,
+            "ai_disclosure_law": "",
+            "quiet_hours_start": "21:00",
+            "quiet_hours_end": "08:00",
+            "responsible_gaming_helpline": "1-800-522-4700",
+            "state_helpline": "1-888-789-7777",
+            "self_exclusion_authority": "CT Department of Consumer Protection",
+            "self_exclusion_url": "ct.gov/selfexclusion",
+        },
+        "operational": {
+            "timezone": "America/New_York",
+            "telnyx_phone_number": "",
+            "escalation_slack_channel": "",
+            "escalation_sms_number": "",
+            "contact_phone": "",
+            "max_messages_per_guest_per_day": 20,
+            "session_timeout_hours": 48,
+            "property_type": "tribal",
+            "property_size_gaming_sqft": 364000,
+            "dining_venues": 40,
+            "hotel_towers": 2,
+        },
+        "prompts": {
+            "system_prompt_override": None,
+            "greeting_template": "Hi $guest_name, this is $persona_name from Mohegan Sun! How can I help you today?",
+            "greeting_template_es": "Hola $guest_name, soy $persona_name de Mohegan Sun. Como puedo ayudarte hoy?",
+            "fallback_message": "I want to make sure I get you the right answer. Let me connect you with someone who can help.",
+            "casino_name_display": "Mohegan Sun",
+        },
+        "rag": {
+            "min_relevance_score": 0.35,
+            "top_k": 5,
+            "embedding_model": "gemini-embedding-001",
+            "embedding_dimensions": 768,
+        },
+    },
+    "foxwoods": {
+        "_id": "foxwoods",
+        "_version": 1,
+        "_updated_at": "",
+        "features": {
+            "ai_disclosure_enabled": True,
+            "whisper_planner_enabled": True,
+            "specialist_agents_enabled": True,
+            "comp_agent_enabled": True,
+            "spanish_support_enabled": True,
+            "outbound_campaigns_enabled": False,
+            "hitl_interrupt_enabled": False,
+            "human_like_delay_enabled": True,
+            "sms_enabled": False,
+            "sentiment_detection_enabled": True,
+            "guest_profile_enabled": True,
+            "field_extraction_enabled": True,
+        },
+        "branding": {
+            "persona_name": "Foxy",
+            "tone": "warm_professional",
+            "formality_level": "casual_respectful",
+            "emoji_allowed": False,
+            "exclamation_limit": 1,
+        },
+        "regulations": {
+            "state": "CT",
+            "gaming_age_minimum": 21,
+            "ai_disclosure_required": True,
+            "ai_disclosure_law": "",
+            "quiet_hours_start": "21:00",
+            "quiet_hours_end": "08:00",
+            "responsible_gaming_helpline": "1-800-522-4700",
+            "state_helpline": "1-888-789-7777",
+            "self_exclusion_authority": "CT Department of Consumer Protection",
+            "self_exclusion_url": "ct.gov/selfexclusion",
+        },
+        "operational": {
+            "timezone": "America/New_York",
+            "telnyx_phone_number": "",
+            "escalation_slack_channel": "",
+            "escalation_sms_number": "",
+            "contact_phone": "",
+            "max_messages_per_guest_per_day": 20,
+            "session_timeout_hours": 48,
+            "property_type": "tribal",
+            "property_size_gaming_sqft": 344000,
+            "dining_venues": 30,
+            "hotel_towers": 4,
+        },
+        "prompts": {
+            "system_prompt_override": None,
+            "greeting_template": "Hi $guest_name, this is $persona_name from Foxwoods! How can I help you today?",
+            "greeting_template_es": "Hola $guest_name, soy $persona_name de Foxwoods. Como puedo ayudarte hoy?",
+            "fallback_message": "I want to make sure I get you the right answer. Let me connect you with someone who can help.",
+            "casino_name_display": "Foxwoods Resort Casino",
+        },
+        "rag": {
+            "min_relevance_score": 0.35,
+            "top_k": 5,
+            "embedding_model": "gemini-embedding-001",
+            "embedding_dimensions": 768,
+        },
+    },
+    "hard_rock_ac": {
+        "_id": "hard_rock_ac",
+        "_version": 1,
+        "_updated_at": "",
+        "features": {
+            "ai_disclosure_enabled": True,
+            "whisper_planner_enabled": True,
+            "specialist_agents_enabled": True,
+            "comp_agent_enabled": True,
+            "spanish_support_enabled": True,
+            "outbound_campaigns_enabled": False,
+            "hitl_interrupt_enabled": False,
+            "human_like_delay_enabled": True,
+            "sms_enabled": False,
+            "sentiment_detection_enabled": True,
+            "guest_profile_enabled": True,
+            "field_extraction_enabled": True,
+        },
+        "branding": {
+            "persona_name": "Ace",
+            "tone": "casual",
+            "formality_level": "casual",
+            "emoji_allowed": False,
+            "exclamation_limit": 2,
+        },
+        "regulations": {
+            "state": "NJ",
+            "gaming_age_minimum": 21,
+            "ai_disclosure_required": True,
+            "ai_disclosure_law": "",
+            "quiet_hours_start": "21:00",
+            "quiet_hours_end": "08:00",
+            "responsible_gaming_helpline": "1-800-GAMBLER",
+            "state_helpline": "1-800-GAMBLER",
+            "self_exclusion_authority": "NJ Division of Gaming Enforcement",
+            "self_exclusion_options": "1-year, 5-year, or lifetime",
+            "self_exclusion_url": "nj.gov/oag/ge/selfexclusion.html",
+        },
+        "operational": {
+            "timezone": "America/New_York",
+            "telnyx_phone_number": "",
+            "escalation_slack_channel": "",
+            "escalation_sms_number": "",
+            "contact_phone": "",
+            "max_messages_per_guest_per_day": 20,
+            "session_timeout_hours": 48,
+            "property_type": "commercial",
+            "property_size_gaming_sqft": 160000,
+            "dining_venues": 20,
+            "hotel_towers": 1,
+        },
+        "prompts": {
+            "system_prompt_override": None,
+            "greeting_template": "Hi $guest_name, this is $persona_name from Hard Rock Atlantic City! How can I help you today?",
+            "greeting_template_es": "Hola $guest_name, soy $persona_name de Hard Rock Atlantic City. Como puedo ayudarte hoy?",
+            "fallback_message": "I want to make sure I get you the right answer. Let me connect you with someone who can help.",
+            "casino_name_display": "Hard Rock Hotel & Casino Atlantic City",
+        },
+        "rag": {
+            "min_relevance_score": 0.35,
+            "top_k": 5,
+            "embedding_model": "gemini-embedding-001",
+            "embedding_dimensions": 768,
+        },
+    },
+}
+
+
+def get_casino_profile(casino_id: str) -> dict[str, Any]:
+    """Return static casino profile by ID, or DEFAULT_CONFIG if not found.
+
+    This provides synchronous access to pre-configured casino profiles
+    without requiring Firestore. For runtime config with hot-reload,
+    use the async ``get_casino_config()`` instead.
+
+    Args:
+        casino_id: Casino identifier (e.g., ``"mohegan_sun"``).
+
+    Returns:
+        A config dict with all sections populated.
+    """
+    return CASINO_PROFILES.get(casino_id, DEFAULT_CONFIG)
+
+
+# ---------------------------------------------------------------------------
 # Firestore client accessor
 # ---------------------------------------------------------------------------
 
