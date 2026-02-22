@@ -311,3 +311,252 @@ class TestFullGraphE2E:
         # thread_id. Each subsequent call accumulates messages in the state.
         # This verifies the wiring: build_graph() creates a checkpointer,
         # chat() uses thread_id in config, and ainvoke persists state.
+
+    @pytest.mark.asyncio
+    async def test_retry_loop_full_pipeline(self):
+        """Validator returns RETRY on first attempt, then PASS on second.
+
+        Verifies the generate -> validate -> generate -> validate -> respond
+        path through the real compiled graph (the RETRY conditional edge).
+        """
+        # Track validation calls to return RETRY first, then PASS
+        validate_call_count = {"n": 0}
+
+        def _with_structured_output(schema):
+            chain = AsyncMock()
+            if schema is RouterOutput:
+                chain.ainvoke = AsyncMock(return_value=RouterOutput(
+                    query_type="property_qa", confidence=0.95,
+                ))
+            elif schema is DispatchOutput:
+                chain.ainvoke = AsyncMock(return_value=DispatchOutput(
+                    specialist="dining",
+                    confidence=0.9,
+                    reasoning="Restaurant query",
+                ))
+            elif schema is ValidationResult:
+                async def _validate_side_effect(prompt):
+                    validate_call_count["n"] += 1
+                    if validate_call_count["n"] == 1:
+                        return ValidationResult(
+                            status="RETRY",
+                            reason="Missing source attribution in response",
+                        )
+                    return ValidationResult(
+                        status="PASS",
+                        reason="Source attribution added, response is correct",
+                    )
+                chain.ainvoke = AsyncMock(side_effect=_validate_side_effect)
+            elif schema is InjectionClassification:
+                chain.ainvoke = AsyncMock(return_value=InjectionClassification(
+                    is_injection=False, confidence=0.05,
+                    reason="Legitimate property question",
+                ))
+            else:
+                chain.ainvoke = AsyncMock(return_value=WhisperPlan(
+                    next_topic="dining",
+                    extraction_targets=["dietary_restrictions"],
+                    offer_readiness=0.3,
+                    conversation_note="Guest asking about dining",
+                    proactive_suggestion=None,
+                    suggestion_confidence=0.0,
+                ))
+            return chain
+
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output = MagicMock(side_effect=_with_structured_output)
+        mock_response = MagicMock()
+        mock_response.content = "Todd English's Tuscany offers excellent Italian cuisine at Mohegan Sun."
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+
+        mock_cb = _make_permissive_cb()
+
+        with (
+            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
+            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch("src.agent.nodes.search_hours", return_value=[]),
+            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+        ):
+            graph = build_graph()
+            result = await chat(graph, "What Italian restaurants do you have?")
+
+        assert "response" in result
+        assert len(result["response"]) > 0
+        assert "thread_id" in result
+        # Validator was called twice (RETRY then PASS)
+        assert validate_call_count["n"] == 2
+
+    @pytest.mark.asyncio
+    async def test_fail_to_fallback_full_pipeline(self):
+        """Validator always returns non-PASS, triggering RETRY then FAIL.
+
+        Verifies the generate -> validate (RETRY) -> generate -> validate (FAIL)
+        -> fallback path through the real compiled graph.
+        The fallback_node returns a message with the property phone number.
+        """
+        def _with_structured_output(schema):
+            chain = AsyncMock()
+            if schema is RouterOutput:
+                chain.ainvoke = AsyncMock(return_value=RouterOutput(
+                    query_type="property_qa", confidence=0.95,
+                ))
+            elif schema is DispatchOutput:
+                chain.ainvoke = AsyncMock(return_value=DispatchOutput(
+                    specialist="dining",
+                    confidence=0.9,
+                    reasoning="Restaurant query",
+                ))
+            elif schema is ValidationResult:
+                # Always return RETRY — validate_node logic:
+                # retry_count=0 -> RETRY, retry_count=1 -> FAIL
+                chain.ainvoke = AsyncMock(return_value=ValidationResult(
+                    status="RETRY",
+                    reason="Response contains factual errors about menu items",
+                ))
+            elif schema is InjectionClassification:
+                chain.ainvoke = AsyncMock(return_value=InjectionClassification(
+                    is_injection=False, confidence=0.05,
+                    reason="Legitimate property question",
+                ))
+            else:
+                chain.ainvoke = AsyncMock(return_value=WhisperPlan(
+                    next_topic="dining",
+                    extraction_targets=["dietary_restrictions"],
+                    offer_readiness=0.3,
+                    conversation_note="Guest asking about dining",
+                    proactive_suggestion=None,
+                    suggestion_confidence=0.0,
+                ))
+            return chain
+
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output = MagicMock(side_effect=_with_structured_output)
+        mock_response = MagicMock()
+        mock_response.content = "Some generated response that will fail validation."
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+
+        mock_cb = _make_permissive_cb()
+
+        with (
+            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
+            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch("src.agent.nodes.search_hours", return_value=[]),
+            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+        ):
+            graph = build_graph()
+            result = await chat(graph, "Tell me about your Italian restaurants")
+
+        response_text = result["response"]
+        assert len(response_text) > 0
+        # Fallback node includes the property phone number (1-888-226-7711)
+        assert "1-888-226-7711" in response_text
+        assert "thread_id" in result
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_open_full_pipeline(self):
+        """Circuit breaker is open, so the specialist agent returns CB fallback.
+
+        Verifies that when CB.allow_request() returns False, the specialist
+        agent (_base.py:135) returns a fallback message with skip_validation=True,
+        and the graph routes through validate (auto-PASS) -> persona -> respond.
+        """
+        mock_llm = _make_mock_llm(
+            router_output=RouterOutput(query_type="property_qa", confidence=0.95),
+            dispatch_output=DispatchOutput(
+                specialist="dining",
+                confidence=0.9,
+                reasoning="Restaurant query",
+            ),
+            validation_output=ValidationResult(status="PASS", reason="OK"),
+            agent_response="This should not appear because CB is open.",
+        )
+
+        # Create a CB that blocks all requests (open state)
+        mock_cb_open = AsyncMock()
+        mock_cb_open.allow_request = AsyncMock(return_value=False)
+        mock_cb_open.record_success = AsyncMock()
+        mock_cb_open.record_failure = AsyncMock()
+        mock_cb_open.record_cancellation = AsyncMock()
+        mock_cb_open.is_open = True
+        mock_cb_open.state = "open"
+
+        # Patch _get_circuit_breaker at all import sites:
+        # - graph.py imports it for dispatch CB check
+        # - each specialist agent module imports it as get_cb_fn
+        # Python's "from X import Y" creates a local binding, so we must
+        # patch where the reference is USED, not just where it's DEFINED.
+        with (
+            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.graph._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.agents.dining_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.agents.host_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.agents.entertainment_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.agents.comp_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.agents.hotel_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch("src.agent.nodes.search_hours", return_value=[]),
+            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+        ):
+            graph = build_graph()
+            result = await chat(graph, "What restaurants do you have?")
+
+        response_text = result["response"]
+        assert len(response_text) > 0
+        # CB fallback message from _base.py contains "technical difficulties"
+        assert "technical difficulties" in response_text.lower() or "contact" in response_text.lower()
+        assert "thread_id" in result
+
+    @pytest.mark.asyncio
+    async def test_whisper_planner_failure_silent(self):
+        """Whisper planner LLM raises an exception but the graph continues.
+
+        Verifies that whisper_planner_node is fail-silent: when its LLM call
+        fails, it returns {"whisper_plan": None} and the graph proceeds to
+        the generate node without crashing.
+        """
+        mock_llm = _make_mock_llm(
+            router_output=RouterOutput(query_type="property_qa", confidence=0.95),
+            dispatch_output=DispatchOutput(
+                specialist="dining",
+                confidence=0.9,
+                reasoning="Restaurant query",
+            ),
+            validation_output=ValidationResult(status="PASS", reason="OK"),
+            agent_response="Todd English's Tuscany offers Italian dining at Mohegan Sun.",
+        )
+        mock_cb = _make_permissive_cb()
+
+        # Create a broken whisper LLM that raises on any structured output call
+        mock_whisper_llm = MagicMock()
+        whisper_chain = AsyncMock()
+        whisper_chain.ainvoke = AsyncMock(side_effect=Exception("LLM timeout — whisper planner unavailable"))
+        mock_whisper_llm.with_structured_output = MagicMock(return_value=whisper_chain)
+
+        with (
+            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_whisper_llm),
+            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
+            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch("src.agent.nodes.search_hours", return_value=[]),
+            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+        ):
+            graph = build_graph()
+            result = await chat(graph, "What Italian restaurants do you have?")
+
+        # Graph should still produce a valid response despite whisper failure
+        assert "response" in result
+        assert len(result["response"]) > 0
+        assert "thread_id" in result
+        # The specialist agent still generates a response
+        response_text = result["response"]
+        assert "Tuscany" in response_text or "Italian" in response_text or "dining" in response_text.lower()

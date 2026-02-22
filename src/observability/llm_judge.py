@@ -15,6 +15,8 @@ Uses deterministic keyword/heuristic scoring as the default offline mode.
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import logging
 import math
 import os
@@ -23,9 +25,22 @@ from dataclasses import dataclass, field
 from string import Template
 from typing import Any
 
+from cachetools import TTLCache
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Production hardening: concurrency limiter + result cache
+# ---------------------------------------------------------------------------
+
+# Limit concurrent LLM judge calls to avoid overwhelming Gemini API
+# during batch evaluations.
+_EVAL_SEMAPHORE = asyncio.Semaphore(5)
+
+# Cache evaluation results for 5 minutes to avoid re-evaluating
+# identical conversations. Key = SHA-256 of (conversation_history + response).
+_eval_cache: TTLCache = TTLCache(maxsize=100, ttl=300)
 
 
 def _is_nan(value: float) -> bool:
@@ -650,6 +665,15 @@ async def evaluate_conversation_llm(
         ConversationEvalScore with LLM-based scores mapped to 0.0-1.0.
         Falls back to offline scoring on any LLM failure.
     """
+    # Check result cache before any LLM call
+    cache_key = hashlib.sha256(
+        (str(messages or []) + (response or "")).encode()
+    ).hexdigest()
+    cached = _eval_cache.get(cache_key)
+    if cached is not None:
+        logger.debug("LLM judge cache hit for key %s", cache_key[:12])
+        return cached
+
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
     except ImportError:
@@ -681,64 +705,70 @@ async def evaluate_conversation_llm(
 
         # Retry once on stochastic structured output failures (Gemini sometimes
         # returns truncated JSON — same pattern as refusal-retry in pipeline-safety).
+        # Semaphore limits concurrent LLM calls to prevent Gemini API overload.
         max_attempts = 2
         last_error: Exception | None = None
-        for attempt in range(max_attempts):
-            try:
-                result: LLMJudgeOutput = await judge_llm.ainvoke(prompt)
+        async with _EVAL_SEMAPHORE:
+            for attempt in range(max_attempts):
+                try:
+                    result: LLMJudgeOutput = await judge_llm.ainvoke(prompt)
 
-                # Map LLM judge dimensions to ConversationEvalScore fields.
-                # Semantic mapping: each LLM dimension maps to the closest
-                # existing metric for backward-compatible reporting.
-                # R31 fix C-001: previous mapping was semantically wrong
-                # (groundedness→empathy made no sense). Corrected mapping:
-                scores = {
-                    METRIC_EMPATHY: result.proactive_value.score / 10.0,         # proactive care ≈ empathy
-                    METRIC_CULTURAL_SENSITIVITY: result.safety.score / 10.0,      # safety compliance ≈ cultural sensitivity
-                    METRIC_CONVERSATION_FLOW: result.contextual_relevance.score / 10.0,  # relevance ≈ flow
-                    METRIC_PERSONA_CONSISTENCY: result.persona_fidelity.score / 10.0,     # persona ≈ persona
-                    METRIC_GUEST_EXPERIENCE: result.groundedness.score / 10.0,    # grounded = accurate = good experience
-                }
+                    # Map LLM judge dimensions to ConversationEvalScore fields.
+                    # Semantic mapping: each LLM dimension maps to the closest
+                    # existing metric for backward-compatible reporting.
+                    # R31 fix C-001: previous mapping was semantically wrong
+                    # (groundedness→empathy made no sense). Corrected mapping:
+                    scores = {
+                        METRIC_EMPATHY: result.proactive_value.score / 10.0,         # proactive care ≈ empathy
+                        METRIC_CULTURAL_SENSITIVITY: result.safety.score / 10.0,      # safety compliance ≈ cultural sensitivity
+                        METRIC_CONVERSATION_FLOW: result.contextual_relevance.score / 10.0,  # relevance ≈ flow
+                        METRIC_PERSONA_CONSISTENCY: result.persona_fidelity.score / 10.0,     # persona ≈ persona
+                        METRIC_GUEST_EXPERIENCE: result.groundedness.score / 10.0,    # grounded = accurate = good experience
+                    }
 
-                return ConversationEvalScore(
-                    empathy=scores[METRIC_EMPATHY],
-                    cultural_sensitivity=scores[METRIC_CULTURAL_SENSITIVITY],
-                    conversation_flow=scores[METRIC_CONVERSATION_FLOW],
-                    persona_consistency=scores[METRIC_PERSONA_CONSISTENCY],
-                    guest_experience=scores[METRIC_GUEST_EXPERIENCE],
-                    details={
-                        "mode": "llm_judge",
-                        "retry_count": attempt,
-                        "groundedness": {
-                            "score": result.groundedness.score,
-                            "justification": result.groundedness.justification,
+                    eval_result = ConversationEvalScore(
+                        empathy=scores[METRIC_EMPATHY],
+                        cultural_sensitivity=scores[METRIC_CULTURAL_SENSITIVITY],
+                        conversation_flow=scores[METRIC_CONVERSATION_FLOW],
+                        persona_consistency=scores[METRIC_PERSONA_CONSISTENCY],
+                        guest_experience=scores[METRIC_GUEST_EXPERIENCE],
+                        details={
+                            "mode": "llm_judge",
+                            "retry_count": attempt,
+                            "groundedness": {
+                                "score": result.groundedness.score,
+                                "justification": result.groundedness.justification,
+                            },
+                            "persona_fidelity": {
+                                "score": result.persona_fidelity.score,
+                                "justification": result.persona_fidelity.justification,
+                            },
+                            "safety": {
+                                "score": result.safety.score,
+                                "justification": result.safety.justification,
+                            },
+                            "contextual_relevance": {
+                                "score": result.contextual_relevance.score,
+                                "justification": result.contextual_relevance.justification,
+                            },
+                            "proactive_value": {
+                                "score": result.proactive_value.score,
+                                "justification": result.proactive_value.justification,
+                            },
                         },
-                        "persona_fidelity": {
-                            "score": result.persona_fidelity.score,
-                            "justification": result.persona_fidelity.justification,
-                        },
-                        "safety": {
-                            "score": result.safety.score,
-                            "justification": result.safety.justification,
-                        },
-                        "contextual_relevance": {
-                            "score": result.contextual_relevance.score,
-                            "justification": result.contextual_relevance.justification,
-                        },
-                        "proactive_value": {
-                            "score": result.proactive_value.score,
-                            "justification": result.proactive_value.justification,
-                        },
-                    },
-                )
-            except Exception as exc:
-                last_error = exc
-                if attempt < max_attempts - 1:
-                    logger.info(
-                        "LLM judge attempt %d failed (stochastic output); retrying",
-                        attempt + 1,
                     )
-                    continue
+
+                    # Cache successful LLM judge results (not fallback/offline)
+                    _eval_cache[cache_key] = eval_result
+                    return eval_result
+                except Exception as exc:
+                    last_error = exc
+                    if attempt < max_attempts - 1:
+                        logger.info(
+                            "LLM judge attempt %d failed (stochastic output); retrying",
+                            attempt + 1,
+                        )
+                        continue
 
         logger.warning(
             "LLM judge evaluation failed after %d attempts; falling back to offline scoring",
@@ -992,6 +1022,36 @@ GOLDEN_CONVERSATIONS: list[ConversationTestCase] = [
             },
         ],
         expected_behavior="Uses guest name 'Mike' and remembers party size in turn 4",
+        expected_empathy_level="medium",
+    ),
+    ConversationTestCase(
+        id="multi-entertainment-01",
+        name="Entertainment venue inquiry with ticket follow-up",
+        category="entertainment",
+        turns=[
+            {"role": "user", "content": "What shows do you have this weekend?"},
+            {
+                "role": "assistant",
+                "content": "We have an exciting entertainment lineup this weekend! "
+                "The Mohegan Sun Arena hosts major concerts and events, the Wolf Den "
+                "offers free nightly performances — no tickets needed, first-come "
+                "first-served — and Comix Comedy Club features nationally touring "
+                "comedians Thursday through Sunday. Would you like details about "
+                "any of these venues?",
+            },
+            {"role": "user", "content": "How do I get tickets for the Arena shows?"},
+            {
+                "role": "assistant",
+                "content": "Tickets for Mohegan Sun Arena events can be purchased "
+                "through the Box Office located near the Arena entrance, online at "
+                "mohegansun.com/entertainment, or by phone. If you're a Momentum "
+                "Rewards member, you'll enjoy priority access and exclusive pre-sale "
+                "opportunities. Would you like to know about any specific upcoming "
+                "shows, or are you interested in our VIP packages that include "
+                "premium seating and backstage access?",
+            },
+        ],
+        expected_behavior="Covers all three entertainment venues, provides booking info, mentions loyalty benefits",
         expected_empathy_level="medium",
     ),
 ]

@@ -94,13 +94,18 @@ steps:
             # Verify version matches deployed commit
             DEPLOYED_VERSION=$(cat /tmp/health.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('version',''))" 2>/dev/null)
             echo "Deployed version: $DEPLOYED_VERSION, Expected: $COMMIT_SHA"
+            if [ -n "$DEPLOYED_VERSION" ] && [ "$DEPLOYED_VERSION" != "$COMMIT_SHA" ]; then
+              echo "VERSION MISMATCH: deployed=$DEPLOYED_VERSION expected=$COMMIT_SHA"
+              echo "Stale container may be serving old code. Failing smoke test."
+              STATUS="version_mismatch"
+            fi
             break
           fi
           echo "Retrying in 15s..."
           sleep 15
         done
         if [ "$STATUS" != "200" ]; then
-          echo "SMOKE TEST FAILED: /health returned $STATUS after 3 attempts"
+          echo "SMOKE TEST FAILED: /health returned $STATUS after 3 attempts (version_mismatch = stale container)"
           echo "Rolling back to previous revision..."
           PREV=$(cat /workspace/previous-revision.txt)
           if [ "$PREV" != "none" ]; then

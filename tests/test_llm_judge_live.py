@@ -6,6 +6,7 @@ Pydantic model tests run without any API key.
 
 from __future__ import annotations
 
+import asyncio
 import os
 
 import pytest
@@ -111,6 +112,24 @@ class TestOfflineFallbackStillWorks:
         response = "Welcome to Mohegan Sun!"
         score = evaluate_conversation(messages, response)
         assert score.details.get("mode") == "offline"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_evaluations_complete(self):
+        """Multiple concurrent evaluate_conversation_llm calls complete without deadlock."""
+        messages = [{"role": "user", "content": "What restaurants are open?"}]
+        response = "We have several wonderful dining options at Mohegan Sun."
+
+        # Launch 10 concurrent evaluations (semaphore limit is 5)
+        tasks = [
+            evaluate_conversation_llm(messages, response)
+            for _ in range(10)
+        ]
+        results = await asyncio.gather(*tasks)
+
+        assert len(results) == 10
+        for score in results:
+            assert isinstance(score, ConversationEvalScore)
+            assert 0.0 <= score.empathy <= 1.0
 
 
 # ---------------------------------------------------------------------------

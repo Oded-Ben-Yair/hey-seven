@@ -1,60 +1,57 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "Phase 5 complete. Score: 92/100 (Code 37/40, Agent 55/60). ~1870+ tests. R31 hostile review done. 3 CRITICALs fixed.",
-    "lastModified": "2026-02-22T12:30:00Z",
+    "summary": "Phase 5.5 complete. Estimated score: 95.5/100. ~1875+ tests. 4 new E2E graph tests, LLM judge hardening, entertainment golden conv, Cloud Build version assertion.",
+    "lastModified": "2026-02-22T16:00:00Z",
     "branch": "main",
-    "commitHash": "8eec82c",
+    "commitHash": "pending",
     "tag": "v1.0.0",
-    "phase": "phase5-complete"
+    "phase": "phase5.5-complete"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "E2E tests: add RETRY loop and circuit-breaker-open paths (+1 testing)" },
-    { "priority": 1, "description": "LLM judge: add rate limiting for production use (+0.5 scalability)" },
-    { "priority": 2, "description": "Add entertainment golden conversation test case (+0.5 domain)" },
-    { "priority": 3, "description": "Cloud Build smoke test: assert version match (+0.5 devops)" },
-    { "priority": 4, "description": "Expand helpline data beyond CT/NJ (PA, MA, NY for Tri-State properties)" }
+    { "priority": 0, "description": "Run hostile review round R32 to validate 95+ score" },
+    { "priority": 1, "description": "Expand helpline data beyond CT/NJ (PA, MA, NY for Tri-State properties)" },
+    { "priority": 2, "description": "Frontend Next.js implementation" },
+    { "priority": 3, "description": "GCP Cloud Run production deployment" }
   ],
   "phase5_scores": {
     "rubric": "40% code quality / 60% agent quality",
-    "trajectory": { "R20": 85.5, "R28": 87, "R30": 88, "R31": 92 },
+    "trajectory": { "R20": 85.5, "R28": 87, "R30": 88, "R31": 92, "R32_target": 95.5 },
+    "phase5_5_additions": {
+      "testing_strategy": "+1.5 (4 new E2E: retry loop, fail-to-fallback, CB open, whisper failure)",
+      "scalability_production": "+0.5 (LLM judge semaphore + TTLCache)",
+      "domain_intelligence": "+0.5 (entertainment golden conversation)",
+      "docker_devops": "+0.5 (Cloud Build version assertion)",
+      "documentation": "+0.5 (decisions.log, status.json)"
+    },
     "dimensions": {
       "graph_architecture": { "R30": 9.0, "R31": 9.0 },
       "rag_pipeline": { "R30": 8.0, "R31": 9.0 },
       "data_model": { "R30": 9.0, "R31": 9.0 },
       "api_design": { "R30": 8.5, "R31": 9.0 },
-      "testing_strategy": { "R30": 5.0, "R31": 8.0 },
-      "docker_devops": { "R30": 7.5, "R31": 7.5 },
+      "testing_strategy": { "R30": 5.0, "R31": 8.0, "R32_est": 9.5 },
+      "docker_devops": { "R30": 7.5, "R31": 7.5, "R32_est": 8.0 },
       "prompts_guardrails": { "R30": 9.5, "R31": 11.0, "max": 12 },
-      "scalability_production": { "R30": 9.0, "R31": 10.5, "max": 12 },
-      "tradeoff_documentation": { "R30": 9.0, "R31": 10.5, "max": 12 },
-      "domain_intelligence": { "R30": 12.0, "R31": 14.0, "max": 16 }
+      "scalability_production": { "R30": 9.0, "R31": 10.5, "R32_est": 11.0, "max": 12 },
+      "tradeoff_documentation": { "R30": 9.0, "R31": 10.5, "R32_est": 11.0, "max": 12 },
+      "domain_intelligence": { "R30": 12.0, "R31": 14.0, "R32_est": 14.5, "max": 16 }
     }
   },
-  "phase5_deliverables": {
-    "commits": 3,
-    "newTests": 31,
-    "totalTests": "1870+",
-    "newFiles": [
-      "tests/test_full_graph_e2e.py (5 E2E graph tests)",
-      "tests/test_prompt_parameterization.py (12 prompt tests)",
-      "tests/test_llm_judge_live.py (12 LLM judge tests)",
-      "tests/test_rag_quality.py (9 RAG quality tests)",
-      "knowledge-base/casino-operations/entertainment-guide.md"
-    ],
+  "phase5_5_deliverables": {
+    "newTests": 5,
+    "totalTests": "1875+",
     "modifiedFiles": [
-      "src/agent/prompts.py ($property_description)",
-      "src/agent/agents/_base.py (property_description + helpline fix)",
-      "src/agent/persona.py (DEFAULT_CONFIG removal)",
-      "src/casino/config.py (property_description in profiles)",
-      "src/observability/llm_judge.py (LLM-as-judge G-Eval)"
-    ],
-    "criticalBugsFixed": 3,
-    "reviewReports": ["reviews/round-31/"]
+      "tests/test_full_graph_e2e.py (4 new E2E graph tests: retry, fallback, CB, whisper)",
+      "src/observability/llm_judge.py (semaphore + TTLCache + entertainment golden conv)",
+      "tests/test_llm_judge_live.py (concurrent evaluation test)",
+      "cloudbuild.yaml (version assertion in smoke test)",
+      ".claude/decisions.log (Phase 5.5 decisions)",
+      ".claude/status.json (updated)"
+    ]
   },
   "sessionNotes": {
     "lastSessionDate": "2026-02-22",
-    "lastSessionId": "hey-seven-phase5-20260222"
+    "lastSessionId": "hey-seven-phase5.5-20260222"
   }
 }
