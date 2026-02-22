@@ -65,6 +65,7 @@ def base_state():
         "guest_sentiment": None,
         "guest_context": {},
         "guest_name": None,
+        "suggestion_offered": 0,
     }
 
 
@@ -257,8 +258,13 @@ class TestProactiveSuggestions:
         assert plan.proactive_suggestion is None
         assert plan.suggestion_confidence == 0.0
 
-    def test_format_whisper_plan_includes_suggestion(self):
-        """format_whisper_plan includes suggestion when confidence >= 0.8."""
+    def test_format_whisper_plan_excludes_suggestion(self):
+        """format_whisper_plan does NOT include suggestion (R23 fix C-001: deduplicated).
+
+        Proactive suggestions are now injected by execute_specialist() in _base.py
+        with proper sentiment gating and max-1 enforcement. format_whisper_plan()
+        only formats planning data, not suggestions.
+        """
         plan_dict = {
             "next_topic": "dining",
             "extraction_targets": [],
@@ -268,9 +274,11 @@ class TestProactiveSuggestions:
             "suggestion_confidence": 0.9,
         }
         result = format_whisper_plan(plan_dict)
-        assert "Proactive suggestion" in result
-        assert "Beauty & Essex" in result
-        assert "90%" in result
+        # R23 fix C-001: suggestion removed from format_whisper_plan
+        assert "Proactive suggestion" not in result
+        # But planning data is still present
+        assert "dining" in result
+        assert "Whisper Track Guidance" in result
 
     def test_format_whisper_plan_excludes_low_confidence(self):
         """format_whisper_plan excludes suggestion when confidence < 0.8."""
@@ -304,7 +312,7 @@ class TestProactiveSuggestions:
         assert format_whisper_plan(None) == ""
 
     def test_suggestion_confidence_boundary_08(self):
-        """Confidence exactly at 0.8 should be included."""
+        """Confidence at 0.8 does NOT show in format_whisper_plan (R23: deduplicated)."""
         plan_dict = {
             "next_topic": "none",
             "extraction_targets": [],
@@ -314,7 +322,8 @@ class TestProactiveSuggestions:
             "suggestion_confidence": 0.8,
         }
         result = format_whisper_plan(plan_dict)
-        assert "Proactive suggestion" in result
+        # R23 fix C-001: suggestions no longer in format_whisper_plan
+        assert "Proactive suggestion" not in result
 
     def test_suggestion_confidence_boundary_079(self):
         """Confidence at 0.79 should NOT be included."""
@@ -328,6 +337,48 @@ class TestProactiveSuggestions:
         }
         result = format_whisper_plan(plan_dict)
         assert "Proactive suggestion" not in result
+
+    @pytest.mark.asyncio()
+    async def test_suggestion_not_injected_when_sentiment_none(self, base_state, _disable_features):
+        """Proactive suggestion is NOT injected when sentiment is None (R23 fix C-002)."""
+        base_state["guest_sentiment"] = None  # Detection disabled or failed
+        base_state["whisper_plan"] = {
+            "next_topic": "dining",
+            "extraction_targets": [],
+            "offer_readiness": 0.5,
+            "conversation_note": "Guest asked about dinner",
+            "proactive_suggestion": "Try Todd English's",
+            "suggestion_confidence": 0.95,
+        }
+
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="Here are our restaurants"))
+
+        mock_cb = AsyncMock()
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
+
+        with patch("src.agent.agents._base.get_settings") as mock_settings:
+            mock_settings.return_value = MagicMock(
+                PROPERTY_NAME="Mohegan Sun",
+                PROPERTY_PHONE="1-888-226-7711",
+                MAX_HISTORY_MESSAGES=20,
+            )
+
+            await execute_specialist(
+                base_state,
+                agent_name="host",
+                system_prompt_template=Template("You are a concierge for $property_name."),
+                context_header="Context",
+                no_context_fallback="No info.",
+                get_llm_fn=AsyncMock(return_value=mock_llm),
+                get_cb_fn=AsyncMock(return_value=mock_cb),
+            )
+
+        call_args = mock_llm.ainvoke.call_args[0][0]
+        system_msgs = [m for m in call_args if isinstance(m, SystemMessage)]
+        system_text = " ".join(m.content for m in system_msgs)
+        assert "Proactive Suggestion" not in system_text
 
     @pytest.mark.asyncio()
     async def test_suggestion_not_injected_when_frustrated(self, base_state, _disable_features):

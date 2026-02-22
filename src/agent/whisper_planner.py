@@ -267,13 +267,10 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
         f"Note: {note}",
     ]
 
-    # Phase 4: Include proactive suggestion when confidence is high enough
-    suggestion = plan.get("proactive_suggestion")
-    suggestion_conf = plan.get("suggestion_confidence", 0.0)
-    if suggestion and suggestion_conf >= 0.8:
-        lines.append(
-            f"Proactive suggestion ({suggestion_conf:.0%} confidence): {suggestion}"
-        )
+    # R23 fix C-001: proactive suggestion is injected by execute_specialist()
+    # in _base.py with proper sentiment gating and max-1 enforcement.
+    # Do NOT duplicate here — the dedicated section has better framing and
+    # guards. This function only formats the planning data.
 
     return "\n".join(lines)
 

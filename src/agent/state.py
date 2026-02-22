@@ -89,6 +89,12 @@ class PropertyQAState(TypedDict):
     # is preserved. This prevents accidental reset of the escalation counter
     # when per-turn fields are reset via _initial_state().
     responsible_gaming_count: Annotated[int, _keep_max]
+    # v4 fields (Phase 4: R21-R23)
+    # _keep_max reducer on bool: max(True, False) = True (booleans are ints).
+    # Once a proactive suggestion is injected, this stays True for the session.
+    # _initial_state() passes False; max(existing_True, False) = True (preserved).
+    # R23 fix C-003: enforces max-1-suggestion-per-conversation.
+    suggestion_offered: Annotated[int, _keep_max]
 
 
 class RouterOutput(BaseModel):

@@ -517,6 +517,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "guest_sentiment": None,
         "guest_context": {},
         "guest_name": None,
+        # v4 fields (Phase 4: R23 fix C-003)
+        "suggestion_offered": 0,  # _keep_max: max(True, False) = True (persists)
     }
 
 

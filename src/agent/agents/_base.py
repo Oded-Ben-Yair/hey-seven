@@ -214,10 +214,19 @@ async def execute_specialist(
         )
 
     # Phase 4: Proactive suggestion injection from whisper plan.
-    # Only inject when confidence >= 0.8, guest sentiment is not negative,
-    # and we have a suggestion. Max 1 per conversation (tracked by whisper planner).
+    # Only inject when: confidence >= 0.8, sentiment is explicitly positive/neutral
+    # (not None — must have positive evidence), and no prior suggestion this session.
+    # R23 fix C-002: require positive evidence of non-negative sentiment (not just
+    # absence of negative). When sentiment is None (detection disabled/failed),
+    # do NOT suggest — we can't know if the guest is frustrated.
+    # R23 fix C-003: check suggestion_offered to enforce max-1-per-conversation.
     whisper = state.get("whisper_plan")
-    if whisper and state.get("guest_sentiment") not in ("frustrated", "negative"):
+    suggestion_already_offered = state.get("suggestion_offered", False)
+    if (
+        whisper
+        and not suggestion_already_offered
+        and state.get("guest_sentiment") in ("positive", "neutral")
+    ):
         suggestion = whisper.get("proactive_suggestion")
         conf = whisper.get("suggestion_confidence", 0.0)
         if suggestion and conf >= 0.8:
@@ -227,6 +236,9 @@ async def execute_specialist(
                 "Only mention this if it fits naturally in your response. "
                 "Never push; if the guest doesn't bite, drop it."
             )
+            # R23 fix C-003: Mark suggestion as offered to enforce max-1.
+            # _keep_max reducer: max(True, False) = True, persists across turns.
+            suggestion_already_offered = True  # Used in return dict below
 
     # Build message list
     llm_messages = [SystemMessage(content=system_prompt)]
@@ -234,9 +246,18 @@ async def execute_specialist(
     # Phase 4: Persona drift prevention — re-inject condensed persona reminder
     # when conversation history exceeds threshold. Research: persona consistency
     # drops 20-40% over 10-15 turns without reinforcement.
-    if len(history) > _PERSONA_REINJECT_THRESHOLD:
+    # R23 fix H-002: count only HumanMessage instances for threshold check
+    # (retries add extra AIMessages that inflate the count).
+    human_turn_count = sum(1 for m in history if isinstance(m, HumanMessage))
+    if human_turn_count > _PERSONA_REINJECT_THRESHOLD // 2:
+        # R23 fix H-003: read persona name from branding config, not hardcoded
+        try:
+            from src.casino.config import DEFAULT_CONFIG
+            _persona_name = DEFAULT_CONFIG.get("branding", {}).get("persona_name", "Seven")
+        except Exception:
+            _persona_name = "Seven"
         llm_messages.append(SystemMessage(content=(
-            f"PERSONA REMINDER: You are Seven, the AI concierge for "
+            f"PERSONA REMINDER: You are {_persona_name}, the AI concierge for "
             f"{settings.PROPERTY_NAME}. Maintain your warm, professional tone. "
             "Never provide gambling advice or discuss competitors. "
             "Always stay on-property topics. Be concise and helpful."
@@ -266,7 +287,11 @@ async def execute_specialist(
             response = await llm.ainvoke(llm_messages)
         await cb.record_success()
         content = response.content if isinstance(response.content, str) else str(response.content)
-        return {"messages": [AIMessage(content=content)]}
+        result: dict = {"messages": [AIMessage(content=content)]}
+        # R23 fix C-003: persist suggestion_offered flag across turns
+        if suggestion_already_offered:
+            result["suggestion_offered"] = 1  # _keep_max: max(1, 0) = 1 (persists)
+        return result
     except (ValueError, TypeError) as exc:
         await cb.record_failure()
         logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)

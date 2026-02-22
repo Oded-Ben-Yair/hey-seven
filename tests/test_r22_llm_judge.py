@@ -199,7 +199,7 @@ class TestRegressionDetection:
         """Regression detected when a metric drops below baseline - threshold."""
         report = ConversationEvalReport(
             total_cases=5,
-            avg_empathy=0.25,  # Baseline is 0.40, drop is 0.15 > threshold 0.05
+            avg_empathy=0.20,  # Baseline is 0.35, drop is 0.15 > threshold 0.05
             avg_cultural_sensitivity=0.9,
             avg_conversation_flow=0.7,
             avg_persona_consistency=0.8,
@@ -213,11 +213,11 @@ class TestRegressionDetection:
         """No regression when drop is within threshold."""
         report = ConversationEvalReport(
             total_cases=5,
-            avg_empathy=0.52,  # Baseline 0.55, drop is 0.03 < threshold 0.05
-            avg_cultural_sensitivity=0.68,  # Baseline 0.70, drop is 0.02
-            avg_conversation_flow=0.48,  # Baseline 0.50, drop is 0.02
-            avg_persona_consistency=0.58,  # Baseline 0.60, drop is 0.02
-            avg_guest_experience=0.53,  # Baseline 0.55, drop is 0.02
+            avg_empathy=0.32,  # Baseline 0.35, drop is 0.03 < threshold 0.05
+            avg_cultural_sensitivity=0.58,  # Baseline 0.60, drop is 0.02
+            avg_conversation_flow=0.38,  # Baseline 0.40, drop is 0.02
+            avg_persona_consistency=0.48,  # Baseline 0.50, drop is 0.02
+            avg_guest_experience=0.43,  # Baseline 0.45, drop is 0.02
         )
         regressions = detect_regression(report, QUALITY_BASELINE)
         assert regressions == []
@@ -226,11 +226,11 @@ class TestRegressionDetection:
         """Multiple regressions detected simultaneously."""
         report = ConversationEvalReport(
             total_cases=5,
-            avg_empathy=0.30,  # -0.25 from baseline
-            avg_cultural_sensitivity=0.40,  # -0.30 from baseline
-            avg_conversation_flow=0.20,  # -0.30 from baseline
-            avg_persona_consistency=0.30,  # -0.30 from baseline
-            avg_guest_experience=0.25,  # -0.30 from baseline
+            avg_empathy=0.20,  # -0.15 from baseline 0.35
+            avg_cultural_sensitivity=0.40,  # -0.20 from baseline 0.60
+            avg_conversation_flow=0.20,  # -0.20 from baseline 0.40
+            avg_persona_consistency=0.30,  # -0.20 from baseline 0.50
+            avg_guest_experience=0.25,  # -0.20 from baseline 0.45
         )
         regressions = detect_regression(report, QUALITY_BASELINE)
         assert len(regressions) == 5
@@ -239,7 +239,7 @@ class TestRegressionDetection:
         """Custom threshold changes sensitivity."""
         report = ConversationEvalReport(
             total_cases=5,
-            avg_empathy=0.37,  # Drop of 0.03 from baseline 0.40
+            avg_empathy=0.32,  # Drop of 0.03 from baseline 0.35
             avg_cultural_sensitivity=0.9,
             avg_conversation_flow=0.7,
             avg_persona_consistency=0.8,
@@ -251,6 +251,33 @@ class TestRegressionDetection:
         regressions = detect_regression(report, QUALITY_BASELINE, threshold=0.02)
         assert len(regressions) == 1
         assert "empathy" in regressions[0]
+
+    def test_nan_score_detected(self):
+        """NaN scores are flagged as regressions (R23 fix C1)."""
+        report = ConversationEvalReport(
+            total_cases=5,
+            avg_empathy=float("nan"),
+            avg_cultural_sensitivity=0.9,
+            avg_conversation_flow=0.7,
+            avg_persona_consistency=0.8,
+            avg_guest_experience=0.75,
+        )
+        regressions = detect_regression(report, QUALITY_BASELINE)
+        assert any("NaN" in r for r in regressions)
+
+    def test_invalid_baseline_key_detected(self):
+        """Invalid baseline keys are flagged (R23 fix C3)."""
+        report = ConversationEvalReport(
+            total_cases=5,
+            avg_empathy=0.5,
+            avg_cultural_sensitivity=0.9,
+            avg_conversation_flow=0.7,
+            avg_persona_consistency=0.8,
+            avg_guest_experience=0.75,
+        )
+        bad_baseline = {"emphaty": 0.5}  # Typo
+        regressions = detect_regression(report, bad_baseline)
+        assert any("INVALID BASELINE" in r for r in regressions)
 
     def test_regression_with_empty_baseline(self):
         """No regression when baseline is empty."""
