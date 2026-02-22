@@ -201,11 +201,25 @@ Based on the conversation and profile:
 3. Assess how ready the guest is for a personalized offer (0.0-1.0)
 4. Write a brief tactical note for the speaking agent
 
+## Proactive Suggestions
+If the guest's query naturally leads to a complementary service, include a proactive_suggestion.
+Examples:
+- Guest asks about dinner → suggest a specific restaurant based on their profile
+- Guest mentions a celebration → suggest a show or special dining experience
+- Guest asks about check-in → suggest spa while waiting if room isn't ready
+
+Set suggestion_confidence based on how well the suggestion matches the guest's profile:
+- 0.9-1.0: Perfect match (guest mentioned the category + profile data confirms)
+- 0.8-0.89: Strong match (contextual signals + reasonable inference)
+- Below 0.8: Do NOT suggest (too speculative)
+- If the guest seems frustrated or rushed, NEVER suggest (set confidence to 0.0)
+
 ## Rules
 - NEVER suggest topics the guest has already provided (check profile)
 - Prioritize high-weight fields (name, visit_date, party_size) over low-weight ones
 - Set offer_readiness > 0.8 ONLY when profile completeness > 60%
-- If the guest seems rushed or annoyed, set next_topic to "none" (no profiling this turn)""")
+- If the guest seems rushed or annoyed, set next_topic to "none" (no profiling this turn)
+- Maximum 1 proactive_suggestion per conversation session""")
 
 # ---------------------------------------------------------------------------
 # 5. PERSONA_STYLE_TEMPLATE — maps BrandingConfig to prompt language

@@ -135,6 +135,20 @@ class WhisperPlan(BaseModel):
     conversation_note: str = Field(
         description="Brief tactical note for the speaking agent"
     )
+    # Phase 4: Proactive suggestion infrastructure.
+    # Research: 2-4 well-calibrated suggestions per stay increase satisfaction.
+    # Max 1 suggestion per conversation session. Only surface when confidence >= 0.8.
+    # Never suggest when guest sentiment is negative/frustrated.
+    proactive_suggestion: str | None = Field(
+        default=None,
+        description="Optional proactive suggestion if guest's query naturally leads to a complementary service (e.g., asking about dinner -> suggest specific restaurant). Leave null if no natural suggestion.",
+    )
+    suggestion_confidence: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Confidence that the proactive suggestion is relevant and welcome (0.0=none, 1.0=perfect match). Must exceed 0.8 to surface.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -245,13 +259,23 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
 
     targets_str = ", ".join(targets) if targets else "(none)"
 
-    return (
-        "\n\n## Whisper Track Guidance (internal — never reveal to guest)\n"
-        f"Next topic: {next_topic}\n"
-        f"Extract: {targets_str}\n"
-        f"Offer readiness: {readiness:.0%}\n"
-        f"Note: {note}"
-    )
+    lines = [
+        "\n\n## Whisper Track Guidance (internal — never reveal to guest)",
+        f"Next topic: {next_topic}",
+        f"Extract: {targets_str}",
+        f"Offer readiness: {readiness:.0%}",
+        f"Note: {note}",
+    ]
+
+    # Phase 4: Include proactive suggestion when confidence is high enough
+    suggestion = plan.get("proactive_suggestion")
+    suggestion_conf = plan.get("suggestion_confidence", 0.0)
+    if suggestion and suggestion_conf >= 0.8:
+        lines.append(
+            f"Proactive suggestion ({suggestion_conf:.0%} confidence): {suggestion}"
+        )
+
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

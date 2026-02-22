@@ -23,6 +23,7 @@ from src.agent.prompts import (
     get_persona_style,
     get_responsible_gaming_helplines,
 )
+from src.agent.sentiment import detect_sentiment
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
 from src.config import get_settings
@@ -36,6 +37,37 @@ logger = logging.getLogger(__name__)
 # Gemini API typical QPS limits: 60-300 RPM for Flash, so 20 concurrent
 # is conservative. R5 fix per Gemini F3 analysis.
 _LLM_SEMAPHORE = asyncio.Semaphore(20)
+
+# Phase 4: Persona drift prevention threshold.
+# Research: persona consistency drops 20-40% over 10-15 LLM turns.
+# Re-inject condensed persona reminder after this many messages in context.
+_PERSONA_REINJECT_THRESHOLD = 10  # ~5 human turns
+
+
+def _count_consecutive_frustrated(messages: list) -> int:
+    """Count consecutive frustrated/negative sentiments from recent HumanMessages.
+
+    Iterates messages in reverse, running sub-1ms VADER sentiment detection
+    on each HumanMessage. Returns count of consecutive frustrated/negative
+    messages before the first positive/neutral one.
+
+    Used for frustration escalation: when count >= 2, the speaking agent
+    injects a soft escalation offer to connect with a human host.
+
+    Research: HEART framework — guests in sustained distress need human
+    empathy, not AI persistence. 40-50% of escalations fail because they
+    happen too late.
+    """
+    count = 0
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage):
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            sentiment = detect_sentiment(content)
+            if sentiment in ("frustrated", "negative"):
+                count += 1
+            else:
+                break
+    return count
 
 
 def _fallback_message(reason: str = "trouble generating a response") -> str:
@@ -165,8 +197,50 @@ async def execute_specialist(
         if tone_guide:
             system_prompt += f"\n\n## Tone Guidance\n{tone_guide}"
 
+    # Phase 4: Frustration escalation — detect sustained negative sentiment
+    # from conversation history. When guest shows 2+ consecutive frustrated
+    # messages, inject soft escalation offer. Research: HEART framework.
+    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    frustrated_count = _count_consecutive_frustrated(history)
+    if frustrated_count >= 2 and state.get("guest_sentiment") in ("frustrated", "negative"):
+        system_prompt += (
+            "\n\n## Escalation Guidance\n"
+            "The guest has expressed frustration across multiple messages. "
+            "After addressing their current question, gently offer to connect "
+            "them with a human host who can provide more specialized assistance. "
+            "Use warm language like: \"I want to make sure you get the best "
+            "possible help — would you like me to connect you with one of our "
+            "dedicated hosts who can assist you personally?\""
+        )
+
+    # Phase 4: Proactive suggestion injection from whisper plan.
+    # Only inject when confidence >= 0.8, guest sentiment is not negative,
+    # and we have a suggestion. Max 1 per conversation (tracked by whisper planner).
+    whisper = state.get("whisper_plan")
+    if whisper and state.get("guest_sentiment") not in ("frustrated", "negative"):
+        suggestion = whisper.get("proactive_suggestion")
+        conf = whisper.get("suggestion_confidence", 0.0)
+        if suggestion and conf >= 0.8:
+            system_prompt += (
+                "\n\n## Proactive Suggestion (weave naturally, don't force)\n"
+                f"{suggestion}\n"
+                "Only mention this if it fits naturally in your response. "
+                "Never push; if the guest doesn't bite, drop it."
+            )
+
     # Build message list
     llm_messages = [SystemMessage(content=system_prompt)]
+
+    # Phase 4: Persona drift prevention — re-inject condensed persona reminder
+    # when conversation history exceeds threshold. Research: persona consistency
+    # drops 20-40% over 10-15 turns without reinforcement.
+    if len(history) > _PERSONA_REINJECT_THRESHOLD:
+        llm_messages.append(SystemMessage(content=(
+            f"PERSONA REMINDER: You are Seven, the AI concierge for "
+            f"{settings.PROPERTY_NAME}. Maintain your warm, professional tone. "
+            "Never provide gambling advice or discuss competitors. "
+            "Always stay on-property topics. Be concise and helpful."
+        )))
 
     # On retry, inject feedback
     if retry_count > 0 and retry_feedback:
@@ -180,7 +254,6 @@ async def execute_specialist(
     # Sliding window on conversation history.
     # On retry, exclude the last AIMessage (the one that failed validation)
     # to prevent the LLM from parroting the invalid response.
-    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
     if retry_count > 0 and history and isinstance(history[-1], AIMessage):
         history = history[:-1]
     window = history[-settings.MAX_HISTORY_MESSAGES:]
