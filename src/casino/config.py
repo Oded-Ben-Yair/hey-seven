@@ -425,7 +425,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "quiet_hours_start": "22:00",
             "quiet_hours_end": "08:00",
             "responsible_gaming_helpline": "1-800-522-4700",
-            "state_helpline": "",
+            "state_helpline": "1-800-522-4700",
             "self_exclusion_authority": "Nevada Gaming Control Board",
             "self_exclusion_url": "gaming.nv.gov",
         },

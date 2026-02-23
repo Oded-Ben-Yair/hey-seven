@@ -84,6 +84,10 @@ _KNOWN_NODES = frozenset({
     NODE_COMPLIANCE_GATE, NODE_PERSONA, NODE_WHISPER,
 })
 
+# Keys that only _dispatch_to_specialist may set — specialist agents should
+# not return these.  Module-level for zero per-call allocation (R33 fix).
+_DISPATCH_OWNED_KEYS = frozenset({"guest_context", "guest_name"})
+
 
 def _extract_node_metadata(node: str, output: Any) -> dict:
     """Extract per-node metadata for graph trace SSE events."""
@@ -221,7 +225,8 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
                 categories=categories,
             )
 
-            result: DispatchOutput = await dispatch_llm.ainvoke(prompt)
+            async with asyncio.timeout(get_settings().MODEL_TIMEOUT):
+                result: DispatchOutput = await dispatch_llm.ainvoke(prompt)
             await cb.record_success()
 
             # Validate that the specialist name is in the registry
@@ -293,7 +298,8 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
 
     # Guard: warn if specialist result contains keys that should only be
     # set by _dispatch_to_specialist (not the specialist agent itself).
-    _DISPATCH_OWNED_KEYS = frozenset({"guest_context", "guest_name"})
+    # R33 fix: _DISPATCH_OWNED_KEYS moved to module level (see below call site).
+
     collisions = _DISPATCH_OWNED_KEYS & set(result.keys())
     if collisions:
         logger.warning(

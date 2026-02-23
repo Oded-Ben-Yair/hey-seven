@@ -164,19 +164,23 @@ def create_app() -> FastAPI:
             logger.debug("Failed to collect circuit breaker metrics", exc_info=True)
             cb_metrics = {"state": "unknown", "error": "collection_failed"}
 
-        # Rate limiter client count: find the RateLimitMiddleware instance
-        # from the middleware stack. The middleware is added via add_middleware()
-        # which wraps it; we access it through the app's middleware_stack.
+        # Rate limiter client count: walk the ASGI middleware chain to find
+        # the actual RateLimitMiddleware instance (not the config in user_middleware).
+        # R33 fix: previous code iterated user_middleware (config objects) which
+        # never yields the live instance — rate_limit_clients was always 0.
         rate_limit_clients = 0
-        for mw in getattr(app, "user_middleware", []):
-            if mw.cls is RateLimitMiddleware:
-                # Middleware instances are not directly accessible from
-                # user_middleware (which stores config). Use a sentinel.
+        middleware = app.middleware_stack
+        while middleware is not None:
+            if isinstance(middleware, RateLimitMiddleware):
+                async with middleware._lock:
+                    rate_limit_clients = len(middleware._requests)
                 break
+            middleware = getattr(middleware, "app", None)
 
         settings = get_settings()
         return JSONResponse(content={
             "circuit_breaker": cb_metrics,
+            "rate_limit_clients": rate_limit_clients,
             "version": settings.VERSION,
             "environment": settings.ENVIRONMENT,
         })

@@ -226,6 +226,24 @@ _CONFUSABLES: dict[str, str] = {
     "\u0410": "A", "\u0415": "E", "\u041e": "O", "\u0420": "P",
     "\u0421": "C", "\u0422": "T", "\u0423": "Y", "\u0425": "X",
     "\u041d": "H", "\u041c": "M", "\u0412": "B", "\u041a": "K",
+    # Greek lowercase (R33 fix: missing Greek homoglyphs bypass normalization)
+    "\u03bf": "o",  # omicron
+    "\u03b1": "a",  # alpha
+    "\u03b5": "e",  # epsilon
+    "\u03b9": "i",  # iota
+    "\u03ba": "k",  # kappa
+    "\u03c1": "p",  # rho (visually similar to Latin 'p')
+    "\u03c5": "u",  # upsilon (visually similar to Latin 'u')
+    # Greek uppercase
+    "\u0391": "A",  # Alpha
+    "\u0395": "E",  # Epsilon
+    "\u039f": "O",  # Omicron
+    "\u039a": "K",  # Kappa
+    "\u0397": "H",  # Eta
+    "\u039c": "M",  # Mu
+    "\u03a4": "T",  # Tau
+    "\u0392": "B",  # Beta
+    "\u03a7": "X",  # Chi
 }
 
 

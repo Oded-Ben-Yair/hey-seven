@@ -27,6 +27,7 @@ from src.agent.prompts import (
 from src.agent.sentiment import detect_sentiment
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
+from src.casino.config import get_casino_profile
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -143,7 +144,6 @@ async def execute_specialist(
 
     # R29 fix: Inject property_description from casino profile for multi-property support.
     # Avoids hardcoding Mohegan Sun description in the system prompt template.
-    from src.casino.config import get_casino_profile
     _casino_profile = get_casino_profile(settings.CASINO_ID)
     _property_description = _casino_profile.get("property_description", "")
 
@@ -193,7 +193,6 @@ async def execute_specialist(
     # Phase 3: Inject persona style from BrandingConfig (fail-silent)
     # R27 fix H-003: use property-specific profile instead of DEFAULT_CONFIG
     try:
-        from src.casino.config import get_casino_profile
         _profile = get_casino_profile(settings.CASINO_ID)
         branding = _profile.get("branding", {})
         persona_style = get_persona_style(branding)
@@ -281,7 +280,6 @@ async def execute_specialist(
     if human_turn_count > _PERSONA_REINJECT_THRESHOLD // 2:
         # R23/R29 fix: read persona name from property-specific profile
         try:
-            from src.casino.config import get_casino_profile
             _persona_name = get_casino_profile(
                 settings.CASINO_ID
             ).get("branding", {}).get("persona_name", "Seven")
@@ -321,7 +319,7 @@ async def execute_specialist(
         result: dict = {"messages": [AIMessage(content=content)]}
         # R23 fix C-003: persist suggestion_offered flag across turns
         if suggestion_already_offered:
-            result["suggestion_offered"] = 1  # _keep_max: max(1, 0) = 1 (persists)
+            result["suggestion_offered"] = True  # _keep_truthy: once True, stays True
         return result
     except (ValueError, TypeError) as exc:
         await cb.record_failure()
