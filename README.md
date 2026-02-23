@@ -20,7 +20,7 @@ docker compose up --build
 
 Casino guests need quick, reliable answers about dining, entertainment, rooms, and amenities. This agent retrieves answers from a curated knowledge base using RAG and streams responses token-by-token via Server-Sent Events.
 
-The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (84 regex patterns across 4 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
+The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (185 regex patterns across 11 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
 
 The generate node delegates to **specialist agents** (host, dining, entertainment, comp, hotel) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
 
@@ -69,7 +69,7 @@ START ──> compliance_gate ──┬──> greeting ────────
 | Specialist agent registry | `agents/registry.py` | 5 specialist agents (host, dining, entertainment, comp, hotel) dispatched by query domain |
 | Whisper planner (silent LLM) | `whisper_planner.py` | Background planning with `WhisperPlan` structured output — fail-silent, per-turn, never guest-facing |
 | Persona envelope | `persona.py` | Channel-aware formatting (web pass-through vs SMS 160-char truncation) |
-| Compliance gate (deterministic) | `compliance_gate.py` | Pre-router node with 84 regex patterns — zero LLM cost, zero latency |
+| Compliance gate (deterministic) | `compliance_gate.py` | Pre-router node with 185 regex patterns across 11 languages — zero LLM cost, zero latency |
 | Per-turn state reset | `_initial_state()` | Non-message fields reset every turn; only `messages` persists via checkpointer |
 
 ## Real-Time Graph Trace
@@ -96,7 +96,7 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 | Config | `pydantic-settings` BaseSettings | 56 env-overridable settings, zero hardcoded values |
 | Retrieval | Multi-strategy RRF reranking | Reciprocal Rank Fusion of semantic + augmented queries, hash-based dedup |
 | Ingestion | Idempotent with deterministic IDs | SHA-256 content+source hash prevents duplicates on re-ingestion |
-| Guardrails | Deterministic regex + LLM validation | Pre-LLM compliance gate blocks injection; 5 categories, 84 patterns, 4 languages |
+| Guardrails | Deterministic regex + LLM validation | Pre-LLM compliance gate blocks injection; 5 categories, 185 patterns, 11 languages |
 | Specialist agents | Registry-based dispatch (5 agents) | Domain-specific prompts and tool selection per query type |
 | Guest profiles | Per-field confidence with decay | 90-day decay, weighted completeness, CCPA cascade delete |
 | SMS compliance | TCPA keyword handling + quiet hours | Deterministic STOP/HELP/START, 280+ area-code timezone mappings, HMAC-authenticated consent hash chain |
@@ -106,15 +106,15 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 
 ## Safety & Guardrails
 
-5 deterministic pre-LLM guardrail categories with 84 regex patterns across 4 languages (English, Spanish, Portuguese, Mandarin):
+5 deterministic pre-LLM guardrail categories with 185 compiled regex patterns across 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog):
 
 | Guardrail | Patterns | Trigger |
 |-----------|----------|---------|
-| Prompt Injection | 11 | Jailbreak attempts, system prompt extraction, encoding tricks, zero-width chars |
-| Responsible Gaming | 31 | Problem gambling concerns, self-exclusion requests (EN/ES/PT/ZH) |
-| Age Verification | 6 | Underage access, minimum age questions |
-| BSA/AML Compliance | 25 | Money laundering, structuring, CTR/SAR evasion, chip walking (EN/ES/PT/ZH) |
-| Patron Privacy | 11 | PII requests about other guests, player tracking, surveillance queries |
+| Prompt Injection | 47 | Jailbreak attempts, system prompt extraction, encoding tricks, zero-width chars (20 Latin + 27 non-Latin) |
+| Responsible Gaming | 60 | Problem gambling concerns, self-exclusion requests across 10 languages |
+| Age Verification | 13 | Underage access, minimum age questions (incl. Hindi/Tagalog) |
+| BSA/AML Compliance | 47 | Money laundering, structuring, CTR/SAR evasion, chip walking across 8 languages |
+| Patron Privacy | 18 | PII requests about other guests, player tracking, surveillance queries (incl. Spanish/Tagalog) |
 
 All guardrails fire in the **compliance gate node** before any LLM call and return deterministic responses with appropriate helpline numbers.
 
@@ -229,7 +229,7 @@ Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planne
 | A/B testing | SHA-256 hash-based splitting (scaffolded) | Feature flag service (LaunchDarkly / Statsig) |
 | Load testing | Not yet implemented | Locust or Artillery for throughput and latency validation |
 | Deployment | Single revision | Blue-green/canary via Cloud Run traffic splitting |
-| Adversarial testing | 84 regex patterns + LLM validation | OWASP prompt injection benchmarks, multilingual red-team testing |
+| Adversarial testing | 185 regex patterns + LLM validation | OWASP prompt injection benchmarks, multilingual red-team testing |
 
 ## Project Structure
 
@@ -242,7 +242,7 @@ hey-seven/
 │   │   ├── nodes.py              # Node functions + routing logic + circuit breaker
 │   │   ├── state.py              # PropertyQAState (13 fields) + 3 Pydantic output models
 │   │   ├── prompts.py            # Prompt templates (concierge, whisper planner, VIP tone)
-│   │   ├── guardrails.py         # 5 deterministic guardrails (84 patterns, 4 languages)
+│   │   ├── guardrails.py         # 5 deterministic guardrails (185 patterns, 11 languages)
 │   │   ├── compliance_gate.py    # Dedicated compliance node (pre-router, zero LLM cost)
 │   │   ├── whisper_planner.py    # Silent background planner (WhisperPlan structured output)
 │   │   ├── persona.py            # SMS/web persona envelope (160-char truncation)

@@ -30,6 +30,10 @@ assignment/
 !README.md
 !ARCHITECTURE.md
 
+# Claude Code session data (R41 fix D6-M004)
+.claude/
+.hypothesis/
+
 # IDE
 .vscode
 .idea

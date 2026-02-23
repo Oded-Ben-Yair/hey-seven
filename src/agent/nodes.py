@@ -122,8 +122,13 @@ def _get_last_human_message(messages: list) -> str:
 # construction stalls (e.g., network hiccup during lazy init), it must NOT
 # block main LLM acquisition.  This prevents cascading latency spikes and
 # request pileups during partial outages.
-# R40 fix D8-C001: Stagger TTLs with random jitter (0-300s) to prevent
+# ADR (R40 fix D8-C001): Stagger TTLs with random jitter (0-300s) to prevent
 # thundering herd when all singletons expire simultaneously after startup.
+# Why 0-300s: spreads re-creation across a 5-minute window instead of a single
+# instant. With 50 concurrent SSE streams, simultaneous expiry causes 50 parallel
+# GCP credential lookups. Additive jitter (not multiplicative) chosen for
+# simplicity — the absolute spread matters more than percentage for this use case.
+# RNG: random.randint() is non-cryptographic, appropriate for timing jitter.
 import random as _random
 
 _LLM_CACHE_TTL = 3600
@@ -446,6 +451,9 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
     return {
         "sources_used": sources,
         "retry_feedback": None,
+        # R41 fix D1-M001: Clear retrieved_context before checkpoint write to
+        # prevent stale chunk data from accumulating in Firestore checkpoints.
+        "retrieved_context": [],
     }
 
 
@@ -473,6 +481,8 @@ async def fallback_node(state: PropertyQAState) -> dict[str, Any]:
         ))],
         "sources_used": [],
         "retry_feedback": None,
+        # R41 fix D1-M001: Clear before checkpoint write (same as respond_node).
+        "retrieved_context": [],
     }
 
 
@@ -568,6 +578,9 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
             "What would you like to know?"
         ))],
         "sources_used": [],
+        # R41 fix D1-M001: Defensive clear (greeting never follows retrieve,
+        # but ensures clean checkpoint state).
+        "retrieved_context": [],
     }
 
 
@@ -677,6 +690,9 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     return {
         "messages": [AIMessage(content=content)],
         "sources_used": [],
+        # R41 fix D1-M001: Defensive clear (off_topic never follows retrieve,
+        # but ensures clean checkpoint state).
+        "retrieved_context": [],
     }
 
 

@@ -248,6 +248,37 @@ gcloud run deploy hey-seven \
 - **Remediation**: Verify `pii_redaction.redact_pii()` is called in feedback endpoint logging. Add missing PII patterns. Purge affected log entries from Cloud Logging.
 - **PII redaction behavior**: Fails CLOSED on error -- returns `[PII_REDACTION_ERROR]` safe placeholder, never passes through original text.
 
+### Graceful Shutdown (SIGTERM Drain)
+
+- **Mechanism**: On SIGTERM, `src/api/app.py` sets a `_shutting_down` asyncio.Event.
+  - New `/chat` requests return 503 immediately during drain.
+  - Active SSE streams are tracked via `_active_streams: set[asyncio.Task]`.
+  - Lifespan waits up to `_DRAIN_TIMEOUT_S` (30s) for active streams to complete.
+  - After drain timeout, pending streams are force-cancelled via `task.cancel()`.
+- **Interaction with Cloud Run**:
+  - Cloud Run sends SIGTERM and allows `--timeout=180s` for graceful shutdown (outer bound).
+  - uvicorn `--timeout-graceful-shutdown=15` handles non-SSE connections.
+  - The 30s drain timeout is for SSE streams specifically (longer than uvicorn's 15s because SSE streams may be mid-generation).
+- **Failure mode**: If all active streams complete within 30s, shutdown is clean. If streams exceed 30s, they are force-cancelled (client sees SSE connection drop; no data corruption since Firestore checkpoints are per-message, not per-stream).
+- **Monitoring**: SIGTERM handler logs `"SIGTERM received, initiating graceful drain (N active streams)"`. Force-close logs `"Force-closing N SSE streams after drain timeout"`.
+- **ADR (R40)**: Chose 30s drain timeout as compromise: long enough for typical LLM generation (P95 ~5s) plus validation loop, short enough to stay well within Cloud Run's 180s outer timeout. The 15s uvicorn graceful shutdown covers non-streaming HTTP requests; the 30s drain covers long-lived SSE connections.
+
+### TTL Jitter (Thundering Herd Prevention)
+
+- **Mechanism**: All 8 singleton caches in `src/agent/nodes.py` use `TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))`.
+- **Problem it solves**: Without jitter, all LLM singletons expire at the same time (3600s after process start). On expiry, all concurrent requests attempt to re-create LLM clients simultaneously (thundering herd). With 50 concurrent SSE streams, this means 50 parallel credential lookups to GCP.
+- **Jitter range**: 0-300s (5 minutes). Each cache gets an independent random offset at module import time. Spreads re-creation across a 5-minute window instead of a single instant.
+- **RNG choice**: `random.randint()` (non-cryptographic) is appropriate — this is timing jitter, not security-critical randomness.
+- **Parameters**: `_LLM_CACHE_TTL = 3600` (base, 1 hour). Jitter is additive (3600-3900s effective TTL).
+- **ADR (R40)**: Chose additive jitter over multiplicative (e.g., `ttl * uniform(0.9, 1.1)`) because additive is simpler to reason about and the absolute spread (0-300s) matters more than the percentage for thundering herd prevention.
+
+### URL Encoding Guardrail Bypass
+
+- **Mechanism**: `src/agent/guardrails.py` `_normalize_input()` applies iterative URL decoding (up to 3 rounds via `urllib.parse.unquote()`) before guardrail pattern matching.
+- **Why iterative**: Single-pass URL decoding misses double-encoded payloads (e.g., `%2569gnore%2520previous` → `%69gnore%20previous` → `ignore previous`). Three rounds handle triple-encoding (diminishing returns beyond that).
+- **Additional normalization**: HTML entity unescape, Unicode Cf category stripping, NFKD normalization, confusable character translation (68 chars via `str.maketrans()`), delimiter stripping, whitespace collapse.
+- **Length guard**: 8192 chars pre- AND post-normalization (prevents ReDoS via expansion attacks where short input normalizes to very long text).
+
 ---
 
 ## Stateful Components (Per-Process)

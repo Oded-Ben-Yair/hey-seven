@@ -42,10 +42,36 @@ steps:
       - '--no-progress'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'
 
+  # Step 3b: Generate SBOM (CycloneDX format) for supply chain transparency
+  # R41 fix D6-M001: SBOM generation per NIST SP 800-218 / EO 14028.
+  # Uses Trivy's built-in CycloneDX output (no extra tool installation).
+  - name: 'aquasec/trivy:0.58.2'
+    timeout: '120s'
+    args:
+      - 'image'
+      - '--format=cyclonedx'
+      - '--output=/workspace/sbom.json'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'
+
   # Step 4: Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     timeout: '120s'
     args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
+
+  # ---------------------------------------------------------------------------
+  # Image Signing ADR (R41 fix D6-M002)
+  # ---------------------------------------------------------------------------
+  # PLANNED: Cosign image signing for tamper-evidence.
+  # Requires: GCP KMS key (projects/$PROJECT_ID/locations/global/keyRings/cosign/cryptoKeys/hey-seven)
+  # Step would be:
+  #   - name: 'gcr.io/cloud-builders/docker'
+  #     entrypoint: 'bash'
+  #     args: ['-c', 'cosign sign --key gcpkms://... us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
+  # WHY NOT YET: KMS key provisioning not in Terraform/IaC yet. Single developer, no
+  # multi-party signing workflow. Cosign signing adds value when multiple actors can
+  # push images; currently only Cloud Build pushes.
+  # WHEN: Before first enterprise client onboards (requires supply chain attestation).
+  # ---------------------------------------------------------------------------
 
   # Step 5: Capture current revision for rollback
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'

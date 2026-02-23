@@ -466,11 +466,17 @@ class TestExtractNodeMetadata:
         meta = _extract_node_metadata("whisper_planner", output_no_plan)
         assert meta["has_plan"] is False
 
+    def test_generate_node_returns_specialist(self):
+        """Generate node returns specialist name metadata (R41 fix D1-M002)."""
+        from src.agent.graph import _extract_node_metadata
+
+        assert _extract_node_metadata("generate", {"specialist_name": "dining"}) == {"specialist": "dining"}
+        assert _extract_node_metadata("generate", {"some": "data"}) == {"specialist": None}
+
     def test_unknown_node_returns_empty(self):
         """Unknown or unhandled nodes return empty dict."""
         from src.agent.graph import _extract_node_metadata
 
-        assert _extract_node_metadata("generate", {"some": "data"}) == {}
         assert _extract_node_metadata("fallback", {}) == {}
 
     def test_non_dict_output_returns_empty(self):

@@ -89,6 +89,9 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
     if node == NODE_RETRIEVE:
         ctx = output.get("retrieved_context", [])
         return {"doc_count": len(ctx)}
+    if node == NODE_GENERATE:
+        # R41 fix D1-M002: Surface specialist name in SSE metadata for observability.
+        return {"specialist": output.get("specialist_name")}
     if node == NODE_VALIDATE:
         return {"result": output.get("validation_result")}
     if node == NODE_RESPOND:

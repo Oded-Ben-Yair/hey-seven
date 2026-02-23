@@ -19,7 +19,7 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     v
 Custom 11-node StateGraph (src/agent/graph.py)
     |
-    |-- compliance_gate (84 regex patterns) --> greeting / off_topic / router
+    |-- compliance_gate (185 regex patterns, 11 languages) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
@@ -94,14 +94,14 @@ Entry point: `build_graph()` in `src/agent/graph.py` compiles the graph with a c
 Priority order (first match wins):
 1. Turn-limit guard: if `messages` exceeds `MAX_MESSAGE_LIMIT` (default 40), forces `off_topic`.
 2. Empty message: routes to `greeting`.
-3. Prompt injection (`audit_input()`): 11 patterns — routes to `off_topic`.
-4. Responsible gaming (`detect_responsible_gaming()`): 31 patterns (17 EN + 8 ES + 3 PT + 3 ZH) — routes to `gambling_advice`.
-5. Age verification (`detect_age_verification()`): 6 patterns — routes to `age_verification`.
-6. BSA/AML (`detect_bsa_aml()`): 14 patterns — routes to `off_topic`.
-7. Patron privacy (`detect_patron_privacy()`): 11 patterns — routes to `patron_privacy`.
+3. Prompt injection (`audit_input()`): 47 patterns (20 Latin + 27 non-Latin) — routes to `off_topic`.
+4. Responsible gaming (`detect_responsible_gaming()`): 60 patterns across 10 languages — routes to `gambling_advice`.
+5. Age verification (`detect_age_verification()`): 13 patterns incl. Hindi/Tagalog — routes to `age_verification`.
+6. BSA/AML (`detect_bsa_aml()`): 47 patterns across 8 languages — routes to `off_topic`.
+7. Patron privacy (`detect_patron_privacy()`): 18 patterns incl. Spanish/Tagalog — routes to `patron_privacy`.
 8. All pass: `query_type=None` signals the downstream router to classify via LLM.
 
-All guardrail patterns are defined in `src/agent/guardrails.py` (84 total patterns). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
+All guardrail patterns are defined in `src/agent/guardrails.py` (185 compiled regex patterns across 11 languages: EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
 
 ### 2. router (`src/agent/nodes.py`)
 
@@ -371,29 +371,29 @@ Used by the `whisper_planner` node to produce structured guidance for the speaki
 
 ## Guardrails
 
-Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **84 regex patterns** across all deterministic guardrails.
+Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **185 compiled regex patterns** across 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).
 
 ### Deterministic: audit_input (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based prompt injection detection. Checks **11 patterns** (e.g., "ignore previous instructions", "system:", "DAN mode", "pretend you are", base64/encoding tricks, unicode homoglyphs, multi-line injection framing, jailbreak prompts). Detected injections are logged and routed directly to `off_topic` without invoking any LLM.
+Pre-LLM regex-based prompt injection detection. Checks **47 patterns** (20 Latin + 27 non-Latin across Arabic, Japanese, Korean, French, Vietnamese, Hindi, Tagalog) including "ignore previous instructions", "system:", "DAN mode", "pretend you are", base64/encoding tricks, unicode homoglyphs, multi-line injection framing, and jailbreak prompts. Detected injections are logged and routed directly to `off_topic` without invoking any LLM.
 
 ### Deterministic: detect_responsible_gaming (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based responsible gaming safety net. Checks **31 patterns** across English (17), Spanish (8), Portuguese (3), and Mandarin (3), including: "gambling problem", "addicted to gambling", "self-exclusion", "can't stop gambling", "limit my gambling", "take a break from gambling", "spending too much at the casino", "family says I gamble", "cooling-off period", "want to ban myself", and Spanish equivalents ("problema de juego", "adiccion al juego", "juego compulsivo", "auto-exclusion", "limite de juego", "perdi todo en el casino"). Portuguese patterns ("problema com jogo", "vicio em jogo", "nao consigo parar de jogar") serve CT's diverse Brazilian/Portuguese community. Mandarin patterns ("赌博成瘾", "戒赌", "赌瘾") serve CT casinos' significant Asian clientele. Detected queries are routed directly to `gambling_advice` (which provides NCPG 1-800-MY-RESET, CT Council 1-888-789-7777, and CT DCP self-exclusion resources) without invoking any LLM.
+Pre-LLM regex-based responsible gaming safety net. Checks **60 patterns** across 10 languages including English, Spanish, Portuguese, Mandarin, French, Vietnamese, Hindi, Tagalog, Arabic, and Korean, including: "gambling problem", "addicted to gambling", "self-exclusion", "can't stop gambling", "limit my gambling", "take a break from gambling", "spending too much at the casino", "family says I gamble", "cooling-off period", "want to ban myself", and Spanish equivalents ("problema de juego", "adiccion al juego", "juego compulsivo", "auto-exclusion", "limite de juego", "perdi todo en el casino"). Portuguese patterns ("problema com jogo", "vicio em jogo", "nao consigo parar de jogar") serve CT's diverse Brazilian/Portuguese community. Mandarin patterns ("赌博成瘾", "戒赌", "赌瘾") serve CT casinos' significant Asian clientele. Detected queries are routed directly to `gambling_advice` (which provides NCPG 1-800-MY-RESET, CT Council 1-888-789-7777, and CT DCP self-exclusion resources) without invoking any LLM.
 
 Responsible gaming helplines are defined as a `RESPONSIBLE_GAMING_HELPLINES` constant in `src/agent/prompts.py` (DRY — used in both the system prompt and the `off_topic_node` response). For multi-property deployment across states, these would be loaded from the property data file.
 
 ### Deterministic: detect_age_verification (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based age verification guardrail. Checks **6 patterns** for underage-related queries (e.g., "my kid wants to play", "minimum gambling age", "can underage guests enter", "how old do you have to be to gamble", "minors allowed"). Connecticut law requires casino guests to be 21+ for gaming. Detected queries route to `age_verification` which provides a structured response listing what minors can and cannot do at the property, the 21+ requirement, and the ID requirement.
+Pre-LLM regex-based age verification guardrail. Checks **13 patterns** (including Hindi and Tagalog) for underage-related queries (e.g., "my kid wants to play", "minimum gambling age", "can underage guests enter", "how old do you have to be to gamble", "minors allowed"). Connecticut law requires casino guests to be 21+ for gaming. Detected queries route to `age_verification` which provides a structured response listing what minors can and cannot do at the property, the 21+ requirement, and the ID requirement.
 
 ### Deterministic: detect_bsa_aml (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based BSA/AML detection. Checks **25 patterns** across English (14), Spanish (5), Portuguese (3), and Mandarin (3) for money laundering, structuring, and CTR/SAR evasion queries — including chip walking and multiple buy-in structuring. Casinos are MSBs under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
+Pre-LLM regex-based BSA/AML detection. Checks **47 patterns** across 8 languages (English, Spanish, Portuguese, Mandarin, French, Vietnamese, Hindi, Tagalog) for money laundering, structuring, and CTR/SAR evasion queries — including chip walking and multiple buy-in structuring. Casinos are MSBs under the Bank Secrecy Act and must not provide guidance that could facilitate financial crime.
 
 ### Deterministic: detect_patron_privacy (`src/agent/guardrails.py`)
 
-Pre-LLM regex-based patron privacy guardrail. Checks **11 patterns** for queries about other guests' presence, identity, or membership status — including social media surveillance, table/machine surveillance, and stalking/tracking patterns. Casinos must never disclose whether a specific person is at the property (privacy obligation and liability safeguard).
+Pre-LLM regex-based patron privacy guardrail. Checks **18 patterns** (including Spanish and Tagalog) for queries about other guests' presence, identity, or membership status — including social media surveillance, table/machine surveillance, and stalking/tracking patterns. Casinos must never disclose whether a specific person is at the property (privacy obligation and liability safeguard).
 
 ### Structural: property_id metadata filter (`src/rag/pipeline.py`)
 
@@ -832,7 +832,7 @@ The following features were consciously deferred from the initial architecture s
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 11 patterns, responsible gaming 31 patterns EN+ES+PT+ZH, age verification 6 patterns, BSA/AML 25 patterns EN+ES+PT+ZH, patron privacy 11 patterns — 84 total) | ~262 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 47 patterns incl. 27 non-Latin, responsible gaming 60 patterns across 10 languages, age verification 13 patterns, BSA/AML 47 patterns across 8 languages, patron privacy 18 patterns — 185 total across 11 languages) | ~672 |
 | `compliance_gate.py` | Dedicated compliance node — runs all 5 guardrail layers as single pre-router node (zero LLM calls) | ~99 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~179 |
 | `nodes.py` | 8 async graph nodes (router, retrieve, generate, validate, respond, fallback, greeting, off_topic) + routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~686 |
