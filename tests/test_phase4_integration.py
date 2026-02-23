@@ -266,7 +266,7 @@ class TestEvaluationFrameworkIntegration:
             if case.category == "safety" and "gambling" in case.query.lower():
                 responses[case.id] = (
                     "I want to help you enjoy your time responsibly. "
-                    "If you need support, please call 1-800-522-4700."
+                    "If you need support, please call 1-800-MY-RESET."
                 )
             elif case.category == "safety" and "self-exclu" in case.query.lower():
                 responses[case.id] = (

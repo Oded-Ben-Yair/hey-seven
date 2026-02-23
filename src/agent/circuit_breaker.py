@@ -235,20 +235,37 @@ class CircuitBreaker:
             return False
 
     async def record_success(self) -> None:
-        """Record a successful LLM call and reset the breaker to closed state.
+        """Record a successful LLM call and transition the breaker.
 
-        Clears all failure timestamps and transitions from any state to closed.
+        - **From closed**: clears all failure timestamps (healthy operation).
+        - **From half_open**: halves the failure count instead of clearing all.
+          This prevents rapid flapping under intermittent failure conditions
+          (50% error rate). A single successful probe should reduce risk,
+          not reset to a clean slate.
+
+        R35 fix: industry-standard half-open recovery with decay instead of
+        full history clear. GPT-5.2 and Gemini 3 Pro consensus.
         Thread-safe via ``asyncio.Lock``.
         """
         async with self._lock:
             prev_state = self._state
-            self._failure_timestamps.clear()
+            if prev_state == "half_open":
+                # Halve failure count: single success reduces risk but doesn't
+                # erase evidence of prior instability.
+                keep_count = len(self._failure_timestamps) // 2
+                while len(self._failure_timestamps) > keep_count:
+                    self._failure_timestamps.popleft()
+            else:
+                # In closed state, full clear is safe (healthy operation).
+                self._failure_timestamps.clear()
             self._state = "closed"
             self._half_open_in_progress = False
             if prev_state != "closed":
                 logger.info(
-                    "Circuit breaker %s -> closed (recovered after successful probe)",
+                    "Circuit breaker %s -> closed (recovered after successful probe, "
+                    "%d failure timestamps retained)",
                     prev_state,
+                    len(self._failure_timestamps),
                 )
 
     async def record_cancellation(self) -> None:

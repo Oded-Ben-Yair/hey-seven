@@ -8,10 +8,12 @@ Switch via STATE_BACKEND env var: "memory" (default) | "redis".
 
 import logging
 import random
+import threading
 import time
 from abc import ABC, abstractmethod
-from functools import lru_cache
 from typing import Any
+
+from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
@@ -166,17 +168,40 @@ class RedisBackend(StateBackend):
         self._client.delete(key)
 
 
-@lru_cache(maxsize=1)
+# R35 CRITICAL fix: Migrate from @lru_cache to TTLCache for credential rotation.
+# Redis connection may drop; TTLCache allows periodic reconnection attempt.
+_state_backend_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_state_backend_lock = threading.Lock()
+
+
 def get_state_backend() -> StateBackend:
     """Return the configured state backend singleton."""
-    from src.config import get_settings
+    cached = _state_backend_cache.get("backend")
+    if cached is not None:
+        return cached
 
-    settings = get_settings()
-    backend_type = getattr(settings, "STATE_BACKEND", "memory")
-    if backend_type == "redis":
-        redis_url = getattr(settings, "REDIS_URL", "")
-        if not redis_url:
-            logger.warning("STATE_BACKEND=redis but REDIS_URL not set, falling back to memory")
-            return InMemoryBackend()
-        return RedisBackend(redis_url)
-    return InMemoryBackend()
+    with _state_backend_lock:
+        # Double-check after acquiring lock
+        cached = _state_backend_cache.get("backend")
+        if cached is not None:
+            return cached
+
+        from src.config import get_settings
+
+        settings = get_settings()
+        backend_type = getattr(settings, "STATE_BACKEND", "memory")
+        if backend_type == "redis":
+            redis_url = getattr(settings, "REDIS_URL", "")
+            if not redis_url:
+                logger.warning("STATE_BACKEND=redis but REDIS_URL not set, falling back to memory")
+                backend = InMemoryBackend()
+            else:
+                backend = RedisBackend(redis_url)
+        else:
+            backend = InMemoryBackend()
+        _state_backend_cache["backend"] = backend
+        return backend
+
+
+# Backward-compat shim: conftest.py uses get_state_backend.cache_clear()
+get_state_backend.cache_clear = _state_backend_cache.clear

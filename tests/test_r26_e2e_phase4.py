@@ -558,7 +558,7 @@ class TestCasinoProfiles:
         profile = get_casino_profile("mohegan_sun")
         assert profile["regulations"]["state"] == "CT"
         assert profile["branding"]["persona_name"] == "Seven"
-        assert profile["regulations"]["responsible_gaming_helpline"] == "1-800-522-4700"
+        assert profile["regulations"]["responsible_gaming_helpline"] == "1-800-MY-RESET"
 
     def test_hard_rock_ac_profile(self):
         """Hard Rock AC has correct NJ state and persona."""

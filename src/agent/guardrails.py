@@ -257,12 +257,12 @@ _BSA_AML_PATTERNS = [
     re.compile(r"trốn\s+thuế", re.I),                              # tax evasion (trốn thuế)
     # Hindi BSA/AML patterns (NJ/CT significant Indian-American clientele)
     re.compile(r"(?:धन\s*शोधन|मनी\s*लॉन्ड्रिंग)", re.I),  # money laundering (धन शोधन)
-    re.compile(r"काल[ाे]?\s*(?:धन|पैसे?)", re.I),  # black money (काला धन)
+    re.compile(r"काल[ाे]\s*(?:धन|पैसे?)", re.I),  # black money (काला धन) — R35 fix: matra required to avoid "काल" (time) false positive
     re.compile(r"(?:छोटे[- ]?छोटे|बांटकर)\s*(?:जमा|डिपॉज़िट|कैश)", re.I),  # structuring deposits
     re.compile(r"(?:पैसे?|धन|कैश)\s*(?:छुपा|छिपा|हाइड)", re.I),  # hide money
     re.compile(r"(?:कर\s*चोरी|टैक्स\s*(?:चोरी|से\s+बच))", re.I),  # tax evasion (कर चोरी)
     # Tagalog BSA/AML patterns
-    re.compile(r"\blabada\s+ng\s+pera", re.I),  # money laundering (labada ng pera)
+    re.compile(r"\b(?:paghuhugas|hugasan)\s+ng\s+pera", re.I),  # money laundering (R35 fix: "labada" is literal laundry; "paghuhugas ng pera" is standard Filipino)
     re.compile(r"\bpaano\s+(?:mag[- ]?)?launder", re.I),  # how to launder
     re.compile(r"\bitago\s+(?:ang\s+)?(?:mga\s+)?pera", re.I),  # hide money
     re.compile(r"\bputol[- ]?putol\s+(?:na\s+)?(?:deposit|deposito)", re.I),  # structuring deposits
@@ -292,6 +292,15 @@ _PATRON_PRIVACY_PATTERNS = [
     # Specific table/machine surveillance
     re.compile(r"\bwho\s+(?:is|was)\s+(?:at|on|playing\s+at)\s+(?:table|machine|slot)\b", re.I),
     re.compile(r"\b(?:track|follow|watch|stalk)\s+(?:a\s+|that\s+)?(?:guest|patron|player|person|someone)\b", re.I),
+    # Spanish patron privacy patterns (R35 fix: English-only was the outlier among guardrail categories)
+    re.compile(r"\bd[oó]nde\s+est[aá]\s+(?:mi\s+)?(?:esposo|esposa|pareja|amigo|amiga)\b", re.I),  # where is my husband/wife/friend
+    re.compile(r"\b(?:est[aá]|estuvo)\s+[\w\s]+\s+(?:en\s+el\s+)?casino\b", re.I),  # is/was [someone] at the casino
+    re.compile(r"\b(?:busco|buscando)\s+(?:a\s+)?(?:un\s+)?(?:hu[eé]sped|jugador|persona)\b", re.I),  # looking for a guest/player
+    re.compile(r"\bquien\s+est[aá]\s+(?:en|jugando\s+en)\s+(?:la\s+)?mesa\b", re.I),  # who is at the table
+    # Tagalog patron privacy patterns (R35 fix)
+    re.compile(r"\bnasaan\s+(?:ang\s+)?(?:asawa|kaibigan|kasama)\s+ko\b", re.I),  # where is my spouse/friend
+    re.compile(r"\bnandito\s+(?:ba\s+)?(?:si|ang)\s+", re.I),  # is [someone] here
+    re.compile(r"\bsino\s+(?:ang\s+)?(?:nasa|naglalaro\s+sa)\s+(?:mesa|machine)\b", re.I),  # who is at the table/machine
 ]
 
 # ---------------------------------------------------------------------------
@@ -354,8 +363,13 @@ def _normalize_input(text: str) -> str:
     collapses whitespace. This makes regex patterns effective against
     Unicode homoglyph attacks and encoding tricks.
     """
-    # Remove zero-width characters (already caught by regex, but defense in depth)
-    text = re.sub(r"[\u200b-\u200f\u2028-\u202f\ufeff]", "", text)
+    # Remove ALL Unicode format characters (category Cf) — zero-width joiners,
+    # bidi isolates/overrides, word joiners, interlinear annotations, etc.
+    # R35 CRITICAL fix: previous regex only covered \u200b-\u200f, \u2028-\u202f,
+    # \ufeff. Missing: \u2060 (Word Joiner), \u2066-\u2069 (Bidi Isolates),
+    # \u202A-\u202E (Bidi Override), \u180E (Mongolian Vowel Separator),
+    # \uFFF9-\uFFFB (Interlinear Annotation). Category-based stripping catches all.
+    text = "".join(c for c in text if unicodedata.category(c) != "Cf")
     # Replace cross-script homoglyphs (Cyrillic/Greek → Latin) — O(n) single pass
     text = text.translate(_CONFUSABLES_TABLE)
     # Normalize Unicode to NFKD (decomposes characters to base + combining marks)

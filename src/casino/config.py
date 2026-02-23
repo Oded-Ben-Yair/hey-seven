@@ -150,7 +150,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "ai_disclosure_law": "",
         "quiet_hours_start": "21:00",
         "quiet_hours_end": "08:00",
-        "responsible_gaming_helpline": "1-800-522-4700",
+        "responsible_gaming_helpline": "1-800-MY-RESET",
         "state_helpline": "",
     },
     "operational": {
@@ -211,10 +211,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "state": "CT",
             "gaming_age_minimum": 21,
             "ai_disclosure_required": True,
-            "ai_disclosure_law": "",
+            "ai_disclosure_law": "CT SB 2 (effective Oct 1, 2026)",
             "quiet_hours_start": "21:00",
             "quiet_hours_end": "08:00",
-            "responsible_gaming_helpline": "1-800-522-4700",
+            "responsible_gaming_helpline": "1-800-MY-RESET",
             "state_helpline": "1-888-789-7777",
             "self_exclusion_authority": "CT Department of Consumer Protection",
             "self_exclusion_url": "ct.gov/selfexclusion",
@@ -282,10 +282,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "state": "CT",
             "gaming_age_minimum": 21,
             "ai_disclosure_required": True,
-            "ai_disclosure_law": "",
+            "ai_disclosure_law": "CT SB 2 (effective Oct 1, 2026)",
             "quiet_hours_start": "21:00",
             "quiet_hours_end": "08:00",
-            "responsible_gaming_helpline": "1-800-522-4700",
+            "responsible_gaming_helpline": "1-800-MY-RESET",
             "state_helpline": "1-888-789-7777",
             "self_exclusion_authority": "CT Department of Consumer Protection",
             "self_exclusion_url": "ct.gov/selfexclusion",
@@ -360,6 +360,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "state_helpline": "1-800-848-1880",
             "self_exclusion_authority": "PA Gaming Control Board",
             "self_exclusion_url": "gamingcontrolboard.pa.gov",
+            "self_exclusion_phone": "1-855-405-1429",  # R35 fix: PGCB Self-Exclusion Program
         },
         "operational": {
             "timezone": "America/New_York",
@@ -426,10 +427,11 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "ai_disclosure_law": "",
             "quiet_hours_start": "22:00",
             "quiet_hours_end": "08:00",
-            "responsible_gaming_helpline": "1-800-522-4700",
-            "state_helpline": "1-800-522-4700",
+            "responsible_gaming_helpline": "1-800-MY-RESET",
+            "state_helpline": "1-800-GAMBLER",
             "self_exclusion_authority": "Nevada Gaming Control Board",
             "self_exclusion_url": "gaming.nv.gov",
+            "self_exclusion_phone": "1-702-486-2000",  # R35 fix: NGCB main line
         },
         "operational": {
             "timezone": "America/Los_Angeles",
@@ -500,7 +502,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "state_helpline": "1-800-GAMBLER",
             "self_exclusion_authority": "NJ Division of Gaming Enforcement",
             "self_exclusion_options": "1-year, 5-year, or lifetime",
-            "self_exclusion_url": "nj.gov/oag/ge/selfexclusion.html",
+            "self_exclusion_url": "njportal.com/dge/selfexclusion",
+            "self_exclusion_phone": "1-833-788-4DGE",
         },
         "operational": {
             "timezone": "America/New_York",
@@ -551,7 +554,13 @@ def get_casino_profile(casino_id: str) -> dict[str, Any]:
             "Unknown casino_id=%s, falling back to DEFAULT_CONFIG (Mohegan Sun defaults)",
             casino_id,
         )
-        return DEFAULT_CONFIG
+        # R35 fix: return deepcopy to prevent caller mutation of global default.
+        # get_casino_config() (async) already uses deepcopy — this makes the sync
+        # path consistent. Without this, any caller mutating the returned dict
+        # (e.g., profile["branding"]["persona_name"] = "X") corrupts the global
+        # DEFAULT_CONFIG for ALL subsequent calls across all requests.
+        import copy
+        return copy.deepcopy(DEFAULT_CONFIG)
     return profile
 
 

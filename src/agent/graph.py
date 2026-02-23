@@ -190,6 +190,11 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     retrieved = state.get("retrieved_context", [])
     dispatch_method = "keyword_fallback"
 
+    # R35 fix A2: Hoist settings once to eliminate TOCTOU from 5 separate calls.
+    # Settings are TTL-cached (1 hour), but if the TTL expires between call 1
+    # and call 5, the function operates with mixed configuration values.
+    settings = get_settings()
+
     # --- Try structured LLM dispatch first ---
     # R15 fix (DeepSeek F-001, GPT F1): acquire CB before try block to prevent
     # UnboundLocalError in except handlers if _get_circuit_breaker() itself raises.
@@ -213,7 +218,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
                 categories=categories,
             )
 
-            async with asyncio.timeout(get_settings().MODEL_TIMEOUT):
+            async with asyncio.timeout(settings.MODEL_TIMEOUT):
                 result: DispatchOutput = await dispatch_llm.ainvoke(prompt)
             await cb.record_success()
 
@@ -256,7 +261,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
     # When disabled, all queries route to the general host concierge.
     # Uses async is_feature_enabled() for multi-tenant support (per-casino overrides).
-    if agent_name != "host" and not await is_feature_enabled(get_settings().CASINO_ID, "specialist_agents_enabled"):
+    if agent_name != "host" and not await is_feature_enabled(settings.CASINO_ID, "specialist_agents_enabled"):
         logger.info("Specialist agents disabled; routing %s to host", agent_name)
         agent_name = "host"
 
@@ -264,7 +269,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # Fail-silent: profile lookup failure = empty context, not crash.
     guest_context_update: dict[str, Any] = {}
     try:
-        if await is_feature_enabled(get_settings().CASINO_ID, "guest_profile_enabled"):
+        if await is_feature_enabled(settings.CASINO_ID, "guest_profile_enabled"):
             from src.data.guest_profile import get_agent_context
             extracted = state.get("extracted_fields", {})
             if extracted:
@@ -287,13 +292,13 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # (prompt assembly + LLM invoke + retries). Without this, a hung specialist
     # blocks the entire graph indefinitely.
     try:
-        async with asyncio.timeout(get_settings().MODEL_TIMEOUT * 2):
+        async with asyncio.timeout(settings.MODEL_TIMEOUT * 2):
             result = await agent_fn({**state, **guest_context_update})
     except TimeoutError:
         logger.error(
             "Specialist %s timed out after %ds — returning fallback",
             agent_name,
-            get_settings().MODEL_TIMEOUT * 2,
+            settings.MODEL_TIMEOUT * 2,
         )
         result = {
             "messages": [AIMessage(content=(

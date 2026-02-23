@@ -935,7 +935,7 @@ class TestTagalogBsaAml:
     @pytest.mark.parametrize(
         "message,description",
         [
-            ("labada ng pera sa casino", "Tagalog: money laundering at casino"),
+            ("paghuhugas ng pera sa casino", "Tagalog: money laundering at casino"),
             ("paano mag-launder ng pera?", "Tagalog: how to launder money?"),
             ("itago ang mga pera ko", "Tagalog: hide my money"),
             ("putol-putol na deposit para hindi malaman", "Tagalog: structuring deposits"),

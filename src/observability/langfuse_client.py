@@ -11,8 +11,10 @@ LANGFUSE_PUBLIC_KEY is not set.
 
 import logging
 import random
-from functools import lru_cache
+import threading
 from typing import Any
+
+from cachetools import TTLCache
 
 from src.config import get_settings
 
@@ -22,39 +24,56 @@ logger = logging.getLogger(__name__)
 _PRODUCTION_SAMPLE_RATE = 0.10
 _DEV_SAMPLE_RATE = 1.0
 
+# R35 CRITICAL fix: Migrate from @lru_cache to TTLCache for credential rotation.
+# LangFuse credentials may rotate (GCP Workload Identity, secret manager rotation).
+# @lru_cache never expires — requires container restart. TTLCache gives 1-hour refresh.
+_langfuse_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_langfuse_lock = threading.Lock()
 
-@lru_cache(maxsize=1)
+
 def _get_langfuse_client() -> Any | None:
     """Initialize LangFuse client if configured.
 
     Lazy-imports langfuse to avoid import failures when
-    the package is not installed.
+    the package is not installed. Uses TTLCache (1-hour TTL)
+    for credential rotation support.
 
     Returns:
         Langfuse client instance or None if not configured.
     """
-    settings = get_settings()
+    cached = _langfuse_cache.get("client")
+    if cached is not None:
+        return cached
 
-    if not settings.LANGFUSE_PUBLIC_KEY:
-        logger.debug("LangFuse not configured (no LANGFUSE_PUBLIC_KEY)")
-        return None
+    with _langfuse_lock:
+        # Double-check after acquiring lock
+        cached = _langfuse_cache.get("client")
+        if cached is not None:
+            return cached
 
-    try:
-        from langfuse import Langfuse  # noqa: E402
+        settings = get_settings()
 
-        client = Langfuse(
-            public_key=settings.LANGFUSE_PUBLIC_KEY,
-            secret_key=settings.LANGFUSE_SECRET_KEY.get_secret_value(),
-            host=settings.LANGFUSE_HOST,
-        )
-        logger.info("LangFuse client initialized (host=%s)", settings.LANGFUSE_HOST)
-        return client
-    except ImportError:
-        logger.debug("langfuse package not installed; observability disabled")
-        return None
-    except Exception:
-        logger.warning("LangFuse client init failed; observability disabled", exc_info=True)
-        return None
+        if not settings.LANGFUSE_PUBLIC_KEY:
+            logger.debug("LangFuse not configured (no LANGFUSE_PUBLIC_KEY)")
+            return None
+
+        try:
+            from langfuse import Langfuse  # noqa: E402
+
+            client = Langfuse(
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY.get_secret_value(),
+                host=settings.LANGFUSE_HOST,
+            )
+            logger.info("LangFuse client initialized (host=%s)", settings.LANGFUSE_HOST)
+            _langfuse_cache["client"] = client
+            return client
+        except ImportError:
+            logger.debug("langfuse package not installed; observability disabled")
+            return None
+        except Exception:
+            logger.warning("LangFuse client init failed; observability disabled", exc_info=True)
+            return None
 
 
 def is_observability_enabled() -> bool:
@@ -135,4 +154,9 @@ def get_langfuse_handler(
 
 def clear_langfuse_cache() -> None:
     """Clear the LangFuse client cache (for testing)."""
-    _get_langfuse_client.cache_clear()
+    _langfuse_cache.clear()
+
+
+# Backward-compat shim: conftest.py and other callers use
+# _get_langfuse_client.cache_clear() — provide the same interface.
+_get_langfuse_client.cache_clear = _langfuse_cache.clear

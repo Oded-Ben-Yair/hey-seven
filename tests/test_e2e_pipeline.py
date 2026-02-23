@@ -293,7 +293,7 @@ class TestE2EPipelineResponsibleGaming:
 
         # Should include helpline information
         last_content = ai_messages[-1].content
-        assert "1-800-522-4700" in last_content or "problem gambling" in last_content.lower()
+        assert "1-800-MY-RESET" in last_content or "problem gambling" in last_content.lower()
 
 
 class TestE2EPipelinePropertyQA:

@@ -11,7 +11,10 @@ Constants:
   used in both the system prompt and the off_topic_node)
 """
 
+import logging
 from string import Template
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Responsible Gaming Helplines
@@ -60,7 +63,14 @@ def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
                     lines.append(f"- {state_code} State Helpline: {state_helpline}")
                 return "\n".join(lines)
         except Exception:
-            pass  # Fall through to default
+            # R35 fix: Log the failure instead of silently swallowing.
+            # Silent pass caused R25-R31 multi-tenant helpline bug to persist —
+            # NJ guests received CT helplines without any log warning.
+            logger.warning(
+                "Helpline lookup failed for casino_id=%s, falling back to default",
+                casino_id,
+                exc_info=True,
+            )
     return RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
 # ---------------------------------------------------------------------------

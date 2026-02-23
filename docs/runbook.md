@@ -447,7 +447,7 @@ Five deterministic guardrail layers run before any LLM call:
 These are handled automatically by deterministic guardrails (NO human judgment needed):
 
 - **Self-exclusion mentions**: Auto-provides DMHAS 1-888-789-7777 (Connecticut)
-- **Problem gambling**: Auto-provides 1-800-522-4700 (NCPG)
+- **Problem gambling**: Auto-provides 1-800-MY-RESET (NCPG)
 - **BSA/AML suspicious**: Auto-redirects to appropriate authorities
 - **Underage mentions**: Auto-provides age verification info
 

@@ -279,8 +279,8 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 166, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 166. "
+        assert len(patterns) == 173, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 173. "
             f"Update docs if patterns were added/removed."
         )
 

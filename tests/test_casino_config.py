@@ -334,7 +334,7 @@ class TestRegulationConfig:
         assert regs["ai_disclosure_required"] is True
         assert regs["quiet_hours_start"] == "21:00"
         assert regs["quiet_hours_end"] == "08:00"
-        assert regs["responsible_gaming_helpline"] == "1-800-522-4700"
+        assert regs["responsible_gaming_helpline"] == "1-800-MY-RESET"
 
 
 # ---------------------------------------------------------------------------
@@ -514,7 +514,7 @@ class TestCasinoProfiles:
         regs = profile["regulations"]
         assert regs["state"] == "NV"
         assert regs["gaming_age_minimum"] == 21
-        assert regs["responsible_gaming_helpline"] == "1-800-522-4700"
+        assert regs["responsible_gaming_helpline"] == "1-800-MY-RESET"
         assert regs["self_exclusion_authority"] == "Nevada Gaming Control Board"
         assert profile["operational"]["timezone"] == "America/Los_Angeles"
 

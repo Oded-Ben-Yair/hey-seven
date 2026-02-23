@@ -256,7 +256,7 @@ class TestFullGraphE2E:
         response_text = result["response"]
 
         # Response should contain helpline information
-        assert "1-800-522-4700" in response_text or "helpline" in response_text.lower() or "problem gambling" in response_text.lower()
+        assert "1-800-MY-RESET" in response_text or "helpline" in response_text.lower() or "problem gambling" in response_text.lower()
 
         # RAG retrieval should NOT be called (guardrail bypasses router+retrieve)
         mock_search.assert_not_called()

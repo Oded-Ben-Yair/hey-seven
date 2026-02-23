@@ -174,13 +174,16 @@ class TestGetCasinoProfile:
         from src.casino.config import DEFAULT_CONFIG, get_casino_profile
 
         profile = get_casino_profile("nonexistent_casino")
-        assert profile is DEFAULT_CONFIG
+        # R35: get_casino_profile now returns deepcopy to prevent mutation of global
+        assert profile == DEFAULT_CONFIG
+        assert profile is not DEFAULT_CONFIG  # Must be a copy, not the original
 
     def test_returns_default_config_for_empty_string(self):
         from src.casino.config import DEFAULT_CONFIG, get_casino_profile
 
         profile = get_casino_profile("")
-        assert profile is DEFAULT_CONFIG
+        assert profile == DEFAULT_CONFIG
+        assert profile is not DEFAULT_CONFIG  # Must be a copy, not the original
 
 
 # ---------------------------------------------------------------------------
