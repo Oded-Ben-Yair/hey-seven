@@ -11,6 +11,21 @@ the query.  Falls back to deterministic keyword counting when the LLM is
 unavailable (circuit breaker open, parsing failure, network error).  The agent
 is resolved via ``get_agent()`` from the registry.  The node name ``"generate"``
 is preserved for SSE streaming compatibility.
+
+Concurrency Model
+-----------------
+- **Max concurrent streams**: Bounded by Cloud Run ``--concurrency=50`` (container-level).
+  Each ``chat_stream()`` call runs as an independent async generator tracked by
+  ``_active_streams`` in ``app.py``.  No graph-level concurrency limit; backpressure
+  is at the LLM call layer via ``asyncio.Semaphore(20)`` in ``_base.py``.
+- **Checkpointer thread safety**: ``MemorySaver`` (local dev) is thread-safe but
+  serializes writes.  ``FirestoreSaver`` (production) supports concurrent read/write
+  across instances.  Concurrent writes to the *same* ``thread_id`` are last-write-wins
+  — acceptable because each thread_id maps to a single user session.
+- **Singleton safety**: LLM clients, circuit breaker, retriever, and settings are
+  TTL-cached with ``asyncio.Lock`` (async) or ``threading.Lock`` (sync) guards.
+  Separate locks per client type (main LLM, validator LLM) prevent cascading stalls
+  during credential refresh.
 """
 
 import asyncio
@@ -25,6 +40,7 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -643,10 +659,28 @@ async def chat(
     if handler:
         config["callbacks"] = [handler]
 
-    result = await graph.ainvoke(
-        _initial_state(message),
-        config=config,
-    )
+    try:
+        result = await graph.ainvoke(
+            _initial_state(message),
+            config=config,
+        )
+    except GraphRecursionError:
+        # R42 fix D1-M001: Catch GraphRecursionError when the validate->generate
+        # retry loop exceeds GRAPH_RECURSION_LIMIT. The retry_count bounds (max 1)
+        # should prevent this, but a bug in retry tracking could trigger it.
+        logger.error(
+            "GraphRecursionError: recursion limit reached (thread_id=%s). "
+            "This indicates a bug in retry_count tracking.",
+            thread_id,
+        )
+        return {
+            "response": (
+                "I apologize, but I encountered an issue processing your request. "
+                "Please try again, or contact us directly for assistance."
+            ),
+            "thread_id": thread_id,
+            "sources": [],
+        }
 
     # Extract final AI response
     messages = result.get("messages", [])
@@ -703,9 +737,14 @@ async def chat_stream(
     if handler:
         config["callbacks"] = [handler]
 
+    # R42 fix D4-M001: Emit retry:0 to disable browser EventSource auto-reconnect.
+    # Without this, network blips cause the browser to reconnect and resend the
+    # message, creating duplicate LLM calls and duplicate conversation messages.
+    # Full Last-Event-ID reconnection support (caching + replay) is deferred to
+    # post-MVP; for now, disabling auto-reconnect prevents the duplicate problem.
     yield {
         "event": "metadata",
-        "data": json.dumps({"thread_id": thread_id}),
+        "data": json.dumps({"thread_id": thread_id, "retry": 0}),
     }
 
     sources: list[str] = []
@@ -822,6 +861,14 @@ async def chat_stream(
             _pii_redactor.buffer_size,
         )
         raise
+    except GraphRecursionError:
+        # R42 fix D1-M001: Explicit handling for recursion limit exceeded.
+        logger.error("GraphRecursionError during SSE stream — retry_count tracking bug suspected")
+        errored = True
+        yield {
+            "event": "error",
+            "data": json.dumps({"error": "I encountered an issue processing your request. Please try again."}),
+        }
     except Exception:
         logger.exception("Error during SSE stream")
         errored = True

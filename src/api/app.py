@@ -145,10 +145,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     settings = get_settings()
+    # R42 fix D4-M003: Disable OpenAPI/Swagger docs in production. /docs and
+    # /openapi.json expose full API schema, internal model names, and endpoint
+    # parameters — valuable reconnaissance data for attackers. Only expose in
+    # development mode.
+    is_dev = settings.ENVIRONMENT == "development"
     app = FastAPI(
         title="Hey Seven Property Q&A Agent",
         version=settings.VERSION,
         lifespan=lifespan,
+        docs_url="/docs" if is_dev else None,
+        redoc_url="/redoc" if is_dev else None,
+        openapi_url="/openapi.json" if is_dev else None,
     )
 
     # CORS — configured per environment
@@ -251,6 +259,24 @@ def create_app() -> FastAPI:
         from src.agent.graph import chat_stream
 
         sse_timeout = get_settings().SSE_TIMEOUT_SECONDS
+
+        # R42 fix D4-M001: Detect SSE reconnection via Last-Event-ID header.
+        # When present, the browser auto-reconnected after a disconnect. Return
+        # a done event immediately to prevent duplicate LLM invocations. Full
+        # replay-from-checkpoint support is deferred to post-MVP.
+        last_event_id = request.headers.get("last-event-id")
+        if last_event_id:
+            logger.info("SSE reconnection detected (Last-Event-ID=%s), skipping re-invoke", last_event_id)
+
+            async def _reconnect_response():
+                yield {
+                    "event": "error",
+                    "data": json.dumps({"error": "Connection was interrupted. Please resend your message."}),
+                }
+                yield {"event": "done", "data": json.dumps({"done": True})}
+
+            return EventSourceResponse(_reconnect_response())
+
         # Thread X-Request-ID from middleware into graph for observability correlation.
         # Sanitize to prevent log injection / trace poisoning: allow only
         # alphanumeric chars, hyphens, and underscores (max 64 chars).
