@@ -22,8 +22,8 @@ class TestSettingsCount:
         # Count fields defined directly on Settings (exclude inherited)
         fields = Settings.model_fields
         actual_count = len(fields)
-        assert actual_count == 59, (
-            f"Settings has {actual_count} fields, but docs say 59. "
+        assert actual_count == 60, (
+            f"Settings has {actual_count} fields, but docs say 60. "
             f"Update README.md and .env.example if count changed."
         )
 
@@ -62,8 +62,8 @@ class TestStateFieldCount:
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 17, (
-            f"PropertyQAState has {actual} fields, expected 17. "
+        assert actual == 18, (
+            f"PropertyQAState has {actual} fields, expected 18. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 

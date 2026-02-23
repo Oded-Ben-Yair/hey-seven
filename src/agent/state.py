@@ -23,7 +23,7 @@ __all__ = [
 
 
 def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
-    """Reducer that merges extracted fields across turns (latest value wins).
+    """Reducer that merges extracted fields across turns (latest non-None wins).
 
     Design decision: "latest wins" is intentional for guest profiling.
     When a guest corrects their name ("Actually, I'm Sarah not Sara"),
@@ -31,16 +31,17 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     choice for guest data where the most recent extraction is the most
     accurate.
 
+    R37 fix M-008: Filter None values from ``b`` before merging. Without
+    this, an extraction that finds no name returns ``{"name": None}``
+    which overwrites a previously-extracted name. Only non-None values
+    should overwrite existing data.
+
     When ``_initial_state()`` passes ``{}``, ``{**existing, **{}} == existing``
     so accumulated fields persist across turns. When extraction produces
     new fields, they merge into the existing dict. When the same key is
-    re-extracted, the newer value wins.
-
-    If conflict detection is needed in the future, add a
-    ``_merge_dicts_with_conflicts`` variant that logs when an existing
-    non-None value is overwritten.
+    re-extracted with a non-None value, the newer value wins.
     """
-    return {**a, **b}
+    return {**a, **{k: v for k, v in b.items() if v is not None}}
 
 
 def _keep_max(a: int, b: int) -> int:
@@ -141,6 +142,10 @@ class PropertyQAState(TypedDict):
     # is preserved. This prevents accidental reset of the escalation counter
     # when per-turn fields are reset via _initial_state().
     responsible_gaming_count: Annotated[int, _keep_max]
+    # R37 fix C-001: Persist specialist name so RETRY re-uses the same
+    # specialist instead of re-dispatching (which wastes tokens and risks
+    # non-deterministic specialist switching).
+    specialist_name: str | None
     # v4 fields (Phase 4: R21-R23)
     # _keep_truthy reducer: once True, stays True for the session.
     # _initial_state() passes False; ``False or existing_True`` = True (preserved).

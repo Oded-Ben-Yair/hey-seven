@@ -12,8 +12,10 @@
 # ---------------------------------------------------------------------------
 steps:
   # Step 1: Install dependencies and run tests + lint
+  # R37 fix D6-m1: Per-step timeout prevents hung steps from blocking the pipeline.
   - name: 'python:3.12.8-slim-bookworm'
     entrypoint: 'bash'
+    timeout: '600s'
     args:
       - '-c'
       - |
@@ -26,10 +28,12 @@ steps:
 
   # Step 2: Build Docker image (Artifact Registry, not deprecated gcr.io)
   - name: 'gcr.io/cloud-builders/docker'
+    timeout: '300s'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA', '.']
 
   # Step 3: Trivy container vulnerability scan (pinned version for reproducible builds)
   - name: 'aquasec/trivy:0.58.2'
+    timeout: '300s'
     args:
       - 'image'
       - '--severity=CRITICAL,HIGH'
@@ -40,6 +44,7 @@ steps:
 
   # Step 4: Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
+    timeout: '120s'
     args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
 
   # Step 5: Capture current revision for rollback

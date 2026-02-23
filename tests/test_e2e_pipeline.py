@@ -55,6 +55,7 @@ def _mock_settings(**overrides):
         "MODEL_MAX_OUTPUT_TOKENS": 2048,
         "WHISPER_LLM_TEMPERATURE": 0.2,
         "COMP_COMPLETENESS_THRESHOLD": 0.60,
+        "RETRIEVAL_TIMEOUT": 10,
     }
     defaults.update(overrides)
     mock = MagicMock()

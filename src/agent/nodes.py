@@ -303,20 +303,23 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
     # blocking the event loop.  Production path (Vertex AI) has native async.
     # Timeout guard: prevents a hung ChromaDB query (e.g., corrupted SQLite)
     # from permanently blocking the event loop thread pool.
-    _RETRIEVAL_TIMEOUT = 10  # seconds
+    # R37 fix M-006: Timeout is now configurable via settings.RETRIEVAL_TIMEOUT
+    # (default 10s). Production Vertex AI may have different latency characteristics.
+    settings = get_settings()
+    _retrieval_timeout = settings.RETRIEVAL_TIMEOUT
     try:
         if query_type == "hours_schedule":
             results = await asyncio.wait_for(
                 asyncio.to_thread(search_hours, query),
-                timeout=_RETRIEVAL_TIMEOUT,
+                timeout=_retrieval_timeout,
             )
         else:
             results = await asyncio.wait_for(
                 asyncio.to_thread(search_knowledge_base, query),
-                timeout=_RETRIEVAL_TIMEOUT,
+                timeout=_retrieval_timeout,
             )
     except TimeoutError:
-        logger.warning("Retrieval timed out after %ds for query: %s", _RETRIEVAL_TIMEOUT, query[:80])
+        logger.warning("Retrieval timed out after %ds for query: %s", _retrieval_timeout, query[:80])
         results = []
     except Exception:
         # Broad catch: ChromaDB can raise ChromaError, sqlite3.OperationalError;

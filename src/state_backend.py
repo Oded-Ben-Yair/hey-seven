@@ -69,12 +69,23 @@ class InMemoryBackend(StateBackend):
         if key in self._store and self._store[key][1] < time.monotonic():
             del self._store[key]
 
+    # R37 fix beta-C2: Cap sweep batch size to prevent event loop blocking.
+    # At 50K entries, iterating all entries under threading.Lock takes 10-50ms,
+    # blocking the asyncio event loop (no SSE heartbeats, no health checks).
+    # Batching to 1000 entries per sweep keeps lock hold time under 1ms.
+    _SWEEP_BATCH_SIZE = 1000
+
     def _maybe_sweep(self) -> None:
-        """Probabilistic sweep: evict all expired entries with ~1% probability.
+        """Probabilistic sweep: evict expired entries with ~1% probability.
 
         Also triggers unconditionally when store exceeds _MAX_STORE_SIZE.
         Prevents unbounded memory growth from write-once-never-read keys
         (e.g., transient IP rate-limit windows).
+
+        R37 fix beta-C2: Sweep is batched to _SWEEP_BATCH_SIZE entries per
+        tick to prevent the threading.Lock from blocking the asyncio event
+        loop. Multiple sweeps across successive writes will eventually
+        evict all expired entries (amortized full cleanup).
 
         R11 fix: DeepSeek F-007, Gemini F-002, GPT F-001 (3/3 consensus).
         """
@@ -84,15 +95,22 @@ class InMemoryBackend(StateBackend):
             return
 
         now = time.monotonic()
-        expired_keys = [k for k, (_, expiry) in self._store.items() if expiry < now]
+        expired_keys = []
+        for k, (_, expiry) in self._store.items():
+            if expiry < now:
+                expired_keys.append(k)
+            if len(expired_keys) >= self._SWEEP_BATCH_SIZE:
+                break
+
         for k in expired_keys:
             del self._store[k]
 
         if expired_keys:
             logger.debug(
-                "InMemoryBackend sweep: evicted %d expired entries (store size: %d)",
+                "InMemoryBackend sweep: evicted %d expired entries (store size: %d, batch limit: %d)",
                 len(expired_keys),
                 len(self._store),
+                self._SWEEP_BATCH_SIZE,
             )
 
     def increment(self, key: str, ttl: int = 60) -> int:

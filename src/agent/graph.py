@@ -195,10 +195,24 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # and call 5, the function operates with mixed configuration values.
     settings = get_settings()
 
+    # R37 fix C-001: On RETRY, reuse the previously-dispatched specialist.
+    # This avoids (1) a wasted LLM dispatch call, and (2) non-deterministic
+    # specialist switching where the dispatch LLM could route to a different
+    # specialist on retry.
+    existing_specialist = state.get("specialist_name")
+    if existing_specialist and existing_specialist in _AGENT_REGISTRY:
+        agent_name = existing_specialist
+        dispatch_method = "retry_reuse"
+        logger.info(
+            "Retry path — reusing specialist %s (skipping dispatch)",
+            agent_name,
+        )
+    else:
+        agent_name = None
+
     # --- Try structured LLM dispatch first ---
     # R15 fix (DeepSeek F-001, GPT F1): acquire CB before try block to prevent
     # UnboundLocalError in except handlers if _get_circuit_breaker() itself raises.
-    agent_name = None
     cb = await _get_circuit_breaker()
     try:
         if await cb.allow_request():
@@ -329,6 +343,21 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
             "overwritten by dispatch layer (specialist should not set these)",
             agent_name, collisions,
         )
+
+    # R37 fix M-001: Filter specialist result to known PropertyQAState keys.
+    # Prevents unknown keys from polluting state and type mismatches from
+    # crashing reducers (e.g., "messages": "not a list" crashes add_messages).
+    _valid_keys = frozenset(PropertyQAState.__annotations__)
+    unknown = set(result.keys()) - _valid_keys
+    if unknown:
+        logger.warning(
+            "Specialist %s returned unknown state keys %s — filtering out",
+            agent_name, unknown,
+        )
+        result = {k: v for k, v in result.items() if k in _valid_keys}
+
+    # R37 fix C-001: Persist specialist name in state for retry path.
+    result["specialist_name"] = agent_name
 
     # Merge guest context updates into the result so they persist in state
     if guest_context_update:
@@ -557,6 +586,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "guest_sentiment": None,
         "guest_context": {},
         "guest_name": None,
+        # R37 fix C-001: specialist name persisted for retry path
+        "specialist_name": None,
         # v4 fields (Phase 4: R23 fix C-003)
         "suggestion_offered": False,  # _keep_truthy: once True, stays True for the session
     }

@@ -7,7 +7,7 @@ and pure ASGI middleware (no BaseHTTPMiddleware).
 import asyncio
 import json
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, aclosing
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -228,27 +228,35 @@ def create_app() -> FastAPI:
                     # take 15-30s). Previous implementation only checked elapsed
                     # time INSIDE the async-for loop, which never fires while
                     # awaiting the next event.
+                    #
+                    # R37 fix beta-C1: Wrap in aclosing() to ensure the async
+                    # generator is properly closed on timeout/disconnect. Without
+                    # this, TimeoutError from wait_for() cancels __anext__() but
+                    # leaves the generator alive with internal state (LLM connections,
+                    # Firestore handles), causing resource leaks during LLM degradation.
                     _HEARTBEAT_INTERVAL = 15  # seconds
                     event_iter = chat_stream(
                         agent, body.message, body.thread_id,
                         request_id=request_id,
-                    ).__aiter__()
+                    )
 
-                    while True:
-                        if await request.is_disconnected():
-                            logger.info("Client disconnected, cancelling stream")
-                            return
-                        try:
-                            event = await asyncio.wait_for(
-                                event_iter.__anext__(),
-                                timeout=_HEARTBEAT_INTERVAL,
-                            )
-                            yield event
-                        except TimeoutError:
-                            # No event within heartbeat interval — send ping
-                            yield {"event": "ping", "data": ""}
-                        except StopAsyncIteration:
-                            break
+                    async with aclosing(event_iter) as stream:
+                        aiter = stream.__aiter__()
+                        while True:
+                            if await request.is_disconnected():
+                                logger.info("Client disconnected, cancelling stream")
+                                return
+                            try:
+                                event = await asyncio.wait_for(
+                                    aiter.__anext__(),
+                                    timeout=_HEARTBEAT_INTERVAL,
+                                )
+                                yield event
+                            except TimeoutError:
+                                # No event within heartbeat interval — send ping
+                                yield {"event": "ping", "data": ""}
+                            except StopAsyncIteration:
+                                break
             except TimeoutError:
                 logger.warning("SSE stream timed out after %ds", sse_timeout)
                 yield {
@@ -271,15 +279,17 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     # Separated from /health to prevent instance flapping. /live confirms
     # the process is alive and the event loop is responsive. /health is
-    # used as the READINESS probe (gated on agent + RAG + property data).
+    # used as the STARTUP probe (gated on agent + RAG + property data).
     # Cloud Run liveness probes that return 503 cause instance replacement,
     # amplifying outages when downstream deps (LLM API, vector store) are
     # temporarily degraded. /live avoids this by always returning 200.
     #
+    # R37 fix D8-M4/D9-M1: Cloud Run does NOT have readiness probes
+    # (that's a Kubernetes concept). It supports startup + liveness only.
+    # /health is used as the startup probe to gate traffic until ready.
     # Cloud Run probe configuration (R10 fix — Gemini F18, GPT P0-F6):
-    #   startupProbe:  /live  (is the process booting?)
+    #   startupProbe:  /health  (is the agent ready to serve?)
     #   livenessProbe: /live  (is the process alive? — always 200)
-    #   readinessProbe: /health (can the instance serve? — 503 on CB open)
     # WARNING: Do NOT use /health as livenessProbe. When CB is open (LLM
     # outage), /health returns 503 which would cause Cloud Run to replace
     # the instance in a loop, amplifying the outage.
@@ -288,7 +298,7 @@ def create_app() -> FastAPI:
         return LiveResponse()
 
     # ------------------------------------------------------------------
-    # GET /health — Health check (readiness/startup probe)
+    # GET /health — Health check (startup probe)
     # ------------------------------------------------------------------
     @app.get("/health", response_model=HealthResponse)
     async def health(request: Request):

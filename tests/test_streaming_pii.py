@@ -183,3 +183,47 @@ class TestStreamingPIIRedactor:
         text = "".join(output)
         assert long_email not in text
         assert "[EMAIL]" in text
+
+
+class TestStreamingVsFullTextParity:
+    """R37 fix C-002: Verify streaming and full-text PII redaction produce
+    identical output for known PII patterns.
+
+    StreamingPIIRedactor delegates to redact_pii() internally, so parity
+    is expected. This test catches divergence if the code paths ever split.
+    """
+
+    @pytest.mark.parametrize(
+        "pii_text",
+        [
+            "My SSN is 123-45-6789 thanks",
+            "Call me at 860-555-0123 please",
+            "Card number 4111 1111 1111 1111 on file",
+            "Email bob@example.com for details",
+            "My player card: 12345678901 is expired",
+            "member number: 9876543210 for rewards",
+        ],
+        ids=["ssn", "phone", "card", "email", "player_card", "member"],
+    )
+    def test_streaming_matches_full_text_redaction(self, pii_text):
+        """Feeding text token-by-token through StreamingPIIRedactor and then
+        flushing must produce the same result as redact_pii() on the full text.
+        """
+        from src.api.pii_redaction import redact_pii
+
+        # Full-text path
+        full_result = redact_pii(pii_text)
+
+        # Streaming path: feed one character at a time (worst case)
+        r = StreamingPIIRedactor()
+        streaming_chunks = []
+        for char in pii_text:
+            streaming_chunks.extend(r.feed(char))
+        streaming_chunks.extend(r.flush())
+        streaming_result = "".join(streaming_chunks)
+
+        assert streaming_result == full_result, (
+            f"Parity mismatch:\n"
+            f"  Full-text: {full_result!r}\n"
+            f"  Streaming: {streaming_result!r}"
+        )

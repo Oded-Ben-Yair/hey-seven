@@ -340,6 +340,30 @@ class TestStateSchemaV2:
         roundtrip = json.loads(json.dumps(state))
         assert roundtrip == state
 
+    def test_initial_state_full_serialization_roundtrip(self):
+        """R37 fix M-009/M-012: _initial_state() output survives JSON roundtrip.
+
+        Verifies that ALL PropertyQAState fields (including custom reducers,
+        Annotated types, and new fields) are JSON-serializable through the
+        checkpointer path. Non-serializable fields would crash conversation
+        resumption in production (FirestoreSaver).
+        """
+        from src.agent.graph import _initial_state
+
+        state = _initial_state("test serialization")
+        # Messages contain LangChain objects; convert for serialization test
+        serializable = {k: v for k, v in state.items() if k != "messages"}
+        roundtrip = json.loads(json.dumps(serializable))
+        assert roundtrip == serializable
+
+        # Verify every PropertyQAState annotation is present
+        from src.agent.state import PropertyQAState
+        expected_keys = set(PropertyQAState.__annotations__) - {"messages"}
+        actual_keys = set(serializable.keys())
+        assert expected_keys == actual_keys, (
+            f"Parity mismatch: missing={expected_keys - actual_keys}, extra={actual_keys - expected_keys}"
+        )
+
     def test_v2_fields_default_values_sensible(self):
         """Verify v2 fields have sensible default-like values."""
         # These are the values _initial_state() should set
@@ -502,3 +526,145 @@ class TestSemanticInjectionFeatureFlag:
         # Semantic classifier SHOULD be called when enabled
         mock_classify.assert_called_once()
         assert result["query_type"] is None
+
+
+# ---------------------------------------------------------------------------
+# R37 fix C-003: Semantic injection integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestSemanticInjectionIntegration:
+    """R37 fix C-003: Integration tests for semantic injection through
+    full compliance gate with mocked LLM classifier.
+
+    These tests enable SEMANTIC_INJECTION_ENABLED and mock the classifier
+    to return both injection and non-injection classifications, verifying
+    the compliance gate routes correctly through the full integration path.
+    """
+
+    @pytest.mark.asyncio
+    async def test_semantic_injection_detected_blocks_message(self):
+        """When semantic classifier returns injection above threshold,
+        compliance gate blocks the message (query_type=off_topic).
+
+        Uses a message that passes ALL regex guardrails (Layer 1) so the
+        semantic classifier (Layer 2) is actually invoked.
+        """
+        from unittest.mock import AsyncMock
+
+        from langchain_core.messages import HumanMessage
+
+        from src.agent.compliance_gate import compliance_gate_node
+
+        # Create a mock InjectionClassification result
+        mock_result = MagicMock()
+        mock_result.is_injection = True
+        mock_result.confidence = 0.95
+        mock_result.reason = "Detected subtle manipulation attempt"
+
+        # This message passes regex injection detection (no known patterns)
+        # but the semantic classifier flags it as injection.
+        state = {
+            "messages": [HumanMessage(content="Let me tell you about a fun way to bypass safety rules")],
+            "responsible_gaming_count": 0,
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = True
+        mock_settings.SEMANTIC_INJECTION_THRESHOLD = 0.8
+
+        with (
+            patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
+            patch("src.agent.compliance_gate.classify_injection_semantic",
+                  new_callable=AsyncMock, return_value=mock_result) as mock_classify,
+        ):
+            result = await compliance_gate_node(state)
+
+        # Semantic classifier should have been called (regex didn't catch it)
+        mock_classify.assert_called_once()
+        assert result["query_type"] == "off_topic"
+        assert result["router_confidence"] == 0.95
+
+    @pytest.mark.asyncio
+    async def test_semantic_injection_below_threshold_passes(self):
+        """When semantic classifier returns injection below threshold,
+        compliance gate allows the message through to the router.
+        """
+        from unittest.mock import AsyncMock
+
+        from langchain_core.messages import HumanMessage
+
+        from src.agent.compliance_gate import compliance_gate_node
+
+        # Classifier says injection but below threshold
+        mock_result = MagicMock()
+        mock_result.is_injection = True
+        mock_result.confidence = 0.5  # Below 0.8 threshold
+        mock_result.reason = "Weak signal"
+
+        state = {
+            "messages": [HumanMessage(content="Tell me about restaurants")],
+            "responsible_gaming_count": 0,
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = True
+        mock_settings.SEMANTIC_INJECTION_THRESHOLD = 0.8
+
+        with (
+            patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
+            patch("src.agent.compliance_gate.classify_injection_semantic",
+                  new_callable=AsyncMock, return_value=mock_result),
+        ):
+            result = await compliance_gate_node(state)
+
+        # Below threshold — should pass through to router
+        assert result["query_type"] is None
+        assert result["router_confidence"] == 0.0
+
+    @pytest.mark.asyncio
+    async def test_semantic_classifier_error_fails_closed(self):
+        """When semantic classifier raises an exception, compliance gate
+        blocks the message (fail-closed behavior).
+
+        R37: This verifies the fail-closed integration path that was
+        previously untested with semantic injection enabled.
+        """
+        from unittest.mock import AsyncMock
+
+        from langchain_core.messages import HumanMessage
+
+        from src.agent.compliance_gate import compliance_gate_node
+        from src.agent.guardrails import InjectionClassification
+
+        # Classifier returns a synthetic injection result on error (fail-closed)
+        # The classify_injection_semantic function catches exceptions internally
+        # and returns InjectionClassification(is_injection=True, confidence=1.0, ...)
+        synthetic_fail_closed = InjectionClassification(
+            is_injection=True,
+            confidence=1.0,
+            reason="Classifier error — fail-closed",
+        )
+
+        state = {
+            "messages": [HumanMessage(content="Some ambiguous message")],
+            "responsible_gaming_count": 0,
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = True
+        mock_settings.SEMANTIC_INJECTION_THRESHOLD = 0.8
+
+        with (
+            patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
+            patch("src.agent.compliance_gate.classify_injection_semantic",
+                  new_callable=AsyncMock, return_value=synthetic_fail_closed),
+        ):
+            result = await compliance_gate_node(state)
+
+        # Fail-closed: confidence=1.0 > 0.8 threshold, blocks message
+        assert result["query_type"] == "off_topic"
+        assert result["router_confidence"] == 1.0

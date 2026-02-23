@@ -1,5 +1,8 @@
 # Stage 1: Build dependencies
-FROM python:3.12.8-slim-bookworm AS builder
+# R37 fix D6-M3: Pin to SHA-256 digest to prevent tag republishing attacks.
+# Tag can be republished with different contents; digest is immutable.
+# To update: docker pull python:3.12.8-slim-bookworm && docker inspect --format='{{index .RepoDigests 0}}'
+FROM python:3.12.8-slim-bookworm@sha256:8ef40398b663cf0a3a4685ad0ffcf924282e4c954283b33b7765eae0856d7e0c AS builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
@@ -11,7 +14,7 @@ COPY requirements-prod.txt .
 RUN pip install --no-cache-dir --target=/build/deps -r requirements-prod.txt
 
 # Stage 2: Production
-FROM python:3.12.8-slim-bookworm
+FROM python:3.12.8-slim-bookworm@sha256:8ef40398b663cf0a3a4685ad0ffcf924282e4c954283b33b7765eae0856d7e0c
 
 # Install curl for HEALTHCHECK (slim image has neither curl nor wget)
 # Security: non-root user
