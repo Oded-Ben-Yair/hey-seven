@@ -252,7 +252,11 @@ class CircuitBreaker:
             if prev_state == "half_open":
                 # Halve failure count: single success reduces risk but doesn't
                 # erase evidence of prior instability.
-                keep_count = len(self._failure_timestamps) // 2
+                # R36 fix A3: Use max(..., 1) to always retain at least 1
+                # failure timestamp. Without this, integer division with
+                # small N (e.g., 1 // 2 = 0) clears ALL evidence, making
+                # a single half-open success equivalent to a full reset.
+                keep_count = max(len(self._failure_timestamps) // 2, 1)
                 while len(self._failure_timestamps) > keep_count:
                     self._failure_timestamps.popleft()
             else:

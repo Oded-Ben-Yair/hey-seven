@@ -42,8 +42,10 @@ def rerank_by_rrf(
 
     for results in result_lists:
         for rank, (doc, score) in enumerate(results):
+            # R36 fix A8: Use null byte delimiter to prevent ambiguous
+            # concatenation (same fix as _compute_chunk_id in pipeline.py).
             doc_id = hashlib.sha256(
-                (doc.page_content + str(doc.metadata.get("source", ""))).encode()
+                f"{doc.page_content}\x00{doc.metadata.get('source', '')}".encode()
             ).hexdigest()
             if doc_id not in doc_map or score > doc_map[doc_id][1]:
                 doc_map[doc_id] = (doc, score)

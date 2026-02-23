@@ -408,7 +408,7 @@ Five deterministic guardrail layers run before any LLM call:
 |----------|---------|------------|---------|
 | `ENVIRONMENT` | `development` | `production` | Enables production secret validation |
 | `LOG_LEVEL` | `INFO` | `INFO` | Logging level |
-| `VERSION` | `1.0.0` | `$COMMIT_SHA` | Version reported by /health |
+| `VERSION` | `1.1.0` | `$COMMIT_SHA` | Version reported by /health |
 | `GOOGLE_API_KEY` | (empty) | Secret Manager | Gemini LLM access |
 | `API_KEY` | (empty) | Secret Manager | Client authentication (required in production) |
 | `CMS_WEBHOOK_SECRET` | (empty) | Secret Manager | CMS webhook verification (required in production) |
@@ -446,7 +446,7 @@ Five deterministic guardrail layers run before any LLM call:
 
 These are handled automatically by deterministic guardrails (NO human judgment needed):
 
-- **Self-exclusion mentions**: Auto-provides DMHAS 1-888-789-7777 (Connecticut)
+- **Self-exclusion mentions**: Auto-provides state-specific helpline (e.g., CT: 1-888-789-7777, NJ: 1-800-GAMBLER, PA: 1-800-GAMBLER, NV: 1-800-MY-RESET)
 - **Problem gambling**: Auto-provides 1-800-MY-RESET (NCPG)
 - **BSA/AML suspicious**: Auto-redirects to appropriate authorities
 - **Underage mentions**: Auto-provides age verification info

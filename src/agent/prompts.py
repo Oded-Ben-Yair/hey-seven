@@ -61,6 +61,11 @@ def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
                     lines.append(f"- {state_code} Problem Gambling Helpline: {rg_helpline}")
                 if state_helpline:
                     lines.append(f"- {state_code} State Helpline: {state_helpline}")
+                # R36 fix B9: Surface self-exclusion duration options when defined
+                # (e.g., Hard Rock AC NJ DGE requires informing guests of options).
+                self_exclusion_opts = regulations.get("self_exclusion_options")
+                if self_exclusion_opts:
+                    lines.append(f"- Self-Exclusion Options: {self_exclusion_opts}")
                 return "\n".join(lines)
         except Exception:
             # R35 fix: Log the failure instead of silently swallowing.

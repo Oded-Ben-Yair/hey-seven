@@ -189,7 +189,8 @@ class ValidationResult(BaseModel):
         description="PASS if the response meets all 6 criteria, RETRY for minor issues worth correcting, FAIL for serious violations"
     )
     reason: str = Field(
-        description="Why the response passed or failed validation"
+        description="Why the response passed or failed validation",
+        max_length=500,
     )
 
 

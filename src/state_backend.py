@@ -58,6 +58,12 @@ class InMemoryBackend(StateBackend):
     def __init__(self) -> None:
         self._store: dict[str, tuple[Any, float]] = {}
         self._sweep_counter: int = 0
+        # R36 fix B5: threading.Lock protects all read-modify-write ops.
+        # InMemoryBackend is called from async coroutines but its operations
+        # are synchronous and sub-microsecond, so threading.Lock is appropriate
+        # (no awaits inside critical sections). Prevents TOCTOU races in
+        # increment() where concurrent coroutines read the same count.
+        self._lock = threading.Lock()
 
     def _cleanup_expired(self, key: str) -> None:
         if key in self._store and self._store[key][1] < time.monotonic():
@@ -90,32 +96,38 @@ class InMemoryBackend(StateBackend):
             )
 
     def increment(self, key: str, ttl: int = 60) -> int:
-        self._cleanup_expired(key)
-        expiry = time.monotonic() + ttl
-        current = int(self._store.get(key, (0, 0))[0])
-        self._store[key] = (current + 1, expiry)
-        self._maybe_sweep()
-        return current + 1
+        with self._lock:
+            self._cleanup_expired(key)
+            expiry = time.monotonic() + ttl
+            current = int(self._store.get(key, (0, 0))[0])
+            self._store[key] = (current + 1, expiry)
+            self._maybe_sweep()
+            return current + 1
 
     def get_count(self, key: str) -> int:
-        self._cleanup_expired(key)
-        return int(self._store.get(key, (0, 0))[0])
+        with self._lock:
+            self._cleanup_expired(key)
+            return int(self._store.get(key, (0, 0))[0])
 
     def set(self, key: str, value: str, ttl: int = 300) -> None:
-        self._store[key] = (value, time.monotonic() + ttl)
-        self._maybe_sweep()
+        with self._lock:
+            self._store[key] = (value, time.monotonic() + ttl)
+            self._maybe_sweep()
 
     def get(self, key: str) -> str | None:
-        self._cleanup_expired(key)
-        entry = self._store.get(key)
-        return entry[0] if entry else None
+        with self._lock:
+            self._cleanup_expired(key)
+            entry = self._store.get(key)
+            return entry[0] if entry else None
 
     def exists(self, key: str) -> bool:
-        self._cleanup_expired(key)
-        return key in self._store
+        with self._lock:
+            self._cleanup_expired(key)
+            return key in self._store
 
     def delete(self, key: str) -> None:
-        self._store.pop(key, None)
+        with self._lock:
+            self._store.pop(key, None)
 
 
 class RedisBackend(StateBackend):

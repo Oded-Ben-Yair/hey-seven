@@ -112,13 +112,14 @@ class ErrorHandlingMiddleware:
     response includes the same headers that SecurityHeadersMiddleware adds.
     """
 
-    # Security headers included in error responses so that 500s generated
-    # by this outermost middleware still carry all security headers.
+    # R36 fix A13: Unified with SecurityHeadersMiddleware._STATIC_HEADERS.
+    # Removed deprecated x-xss-protection (Chrome removed in 2019), added
+    # HSTS for parity. Error responses now carry identical headers.
     _SECURITY_HEADERS = [
         (b"x-content-type-options", b"nosniff"),
         (b"x-frame-options", b"DENY"),
         (b"referrer-policy", b"strict-origin-when-cross-origin"),
-        (b"x-xss-protection", b"1; mode=block"),
+        (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
     ]
 
     def __init__(self, app: ASGIApp) -> None:
@@ -176,19 +177,30 @@ class ErrorHandlingMiddleware:
 class SecurityHeadersMiddleware:
     """Add security headers to every HTTP response.
 
-    Uses per-request nonce-based CSP for script-src and style-src.
-    CSS and JS are externalized into separate static files (styles.css, app.js),
-    so 'unsafe-inline' is no longer needed. Each request gets a unique
-    cryptographically random nonce to prevent XSS via injected scripts/styles.
+    R36 fix A11: CSP uses strict policy without nonce. This backend serves
+    JSON API responses only — no server-rendered HTML templates. The frontend
+    is a separate Next.js app served from a different origin. Nonce-based CSP
+    requires passing nonces to template rendering, which is not applicable
+    for an API-only backend. The CSP blocks inline scripts/styles as defense
+    in depth against accidental HTML responses.
     """
 
-    # Static security headers (CSP is generated per-request with nonce).
+    # Static security headers (shared with ErrorHandlingMiddleware).
     _STATIC_HEADERS = [
         (b"x-content-type-options", b"nosniff"),
         (b"x-frame-options", b"DENY"),
         (b"referrer-policy", b"strict-origin-when-cross-origin"),
         (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
     ]
+
+    # R36 fix A11: Static CSP for API-only backend — no nonce needed.
+    _CSP = (
+        b"default-src 'self'; "
+        b"script-src 'self'; "
+        b"style-src 'self' https://fonts.googleapis.com; "
+        b"font-src 'self' https://fonts.gstatic.com; "
+        b"img-src 'self' data:; connect-src 'self'"
+    )
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -198,21 +210,11 @@ class SecurityHeadersMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Generate a per-request nonce (16 bytes = 128 bits of entropy).
-        nonce = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
-        csp = (
-            f"default-src 'self'; "
-            f"script-src 'self' 'nonce-{nonce}'; "
-            f"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com; "
-            f"font-src 'self' https://fonts.gstatic.com; "
-            f"img-src 'self' data:; connect-src 'self'"
-        ).encode()
-
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
                 message["headers"] = list(message.get("headers", [])) + list(
                     self._STATIC_HEADERS
-                ) + [(b"content-security-policy", csp)]
+                ) + [(b"content-security-policy", self._CSP)]
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
@@ -277,10 +279,12 @@ class ApiKeyMiddleware:
                 {
                     "type": "http.response.start",
                     "status": 401,
+                    # R36 fix A9: Include security headers on 401 responses
+                    # for parity with ErrorHandlingMiddleware 500 responses.
                     "headers": [
                         (b"content-type", b"application/json"),
                         (b"content-length", str(len(body)).encode()),
-                    ],
+                    ] + list(SecurityHeadersMiddleware._STATIC_HEADERS),
                 }
             )
             await send({"type": "http.response.body", "body": body})
@@ -362,6 +366,9 @@ class RateLimitMiddleware:
         # Stale-client sweep counter. R16 fix: initialized in __init__
         # instead of lazy getattr (Gemini F-009, Grok M-006 consensus).
         self._request_counter: int = 0
+        # R36 fix B6: Time-based sweep fallback. Under low traffic, stale
+        # clients accumulate without cleanup (never reach 100 request threshold).
+        self._last_sweep: float = time.monotonic()
 
     @staticmethod
     def _normalize_ip(ip: str) -> str:
@@ -421,18 +428,21 @@ class RateLimitMiddleware:
         window_start = now - self.window_seconds
 
         async with self._lock:
-            # Periodic stale-client sweep: every 100 requests, remove clients
-            # whose deques are fully expired. Prevents slow memory growth from
-            # transient IPs that made one request and never returned.
+            # Periodic stale-client sweep: every 100 requests OR every 300s,
+            # remove clients whose deques are fully expired. Prevents slow
+            # memory growth from transient IPs.
             # R11 fix: DeepSeek F-006, Gemini F-001, GPT F-002 (3/3 consensus).
+            # R36 fix B6: Added time-based fallback for low-traffic scenarios.
             self._request_counter += 1
-            if self._request_counter % 100 == 0:
+            time_since_sweep = now - self._last_sweep
+            if self._request_counter % 100 == 0 or time_since_sweep > 300:
                 stale = [
                     ip for ip, dq in self._requests.items()
                     if not dq or dq[-1] < window_start
                 ]
                 for ip in stale:
                     del self._requests[ip]
+                self._last_sweep = now
 
             # Memory guard: evict LEAST recently used client if at capacity
             if client_ip not in self._requests and len(self._requests) >= self.max_clients:

@@ -120,7 +120,7 @@ class TestSecurityHeadersMiddleware:
 
 
 class TestCSPNonce:
-    """CSP uses per-request nonce, not unsafe-inline."""
+    """CSP uses strict policy for API-only backend (R36: nonce removed)."""
 
     def test_csp_has_no_unsafe_inline(self):
         """CSP header must not contain unsafe-inline."""
@@ -135,19 +135,20 @@ class TestCSPNonce:
             f"CSP must not contain unsafe-inline, got: {csp}"
         )
 
-    def test_csp_contains_nonce(self):
-        """CSP header must contain a nonce directive."""
+    def test_csp_is_static_no_nonce(self):
+        """R36: CSP is static for API-only backend — no per-request nonce."""
         from src.api.middleware import SecurityHeadersMiddleware
 
         app = Starlette(routes=[Route("/test", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        resp = client.get("/test")
-        csp = resp.headers["content-security-policy"]
-        assert "'nonce-" in csp, f"CSP must contain a nonce directive, got: {csp}"
+        csp = client.get("/test").headers["content-security-policy"]
+        assert "'nonce-" not in csp, (
+            f"API-only CSP should not contain nonce, got: {csp}"
+        )
 
-    def test_csp_nonce_differs_per_request(self):
-        """Each request gets a unique nonce."""
+    def test_csp_consistent_across_requests(self):
+        """R36: Static CSP produces identical headers across requests."""
         from src.api.middleware import SecurityHeadersMiddleware
 
         app = Starlette(routes=[Route("/test", _ok_app)])
@@ -155,46 +156,29 @@ class TestCSPNonce:
         client = TestClient(app)
         csp1 = client.get("/test").headers["content-security-policy"]
         csp2 = client.get("/test").headers["content-security-policy"]
-        # Extract nonce values from script-src
-        import re
-        nonces1 = re.findall(r"'nonce-([^']+)'", csp1)
-        nonces2 = re.findall(r"'nonce-([^']+)'", csp2)
-        assert nonces1, f"No nonce found in CSP: {csp1}"
-        assert nonces2, f"No nonce found in CSP: {csp2}"
-        assert nonces1[0] != nonces2[0], (
-            "Nonces must differ per request to prevent replay attacks"
-        )
+        assert csp1 == csp2, "Static CSP should be identical across requests"
 
     def test_csp_preserves_google_fonts(self):
-        """CSP still allows Google Fonts after nonce migration."""
-        from src.api.middleware import SecurityHeadersMiddleware
-
-        app = Starlette(routes=[Route("/test", _ok_app)])
-        app.add_middleware(SecurityHeadersMiddleware)
-        client = TestClient(app)
-        csp = resp = client.get("/test").headers["content-security-policy"]
-        assert "https://fonts.googleapis.com" in csp
-        assert "https://fonts.gstatic.com" in csp
-
-    def test_csp_nonce_in_both_script_and_style(self):
-        """Nonce appears in both script-src and style-src directives."""
+        """CSP still allows Google Fonts."""
         from src.api.middleware import SecurityHeadersMiddleware
 
         app = Starlette(routes=[Route("/test", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
         csp = client.get("/test").headers["content-security-policy"]
-        # Parse directives
-        directives = {}
-        for part in csp.split(";"):
-            part = part.strip()
-            if part:
-                tokens = part.split()
-                directives[tokens[0]] = " ".join(tokens[1:])
-        assert "script-src" in directives
-        assert "style-src" in directives
-        assert "'nonce-" in directives["script-src"]
-        assert "'nonce-" in directives["style-src"]
+        assert "https://fonts.googleapis.com" in csp
+        assert "https://fonts.gstatic.com" in csp
+
+    def test_csp_script_and_style_directives(self):
+        """CSP includes script-src and style-src directives."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/test", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        csp = client.get("/test").headers["content-security-policy"]
+        assert "script-src" in csp
+        assert "style-src" in csp
 
 
 class TestRateLimitMiddleware:

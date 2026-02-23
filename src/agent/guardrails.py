@@ -23,7 +23,6 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "audit_input",
     "detect_prompt_injection",
     "classify_injection_semantic",
     "detect_responsible_gaming",
@@ -181,6 +180,14 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     # Taglish hybrid responsible gaming
     re.compile(r"\badik\s+(?:na\s+)?(?:ako\s+)?sa\s+gambling", re.I),  # Taglish: addicted to gambling
     re.compile(r"\blost\s+everything\s+sa\s+casino", re.I),  # Taglish: lost everything at casino
+    # R36 fix B8: Japanese responsible gaming patterns (Wynn Las Vegas clientele)
+    re.compile(r"ギャンブル\s*(?:依存|中毒|問題)"),              # gambling addiction/problem
+    re.compile(r"パチンコ\s*中毒"),                               # pachinko addiction
+    re.compile(r"賭け事?\s*(?:をやめ|をやめたい|の問題)"),        # quit gambling / gambling problem
+    # R36 fix B8: Korean responsible gaming patterns
+    re.compile(r"도박\s*중독"),                                   # gambling addiction (도박 중독)
+    re.compile(r"도박을?\s*(?:그만|끊고|멈추)"),                  # stop gambling
+    re.compile(r"도박\s*문제"),                                   # gambling problem
 ]
 
 # ---------------------------------------------------------------------------
@@ -267,6 +274,14 @@ _BSA_AML_PATTERNS = [
     re.compile(r"\bitago\s+(?:ang\s+)?(?:mga\s+)?pera", re.I),  # hide money
     re.compile(r"\bputol[- ]?putol\s+(?:na\s+)?(?:deposit|deposito)", re.I),  # structuring deposits
     re.compile(r"\biwasan\s+(?:ang\s+)?(?:report|ulat)", re.I),  # avoid report
+    # R36 fix B7: Japanese BSA/AML patterns (Wynn Las Vegas high-roller clientele)
+    re.compile(r"マネーロンダリング"),                             # money laundering
+    re.compile(r"お金を隠す"),                                     # hide money
+    re.compile(r"現金.*報告.*避ける"),                              # avoid cash report
+    # R36 fix B7: Korean BSA/AML patterns
+    re.compile(r"돈세탁"),                                         # money laundering (돈세탁)
+    re.compile(r"돈을?\s*숨기"),                                   # hide money
+    re.compile(r"현금.*보고.*피하"),                                # avoid cash report
 ]
 
 # ---------------------------------------------------------------------------
@@ -347,6 +362,15 @@ _CONFUSABLES: dict[str, str] = {
     "\uff50": "p", "\uff51": "q", "\uff52": "r", "\uff53": "s", "\uff54": "t",
     "\uff55": "u", "\uff56": "v", "\uff57": "w", "\uff58": "x", "\uff59": "y",
     "\uff5a": "z",
+    # R36 fix B2: IPA / Latin Extended confusables — highest-risk characters
+    # that survive NFKD normalization (not decomposed to standard Latin).
+    "\u0251": "a",  # ɑ — IPA open back unrounded vowel
+    "\u0261": "g",  # ɡ — IPA voiced velar plosive
+    "\u0131": "i",  # ı — dotless i (Turkish)
+    "\u026a": "i",  # ɪ — IPA near-close near-front unrounded vowel
+    "\u028f": "y",  # ʏ — IPA near-close near-front rounded vowel
+    "\u0274": "n",  # ɴ — IPA uvular nasal (small capital N)
+    "\u0280": "r",  # ʀ — IPA uvular trill (small capital R)
 }
 
 # Pre-built translation table for O(n) single-pass confusable replacement.
@@ -370,12 +394,15 @@ def _normalize_input(text: str) -> str:
     # \u202A-\u202E (Bidi Override), \u180E (Mongolian Vowel Separator),
     # \uFFF9-\uFFFB (Interlinear Annotation). Category-based stripping catches all.
     text = "".join(c for c in text if unicodedata.category(c) != "Cf")
-    # Replace cross-script homoglyphs (Cyrillic/Greek → Latin) — O(n) single pass
-    text = text.translate(_CONFUSABLES_TABLE)
-    # Normalize Unicode to NFKD (decomposes characters to base + combining marks)
+    # R36 fix B1: Normalize BEFORE confusable replacement. Previous order
+    # (confusable -> NFKD) missed precomposed accented Cyrillic/Greek letters
+    # (e.g., accented omicron) that decompose to base confusable + combining
+    # mark. NFKD first ensures decomposition happens before confusable mapping.
     text = unicodedata.normalize("NFKD", text)
     # Remove combining marks (diacritics) to collapse homoglyphs
     text = "".join(c for c in text if not unicodedata.combining(c))
+    # Replace cross-script homoglyphs (Cyrillic/Greek → Latin) — O(n) single pass
+    text = text.translate(_CONFUSABLES_TABLE)
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
     return text
@@ -414,16 +441,16 @@ def _check_patterns(
     return False
 
 
-def audit_input(message: str) -> bool:
+def _audit_input(message: str) -> bool:
     """Check user input for prompt injection patterns.
 
-    **INVERTED SEMANTICS** — This is the original API with counterintuitive
+    **INVERTED SEMANTICS** — internal function with counterintuitive
     return values:
     - Returns ``True`` when input is SAFE (no injection detected)
     - Returns ``False`` when injection IS detected
 
-    Prefer ``detect_prompt_injection()`` which uses consistent semantics
-    (True = detected, matching ``detect_responsible_gaming()`` etc.).
+    External callers should use ``detect_prompt_injection()`` which uses
+    consistent semantics (True = detected).
 
     Deterministic regex-based guardrail that runs before any LLM call.
     Runs patterns against BOTH the raw input (to catch zero-width chars
@@ -436,6 +463,11 @@ def audit_input(message: str) -> bool:
     Returns:
         True if the input looks safe, False if injection detected.
     """
+    # R36 fix B3: Block oversized input before normalization to prevent
+    # CPU exhaustion via 5 O(n) Unicode passes on attacker-controlled payloads.
+    if len(message) > 8192:
+        logger.warning("Input exceeds 8192 chars (%d), blocking as potential DoS", len(message))
+        return False
     # First pass: raw input catches zero-width chars and encoding markers
     if _check_patterns(message, _INJECTION_PATTERNS, "Prompt injection"):
         return False
@@ -456,10 +488,15 @@ def detect_prompt_injection(message: str) -> bool:
     Consistent API with other ``detect_*`` functions: returns ``True``
     when injection IS detected (pattern found), ``False`` when safe.
 
-    This is the preferred API — ``audit_input()`` has inverted semantics
-    (True=safe) which is inconsistent with the rest of the guardrail API.
+    This is the preferred public API for injection detection.
     """
-    return not audit_input(message)
+    return not _audit_input(message)
+
+
+# R36 fix B4: Keep backward-compatible alias but remove from __all__.
+# Callers using ``audit_input()`` (inverted semantics: True=safe) will
+# still work, but it's no longer part of the public API.
+audit_input = _audit_input
 
 
 def detect_responsible_gaming(message: str) -> bool:

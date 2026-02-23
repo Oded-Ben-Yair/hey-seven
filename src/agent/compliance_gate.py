@@ -4,7 +4,7 @@ Two-layer pre-router safety net:
 
 **Layer 1 — Deterministic regex (zero LLM cost, zero latency):**
 5 guardrail categories (prompt injection, responsible gaming, age verification,
-BSA/AML, patron privacy) using ~173 compiled regex patterns across 11 languages
+BSA/AML, patron privacy) using ~185 compiled regex patterns across 11 languages
 (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).
 
 **Layer 2 — Semantic injection classifier (configurable LLM second layer):**

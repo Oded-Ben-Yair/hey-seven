@@ -279,8 +279,8 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 173, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 173. "
+        assert len(patterns) == 185, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 185. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -319,19 +319,19 @@ class TestGuardrailPatternCount:
         )
 
     def test_responsible_gaming_pattern_count(self):
-        """Responsible gaming has 54 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese + Hindi + Tagalog)."""
+        """Responsible gaming has 60 patterns (EN + ES + PT + ZH + FR + VI + Hindi + Tagalog + JP + KO)."""
         from src.agent.guardrails import _RESPONSIBLE_GAMING_PATTERNS
 
-        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 54, (
-            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 54."
+        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 60, (
+            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 60."
         )
 
     def test_bsa_aml_pattern_count(self):
-        """BSA/AML has 41 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese + Hindi + Tagalog)."""
+        """BSA/AML has 47 patterns (EN + ES + PT + ZH + FR + VI + Hindi + Tagalog + JP + KO)."""
         from src.agent.guardrails import _BSA_AML_PATTERNS
 
-        assert len(_BSA_AML_PATTERNS) == 41, (
-            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 41."
+        assert len(_BSA_AML_PATTERNS) == 47, (
+            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 47."
         )
 
 

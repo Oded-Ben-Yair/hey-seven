@@ -548,6 +548,8 @@ def get_casino_profile(casino_id: str) -> dict[str, Any]:
     Returns:
         A config dict with all sections populated.
     """
+    import copy
+
     profile = CASINO_PROFILES.get(casino_id)
     if profile is None:
         logger.warning(
@@ -555,13 +557,11 @@ def get_casino_profile(casino_id: str) -> dict[str, Any]:
             casino_id,
         )
         # R35 fix: return deepcopy to prevent caller mutation of global default.
-        # get_casino_config() (async) already uses deepcopy — this makes the sync
-        # path consistent. Without this, any caller mutating the returned dict
-        # (e.g., profile["branding"]["persona_name"] = "X") corrupts the global
-        # DEFAULT_CONFIG for ALL subsequent calls across all requests.
-        import copy
         return copy.deepcopy(DEFAULT_CONFIG)
-    return profile
+    # R36 fix: return deepcopy for KNOWN casinos too — callers that mutate
+    # the returned dict (e.g., profile["branding"]["key"] = value) would
+    # corrupt the global CASINO_PROFILES for ALL subsequent requests.
+    return copy.deepcopy(profile)
 
 
 # ---------------------------------------------------------------------------

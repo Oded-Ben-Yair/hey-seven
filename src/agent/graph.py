@@ -220,10 +220,14 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
 
             async with asyncio.timeout(settings.MODEL_TIMEOUT):
                 result: DispatchOutput = await dispatch_llm.ainvoke(prompt)
-            await cb.record_success()
 
-            # Validate that the specialist name is in the registry
+            # R36 fix A1: Record CB success AFTER validating the specialist
+            # name is in the registry. Previously, success was recorded before
+            # validation — a valid DispatchOutput with an unknown specialist
+            # (e.g., "spa") was counted as healthy even though it fell through
+            # to keyword fallback, inflating CB health metrics.
             if result.specialist in _AGENT_REGISTRY:
+                await cb.record_success()
                 agent_name = result.specialist
                 dispatch_method = "structured_output"
                 logger.info(
@@ -231,6 +235,12 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
                     agent_name,
                     result.confidence,
                     result.reasoning[:80],
+                )
+            else:
+                logger.warning(
+                    "Structured dispatch returned unknown specialist %r, "
+                    "falling back to keyword routing",
+                    result.specialist,
                 )
         else:
             logger.info("Circuit breaker not allowing requests; using keyword fallback")

@@ -209,10 +209,15 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
             "router_confidence": 1.0,
         }
 
+    # R36 fix A1: Hoist settings once to eliminate TOCTOU race. Same pattern
+    # as _dispatch_to_specialist (R35 fix A2). If TTL expires between calls,
+    # the function would operate with mixed config values.
+    settings = get_settings()
+
     # Phase 3: Detect guest sentiment before LLM routing (sub-1ms VADER).
     # Feature flag: sentiment_detection_enabled (default True).
     sentiment_update: dict[str, Any] = {}
-    if await is_feature_enabled(get_settings().CASINO_ID, "sentiment_detection_enabled"):
+    if await is_feature_enabled(settings.CASINO_ID, "sentiment_detection_enabled"):
         sentiment = detect_sentiment(user_message)
         sentiment_update["guest_sentiment"] = sentiment
 
@@ -220,7 +225,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
     # Populates extracted_fields for whisper planner + guest profile.
     # Feature flag: field_extraction_enabled (default True).
     extraction_update: dict[str, Any] = {}
-    if await is_feature_enabled(get_settings().CASINO_ID, "field_extraction_enabled"):
+    if await is_feature_enabled(settings.CASINO_ID, "field_extraction_enabled"):
         extracted = extract_fields(user_message)
         if extracted:
             # Merge with existing fields (accumulate across turns)

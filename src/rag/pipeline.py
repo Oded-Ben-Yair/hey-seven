@@ -237,7 +237,9 @@ def _compute_chunk_id(text: str, source: str) -> str:
     Returns:
         Hex-encoded SHA-256 hash string.
     """
-    return hashlib.sha256((text + source).encode()).hexdigest()
+    # R36 fix A5: Use null byte delimiter to prevent ambiguous concatenation.
+    # Without delimiter: text="abc", source="def" == text="abcde", source="f".
+    return hashlib.sha256(f"{text}\x00{source}".encode()).hexdigest()
 
 
 _FORMATTERS = {

@@ -537,6 +537,8 @@ class TestCasinoProfiles:
                 )
 
     def test_unknown_casino_returns_default_config(self):
-        """get_casino_profile with unknown ID returns DEFAULT_CONFIG."""
+        """get_casino_profile with unknown ID returns a deepcopy of DEFAULT_CONFIG."""
         profile = get_casino_profile("unknown_casino")
-        assert profile is DEFAULT_CONFIG
+        # R36: returns deepcopy, not identity reference (prevents mutation of global)
+        assert profile == DEFAULT_CONFIG
+        assert profile is not DEFAULT_CONFIG, "Should return deepcopy, not direct reference"
