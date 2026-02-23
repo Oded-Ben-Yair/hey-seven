@@ -486,6 +486,70 @@ class TestSearchKnowledgeBaseUnit:
             assert results == []
 
 
+class TestSearchKnowledgeBaseDualStrategyRRF:
+    """Verify search_knowledge_base uses dual-strategy retrieval with RRF."""
+
+    def test_search_knowledge_base_uses_dual_strategy_rrf(self):
+        """search_knowledge_base calls retrieve_with_scores twice (semantic + augmented)
+        and passes both result sets to rerank_by_rrf for fusion."""
+        from unittest.mock import MagicMock, call
+
+        from langchain_core.documents import Document
+
+        mock_retriever = MagicMock()
+
+        # Strategy 1 (semantic): returns doc_a first
+        doc_a = Document(page_content="Steakhouse A", metadata={"category": "restaurants"})
+        doc_b = Document(page_content="Steakhouse B", metadata={"category": "restaurants"})
+
+        # Return different orderings per strategy call
+        mock_retriever.retrieve_with_scores.side_effect = [
+            [(doc_a, 0.9), (doc_b, 0.7)],  # Semantic: A first
+            [(doc_b, 0.85), (doc_a, 0.75)],  # Augmented: B first
+        ]
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever), \
+             patch("src.agent.tools.rerank_by_rrf") as mock_rrf:
+            # RRF returns fused results
+            mock_rrf.return_value = [(doc_a, 0.9), (doc_b, 0.85)]
+
+            from src.agent.tools import search_knowledge_base
+            results = search_knowledge_base("steakhouse")
+
+        # Verify retrieve_with_scores was called twice (dual strategy)
+        assert mock_retriever.retrieve_with_scores.call_count == 2
+
+        # Verify RRF was called with both result sets
+        mock_rrf.assert_called_once()
+        rrf_args = mock_rrf.call_args[0][0]
+        assert len(rrf_args) == 2, "RRF should receive 2 result lists (semantic + augmented)"
+
+        # Verify final results come from the fused output
+        assert len(results) >= 1
+        assert results[0]["content"] == "Steakhouse A"
+
+    def test_augmented_query_includes_entity_terms(self):
+        """The augmented strategy appends domain terms to the original query."""
+        from unittest.mock import MagicMock
+
+        from langchain_core.documents import Document
+
+        mock_retriever = MagicMock()
+        doc = Document(page_content="Info", metadata={"category": "restaurants"})
+        mock_retriever.retrieve_with_scores.return_value = [(doc, 0.8)]
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever), \
+             patch("src.agent.tools.rerank_by_rrf", return_value=[(doc, 0.8)]):
+            from src.agent.tools import search_knowledge_base
+            search_knowledge_base("steakhouse")
+
+        # Second call should have augmented query
+        calls = mock_retriever.retrieve_with_scores.call_args_list
+        assert len(calls) == 2
+        augmented_query = calls[1][0][0]  # First positional arg of second call
+        assert "name" in augmented_query or "location" in augmented_query or "details" in augmented_query
+
+
 class TestSearchHoursUnit:
     """Unit tests for search_hours with mocked retriever."""
 

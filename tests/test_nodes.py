@@ -467,6 +467,53 @@ class TestOffTopicNode:
         assert "restaurants" in content.lower() or "entertainment" in content.lower()
 
 
+class TestOffTopicPerCasinoHelplines:
+    """Per-casino helplines: NJ property gets NJ helplines, not CT."""
+
+    @patch("src.agent.nodes.get_settings")
+    async def test_off_topic_per_casino_helplines(self, mock_settings):
+        """Hard Rock AC (NJ) off_topic gambling_advice uses NJ helplines."""
+        from src.agent.nodes import off_topic_node
+
+        settings = MagicMock()
+        settings.PROPERTY_NAME = "Hard Rock Hotel & Casino"
+        settings.PROPERTY_PHONE = "1-800-HARDROCK"
+        settings.PROPERTY_WEBSITE = "hardrockhotelatlanticcity.com"
+        settings.PROPERTY_STATE = "New Jersey"
+        settings.CASINO_ID = "hard_rock_ac"
+        mock_settings.return_value = settings
+
+        state = _state(query_type="gambling_advice")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+
+        # Must contain NJ helpline (1-800-GAMBLER), not CT helpline (1-888-789-7777)
+        assert "1-800-GAMBLER" in content, (
+            f"NJ property must show 1-800-GAMBLER. Got: {content}"
+        )
+        assert "Hard Rock" in content
+
+    @patch("src.agent.nodes.get_settings")
+    async def test_mohegan_sun_gets_ct_helplines(self, mock_settings):
+        """Mohegan Sun (CT) off_topic gambling_advice uses CT helplines."""
+        from src.agent.nodes import off_topic_node
+
+        settings = MagicMock()
+        settings.PROPERTY_NAME = "Mohegan Sun"
+        settings.PROPERTY_PHONE = "1-888-226-7711"
+        settings.PROPERTY_WEBSITE = "mohegansun.com"
+        settings.PROPERTY_STATE = "Connecticut"
+        settings.CASINO_ID = "mohegan_sun"
+        mock_settings.return_value = settings
+
+        state = _state(query_type="gambling_advice")
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+
+        # Must contain national helpline
+        assert "1-800-MY-RESET" in content
+
+
 class TestRouteFromRouter:
     def test_greeting_routes_to_greeting(self):
         """Greeting query_type routes to greeting node."""

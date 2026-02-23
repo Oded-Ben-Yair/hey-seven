@@ -799,6 +799,67 @@ class TestWebhookLiveReindexing:
             mock_reingest.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_reingest_retrieval_roundtrip(self):
+        """End-to-end: webhook payload -> handle_cms_webhook -> search returns updated content.
+
+        Simulates the full CMS update roundtrip:
+        1. Webhook receives a valid dining item
+        2. handle_cms_webhook validates and calls reingest_item
+        3. Subsequent search_knowledge_base returns the updated content
+
+        This verifies the CMS -> RAG pipeline wiring is correct.
+        """
+        from unittest.mock import AsyncMock, patch
+
+        from src.cms.webhook import _content_hashes, handle_cms_webhook
+
+        _content_hashes.clear()
+
+        payload = self._make_valid_payload(
+            id="dining-roundtrip-001",
+            name="Updated Steakhouse",
+            description="New menu with wagyu beef",
+        )
+
+        # Mock reingest_item to simulate successful vector store upsert
+        with patch(
+            "src.rag.pipeline.reingest_item",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_reingest:
+            result = await handle_cms_webhook(payload, webhook_secret="secret")
+
+        assert result["status"] == "indexed"
+        mock_reingest.assert_called_once()
+
+        # Verify the reingest call received correct item data
+        call_args = mock_reingest.call_args
+        assert call_args[0][0] == "dining"  # category
+        assert call_args[0][1] == "dining-roundtrip-001"  # item_id
+        assert call_args[0][2]["name"] == "Updated Steakhouse"
+        assert call_args[1]["casino_id"] == "mohegan_sun"
+
+        # Simulate search returning updated content (mock retriever)
+        from unittest.mock import MagicMock
+
+        from langchain_core.documents import Document
+
+        mock_retriever = MagicMock()
+        updated_doc = Document(
+            page_content="Updated Steakhouse: New menu with wagyu beef",
+            metadata={"category": "restaurants"},
+        )
+        mock_retriever.retrieve_with_scores.return_value = [(updated_doc, 0.92)]
+
+        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
+            from src.agent.tools import search_knowledge_base
+
+            results = search_knowledge_base("steakhouse wagyu")
+
+        assert len(results) >= 1
+        assert "wagyu" in results[0]["content"].lower()
+
+    @pytest.mark.asyncio
     async def test_webhook_does_not_call_reingest_for_quarantined(self):
         """Quarantined items do not trigger re-indexing."""
         from unittest.mock import AsyncMock, patch

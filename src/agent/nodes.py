@@ -49,6 +49,27 @@ __all__ = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# i18n Architecture Decision Record (ADR)
+# ---------------------------------------------------------------------------
+# DECISION: Response language is English-only for MVP
+# CONTEXT: Guardrails detect 4 languages (EN, ES, PT, ZH) for safety-critical
+#   patterns (responsible gaming, BSA/AML). However, the concierge response
+#   is always English because:
+#   1. System prompt is English-only
+#   2. RAG knowledge base is English-only
+#   3. LLM validation prompt is English-only
+#   4. Multi-language response requires per-language prompt templates,
+#      localized helplines, and localized validation — significant scope
+# PLANNED APPROACH (post-MVP):
+#   1. Detect language in router (add to RouterOutput)
+#   2. Select localized prompt template (CONCIERGE_SYSTEM_PROMPT_ES, etc.)
+#   3. Select localized helplines from casino profile
+#   4. Validate in the response language
+# STATUS: Guardrails multilingual (EN+ES+PT+ZH), responses English-only
+# ---------------------------------------------------------------------------
+
+
 def _format_context_block(retrieved: list[dict], separator: str = "\n---\n") -> str:
     """Format retrieved context as numbered sources for LLM consumption.
 

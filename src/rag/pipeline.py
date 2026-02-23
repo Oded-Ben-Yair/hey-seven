@@ -800,6 +800,7 @@ class AbstractRetriever(ABC):
         self,
         query: str,
         top_k: int = 5,
+        min_score: float | None = None,
     ) -> list[tuple[Document, float]]:
         """Retrieve documents with relevance scores."""
         ...
@@ -855,8 +856,16 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
         self,
         query: str,
         top_k: int = 5,
+        min_score: float | None = None,
     ) -> list[tuple[Document, float]]:
         """Retrieve documents with normalized relevance scores (0-1, higher = more relevant).
+
+        Returns single-strategy results for a given query. Multi-strategy
+        orchestration and RRF fusion are performed in ``src/agent/tools.py``
+        (the orchestration layer). Filtering after fusion is deliberate:
+        a document may rank high in one strategy but low in another, so
+        post-fusion relevance filtering uses the original cosine score
+        as the quality gate.
 
         Uses ``similarity_search_with_relevance_scores`` which normalizes the
         underlying distance metric to a [0, 1] relevance range.  The collection
@@ -872,6 +881,11 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
         Args:
             query: The search query.
             top_k: Number of results to return.
+            min_score: Optional minimum relevance score threshold (0-1).
+                When set, results below this score are excluded before
+                returning. Default ``None`` means no filtering (backward
+                compatible). Useful for single-strategy retrieval where
+                post-fusion filtering is not applicable.
 
         Returns:
             List of (Document, relevance_score) tuples where 1.0 = exact match.
@@ -882,9 +896,12 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
 
         # Structural grounding: only return documents for the configured property
         property_id = get_settings().PROPERTY_NAME.lower().replace(" ", "_")
-        return self.vectorstore.similarity_search_with_relevance_scores(
+        results = self.vectorstore.similarity_search_with_relevance_scores(
             query, k=top_k, filter={"property_id": property_id},
         )
+        if min_score is not None:
+            results = [(doc, score) for doc, score in results if score >= min_score]
+        return results
 
 
 # ---------------------------------------------------------------------------

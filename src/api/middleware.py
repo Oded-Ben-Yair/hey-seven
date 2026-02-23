@@ -309,9 +309,46 @@ class RateLimitMiddleware:
     3. API Gateway quotas (if using Apigee or similar)
     Without this, bot storms can bypass limits by hitting different instances.
     Tracked as a known limitation per R11 review (3/3 reviewer consensus).
+
+    **ADR: In-memory rate limiting for MVP**
+
+    Decision:
+        In-memory sliding-window rate limiting is acceptable for the current
+        MVP deployment phase. No distributed backend is required yet.
+
+    Context:
+        The demo deployment runs on a single Cloud Run instance with
+        ``min-instances=1`` to ensure a warm instance is always available.
+        Traffic is low (< 100 req/min), and the primary threat model is
+        accidental abuse, not coordinated bot storms.
+
+    Failure modes under multi-instance scaling:
+        Each Cloud Run instance maintains independent counters. Under
+        autoscaling (up to ``max-instances=10``), the effective rate limit
+        becomes ``RATE_LIMIT_CHAT * N`` where N is the active instance
+        count. A client sending 20 req/min could slip through if requests
+        are load-balanced across 10 instances (2 req/instance < 20 limit).
+
+    Mitigation:
+        - ``min-instances=1``: most demo traffic hits a single instance.
+        - ``max-instances=10``: bounds the multiplier to 10x.
+        - Cloud Armor is the recommended next step (zero-code, CDN-level).
+
+    3-tier upgrade path:
+        1. **In-memory** (current) -- single instance, demo-grade. No
+           external dependencies. Suitable for < 100 req/min, single
+           instance. Memory bounded by ``RATE_LIMIT_MAX_CLIENTS``.
+        2. **Cloud Memorystore (Redis)** -- shared counters across all
+           instances. Requires Redis instance (~$30/mo for basic tier).
+           Suitable for multi-instance production with < 10K req/min.
+        3. **Cloud Armor rate limiting** -- zero-code, CDN-level enforcement.
+           No application changes needed. Suitable for production scale
+           with DDoS protection. Recommended for GA launch.
     """
 
     def __init__(self, app: ASGIApp) -> None:
+        # TODO(production): Migrate to Cloud Memorystore (Redis) or Cloud Armor
+        # for distributed rate limiting. See ADR in class docstring for upgrade path.
         self.app = app
         settings = get_settings()
         self.max_tokens = settings.RATE_LIMIT_CHAT

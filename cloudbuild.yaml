@@ -1,3 +1,15 @@
+# ---------------------------------------------------------------------------
+# Staging Strategy ADR
+# ---------------------------------------------------------------------------
+# CURRENT (MVP): Single-environment pipeline. Smoke test gate validates
+#   health + version + agent_ready before routing traffic (Step 7-8).
+# PLANNED (production): Branch-based staging via Cloud Build triggers:
+#   - Push to main -> deploy to staging Cloud Run service
+#   - Tag vX.Y.Z -> promote staging image to production Cloud Run service
+#   - Staging runs full E2E test suite (not just smoke test)
+#   - Promotion requires manual approval via Cloud Build approval gates
+# WHY NOT YET: Single demo environment, one developer, no staging GCP project.
+# ---------------------------------------------------------------------------
 steps:
   # Step 1: Install dependencies and run tests + lint
   - name: 'python:3.12.8-slim-bookworm'

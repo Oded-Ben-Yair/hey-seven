@@ -161,3 +161,25 @@ class TestStreamingPIIRedactor:
         flush_output = list(r.flush())
         text = "".join(flush_output)
         assert "hi" in text
+
+    def test_redacts_long_email_with_subdomain(self):
+        """Email with long subdomain (60+ chars total) is caught by the 80-char buffer.
+
+        Validates that the increased _MAX_PATTERN_LEN=80 covers real-world
+        email addresses with subdomains and long TLDs that exceed the
+        previous 40-char buffer.
+        """
+        long_email = "firstname.lastname@hospitality.mohegan-sun-resort.com"
+        assert len(long_email) > 50  # Confirm this is a genuinely long pattern
+        r = StreamingPIIRedactor()
+        # Split the email across chunk boundaries to test lookahead
+        output = (
+            list(r.feed("Contact "))
+            + list(r.feed(long_email[:30]))
+            + list(r.feed(long_email[30:]))
+            + list(r.feed(" for reservations"))
+            + list(r.flush())
+        )
+        text = "".join(output)
+        assert long_email not in text
+        assert "[EMAIL]" in text

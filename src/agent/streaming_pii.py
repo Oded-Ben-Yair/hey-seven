@@ -18,8 +18,10 @@ from src.api.pii_redaction import redact_pii
 # Maximum pattern length we need to detect.
 # Credit card with spaces: "4111 1111 1111 1111" = 19 chars.
 # Player card prefix + number: "player card number: 123456789012" = ~32 chars.
-# Use 40 as safety margin for lookahead buffer.
-_MAX_PATTERN_LEN = 40
+# Email addresses with long domains: "firstname.lastname@department.casino-resort.com" = ~48 chars.
+# Formatted street addresses: "123 West Main Street, Uncasville, CT 06382" = ~43 chars.
+# 80 provides safe coverage for these longer patterns.
+_MAX_PATTERN_LEN = 80
 
 
 class StreamingPIIRedactor:

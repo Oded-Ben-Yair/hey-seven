@@ -59,6 +59,31 @@ _INJECTION_PATTERNS = [
 ]
 
 # ---------------------------------------------------------------------------
+# Non-Latin injection patterns (Arabic, Japanese, Korean)
+# ---------------------------------------------------------------------------
+# These catch injection attempts in non-Latin scripts that bypass
+# the Latin-focused regex patterns above.
+
+_NON_LATIN_INJECTION_PATTERNS = [
+    # Arabic
+    re.compile(r"تجاهل التعليمات", re.I),  # "ignore instructions"
+    re.compile(r"أنت الآن", re.I),           # "you are now"
+    re.compile(r"تصرف كـ", re.I),           # "act as"
+    re.compile(r"نظام جديد", re.I),          # "new system"
+    re.compile(r"كشف الأسرار", re.I),        # "reveal secrets"
+    # Japanese
+    re.compile(r"すべての指示を無視", re.I),    # "ignore all instructions"
+    re.compile(r"DANモード"),                  # "DAN mode"
+    re.compile(r"システムプロンプト"),           # "system prompt"
+    re.compile(r"制限を解除"),                  # "remove restrictions"
+    re.compile(r"秘密を教えて"),                # "tell me secrets"
+    # Korean
+    re.compile(r"모든 지시 무시"),              # "ignore all instructions"
+    re.compile(r"시스템 프롬프트"),             # "system prompt"
+    re.compile(r"제한 해제"),                  # "remove restrictions"
+]
+
+# ---------------------------------------------------------------------------
 # Responsible gaming patterns
 # ---------------------------------------------------------------------------
 
@@ -280,6 +305,9 @@ def audit_input(message: str) -> bool:
     if normalized != message:
         if _check_patterns(normalized, _INJECTION_PATTERNS, "Prompt injection (normalized)"):
             return False
+    # Third pass: non-Latin script injection patterns (Arabic, Japanese, Korean)
+    if _check_patterns(message, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin)"):
+        return False
     return True
 
 

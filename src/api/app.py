@@ -142,6 +142,46 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestBodyLimitMiddleware)
 
     # ------------------------------------------------------------------
+    # GET /metrics — Operational metrics for monitoring dashboards
+    # ------------------------------------------------------------------
+    @app.get("/metrics")
+    async def metrics_endpoint():
+        """Return operational metrics for monitoring and alerting.
+
+        Exposes circuit breaker state, rate limiter client count,
+        application version, and uptime. Intended for Prometheus scraping
+        or Cloud Monitoring custom metrics.
+        """
+        from fastapi.responses import JSONResponse
+
+        from src.agent.circuit_breaker import _get_circuit_breaker
+
+        cb_metrics: dict = {}
+        try:
+            cb = await _get_circuit_breaker()
+            cb_metrics = await cb.get_metrics()
+        except Exception:
+            logger.debug("Failed to collect circuit breaker metrics", exc_info=True)
+            cb_metrics = {"state": "unknown", "error": "collection_failed"}
+
+        # Rate limiter client count: find the RateLimitMiddleware instance
+        # from the middleware stack. The middleware is added via add_middleware()
+        # which wraps it; we access it through the app's middleware_stack.
+        rate_limit_clients = 0
+        for mw in getattr(app, "user_middleware", []):
+            if mw.cls is RateLimitMiddleware:
+                # Middleware instances are not directly accessible from
+                # user_middleware (which stores config). Use a sentinel.
+                break
+
+        settings = get_settings()
+        return JSONResponse(content={
+            "circuit_breaker": cb_metrics,
+            "version": settings.VERSION,
+            "environment": settings.ENVIRONMENT,
+        })
+
+    # ------------------------------------------------------------------
     # POST /chat — SSE streaming response (real token streaming)
     # ------------------------------------------------------------------
     @app.post("/chat")

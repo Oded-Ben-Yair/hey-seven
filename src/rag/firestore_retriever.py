@@ -193,6 +193,7 @@ class FirestoreRetriever(AbstractRetriever):
         self,
         query: str,
         top_k: int = 5,
+        min_score: float | None = None,
     ) -> list[tuple[Document, float]]:
         """Retrieve documents with relevance scores via single Firestore vector search.
 
@@ -205,6 +206,9 @@ class FirestoreRetriever(AbstractRetriever):
         Args:
             query: The search query.
             top_k: Number of results to return.
+            min_score: Optional minimum relevance score threshold (0-1).
+                When set, results below this score are excluded before
+                returning. Default ``None`` means no filtering.
 
         Returns:
             List of (Document, relevance_score) tuples where 1.0 = exact match.
@@ -212,6 +216,8 @@ class FirestoreRetriever(AbstractRetriever):
         settings = get_settings()
         property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
         results = self._single_vector_query(query, top_k, property_id)
+        if min_score is not None:
+            results = [(doc, score) for doc, score in results if score >= min_score]
         logger.info(
             "Firestore search returned %d results (query: %.40s...)",
             len(results),

@@ -2,7 +2,7 @@
 
 from src.agent.prompts import (
     CONCIERGE_SYSTEM_PROMPT,
-    RESPONSIBLE_GAMING_HELPLINES,
+    RESPONSIBLE_GAMING_HELPLINES_DEFAULT,
     ROUTER_PROMPT,
     VALIDATION_PROMPT,
 )
@@ -14,7 +14,7 @@ class TestPromptTemplates:
         result = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
             property_name="Test Casino",
             current_time="Monday 3 PM",
-            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
+            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES_DEFAULT,
         )
         assert "Test Casino" in result
         assert "Monday 3 PM" in result
@@ -29,18 +29,18 @@ class TestPromptTemplates:
         result = CONCIERGE_SYSTEM_PROMPT.safe_substitute(
             property_name="X",
             current_time="now",
-            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
+            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES_DEFAULT,
         )
         assert "1-800-MY-RESET" in result or "1-800-699-7378" in result
         assert "1-888-789-7777" in result
         assert "ct.gov/selfexclusion" in result
 
     def test_helplines_constant_contains_all_resources(self):
-        """RESPONSIBLE_GAMING_HELPLINES constant includes updated resources."""
-        assert "1-800-MY-RESET" in RESPONSIBLE_GAMING_HELPLINES
-        assert "1-800-699-7378" in RESPONSIBLE_GAMING_HELPLINES
-        assert "1-888-789-7777" in RESPONSIBLE_GAMING_HELPLINES
-        assert "ct.gov/selfexclusion" in RESPONSIBLE_GAMING_HELPLINES
+        """RESPONSIBLE_GAMING_HELPLINES_DEFAULT constant includes updated resources."""
+        assert "1-800-MY-RESET" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
+        assert "1-800-699-7378" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
+        assert "1-888-789-7777" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
+        assert "ct.gov/selfexclusion" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
     def test_router_prompt_includes_categories(self):
         """Router prompt lists all 7 query categories."""

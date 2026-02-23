@@ -4,9 +4,33 @@ Plain functions (no @tool decorators) called directly by graph nodes.
 Each returns list[RetrievedChunk] with keys: content, metadata, score.
 Respects RAG_TOP_K and RAG_MIN_RELEVANCE_SCORE from settings.
 
-Retrieval uses Reciprocal Rank Fusion (RRF) to combine multiple query
-strategies for improved recall, especially for proper noun queries
-(e.g., "Todd English's") where augmented search ranks differently.
+RAG retrieval architecture (dual-strategy + RRF fusion):
+
+    This module is the orchestration layer for retrieval. The pipeline is:
+
+    1. **Strategy 1 — direct semantic search**: The raw user query is
+       embedded and compared via cosine similarity against the vector store.
+       Handles well-formed natural language questions.
+
+    2. **Strategy 2 — entity-augmented search**: The query is augmented with
+       domain-relevant terms (e.g., "name location details" or "hours schedule
+       open close") to boost proper noun and schedule matches that pure
+       semantic search may rank lower.
+
+    3. **Fusion — Reciprocal Rank Fusion (RRF)**: Both result lists are
+       merged using RRF with k=60 (per the original RRF paper). Documents
+       appearing in both lists receive higher fused scores. The highest
+       original cosine score is preserved per document for quality filtering.
+
+    4. **Post-fusion filtering**: Results below ``RAG_MIN_RELEVANCE_SCORE``
+       are removed using the original cosine similarity (not the RRF rank
+       score). This ensures grounding quality even for documents ranked
+       highly by fusion.
+
+    The retriever (``CasinoKnowledgeRetriever.retrieve_with_scores()``) in
+    ``src/rag/pipeline.py`` returns single-strategy results. Multi-strategy
+    orchestration and RRF fusion happen here in the tools layer, keeping the
+    retriever backend-agnostic and reusable.
 """
 
 import logging

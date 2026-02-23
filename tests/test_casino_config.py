@@ -17,11 +17,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.casino.config import (
+    CASINO_PROFILES,
     DEFAULT_CONFIG,
     _CONFIG_TTL_SECONDS,
     _deep_merge,
     clear_config_cache,
     get_casino_config,
+    get_casino_profile,
 )
 from src.casino.feature_flags import (
     DEFAULT_FEATURES,
@@ -481,3 +483,60 @@ class TestCasinoConfigEdgeCases:
         ops = config["operational"]
         assert ops["max_messages_per_guest_per_day"] == 20
         assert ops["session_timeout_hours"] == 48
+
+
+# ---------------------------------------------------------------------------
+# TestCasinoProfiles (Phase 6: Step 4c)
+# ---------------------------------------------------------------------------
+
+
+class TestCasinoProfiles:
+    """Tests for static CASINO_PROFILES entries and get_casino_profile()."""
+
+    def test_parx_casino_profile_pa_helplines(self):
+        """Parx Casino profile has correct PA helplines and state."""
+        profile = get_casino_profile("parx_casino")
+        regs = profile["regulations"]
+        assert regs["state"] == "PA"
+        assert regs["gaming_age_minimum"] == 21
+        assert regs["responsible_gaming_helpline"] == "1-800-GAMBLER"
+        assert regs["state_helpline"] == "1-800-848-1880"
+        assert regs["self_exclusion_authority"] == "PA Gaming Control Board"
+
+    def test_parx_casino_branding(self):
+        """Parx Casino uses 'Lucky' persona."""
+        profile = get_casino_profile("parx_casino")
+        assert profile["branding"]["persona_name"] == "Lucky"
+
+    def test_wynn_las_vegas_profile_nv_helplines(self):
+        """Wynn Las Vegas profile has correct NV helplines, state, and timezone."""
+        profile = get_casino_profile("wynn_las_vegas")
+        regs = profile["regulations"]
+        assert regs["state"] == "NV"
+        assert regs["gaming_age_minimum"] == 21
+        assert regs["responsible_gaming_helpline"] == "1-800-522-4700"
+        assert regs["self_exclusion_authority"] == "Nevada Gaming Control Board"
+        assert profile["operational"]["timezone"] == "America/Los_Angeles"
+
+    def test_wynn_las_vegas_luxury_branding(self):
+        """Wynn Las Vegas uses luxury branding with no exclamation marks."""
+        profile = get_casino_profile("wynn_las_vegas")
+        branding = profile["branding"]
+        assert branding["persona_name"] == "Wynn Host"
+        assert branding["tone"] == "luxury"
+        assert branding["formality_level"] == "formal"
+        assert branding["exclamation_limit"] == 0
+
+    def test_all_profiles_have_required_sections(self):
+        """All 5 casino profiles have required top-level config sections."""
+        required_sections = {"regulations", "branding", "operational", "features", "prompts", "rag"}
+        for casino_id, profile in CASINO_PROFILES.items():
+            for section in required_sections:
+                assert section in profile, (
+                    f"Profile '{casino_id}' missing required section: {section}"
+                )
+
+    def test_unknown_casino_returns_default_config(self):
+        """get_casino_profile with unknown ID returns DEFAULT_CONFIG."""
+        profile = get_casino_profile("unknown_casino")
+        assert profile is DEFAULT_CONFIG

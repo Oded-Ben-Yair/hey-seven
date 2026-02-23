@@ -6,7 +6,7 @@ Override any value via environment variable (e.g., ``MODEL_NAME=gemini-2.5-pro``
 
 from functools import lru_cache
 
-from pydantic import SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     MAX_MESSAGE_LIMIT: int = 40  # max total messages (human + AI) before forcing conversation end
     MAX_HISTORY_MESSAGES: int = 20  # sliding window: only last N messages sent to LLM
     ENABLE_HITL_INTERRUPT: bool = False  # When True, adds interrupt_before=["generate"] for human-in-the-loop
-    GRAPH_RECURSION_LIMIT: int = 10  # LangGraph recursion limit (validate->retry loop bound)
+    GRAPH_RECURSION_LIMIT: int = Field(default=10, ge=2, le=50)  # LangGraph recursion limit (validate->retry loop bound)
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
     CB_ROLLING_WINDOW_SECONDS: float = 300.0  # circuit breaker: failure counting window (R10 fix — DeepSeek F8)

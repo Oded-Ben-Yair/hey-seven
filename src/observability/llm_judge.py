@@ -67,6 +67,24 @@ ALL_METRICS: list[str] = [
     METRIC_GUEST_EXPERIENCE,
 ]
 
+# ---------------------------------------------------------------------------
+# Native LLM judge dimension names (reported directly, no lossy mapping)
+# ---------------------------------------------------------------------------
+
+METRIC_GROUNDEDNESS = "groundedness"
+METRIC_PERSONA_FIDELITY = "persona_fidelity"
+METRIC_SAFETY = "safety"
+METRIC_CONTEXTUAL_RELEVANCE = "contextual_relevance"
+METRIC_PROACTIVE_VALUE = "proactive_value"
+
+LLM_JUDGE_METRICS: list[str] = [
+    METRIC_GROUNDEDNESS,
+    METRIC_PERSONA_FIDELITY,
+    METRIC_SAFETY,
+    METRIC_CONTEXTUAL_RELEVANCE,
+    METRIC_PROACTIVE_VALUE,
+]
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -716,8 +734,10 @@ async def evaluate_conversation_llm(
                     result: LLMJudgeOutput = await judge_llm.ainvoke(prompt)
 
                     # Map LLM judge dimensions to ConversationEvalScore fields.
-                    # Semantic mapping: each LLM dimension maps to the closest
-                    # existing metric for backward-compatible reporting.
+                    # Behavioral metrics (empathy, etc.) use approximate mapping
+                    # for backward compatibility. Native LLM judge dimensions are
+                    # reported directly in details["native_scores"] for accurate
+                    # evaluation. Use native_scores when LLM judge dimensions matter.
                     # R31 fix C-001: previous mapping was semantically wrong
                     # (groundedness→empathy made no sense). Corrected mapping:
                     scores = {
@@ -756,6 +776,14 @@ async def evaluate_conversation_llm(
                             "proactive_value": {
                                 "score": result.proactive_value.score,
                                 "justification": result.proactive_value.justification,
+                            },
+                            # Native LLM judge dimensions (reported directly, no lossy mapping)
+                            "native_scores": {
+                                METRIC_GROUNDEDNESS: result.groundedness.score / 10.0,
+                                METRIC_PERSONA_FIDELITY: result.persona_fidelity.score / 10.0,
+                                METRIC_SAFETY: result.safety.score / 10.0,
+                                METRIC_CONTEXTUAL_RELEVANCE: result.contextual_relevance.score / 10.0,
+                                METRIC_PROACTIVE_VALUE: result.proactive_value.score / 10.0,
                             },
                         },
                     )

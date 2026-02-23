@@ -290,6 +290,18 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         dispatch_method,
     )
     result = await agent_fn({**state, **guest_context_update})
+
+    # Guard: warn if specialist result contains keys that should only be
+    # set by _dispatch_to_specialist (not the specialist agent itself).
+    _DISPATCH_OWNED_KEYS = frozenset({"guest_context", "guest_name"})
+    collisions = _DISPATCH_OWNED_KEYS & set(result.keys())
+    if collisions:
+        logger.warning(
+            "Specialist %s returned dispatch-owned keys %s — values will be "
+            "overwritten by dispatch layer (specialist should not set these)",
+            agent_name, collisions,
+        )
+
     # Merge guest context updates into the result so they persist in state
     if guest_context_update:
         result.update(guest_context_update)
@@ -518,7 +530,7 @@ def _initial_state(message: str) -> dict[str, Any]:
         "guest_context": {},
         "guest_name": None,
         # v4 fields (Phase 4: R23 fix C-003)
-        "suggestion_offered": 0,  # _keep_max: max(True, False) = True (persists)
+        "suggestion_offered": False,  # _keep_truthy: once True, stays True for the session
     }
 
 

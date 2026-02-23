@@ -57,13 +57,13 @@ class TestAgentRegistry:
 class TestStateFieldCount:
     """Verify the documented state field count matches code."""
 
-    def test_property_qa_state_has_16_fields(self):
-        """PropertyQAState has exactly 16 fields (13 v1/v2 + 3 v3 Phase 3)."""
+    def test_property_qa_state_has_17_fields(self):
+        """PropertyQAState has exactly 17 fields (13 v1/v2 + 3 v3 + 1 v4)."""
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 16, (
-            f"PropertyQAState has {actual} fields, expected 16. "
+        assert actual == 17, (
+            f"PropertyQAState has {actual} fields, expected 17. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 
@@ -279,8 +279,8 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 84, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 84. "
+        assert len(patterns) == 97, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 97. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -375,13 +375,13 @@ class TestEndpointCount:
             for route in app.routes
             if hasattr(route, "endpoint") and route.path not in self._FASTAPI_BUILTIN
         ]
-        assert len(endpoints) == 8, (
-            f"App has {len(endpoints)} app endpoints, expected 8. "
+        assert len(endpoints) == 9, (
+            f"App has {len(endpoints)} app endpoints, expected 9. "
             f"Endpoints: {endpoints}"
         )
 
     def test_expected_endpoint_paths(self):
-        """All 8 documented endpoint paths exist."""
+        """All 9 documented endpoint paths exist."""
         from src.api.app import create_app
 
         app = create_app()
@@ -391,7 +391,7 @@ class TestEndpointCount:
             if hasattr(route, "endpoint") and route.path not in self._FASTAPI_BUILTIN
         }
         expected = {
-            "/chat", "/live", "/health", "/property",
+            "/chat", "/live", "/health", "/property", "/metrics",
             "/graph", "/sms/webhook", "/cms/webhook", "/feedback",
         }
         assert paths == expected, (

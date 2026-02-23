@@ -163,6 +163,39 @@ class CircuitBreaker:
             self._prune_old_failures()
             return len(self._failure_timestamps)
 
+    async def get_metrics(self) -> dict:
+        """Lock-protected metrics snapshot for observability endpoints.
+
+        Returns a structlog-compatible dict with current circuit breaker
+        state, failure count (pruned), and configuration parameters.
+        All reads happen under the async lock to ensure a consistent
+        snapshot (state and failure_count are from the same instant).
+
+        Returns:
+            Dict with keys: state, failure_count, cooldown_seconds,
+            rolling_window_seconds, last_failure_time_ago.
+        """
+        async with self._lock:
+            self._prune_old_failures()
+            failure_count = len(self._failure_timestamps)
+
+            if self._state == "open" and self._cooldown_expired():
+                state = "half_open"
+            else:
+                state = self._state
+
+            last_failure_ago: float | None = None
+            if self._last_failure_time is not None:
+                last_failure_ago = round(time.monotonic() - self._last_failure_time, 1)
+
+        return {
+            "state": state,
+            "failure_count": failure_count,
+            "cooldown_seconds": self._cooldown_seconds,
+            "rolling_window_seconds": self._rolling_window_seconds,
+            "last_failure_time_ago": last_failure_ago,
+        }
+
     async def allow_request(self) -> bool:
         """Check if a request should be allowed through.
 

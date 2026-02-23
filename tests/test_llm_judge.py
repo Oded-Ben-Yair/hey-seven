@@ -8,11 +8,17 @@ import pytest
 
 from src.observability.llm_judge import (
     ALL_METRICS,
+    LLM_JUDGE_METRICS,
+    METRIC_CONTEXTUAL_RELEVANCE,
     METRIC_CONVERSATION_FLOW,
     METRIC_CULTURAL_SENSITIVITY,
     METRIC_EMPATHY,
+    METRIC_GROUNDEDNESS,
     METRIC_GUEST_EXPERIENCE,
     METRIC_PERSONA_CONSISTENCY,
+    METRIC_PERSONA_FIDELITY,
+    METRIC_PROACTIVE_VALUE,
+    METRIC_SAFETY,
     ConversationEvalReport,
     ConversationEvalScore,
     ConversationTestCase,
@@ -556,3 +562,82 @@ class TestGoldenTestCaseNewFields:
         for case in GOLDEN_DATASET:
             assert case.expected_tone == ""
             assert case.expected_empathy_level == ""
+
+
+# ---------------------------------------------------------------------------
+# TestLLMJudgeNativeMetrics
+# ---------------------------------------------------------------------------
+
+
+class TestLLMJudgeNativeMetrics:
+    """Tests for native LLM judge dimension constants and metrics."""
+
+    def test_llm_judge_metrics_has_five_dimensions(self):
+        """LLM_JUDGE_METRICS contains exactly 5 native dimensions."""
+        assert len(LLM_JUDGE_METRICS) == 5
+
+    def test_llm_judge_metrics_contains_expected_names(self):
+        """LLM_JUDGE_METRICS contains all expected dimension names."""
+        expected = {
+            "groundedness",
+            "persona_fidelity",
+            "safety",
+            "contextual_relevance",
+            "proactive_value",
+        }
+        assert set(LLM_JUDGE_METRICS) == expected
+
+    def test_metric_constants_match_list(self):
+        """Individual metric constants match their positions in LLM_JUDGE_METRICS."""
+        assert METRIC_GROUNDEDNESS == "groundedness"
+        assert METRIC_PERSONA_FIDELITY == "persona_fidelity"
+        assert METRIC_SAFETY == "safety"
+        assert METRIC_CONTEXTUAL_RELEVANCE == "contextual_relevance"
+        assert METRIC_PROACTIVE_VALUE == "proactive_value"
+
+    def test_llm_judge_metrics_no_overlap_with_behavioral(self):
+        """LLM_JUDGE_METRICS and ALL_METRICS have no overlap (distinct namespaces)."""
+        overlap = set(LLM_JUDGE_METRICS) & set(ALL_METRICS)
+        assert overlap == set(), f"Unexpected overlap: {overlap}"
+
+    @pytest.mark.asyncio
+    async def test_native_scores_in_llm_judge_details(self):
+        """LLM judge evaluation includes native_scores in details dict."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from src.observability.llm_judge import (
+            LLMJudgeDimension,
+            LLMJudgeOutput,
+            evaluate_conversation_llm,
+        )
+
+        mock_output = LLMJudgeOutput(
+            groundedness=LLMJudgeDimension(score=8, justification="Grounded"),
+            persona_fidelity=LLMJudgeDimension(score=9, justification="On persona"),
+            safety=LLMJudgeDimension(score=10, justification="Safe"),
+            contextual_relevance=LLMJudgeDimension(score=7, justification="Relevant"),
+            proactive_value=LLMJudgeDimension(score=6, justification="Some value"),
+        )
+
+        mock_llm = MagicMock()
+        mock_judge = MagicMock()
+        mock_judge.ainvoke = AsyncMock(return_value=mock_output)
+        mock_llm.with_structured_output.return_value = mock_judge
+
+        with patch("langchain_google_genai.ChatGoogleGenerativeAI", return_value=mock_llm):
+            from src.observability.llm_judge import _eval_cache
+            _eval_cache.clear()
+
+            score = await evaluate_conversation_llm(
+                [{"role": "user", "content": "What restaurants?"}],
+                "We have great dining options.",
+            )
+
+        assert score.details.get("mode") == "llm_judge"
+        native = score.details.get("native_scores")
+        assert native is not None, "native_scores missing from details"
+        assert native["groundedness"] == 0.8
+        assert native["persona_fidelity"] == 0.9
+        assert native["safety"] == 1.0
+        assert native["contextual_relevance"] == 0.7
+        assert native["proactive_value"] == 0.6

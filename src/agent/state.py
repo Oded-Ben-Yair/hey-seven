@@ -28,11 +28,23 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
 def _keep_max(a: int, b: int) -> int:
     """Reducer that preserves the maximum value across state updates.
 
-    Used for session-level counters that must accumulate across turns.
-    When _initial_state() passes 0, max(existing, 0) preserves the count.
-    When a node increments, max(existing, new) updates the count.
+    Used for session-level counters (e.g., responsible_gaming_count) that
+    must accumulate across turns.  When _initial_state() passes 0,
+    max(existing, 0) preserves the count.  When a node increments,
+    max(existing, new) updates the count.
     """
     return max(a, b)
+
+
+def _keep_truthy(a: bool, b: bool) -> bool:
+    """Reducer that preserves True once set (sticky flag).
+
+    Once a suggestion has been offered, it stays offered for the session.
+    When _initial_state() passes False, ``False or existing_True`` = True
+    (preserved).  When a node sets True, ``existing_False or True`` = True
+    (updated).
+    """
+    return a or b
 
 
 class RetrievedChunk(TypedDict):
@@ -82,6 +94,9 @@ class PropertyQAState(TypedDict):
     # v3 fields (Phase 3: Agent Quality Revolution)
     guest_sentiment: str | None  # positive/negative/neutral/frustrated (from VADER)
     guest_context: dict[str, Any]  # filtered profile from get_agent_context()
+    # Denormalized from extracted_fields["name"] for O(1) access in
+    # persona_envelope_node (which runs on every response turn).
+    # Updated by _dispatch_to_specialist when guest_profile_enabled.
     guest_name: str | None  # extracted guest name for personalization
     # _keep_max reducer: preserves the maximum value across state updates.
     # When _initial_state() resets this to 0, max(existing, 0) preserves
@@ -90,11 +105,10 @@ class PropertyQAState(TypedDict):
     # when per-turn fields are reset via _initial_state().
     responsible_gaming_count: Annotated[int, _keep_max]
     # v4 fields (Phase 4: R21-R23)
-    # _keep_max reducer on bool: max(True, False) = True (booleans are ints).
-    # Once a proactive suggestion is injected, this stays True for the session.
-    # _initial_state() passes False; max(existing_True, False) = True (preserved).
+    # _keep_truthy reducer: once True, stays True for the session.
+    # _initial_state() passes False; ``False or existing_True`` = True (preserved).
     # R23 fix C-003: enforces max-1-suggestion-per-conversation.
-    suggestion_offered: Annotated[int, _keep_max]
+    suggestion_offered: Annotated[bool, _keep_truthy]
 
 
 class RouterOutput(BaseModel):

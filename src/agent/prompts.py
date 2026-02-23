@@ -6,7 +6,8 @@ Three templates using string.Template for safe substitution:
 - VALIDATION_PROMPT: Adversarial review of generated responses
 
 Constants:
-- RESPONSIBLE_GAMING_HELPLINES: Regulatory-mandated helpline numbers (DRY,
+- RESPONSIBLE_GAMING_HELPLINES_DEFAULT: Default CT helpline numbers
+- get_responsible_gaming_helplines(): Per-casino helpline lookup (DRY,
   used in both the system prompt and the off_topic_node)
 """
 
@@ -25,8 +26,6 @@ RESPONSIBLE_GAMING_HELPLINES_DEFAULT = (
     "- CT Self-Exclusion Program: ct.gov/selfexclusion (Dept. of Consumer Protection)"
 )
 
-# Backward-compatible alias
-RESPONSIBLE_GAMING_HELPLINES = RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
 
 def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:

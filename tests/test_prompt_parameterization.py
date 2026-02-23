@@ -6,7 +6,7 @@ casino profiles instead of hardcoded Mohegan Sun text.
 
 import pytest
 
-from src.agent.prompts import CONCIERGE_SYSTEM_PROMPT, RESPONSIBLE_GAMING_HELPLINES
+from src.agent.prompts import CONCIERGE_SYSTEM_PROMPT, RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 from src.casino.config import CASINO_PROFILES, DEFAULT_CONFIG, get_casino_profile
 
 
@@ -45,7 +45,7 @@ class TestPromptParameterization:
         return CONCIERGE_SYSTEM_PROMPT.safe_substitute(
             property_name=profile.get("prompts", {}).get("casino_name_display", "Test"),
             current_time="Monday 3 PM",
-            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES,
+            responsible_gaming_helplines=RESPONSIBLE_GAMING_HELPLINES_DEFAULT,
             property_description=profile.get("property_description", ""),
         )
 
