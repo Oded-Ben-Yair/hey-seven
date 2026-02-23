@@ -42,6 +42,42 @@ from src.rag.reranking import rerank_by_rrf
 
 logger = logging.getLogger(__name__)
 
+# Query-type keyword sets for smart augmentation (Strategy 2).
+# Each set maps to domain-specific augmentation terms that boost
+# retrieval accuracy for that query category.
+_TIME_WORDS = frozenset({
+    "hour", "hours", "time", "open", "close", "schedule", "when",
+    "early", "late", "morning", "evening", "tonight", "today",
+})
+_PRICE_WORDS = frozenset({
+    "price", "cost", "rate", "expensive", "cheap", "affordable",
+    "menu", "fee", "charge", "dollar", "per",
+})
+
+
+def _get_augmentation_terms(query: str) -> str:
+    """Select domain-specific augmentation terms based on query content.
+
+    Improves Strategy 2 (entity-augmented search) by matching augmentation
+    terms to the likely query intent:
+    - Time/schedule queries: augmented with schedule keywords
+    - Price/cost queries: augmented with pricing keywords
+    - Default: augmented with name/location keywords for entity matching
+
+    Args:
+        query: The user's search query.
+
+    Returns:
+        Space-separated augmentation terms to append to the query.
+    """
+    query_lower = query.lower()
+    words = set(query_lower.split())
+    if words & _TIME_WORDS:
+        return "hours schedule open close"
+    if words & _PRICE_WORDS:
+        return "price rate cost menu"
+    return "name location details"
+
 
 def _filter_by_relevance(results: list[tuple], min_score: float) -> list[tuple]:
     """Filter retrieval results by minimum relevance score.
@@ -84,9 +120,10 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
         retriever = get_retriever()
         # Strategy 1: Direct semantic search
         semantic_results = retriever.retrieve_with_scores(query, top_k=settings.RAG_TOP_K)
-        # Strategy 2: Entity-augmented query for proper noun / name matching
+        # Strategy 2: Query-type-aware augmented search for improved recall
+        augmentation = _get_augmentation_terms(query)
         augmented_results = retriever.retrieve_with_scores(
-            f"{query} name location details",
+            f"{query} {augmentation}",
             top_k=settings.RAG_TOP_K,
         )
         # Reciprocal Rank Fusion: merge rankings for better recall

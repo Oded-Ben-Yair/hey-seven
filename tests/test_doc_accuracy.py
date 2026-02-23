@@ -195,12 +195,12 @@ class TestVersionConsistency:
     """Verify VERSION defaults are consistent across config and .env files."""
 
     def test_config_version_default(self):
-        """config.py VERSION default is 1.0.0."""
+        """config.py VERSION default is 1.1.0."""
         from src.config import Settings
 
         default = Settings.model_fields["VERSION"].default
-        assert default == "1.0.0", (
-            f"config.py VERSION default is {default!r}, expected '1.0.0'. "
+        assert default == "1.1.0", (
+            f"config.py VERSION default is {default!r}, expected '1.1.0'. "
             f"Sync .env, .env.example, and ARCHITECTURE.md."
         )
 
@@ -210,7 +210,7 @@ class TestVersionConsistency:
         content = env_example.read_text()
         match = re.search(r"^VERSION=([^\s#]+)", content, re.MULTILINE)
         assert match, "VERSION not found in .env.example"
-        assert match.group(1).strip() == "1.0.0"
+        assert match.group(1).strip() == "1.1.0"
 
 
 class TestCategoryToAgentMapping:
@@ -279,8 +279,8 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 97, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 97. "
+        assert len(patterns) == 112, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 112. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -311,11 +311,11 @@ class TestGuardrailPatternCount:
         )
 
     def test_responsible_gaming_pattern_count(self):
-        """Responsible gaming has 31 patterns (English + Spanish + Portuguese + Mandarin)."""
+        """Responsible gaming has 37 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese)."""
         from src.agent.guardrails import _RESPONSIBLE_GAMING_PATTERNS
 
-        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 31, (
-            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 31."
+        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 37, (
+            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 37."
         )
 
     def test_bsa_aml_pattern_count(self):

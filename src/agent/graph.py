@@ -50,39 +50,27 @@ from .nodes import (
     router_node,
     validate_node,
 )
+from .constants import (
+    NODE_COMPLIANCE_GATE,
+    NODE_FALLBACK,
+    NODE_GENERATE,
+    NODE_GREETING,
+    NODE_OFF_TOPIC,
+    NODE_PERSONA,
+    NODE_RESPOND,
+    NODE_RETRIEVE,
+    NODE_ROUTER,
+    NODE_VALIDATE,
+    NODE_WHISPER,
+    _KNOWN_NODES,
+    _NON_STREAM_NODES,
+)
 from .persona import persona_envelope_node
 from .state import DispatchOutput, PropertyQAState
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["build_graph", "chat", "chat_stream"]
-
-# ---------------------------------------------------------------------------
-# Node name constants — shared between build_graph() and chat_stream()
-# to prevent silent breakage if a node is renamed.
-# ---------------------------------------------------------------------------
-NODE_ROUTER = "router"
-NODE_RETRIEVE = "retrieve"
-NODE_GENERATE = "generate"
-NODE_VALIDATE = "validate"
-NODE_RESPOND = "respond"
-NODE_FALLBACK = "fallback"
-NODE_GREETING = "greeting"
-NODE_OFF_TOPIC = "off_topic"
-NODE_COMPLIANCE_GATE = "compliance_gate"
-NODE_PERSONA = "persona_envelope"
-NODE_WHISPER = "whisper_planner"
-
-_NON_STREAM_NODES = frozenset({
-    NODE_GREETING, NODE_OFF_TOPIC, NODE_FALLBACK,
-    NODE_COMPLIANCE_GATE, NODE_PERSONA, NODE_WHISPER,
-})
-
-_KNOWN_NODES = frozenset({
-    NODE_ROUTER, NODE_RETRIEVE, NODE_GENERATE, NODE_VALIDATE,
-    NODE_RESPOND, NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
-    NODE_COMPLIANCE_GATE, NODE_PERSONA, NODE_WHISPER,
-})
 
 # Keys that only _dispatch_to_specialist may set — specialist agents should
 # not return these.  Module-level for zero per-call allocation (R33 fix).

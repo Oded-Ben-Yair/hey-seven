@@ -12,15 +12,32 @@ from typing import Annotated, Any, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
+__all__ = [
+    "PropertyQAState",
+    "RouterOutput",
+    "DispatchOutput",
+    "ValidationResult",
+    "RetrievedChunk",
+]
+
 
 def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
-    """Reducer that merges extracted fields across turns.
+    """Reducer that merges extracted fields across turns (latest value wins).
 
-    New fields from ``b`` are merged into existing ``a``. When
-    ``_initial_state()`` passes ``{}``, ``{**existing, **{}} == existing``
-    so accumulated fields persist. When extraction produces new fields,
-    they are merged in without overwriting existing values (unless the
-    same key is explicitly re-extracted).
+    Design decision: "latest wins" is intentional for guest profiling.
+    When a guest corrects their name ("Actually, I'm Sarah not Sara"),
+    the new value should overwrite the old one. This is a conscious
+    choice for guest data where the most recent extraction is the most
+    accurate.
+
+    When ``_initial_state()`` passes ``{}``, ``{**existing, **{}} == existing``
+    so accumulated fields persist across turns. When extraction produces
+    new fields, they merge into the existing dict. When the same key is
+    re-extracted, the newer value wins.
+
+    If conflict detection is needed in the future, add a
+    ``_merge_dicts_with_conflicts`` variant that logs when an existing
+    non-None value is overwritten.
     """
     return {**a, **b}
 
@@ -93,7 +110,9 @@ class PropertyQAState(TypedDict):
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
     # v3 fields (Phase 3: Agent Quality Revolution)
     guest_sentiment: str | None  # positive/negative/neutral/frustrated (from VADER)
-    guest_context: dict[str, Any]  # filtered profile from get_agent_context()
+    # Expected keys: name, party_size, occasion, visit_date, dietary, etc.
+    # Populated by _dispatch_to_specialist via get_agent_context(extracted_fields).
+    guest_context: dict[str, Any]
     # Denormalized from extracted_fields["name"] for O(1) access in
     # persona_envelope_node (which runs on every response turn).
     # Updated by _dispatch_to_specialist when guest_profile_enabled.

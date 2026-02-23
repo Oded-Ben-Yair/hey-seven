@@ -16,10 +16,10 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 ## Current State (Updated 2026-02-20)
 
 - **Codebase**: 23K LOC, 51 source modules across 10 packages
-- **Tests**: ~1460 tests across 42 test files (run `make test-ci` for exact count)
+- **Tests**: ~1988 tests across 58 test files (run `make test-ci` for exact count)
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
 - **Review Score**: 92/100 after 20 rounds of hostile multi-model review
-- **Version**: Tagged v1.0.0
+- **Version**: v1.1.0
 - **Deployment**: Live demo on GCP Cloud Run
 
 ## Tech Stack Decisions
@@ -53,6 +53,7 @@ src/                         - Production source code
     agents/                  - Specialist agents (dining, hotel, comp, entertainment, host)
       _base.py               - Shared specialist execution logic (DRY extraction)
       registry.py            - Agent dispatch registry
+    constants.py             - Node name constants (single source of truth)
     graph.py                 - 11-node StateGraph assembly
     state.py                 - CasinoHostState TypedDict
     nodes.py                 - LLM nodes, router, formatter
@@ -94,7 +95,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 32 test files, 1070+ tests
+tests/                       - 58 test files, ~1988 tests
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests

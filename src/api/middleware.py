@@ -363,6 +363,22 @@ class RateLimitMiddleware:
         # instead of lazy getattr (Gemini F-009, Grok M-006 consensus).
         self._request_counter: int = 0
 
+    @staticmethod
+    def _normalize_ip(ip: str) -> str:
+        """Normalize IP address for consistent rate limit keying.
+
+        Strips IPv6 brackets, normalizes IPv4-mapped IPv6 (::ffff:1.2.3.4 -> 1.2.3.4),
+        and strips port numbers if accidentally included.
+        """
+        ip = ip.strip()
+        # Remove brackets from IPv6 (e.g., [::1] -> ::1)
+        if ip.startswith("[") and "]" in ip:
+            ip = ip[1:ip.index("]")]
+        # Normalize IPv4-mapped IPv6 to plain IPv4
+        if ip.startswith("::ffff:"):
+            ip = ip[7:]
+        return ip
+
     def _get_client_ip(self, scope: Scope) -> str:
         """Extract client IP, preferring X-Forwarded-For behind trusted proxies.
 
@@ -370,6 +386,9 @@ class RateLimitMiddleware:
         direct peer IP only.  This prevents IP spoofing via forged XFF headers.
         When TRUSTED_PROXIES is explicitly set (e.g., Cloud Run LB IPs),
         XFF is trusted only from those peers.
+
+        All returned IPs are normalized via ``_normalize_ip()`` for consistent
+        rate limit keying across IPv4 and IPv6 address formats.
         """
         headers = dict(scope.get("headers", []))
         forwarded = headers.get(b"x-forwarded-for", b"").decode()
@@ -379,14 +398,14 @@ class RateLimitMiddleware:
             trusted = self._trusted_proxies
             # None = trust nobody's XFF (default — prevents IP spoofing)
             if trusted is None:
-                return peer_ip
+                return self._normalize_ip(peer_ip)
             # Explicit list: trust XFF only from listed proxy IPs
             if peer_ip in trusted:
-                return forwarded.split(",")[0].strip()
+                return self._normalize_ip(forwarded.split(",")[0].strip())
             # Untrusted peer sent XFF — ignore it, use peer IP
-            return peer_ip
+            return self._normalize_ip(peer_ip)
         client = scope.get("client")
-        return client[0] if client else "unknown"
+        return self._normalize_ip(client[0] if client else "unknown")
 
     async def _is_allowed(self, client_ip: str) -> bool:
         """Check if a request from client_ip is within the rate limit.

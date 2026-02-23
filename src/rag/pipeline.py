@@ -223,6 +223,23 @@ def _format_promotion(item: dict[str, Any]) -> str:
     return " ".join(parts)
 
 
+def _compute_chunk_id(text: str, source: str) -> str:
+    """Compute a deterministic SHA-256 document ID from content + source.
+
+    Shared by ``ingest_property()`` (bulk) and ``reingest_item()`` (single)
+    to ensure consistent ID generation. Same content + same source always
+    produces the same ID, preventing duplicates on re-ingestion.
+
+    Args:
+        text: The formatted text content of the chunk.
+        source: The source identifier (e.g., filename or ``"cms:category/id"``).
+
+    Returns:
+        Hex-encoded SHA-256 hash string.
+    """
+    return hashlib.sha256((text + source).encode()).hexdigest()
+
+
 _FORMATTERS = {
     "restaurants": _format_restaurant,
     "dining": _format_restaurant,
@@ -314,10 +331,8 @@ async def reingest_item(
             "_schema_version": "2.1",
             "_ingestion_version": version_stamp,
         }
-        # Deterministic ID matching ingest_property: SHA-256 of content + source.
-        doc_id = hashlib.sha256(
-            (text + source).encode()
-        ).hexdigest()
+        # Deterministic ID via shared helper (matches ingest_property).
+        doc_id = _compute_chunk_id(text, source)
 
         if hasattr(retriever, "vectorstore") and retriever.vectorstore is not None:
             retriever.vectorstore.add_texts(
@@ -706,13 +721,10 @@ def ingest_property(
     for meta in metadatas:
         meta["_ingestion_version"] = version_stamp
 
-    # Deterministic IDs prevent duplicate chunks on re-ingestion.
-    # Each ID is a SHA-256 hash of content + source metadata, so
-    # the same chunk always maps to the same ID regardless of run.
+    # Deterministic IDs via shared helper — prevents duplicate chunks
+    # on re-ingestion. Same content + source always maps to same ID.
     ids = [
-        hashlib.sha256(
-            (text + str(meta.get("source", ""))).encode()
-        ).hexdigest()
+        _compute_chunk_id(text, str(meta.get("source", "")))
         for text, meta in zip(texts, metadatas)
     ]
 

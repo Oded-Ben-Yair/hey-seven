@@ -81,6 +81,17 @@ _NON_LATIN_INJECTION_PATTERNS = [
     re.compile(r"모든 지시 무시"),              # "ignore all instructions"
     re.compile(r"시스템 프롬프트"),             # "system prompt"
     re.compile(r"제한 해제"),                  # "remove restrictions"
+    # French (significant US casino patron demographic)
+    re.compile(r"ignorer\s+(?:toutes?\s+)?(?:les?\s+)?instructions?", re.I),  # ignore instructions
+    re.compile(r"tu\s+es\s+maintenant", re.I),  # you are now
+    re.compile(r"agis?\s+comme", re.I),  # act as
+    re.compile(r"nouveau\s+syst[eè]me", re.I),  # new system
+    re.compile(r"r[eé]v[eé]ler?\s+(?:les?\s+)?secrets?", re.I),  # reveal secrets
+    # Vietnamese (significant US casino patron demographic)
+    re.compile(r"bỏ qua\s+(?:tất cả\s+)?hướng dẫn", re.I),  # ignore instructions
+    re.compile(r"bây giờ bạn là", re.I),  # you are now
+    re.compile(r"hệ thống mới", re.I),  # new system
+    re.compile(r"tiết lộ bí mật", re.I),  # reveal secrets
 ]
 
 # ---------------------------------------------------------------------------
@@ -125,6 +136,14 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     re.compile(r"赌博\s*(?:成瘾|上瘾|问题)", re.I),  # gambling addiction/problem
     re.compile(r"戒\s*赌", re.I),                     # quit gambling
     re.compile(r"赌瘾", re.I),                         # gambling addiction (colloquial)
+    # French responsible gaming patterns
+    re.compile(r"probl[eè]me\s+de\s+jeu", re.I),  # gambling problem
+    re.compile(r"d[eé]pendance?\s+au\s+jeu", re.I),  # gambling addiction
+    re.compile(r"arr[eê]ter?\s+de\s+jouer", re.I),  # stop gambling
+    # Vietnamese responsible gaming patterns
+    re.compile(r"nghiện\s+(?:cờ\s+)?bạc", re.I),  # gambling addiction
+    re.compile(r"vấn đề\s+(?:cờ\s+)?bạc", re.I),  # gambling problem
+    re.compile(r"không\s+thể\s+ngừng\s+(?:chơi|đánh\s+bạc)", re.I),  # can't stop gambling
 ]
 
 # ---------------------------------------------------------------------------
@@ -199,7 +218,7 @@ _PATRON_PRIVACY_PATTERNS = [
     re.compile(r"\bhave\s+you\s+seen\s+[\w\s]+\b", re.I),
     re.compile(r"\b(?:is|was)\s+(?:[\w]+\s+){1,3}(?:at|in|visiting)\s+(?:the\s+)?(?:casino|resort|property)", re.I),
     re.compile(r"\b(?:celebrity|famous|star)\s+(?:here|visiting|spotted|seen)\b", re.I),
-    re.compile(r"\blook(?:ing)?\s+(?:up|for)\s+(?:a\s+)?(?:guest|patron|member|player)\b", re.I),
+    re.compile(r"\blook(?:ing)?\s+(?:up|for)\s+(?:a\s+)?(?:specific\s+|particular\s+)?(?:guest|patron|member|player)(?:'s|\s+(?:named|called|info|record|detail|account))\b", re.I),
     re.compile(r"\b(?:guest|patron|member)\s+(?:list|info|information|record|status)\b", re.I),
     # Social media / photo surveillance of guests
     re.compile(r"\b(?:post|share|upload)\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:a\s+)?(?:guest|patron|player)", re.I),
@@ -244,6 +263,13 @@ _CONFUSABLES: dict[str, str] = {
     "\u03a4": "T",  # Tau
     "\u0392": "B",  # Beta
     "\u03a7": "X",  # Chi
+    # Fullwidth Latin (U+FF41-U+FF5A) — used in CJK contexts
+    "\uff41": "a", "\uff42": "b", "\uff43": "c", "\uff44": "d", "\uff45": "e",
+    "\uff46": "f", "\uff47": "g", "\uff48": "h", "\uff49": "i", "\uff4a": "j",
+    "\uff4b": "k", "\uff4c": "l", "\uff4d": "m", "\uff4e": "n", "\uff4f": "o",
+    "\uff50": "p", "\uff51": "q", "\uff52": "r", "\uff53": "s", "\uff54": "t",
+    "\uff55": "u", "\uff56": "v", "\uff57": "w", "\uff58": "x", "\uff59": "y",
+    "\uff5a": "z",
 }
 
 
