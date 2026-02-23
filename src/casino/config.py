@@ -218,6 +218,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "state_helpline": "1-888-789-7777",
             "self_exclusion_authority": "CT Department of Consumer Protection",
             "self_exclusion_url": "ct.gov/selfexclusion",
+            "self_exclusion_phone": "1-860-713-6300",
         },
         "operational": {
             "timezone": "America/New_York",

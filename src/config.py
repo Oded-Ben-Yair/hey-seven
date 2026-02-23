@@ -4,8 +4,9 @@ All magic numbers, model names, paths, and tuning knobs live here.
 Override any value via environment variable (e.g., ``MODEL_NAME=gemini-2.5-pro``).
 """
 
-from functools import lru_cache
+import threading
 
+from cachetools import TTLCache
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings
 
@@ -177,16 +178,30 @@ class Settings(BaseSettings):
         return self
 
 
-@lru_cache(maxsize=1)
-def get_settings() -> Settings:
-    """Return a cached Settings instance.
+_settings_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_settings_lock = threading.Lock()
 
-    Uses ``@lru_cache`` (not TTLCache) because Settings are loaded from
-    environment variables which do not rotate like GCP credentials.
-    For runtime config changes, call ``clear_settings_cache()`` to force
-    re-read from environment on next access.
+
+def get_settings() -> Settings:
+    """Return a cached Settings instance with 1-hour TTL.
+
+    Uses TTLCache (not @lru_cache) to allow runtime config changes
+    without container restart. Environment variables are re-read when
+    the cache expires (every 3600s).
+
+    Thread-safe via threading.Lock (Settings is synchronous — not async).
     """
-    return Settings()
+    cached = _settings_cache.get("settings")
+    if cached is not None:
+        return cached
+    with _settings_lock:
+        # Double-check after acquiring lock
+        cached = _settings_cache.get("settings")
+        if cached is not None:
+            return cached
+        settings = Settings()
+        _settings_cache["settings"] = settings
+        return settings
 
 
 def clear_settings_cache() -> None:
@@ -198,4 +213,9 @@ def clear_settings_cache() -> None:
     R17 fix: GPT F-001 — every other singleton has a cache-clear function;
     Settings was the exception, blocking incident response config changes.
     """
-    get_settings.cache_clear()
+    _settings_cache.clear()
+
+
+# Backward compatibility: many test files call get_settings.cache_clear() directly.
+# This shim avoids breaking every test module that uses the @lru_cache API.
+get_settings.cache_clear = _settings_cache.clear  # type: ignore[attr-defined]

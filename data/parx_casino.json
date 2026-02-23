@@ -1,0 +1,247 @@
+{
+  "property": {
+    "name": "Parx Casino",
+    "location": "2999 Street Road, Bensalem, PA 19020",
+    "phone": "1-888-588-7279",
+    "website": "parxcasino.com",
+    "type": "Commercial Casino",
+    "description": "Parx Casino is the #1 revenue-generating casino in Pennsylvania, located in Bensalem, Bucks County. Operated by Greenwood Racing, the property features an expansive gaming floor, diverse dining options, the Xcite Center live entertainment venue, a sportsbook, and the adjacent Parx Racing thoroughbred horse racetrack. Parx is a casino-only property with no hotel.",
+    "opened": "December 2006 (as Philadelphia Park Casino)",
+    "total_area_sqft": 260000
+  },
+  "restaurants": [
+    {
+      "name": "Parxgrill",
+      "cuisine": "Steakhouse",
+      "price_range": "$$$",
+      "hours": "Wednesday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Upscale steakhouse offering USDA Prime steaks, fresh seafood, and classic sides in an elegant setting. Features an extensive wine list and attentive service for a refined dining experience.",
+      "dress_code": "Business casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Bambu",
+      "cuisine": "Asian",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 10:00 PM",
+      "location": "Casino",
+      "description": "Pan-Asian restaurant featuring Chinese, Japanese, and Thai cuisine including noodle dishes, sushi, stir-fry, and traditional Asian specialties in a contemporary setting.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Oliveto",
+      "cuisine": "Italian",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 10:00 PM",
+      "location": "Casino",
+      "description": "Italian restaurant serving brick-oven pizzas, housemade pastas, Italian sandwiches, and classic Italian entrees. Family-friendly atmosphere with quick, quality service.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Foodies",
+      "cuisine": "Food Hall",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 11:00 PM",
+      "location": "Casino",
+      "description": "Multi-station food hall offering a variety of quick-service options including burgers, tacos, poke bowls, sandwiches, and more. Perfect for a quick bite between gaming sessions.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Chickie's & Pete's",
+      "cuisine": "Sports Bar",
+      "price_range": "$",
+      "hours": "Daily 11:00 AM - 12:00 AM",
+      "location": "Casino",
+      "description": "Philadelphia's famous sports bar known for its world-famous Crabfries, wings, pizza, and cold beer. Multiple large-screen TVs for watching live sports events in a high-energy atmosphere.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Liberty Bell Gastropub",
+      "cuisine": "American Gastropub",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 11:00 PM",
+      "location": "Casino",
+      "description": "Elevated pub fare with craft beers, signature cocktails, and a menu featuring gourmet burgers, flatbreads, and comfort food with a twist. A relaxed atmosphere with live entertainment on select nights.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    }
+  ],
+  "entertainment": [
+    {
+      "name": "Xcite Center",
+      "type": "Concert & Event Venue",
+      "capacity": "1,500 seats",
+      "location": "Casino",
+      "description": "Premier live entertainment venue hosting major concerts, comedy shows, and special events. Features state-of-the-art sound and lighting with excellent sightlines and an intimate atmosphere.",
+      "schedule": "Events vary; check parxcasino.com/entertainment for schedule"
+    },
+    {
+      "name": "360 Nightclub",
+      "type": "Nightclub",
+      "capacity": "500",
+      "location": "Casino",
+      "description": "High-energy nightclub featuring top DJs, themed parties, and special events. State-of-the-art sound and lighting systems in an immersive, vibrant atmosphere. Must be 21+ to enter.",
+      "schedule": "Friday and Saturday nights, 10:00 PM - 2:00 AM"
+    }
+  ],
+  "amenities": [
+    {
+      "name": "Parx Racing",
+      "type": "Horse Racetrack",
+      "description": "Live thoroughbred horse racing at the adjacent Parx Racing facility. Features live racing, simulcast wagering, and a trackside dining area. One of the premier thoroughbred racing venues in the Northeast.",
+      "hours": "Live racing schedule varies; simulcast daily; check parxracing.com for schedule"
+    },
+    {
+      "name": "Parx Sports Betting Lounge",
+      "type": "Sports Betting",
+      "description": "Dedicated sports betting lounge featuring large-screen TVs, comfortable seating, and full bar service. A comfortable environment for watching games and placing wagers.",
+      "hours": "Daily, hours vary by sport season"
+    }
+  ],
+  "gaming": {
+    "casino_size_sqft": 260000,
+    "slot_machines": 3300,
+    "table_games": 200,
+    "poker_room": true,
+    "sportsbook": true,
+    "description": "Parx Casino features 260,000 square feet of gaming space, making it the largest casino in Pennsylvania by revenue. The expansive gaming floor offers a wide variety of slot machines, table games, poker, and sports betting.",
+    "areas": [
+      {
+        "name": "Main Casino Floor",
+        "description": "The primary gaming floor featuring thousands of slot machines, electronic table games, and traditional table games in a modern, energetic environment."
+      },
+      {
+        "name": "High Limit Room",
+        "description": "Exclusive high-limit gaming area with elevated minimum bets, premium amenities, and dedicated VIP service."
+      }
+    ],
+    "table_games_offered": [
+      "Blackjack",
+      "Roulette",
+      "Craps",
+      "Baccarat",
+      "Poker",
+      "Pai Gow Poker",
+      "Three Card Poker",
+      "Spanish 21",
+      "Let It Ride",
+      "Casino War"
+    ],
+    "poker_room_details": {
+      "name": "Parx Poker Room",
+      "tables": 48,
+      "games": ["No-Limit Texas Hold'em", "Pot-Limit Omaha", "Limit Hold'em"],
+      "tournaments": "Daily tournaments with varying buy-ins; hosts Parx Big Stax tournament series",
+      "hours": "Open 24 hours, 7 days a week",
+      "description": "One of the premier poker rooms in the Philadelphia region featuring 48 tables, daily tournaments, and cash games at all stakes. Home to the popular Big Stax tournament series."
+    },
+    "sportsbook_details": {
+      "name": "Parx Sportsbook",
+      "description": "Full-service sportsbook in partnership with BetMGM, featuring a massive LED video wall, individual betting stations, comfortable lounge seating, and full bar service. Offers betting on professional and college sports.",
+      "hours": "Daily, hours vary by sport season"
+    },
+    "high_limit_areas": {
+      "description": "VIP high-limit gaming areas available for table games and slots with elevated minimum bets, premium drink service, and dedicated hosts.",
+      "minimum_bets": "Vary by game and time of day"
+    }
+  },
+  "promotions": [
+    {
+      "name": "Xclub Rewards",
+      "type": "loyalty_program",
+      "description": "Parx Casino's official loyalty rewards program. Earn points by playing slots, table games, and poker, as well as through dining and entertainment purchases. Points can be redeemed for free play, dining, and merchandise.",
+      "tiers": [
+        {
+          "name": "Xclub",
+          "description": "Entry level. Earn points on all gaming and resort spending."
+        },
+        {
+          "name": "Gold",
+          "description": "Enhanced rewards, priority access, and select event invitations."
+        },
+        {
+          "name": "Platinum",
+          "description": "Premium benefits including complimentary valet, enhanced earning rates, and exclusive events."
+        },
+        {
+          "name": "Black",
+          "description": "VIP benefits including dedicated host, priority service, and premium perks."
+        },
+        {
+          "name": "Chairman",
+          "description": "By invitation only. The highest tier with full VIP treatment, personalized service, and exclusive access."
+        }
+      ],
+      "how_to_join": "Free to join. Sign up at any Xclub desk, online at parxcasino.com, or through the Parx app."
+    },
+    {
+      "name": "Parx App",
+      "type": "mobile_app",
+      "description": "Download the Parx Casino mobile app to manage your Xclub account, view promotions, check your points balance, and see upcoming entertainment events. Available on iOS and Android."
+    },
+    {
+      "name": "Racing Promotions",
+      "type": "racing",
+      "description": "Special promotions tied to live thoroughbred racing events at Parx Racing, including betting bonuses, dining specials, and trackside experiences."
+    }
+  ],
+  "faq": [
+    {
+      "question": "What are the casino hours?",
+      "answer": "Parx Casino is open 24 hours a day, 7 days a week."
+    },
+    {
+      "question": "What is the minimum gambling age?",
+      "answer": "You must be 21 years of age or older to gamble or consume alcohol at Parx Casino."
+    },
+    {
+      "question": "Is there free parking?",
+      "answer": "Yes, Parx Casino offers free self-parking in a large attached parking garage. Valet parking is also available."
+    },
+    {
+      "question": "Is there a dress code?",
+      "answer": "The casino floor has no formal dress code. The Parxgrill restaurant recommends business casual attire. The 360 Nightclub may have specific dress code requirements."
+    },
+    {
+      "question": "How do I get to Parx Casino?",
+      "answer": "Parx Casino is located at 2999 Street Road, Bensalem, PA 19020. It is accessible by car via I-95 or the Pennsylvania Turnpike. SEPTA public transportation also serves the area."
+    },
+    {
+      "question": "Does Parx Casino allow smoking?",
+      "answer": "Pennsylvania law allows designated smoking areas within casinos. Parx Casino has designated smoking sections on the gaming floor. The majority of the casino, including all restaurants, is non-smoking."
+    },
+    {
+      "question": "Does Parx Casino have a hotel?",
+      "answer": "No, Parx Casino is a casino-only property and does not have an on-site hotel. There are several hotels nearby in the Bensalem and surrounding Philadelphia area. The Parx website lists recommended nearby hotels."
+    },
+    {
+      "question": "How do I join the Xclub Rewards program?",
+      "answer": "Joining is free! Sign up at any Xclub desk on the casino floor, online at parxcasino.com, or through the Parx mobile app. You'll receive your Xclub card immediately."
+    },
+    {
+      "question": "Are there ATMs at Parx Casino?",
+      "answer": "Yes, ATMs are located throughout the casino floor. Please note that transaction fees may apply."
+    },
+    {
+      "question": "Does Parx Casino have a responsible gaming program?",
+      "answer": "Yes, Parx Casino is committed to responsible gaming. The casino provides resources for guests who may need assistance, including self-exclusion options through the Pennsylvania Gaming Control Board (gamingcontrolboard.pa.gov). For help, call 1-800-GAMBLER or the PA Council on Compulsive Gambling at 1-800-848-1880."
+    },
+    {
+      "question": "What is Parx Racing?",
+      "answer": "Parx Racing is a thoroughbred horse racetrack located adjacent to Parx Casino. It features live racing on select days, daily simulcast wagering, and trackside dining. Check parxracing.com for the live racing schedule."
+    },
+    {
+      "question": "Can I host a private event at Parx?",
+      "answer": "Yes, Parx Casino offers event and banquet facilities for private events, corporate gatherings, and celebrations. Contact the events team at parxcasino.com for more information."
+    },
+    {
+      "question": "Is there public transportation to Parx Casino?",
+      "answer": "Yes, SEPTA bus routes serve the Bensalem area near Parx Casino. The casino is also a short drive from Center City Philadelphia via I-95."
+    }
+  ]
+}

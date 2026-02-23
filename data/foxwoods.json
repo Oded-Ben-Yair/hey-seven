@@ -1,0 +1,428 @@
+{
+  "property": {
+    "name": "Foxwoods Resort Casino",
+    "location": "350 Trolley Line Boulevard, Mashantucket, CT 06338",
+    "phone": "1-800-369-9663",
+    "website": "foxwoods.com",
+    "type": "Tribal Casino Resort",
+    "tribe": "Mashantucket Pequot Tribal Nation",
+    "description": "One of the largest casino resort complexes in North America, Foxwoods Resort Casino is owned and operated by the Mashantucket Pequot Tribal Nation. The resort features six casinos, four hotel towers, a world-class spa, over 30 dining options, championship golf, outlet shopping, and the renowned Foxwoods Poker Room with over 100 tables.",
+    "opened": "February 15, 1986",
+    "total_area_sqft": 9000000
+  },
+  "restaurants": [
+    {
+      "name": "David Burke Prime",
+      "cuisine": "Steakhouse",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Celebrity chef David Burke's premium steakhouse featuring USDA Prime dry-aged steaks, creative seafood, and signature dishes like the clothesline bacon. An upscale dining experience with an extensive wine list.",
+      "dress_code": "Business casual",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "Al Dente",
+      "cuisine": "Italian",
+      "price_range": "$$$",
+      "hours": "Thursday-Monday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Authentic Italian cuisine featuring handmade pastas, wood-fired specialties, and classic Italian dishes prepared with fresh ingredients. Warm atmosphere with traditional Italian decor.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Golden Dragon",
+      "cuisine": "Chinese",
+      "price_range": "$$$",
+      "hours": "Daily 11:00 AM - 10:00 PM",
+      "location": "Casino",
+      "description": "Traditional and contemporary Chinese cuisine including dim sum, Cantonese specialties, and Szechuan dishes. Features a large menu with authentic regional preparations.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for dinner"
+    },
+    {
+      "name": "Cedars Steakhouse",
+      "cuisine": "Steakhouse",
+      "price_range": "$$$",
+      "hours": "Thursday-Monday 5:00 PM - 10:00 PM",
+      "location": "Grand Pequot Tower",
+      "description": "Classic steakhouse offering premium cuts of beef, fresh seafood, and traditional sides. Located in the Grand Pequot Tower with an elegant atmosphere and attentive service.",
+      "dress_code": "Business casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Hard Rock Cafe",
+      "cuisine": "American",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 11:00 PM",
+      "location": "Casino",
+      "description": "The iconic rock-and-roll themed restaurant serving classic American fare including burgers, ribs, and fajitas. Features rock memorabilia, live music, and a lively atmosphere.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Festival Buffet",
+      "cuisine": "Buffet",
+      "price_range": "$$",
+      "hours": "Friday-Sunday 4:00 PM - 9:00 PM",
+      "location": "Casino",
+      "description": "All-you-can-eat buffet featuring international stations including Asian, Italian, American, seafood, and carving stations. Rotating seasonal specialties and themed events.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "High Rollers Luxury Lanes & Lounge",
+      "cuisine": "American/Bowling",
+      "price_range": "$$",
+      "hours": "Daily 12:00 PM - 12:00 AM",
+      "location": "Casino",
+      "description": "Upscale bowling experience combined with a full-service restaurant and bar. Features gourmet comfort food, craft cocktails, and VIP bowling lanes in a modern lounge setting.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for lanes"
+    },
+    {
+      "name": "Lucky Star Ramen",
+      "cuisine": "Japanese",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 10:00 PM",
+      "location": "Casino",
+      "description": "Authentic Japanese ramen shop serving rich tonkotsu, miso, and shoyu broths with handmade noodles. Also features gyoza, rice bowls, and Japanese appetizers.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Sugar Factory",
+      "cuisine": "American/Dessert",
+      "price_range": "$$$",
+      "hours": "Daily 11:00 AM - 12:00 AM",
+      "location": "Casino",
+      "description": "Instagram-famous restaurant and candy shop known for its over-the-top milkshakes, signature goblet cocktails, and American menu. A sweet and savory dining experience with vibrant decor.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for dinner"
+    },
+    {
+      "name": "Fox Diner",
+      "cuisine": "American Diner",
+      "price_range": "$",
+      "hours": "Open 24 hours",
+      "location": "Casino",
+      "description": "Classic 24-hour diner serving breakfast all day, burgers, sandwiches, comfort food, and late-night favorites. The go-to spot for a quick meal at any hour.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    }
+  ],
+  "entertainment": [
+    {
+      "name": "Grand Theater",
+      "type": "Concert & Event Venue",
+      "capacity": "4,000 seats",
+      "location": "Grand Pequot Tower",
+      "description": "Premier concert and event venue hosting major headliner acts, comedy shows, boxing, and special events. Features state-of-the-art sound and lighting with excellent sightlines from every seat.",
+      "schedule": "Events vary; check foxwoods.com/entertainment for schedule"
+    },
+    {
+      "name": "Fox Theater",
+      "type": "Theater",
+      "capacity": "1,400 seats",
+      "location": "Casino",
+      "description": "Intimate theater venue hosting concerts, comedy shows, and special performances. Features comfortable seating with cocktail service and excellent acoustics.",
+      "schedule": "Shows vary; check entertainment calendar"
+    },
+    {
+      "name": "The Atrium",
+      "type": "Nightclub & Lounge",
+      "capacity": "500",
+      "location": "Casino",
+      "description": "Upscale nightclub and lounge featuring top DJs, themed parties, craft cocktails, and a vibrant nightlife atmosphere. Must be 21+ to enter.",
+      "schedule": "Friday and Saturday nights, 10:00 PM - 2:00 AM"
+    },
+    {
+      "name": "Monza World-Class Karting",
+      "type": "Family Entertainment",
+      "capacity": "N/A",
+      "location": "Casino Complex",
+      "description": "High-speed indoor go-kart racing experience on a European-style track. Features electric karts reaching speeds up to 45 MPH, suitable for adults and children (height requirements apply).",
+      "schedule": "Daily, hours vary; check foxwoods.com for availability"
+    },
+    {
+      "name": "Foxwoods Bowling Center",
+      "type": "Recreation",
+      "capacity": "N/A",
+      "location": "Casino",
+      "description": "Modern bowling center with multiple lanes, cosmic bowling nights, and a full-service snack bar. Fun for the whole family with league play and open bowling available.",
+      "schedule": "Daily, hours vary"
+    },
+    {
+      "name": "Rainmaker Statue & Museum",
+      "type": "Cultural Attraction",
+      "capacity": "N/A",
+      "location": "Grand Pequot Tower Atrium",
+      "description": "The iconic Rainmaker statue stands in the grand atrium of the resort. The nearby Mashantucket Pequot Museum and Research Center (separate facility) offers exhibits on Pequot tribal history and Native American culture.",
+      "schedule": "Always visible; museum hours vary"
+    }
+  ],
+  "hotel": {
+    "overview": "Foxwoods Resort Casino offers four hotel towers with a combined total of approximately 1,716 rooms and suites, ranging from luxury high-rise towers to a convenient budget-friendly option.",
+    "towers": [
+      {
+        "name": "Grand Pequot Tower",
+        "floors": 24,
+        "rooms": 824,
+        "opened": "1997",
+        "description": "The flagship hotel tower featuring spacious, modern rooms with elegant furnishings and panoramic views of the surrounding Connecticut woodlands. Home to the resort's premier dining venues."
+      },
+      {
+        "name": "Great Cedar Hotel",
+        "floors": 14,
+        "rooms": 312,
+        "opened": "2008",
+        "description": "Contemporary hotel tower with upscale rooms and suites offering a fresh, modern aesthetic. Features direct access to the casino floor and resort amenities."
+      },
+      {
+        "name": "Fox Tower",
+        "floors": 21,
+        "rooms": 300,
+        "opened": "2008",
+        "description": "Stylish hotel tower with boutique-inspired rooms and suites. Features modern decor, premium amenities, and convenient access to the resort's entertainment and dining options."
+      },
+      {
+        "name": "Two Trees Inn",
+        "floors": 5,
+        "rooms": 280,
+        "opened": "1997",
+        "description": "Budget-friendly hotel option located adjacent to the main resort complex. Offers comfortable, well-appointed rooms at an accessible price point. Free shuttle service to the main casino."
+      }
+    ],
+    "room_types": [
+      {
+        "name": "Deluxe Room",
+        "description": "Comfortable room with king or two queen beds, modern furnishings, and views of the Connecticut countryside. Includes flat-screen TV, mini-fridge, in-room safe, and complimentary Wi-Fi.",
+        "size": "400 sq ft",
+        "rate": "Starting from $149/night (varies by season)"
+      },
+      {
+        "name": "Superior Room",
+        "description": "Enhanced room with premium bedding, upgraded amenities, and preferred floor location. Features a sitting area and enhanced bathroom amenities.",
+        "size": "475 sq ft",
+        "rate": "Starting from $189/night"
+      },
+      {
+        "name": "Junior Suite",
+        "description": "Spacious suite with separate living area, king bed, sofa bed, and expanded bathroom. Ideal for extended stays or families.",
+        "size": "600 sq ft",
+        "rate": "Starting from $269/night"
+      },
+      {
+        "name": "Penthouse Suite",
+        "description": "Luxurious suite with separate bedroom and living room, wet bar, dining area, premium entertainment system, and panoramic views. VIP concierge service included.",
+        "size": "1,200+ sq ft",
+        "rate": "Inquire for pricing"
+      }
+    ],
+    "amenities": [
+      "Complimentary Wi-Fi",
+      "24-hour room service",
+      "Flat-screen TVs",
+      "In-room safe",
+      "Mini-fridge",
+      "Premium bedding",
+      "Blackout curtains",
+      "Fitness center access",
+      "Valet parking available",
+      "Free self-parking"
+    ]
+  },
+  "amenities": [
+    {
+      "name": "G Spa",
+      "type": "Full-Service Spa",
+      "description": "Full-service spa offering a comprehensive menu of treatments including massages, facials, body wraps, and wellness therapies. Features a tranquil relaxation lounge, steam room, sauna, and premium skincare services.",
+      "hours": "Daily 9:00 AM - 7:00 PM"
+    },
+    {
+      "name": "Indoor Pool",
+      "type": "Pool & Recreation",
+      "description": "Heated indoor pool with adjacent hot tub, available to hotel guests. Features poolside lounge chairs and towel service in a relaxing environment.",
+      "hours": "Daily 6:00 AM - 10:00 PM"
+    },
+    {
+      "name": "Fitness Center",
+      "type": "Gym",
+      "description": "State-of-the-art fitness center with cardio equipment, free weights, strength machines, and personal training available. Complimentary for hotel guests.",
+      "hours": "Open 24 hours"
+    },
+    {
+      "name": "Tanger Outlets at Foxwoods",
+      "type": "Shopping",
+      "description": "Over 70 brand-name outlet stores and specialty shops offering fashion, accessories, jewelry, home goods, and more. Located within the Foxwoods resort complex for convenient shopping between gaming and dining.",
+      "hours": "Daily 10:00 AM - 9:00 PM (varies by store)"
+    },
+    {
+      "name": "Pequot Museum",
+      "type": "Cultural Attraction",
+      "description": "The Mashantucket Pequot Museum and Research Center is located nearby and offers award-winning exhibits on the history and culture of the Mashantucket Pequot Tribal Nation and Native American peoples of the region.",
+      "hours": "Wednesday-Saturday 10:00 AM - 4:00 PM (seasonal)"
+    },
+    {
+      "name": "Lake of Isles Golf Course",
+      "type": "Golf Course",
+      "description": "Championship 36-hole golf facility located nearby, featuring two 18-hole courses designed by Rees Jones. Includes a full pro shop, driving range, and golf instruction.",
+      "hours": "Seasonal (April-November), dawn to dusk"
+    }
+  ],
+  "gaming": {
+    "casino_size_sqft": 344000,
+    "slot_machines": 4500,
+    "table_games": 250,
+    "poker_room": true,
+    "sportsbook": true,
+    "description": "Foxwoods Resort Casino features one of the largest casino floors in North America with 344,000 square feet of gaming space. The resort offers an enormous variety of slot machines, table games, and one of the largest poker rooms in the world.",
+    "areas": [
+      {
+        "name": "Grand Pequot Casino",
+        "description": "The main gaming floor featuring a wide selection of slot machines, table games, and high-limit areas. Connected to the Grand Pequot Tower."
+      },
+      {
+        "name": "Rainmaker Casino",
+        "description": "Additional gaming floor with slot machines and table games in a vibrant atmosphere."
+      },
+      {
+        "name": "Fox Tower Casino",
+        "description": "Modern gaming floor located in the Fox Tower area, featuring the latest slot machines and electronic table games."
+      }
+    ],
+    "table_games_offered": [
+      "Blackjack",
+      "Roulette",
+      "Craps",
+      "Baccarat",
+      "Poker",
+      "Pai Gow Poker",
+      "Spanish 21",
+      "Three Card Poker",
+      "Let It Ride",
+      "Casino War"
+    ],
+    "poker_room_details": {
+      "name": "Foxwoods Poker Room",
+      "tables": 104,
+      "games": ["No-Limit Texas Hold'em", "Pot-Limit Omaha", "Limit Hold'em", "Seven Card Stud"],
+      "tournaments": "Daily tournaments with varying buy-ins; hosts major tournament series including WPT events",
+      "hours": "Open 24 hours, 7 days a week",
+      "description": "One of the largest poker rooms in the world featuring 104 tables. Hosts major tournament series, daily cash games at all stakes, and regular special events. A destination for poker players worldwide."
+    },
+    "sportsbook_details": {
+      "name": "Book at Foxwoods",
+      "description": "Full-service sportsbook featuring a massive LED video wall, individual betting stations, comfortable lounge seating, and full bar service. Offers betting on professional and college sports through DraftKings partnership.",
+      "hours": "Daily, hours vary by sport season"
+    },
+    "high_limit_areas": {
+      "description": "VIP high-limit gaming areas available for table games and slots with elevated minimum bets, premium drink service, and dedicated hosts.",
+      "minimum_bets": "Vary by game and time of day"
+    }
+  },
+  "promotions": [
+    {
+      "name": "Foxwoods Rewards",
+      "type": "loyalty_program",
+      "description": "Foxwoods' official loyalty rewards program. Earn points by playing slots, table games, and poker, as well as through hotel stays, dining, and entertainment purchases. Points can be redeemed for free play, dining, hotel stays, and retail purchases.",
+      "tiers": [
+        {
+          "name": "Premier",
+          "description": "Entry level. Earn points on all gaming and resort spending."
+        },
+        {
+          "name": "Platinum",
+          "description": "Enhanced rewards, priority access, and select event invitations."
+        },
+        {
+          "name": "Diamond",
+          "description": "Premium benefits including complimentary valet, room upgrades, and exclusive events."
+        },
+        {
+          "name": "Chairman",
+          "description": "By invitation only. The highest tier with full VIP treatment, personalized service, and exclusive access."
+        }
+      ],
+      "how_to_join": "Free to join. Sign up at any Foxwoods Rewards desk, online at foxwoods.com, or through the Foxwoods app."
+    },
+    {
+      "name": "Foxwoods App",
+      "type": "mobile_app",
+      "description": "Download the Foxwoods mobile app to manage your rewards account, view promotions, check your points balance, book hotel rooms, browse restaurants, and see upcoming entertainment events. Available on iOS and Android."
+    },
+    {
+      "name": "Hotel Packages",
+      "type": "packages",
+      "description": "Various seasonal hotel packages combining room stays with dining credits, spa treatments, or entertainment tickets. Check foxwoods.com for current offers."
+    },
+    {
+      "name": "Dining Rewards",
+      "type": "dining",
+      "description": "Foxwoods Rewards members earn points on all dining purchases at participating Foxwoods restaurants. Special dining promotions and discounts available throughout the year."
+    }
+  ],
+  "faq": [
+    {
+      "question": "What are the casino hours?",
+      "answer": "Foxwoods Resort Casino is open 24 hours a day, 7 days a week, 365 days a year."
+    },
+    {
+      "question": "What is the minimum gambling age?",
+      "answer": "You must be 21 years of age or older to gamble or consume alcohol at Foxwoods Resort Casino."
+    },
+    {
+      "question": "Is there free parking?",
+      "answer": "Yes, Foxwoods offers free self-parking in multiple garage locations throughout the resort. Valet parking is also available for a fee."
+    },
+    {
+      "question": "Is there a dress code?",
+      "answer": "The casino floor has no formal dress code. Upscale restaurants like David Burke Prime and Cedars Steakhouse recommend business casual attire. Nightclub venues may have specific dress codes."
+    },
+    {
+      "question": "How do I get to Foxwoods?",
+      "answer": "Foxwoods Resort Casino is located at 350 Trolley Line Boulevard, Mashantucket, CT 06338. It is accessible by car via I-95 to Route 2. The resort also offers bus service from various cities in the Northeast through Foxwoods Express bus packages."
+    },
+    {
+      "question": "Does Foxwoods allow smoking?",
+      "answer": "Connecticut state law prohibits smoking inside public buildings. Foxwoods is entirely smoke-free indoors. Designated outdoor smoking areas are available."
+    },
+    {
+      "question": "Is Foxwoods pet-friendly?",
+      "answer": "Standard hotel rooms do not allow pets. Please contact the hotel directly for information on any pet-friendly accommodation options and policies."
+    },
+    {
+      "question": "How do I join the Foxwoods Rewards program?",
+      "answer": "Joining is free! Sign up at any Foxwoods Rewards desk on the casino floor, online at foxwoods.com, or through the Foxwoods mobile app. You'll receive your rewards card immediately."
+    },
+    {
+      "question": "What is the check-in and check-out time?",
+      "answer": "Standard check-in time is 4:00 PM and check-out time is 11:00 AM. Early check-in and late check-out may be available based on room availability. Higher-tier Foxwoods Rewards members may receive complimentary late check-out."
+    },
+    {
+      "question": "Does Foxwoods have a pool?",
+      "answer": "Yes, Foxwoods has a heated indoor pool and hot tub available to hotel guests. The pool area is open daily from 6:00 AM to 10:00 PM."
+    },
+    {
+      "question": "Are there ATMs at Foxwoods?",
+      "answer": "Yes, ATMs are located throughout the casino floor and near the hotel lobbies. Please note that transaction fees may apply."
+    },
+    {
+      "question": "Does Foxwoods have a responsible gaming program?",
+      "answer": "Yes, Foxwoods is committed to responsible gaming. The resort provides resources for guests who may need assistance, including self-exclusion options through the Connecticut Department of Consumer Protection (ct.gov/selfexclusion, phone: 1-860-713-6300). For help, call the National Problem Gambling Helpline at 1-800-522-4700 or the Connecticut Council on Problem Gambling at 1-888-789-7777."
+    },
+    {
+      "question": "Can I host a private event at Foxwoods?",
+      "answer": "Yes, Foxwoods offers extensive event and convention space including ballrooms, meeting rooms, and conference facilities. Contact the events team at foxwoods.com for more information."
+    },
+    {
+      "question": "Is there a shuttle service to Foxwoods?",
+      "answer": "Foxwoods offers bus service from various cities in the Northeast through Foxwoods Express bus packages. Routes operate from New York City, Boston, Hartford, Providence, and other major cities. Contact 1-800-369-9663 or visit foxwoods.com for current schedules and pricing."
+    },
+    {
+      "question": "What is the Foxwoods Poker Room?",
+      "answer": "The Foxwoods Poker Room features 104 tables, making it one of the largest poker rooms in the world. It offers daily tournaments, cash games at all stakes, and hosts major tournament series including WPT events. The poker room is open 24 hours a day."
+    }
+  ]
+}

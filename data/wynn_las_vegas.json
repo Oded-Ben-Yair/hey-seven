@@ -1,0 +1,424 @@
+{
+  "property": {
+    "name": "Wynn Las Vegas",
+    "location": "3131 Las Vegas Boulevard South, Las Vegas, NV 89109",
+    "phone": "1-702-770-7000",
+    "website": "wynnlasvegas.com",
+    "type": "Luxury Commercial Casino Resort",
+    "description": "Wynn Las Vegas is a Forbes Five-Star luxury casino resort on the Las Vegas Strip, developed by Steve Wynn. Together with its sister property Encore, the resort features approximately 4,750 rooms and suites, Forbes Five-Star dining, an 18-hole championship golf course, world-class entertainment, premium nightlife, and the stunning Lake of Dreams. Wynn has earned more Forbes Five-Star awards than any other independent hotel company in the world.",
+    "opened": "April 28, 2005",
+    "total_area_sqft": 4400000
+  },
+  "restaurants": [
+    {
+      "name": "Wing Lei",
+      "cuisine": "Chinese",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:30 PM - 10:00 PM",
+      "location": "Wynn Tower",
+      "description": "Forbes Five-Star Chinese restaurant and the only Chinese restaurant in North America to hold the distinction. Features exquisite Cantonese and Shanghai cuisine in a stunning, opulent setting with hand-painted silk walls.",
+      "dress_code": "Business casual to formal",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "Lakeside",
+      "cuisine": "Seafood",
+      "price_range": "$$$",
+      "hours": "Daily 5:00 PM - 10:00 PM",
+      "location": "Wynn Tower",
+      "description": "Elegant seafood restaurant overlooking the Lake of Dreams. Features fresh catches, raw bar selections, and seafood-forward dishes in a romantic lakeside setting with views of the nightly light show.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Mizumi",
+      "cuisine": "Japanese",
+      "price_range": "$$$$",
+      "hours": "Thursday-Monday 5:30 PM - 10:00 PM",
+      "location": "Wynn Tower",
+      "description": "Premium Japanese restaurant featuring sushi, sashimi, teppanyaki, and traditional Japanese cuisine in a serene setting inspired by a Japanese garden. Features a sake collection and omakase dining option.",
+      "dress_code": "Smart casual to business casual",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "SW Steakhouse",
+      "cuisine": "Steakhouse",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:30 PM - 10:00 PM",
+      "location": "Wynn Tower",
+      "description": "Award-winning steakhouse overlooking the Lake of Dreams, serving USDA Prime steaks, Wagyu beef, and premium seafood. Features a dramatic fire-and-water show visible from the dining room.",
+      "dress_code": "Business casual",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "Cipriani",
+      "cuisine": "Italian",
+      "price_range": "$$$",
+      "hours": "Daily 5:00 PM - 11:00 PM",
+      "location": "Encore Tower",
+      "description": "The legendary Cipriani brand brings its classic Italian cuisine to Las Vegas. Features signature dishes like beef carpaccio, homemade pastas, and Italian specialties in an elegant Venetian-inspired setting.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Delilah",
+      "cuisine": "Supper Club",
+      "price_range": "$$$",
+      "hours": "Wednesday-Sunday 5:30 PM - 12:00 AM",
+      "location": "Wynn Tower",
+      "description": "A glamorous supper club experience featuring classic American dishes, craft cocktails, and live entertainment. The art deco-inspired space evokes old Hollywood glamour with a modern twist.",
+      "dress_code": "Smart casual to dressy",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "Allegro",
+      "cuisine": "Italian",
+      "price_range": "$$",
+      "hours": "Daily 11:30 AM - 10:00 PM",
+      "location": "Wynn Tower",
+      "description": "Casual Italian restaurant serving wood-fired pizzas, housemade pastas, salads, and Italian favorites in a bright, welcoming atmosphere. Perfect for a relaxed meal.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Red 8 Asian Bistro",
+      "cuisine": "Asian",
+      "price_range": "$$",
+      "hours": "Daily 11:30 AM - 11:00 PM",
+      "location": "Wynn Tower",
+      "description": "Vibrant Pan-Asian restaurant featuring Chinese, Thai, and Vietnamese cuisine in an energetic, red-hued setting overlooking the casino floor. Known for its dim sum, noodle dishes, and barbecue specialties.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "The Buffet at Wynn",
+      "cuisine": "Buffet/Brunch",
+      "price_range": "$$",
+      "hours": "Friday-Sunday 8:00 AM - 3:00 PM (Brunch)",
+      "location": "Wynn Tower",
+      "description": "Elevated buffet and brunch experience featuring 15 live-action cooking stations with cuisines from around the world. Known for its high-quality ingredients, fresh seafood, and expansive dessert selection.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for weekends"
+    },
+    {
+      "name": "Jardin",
+      "cuisine": "French",
+      "price_range": "$$$",
+      "hours": "Daily 7:00 AM - 2:30 PM",
+      "location": "Wynn Tower",
+      "description": "Light-filled French-inspired restaurant overlooking the resort pool and gardens. Features breakfast and lunch with French pastries, seasonal dishes, and an extensive tea and coffee selection.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Tableau",
+      "cuisine": "American/Brunch",
+      "price_range": "$$$",
+      "hours": "Daily 7:00 AM - 2:30 PM",
+      "location": "Wynn Tower",
+      "description": "Elegant all-day restaurant featuring American classics for breakfast and brunch. Known for its sophisticated atmosphere, fresh ingredients, and creative brunch cocktails.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended for brunch"
+    },
+    {
+      "name": "La Cave Wine & Food Hideaway",
+      "cuisine": "Wine Bar/Small Plates",
+      "price_range": "$$",
+      "hours": "Daily 11:30 AM - 11:00 PM",
+      "location": "Wynn Esplanade",
+      "description": "Intimate wine bar and small plates restaurant featuring an extensive wine list, artisanal cheeses, charcuterie, flatbreads, and shared plates in a cozy, cave-like setting.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for dinner"
+    }
+  ],
+  "entertainment": [
+    {
+      "name": "Wynn Theater",
+      "type": "Theater",
+      "capacity": "1,500 seats",
+      "location": "Wynn Tower",
+      "description": "State-of-the-art theater hosting world-class productions, headliner concerts, and special events. Features cutting-edge sound, lighting, and staging in an intimate, luxurious setting.",
+      "schedule": "Shows vary; check wynnlasvegas.com/entertainment for schedule"
+    },
+    {
+      "name": "Lake of Dreams",
+      "type": "Attraction",
+      "capacity": "N/A",
+      "location": "Wynn Tower (Central)",
+      "description": "A signature Wynn attraction featuring a 40-foot waterfall, holograms, puppetry, and original music performed nightly over a 3-acre lake. Visible from select restaurants and the Wynn Esplanade. A one-of-a-kind immersive experience.",
+      "schedule": "Nightly shows every 30 minutes from dusk to midnight"
+    },
+    {
+      "name": "Encore Theater",
+      "type": "Theater",
+      "capacity": "1,500 seats",
+      "location": "Encore Tower",
+      "description": "Intimate theater in the Encore tower hosting headliner concerts, comedy shows, and residency performances. Features premium seating and VIP experiences.",
+      "schedule": "Shows vary; check entertainment calendar"
+    },
+    {
+      "name": "XS Nightclub",
+      "type": "Nightclub",
+      "capacity": "3,000",
+      "location": "Encore",
+      "description": "One of the world's most famous nightclubs, featuring a stunning indoor-outdoor design with a European pool, top-tier DJs, and an unmatched nightlife experience. Consistently ranked among the highest-grossing nightclubs globally. Must be 21+.",
+      "schedule": "Friday, Saturday, Sunday nights; special events vary"
+    },
+    {
+      "name": "Intrigue",
+      "type": "Nightclub",
+      "capacity": "1,200",
+      "location": "Wynn Tower",
+      "description": "Upscale nightclub at Wynn featuring a waterfall patio, top DJs, premium bottle service, and a sophisticated atmosphere. Must be 21+.",
+      "schedule": "Wednesday, Friday, Saturday nights"
+    }
+  ],
+  "hotel": {
+    "overview": "Wynn Las Vegas and Encore together offer approximately 4,750 rooms and suites across two luxury towers, both holding the prestigious Forbes Five Diamond rating. Every room features floor-to-ceiling windows with views of the Strip, mountains, or golf course.",
+    "towers": [
+      {
+        "name": "Wynn Tower",
+        "floors": 45,
+        "rooms": 2716,
+        "opened": "2005",
+        "description": "The original luxury tower featuring spacious rooms and suites with signature Wynn design, floor-to-ceiling windows, and views of the Strip, golf course, or mountains. Forbes Five Diamond rated."
+      },
+      {
+        "name": "Encore Tower",
+        "floors": 48,
+        "rooms": 2034,
+        "opened": "2008",
+        "description": "The sister tower offering all-suite accommodations with contemporary luxury design, floor-to-ceiling windows, and premium amenities. Forbes Five Diamond rated."
+      }
+    ],
+    "room_types": [
+      {
+        "name": "Wynn Resort Room",
+        "description": "Luxurious room with king or two queen beds, signature Wynn Dream Bed, floor-to-ceiling windows, marble bathroom, and resort views. One of the largest standard rooms on the Strip at 640 sq ft.",
+        "size": "640 sq ft",
+        "rate": "Starting from $299/night (varies by season)"
+      },
+      {
+        "name": "Wynn Tower Salon Suite",
+        "description": "Elegant suite with separate living area, king bed, premium furnishings, and panoramic views. Features a wet bar, dining area, and upgraded bathroom with soaking tub.",
+        "size": "1,280 sq ft",
+        "rate": "Starting from $599/night"
+      },
+      {
+        "name": "Encore Tower Suite",
+        "description": "All-suite accommodations in the Encore tower with separate living and sleeping areas, premium entertainment system, and contemporary luxury design.",
+        "size": "745 sq ft",
+        "rate": "Starting from $399/night"
+      },
+      {
+        "name": "Parlor Suite",
+        "description": "Spacious suite with expansive living area, king bedroom, formal dining space, and premium amenities throughout. Ideal for entertaining or extended luxury stays.",
+        "size": "1,800 sq ft",
+        "rate": "Starting from $999/night"
+      },
+      {
+        "name": "Duplex / Villa",
+        "description": "The pinnacle of luxury with multi-level living spaces, private terrace, personal butler service, premium entertainment, and bespoke amenities. Each is uniquely designed.",
+        "size": "3,000+ sq ft",
+        "rate": "Inquire for pricing"
+      }
+    ],
+    "amenities": [
+      "Complimentary Wi-Fi",
+      "24-hour room service",
+      "Flat-screen TVs",
+      "In-room safe",
+      "Mini-bar",
+      "Wynn Dream Bed (premium bedding)",
+      "Floor-to-ceiling windows",
+      "Marble bathroom",
+      "Fitness center access",
+      "Valet parking available"
+    ]
+  },
+  "amenities": [
+    {
+      "name": "The Spa at Wynn",
+      "type": "Full-Service Spa",
+      "description": "Forbes Five-Star rated spa offering an extensive menu of treatments including massages, facials, body wraps, hydrotherapy, and wellness experiences. Features private treatment rooms, a co-ed relaxation lounge, plunge pools, and premium skincare products.",
+      "hours": "Daily 8:00 AM - 7:00 PM"
+    },
+    {
+      "name": "Wynn Golf Club",
+      "type": "Golf Course",
+      "description": "Exclusive 18-hole championship golf course designed by Tom Fazio, located directly on the Las Vegas Strip. The only resort golf course on the Strip, featuring manicured fairways, water features, and personalized caddie service. Recently renovated.",
+      "hours": "Daily, tee times from dawn (seasonal hours)"
+    },
+    {
+      "name": "Wynn Pool Complex",
+      "type": "Pool & Recreation",
+      "description": "Three stunning pool areas including the main pool, the Tower Pool, and the European-inspired Encore Beach Club. Features cabanas, daybeds, poolside dining, and full bar service in a luxurious tropical setting.",
+      "hours": "Daily 9:00 AM - 6:00 PM (seasonal; Encore Beach Club hours vary)"
+    },
+    {
+      "name": "Fitness Center",
+      "type": "Gym",
+      "description": "State-of-the-art fitness center with premium cardio equipment, free weights, strength machines, and personal training available. Features floor-to-ceiling windows and complimentary towel service for hotel guests.",
+      "hours": "Open 24 hours"
+    },
+    {
+      "name": "Wynn Plaza",
+      "type": "Luxury Shopping",
+      "description": "Premier luxury shopping destination featuring the world's most prestigious brands including Chanel, Cartier, Dior, Louis Vuitton, Hermes, Rolex, and more. Located along the Wynn Esplanade and Wynn Plaza.",
+      "hours": "Daily 10:00 AM - 11:00 PM (varies by store)"
+    }
+  ],
+  "gaming": {
+    "casino_size_sqft": 189000,
+    "slot_machines": 1800,
+    "table_games": 250,
+    "poker_room": true,
+    "sportsbook": true,
+    "description": "Wynn Las Vegas features 189,000 square feet of refined gaming space with a luxury atmosphere. The casino floor offers a curated selection of slot machines, table games, and private gaming salons, maintaining an exclusive feel with natural light and elegant design.",
+    "areas": [
+      {
+        "name": "Wynn Casino Floor",
+        "description": "The main gaming floor featuring slot machines, table games, and a refined atmosphere with natural light, fresh flowers, and elegant design throughout."
+      },
+      {
+        "name": "Encore Casino Floor",
+        "description": "Additional gaming space in the Encore tower with slot machines, table games, and a contemporary, vibrant atmosphere."
+      },
+      {
+        "name": "Private Gaming Salons",
+        "description": "Exclusive private gaming rooms for high-limit and VIP players, featuring personalized service, premium amenities, and a discreet, luxurious environment."
+      }
+    ],
+    "table_games_offered": [
+      "Blackjack",
+      "Roulette",
+      "Craps",
+      "Baccarat",
+      "Poker",
+      "Pai Gow Poker",
+      "Three Card Poker",
+      "Spanish 21",
+      "Let It Ride"
+    ],
+    "poker_room_details": {
+      "name": "Wynn Poker Room",
+      "tables": 28,
+      "games": ["No-Limit Texas Hold'em", "Pot-Limit Omaha", "Mixed Games"],
+      "tournaments": "Daily tournaments; hosts Wynn Millions and WPT events",
+      "hours": "Open 24 hours, 7 days a week",
+      "description": "Intimate, upscale poker room featuring 28 tables in a refined setting. Home to some of the highest-stakes cash games in Las Vegas and host to major tournament series including the Wynn Millions."
+    },
+    "sportsbook_details": {
+      "name": "Wynn Sports",
+      "description": "Full-service sportsbook featuring a massive LED video wall, private viewing areas, individual betting stations, premium lounge seating, and full bar and dining service. One of the most respected sportsbooks on the Las Vegas Strip.",
+      "hours": "Daily, hours vary by sport season"
+    },
+    "high_limit_areas": {
+      "description": "Exclusive high-limit gaming salons and private gaming rooms available for table games and slots with elevated minimum bets, premium service, and the utmost discretion.",
+      "minimum_bets": "Vary by game, room, and time of day"
+    }
+  },
+  "promotions": [
+    {
+      "name": "Wynn Rewards",
+      "type": "loyalty_program",
+      "description": "Wynn Las Vegas' official loyalty rewards program. Earn points by playing slots, table games, and poker, as well as through hotel stays, dining, spa, and retail purchases. Points can be redeemed for free play, dining, hotel stays, and spa services.",
+      "tiers": [
+        {
+          "name": "Red",
+          "description": "Entry level. Earn points on all gaming and resort spending."
+        },
+        {
+          "name": "Platinum",
+          "description": "Enhanced rewards, priority access, and select invitations."
+        },
+        {
+          "name": "Black",
+          "description": "Premium benefits including complimentary valet, room upgrades, priority reservations, and exclusive events."
+        },
+        {
+          "name": "Noir",
+          "description": "By invitation only. The highest tier with full VIP treatment, personalized concierge service, and exclusive access to all resort amenities."
+        }
+      ],
+      "how_to_join": "Free to join. Sign up at any Wynn Rewards desk, online at wynnlasvegas.com, or through the Wynn app."
+    },
+    {
+      "name": "Wynn App",
+      "type": "mobile_app",
+      "description": "Download the Wynn mobile app to manage your rewards account, book hotel rooms, make restaurant reservations, view entertainment, and access your digital room key. Available on iOS and Android."
+    },
+    {
+      "name": "Hotel Packages",
+      "type": "packages",
+      "description": "Various seasonal hotel packages combining room stays with dining credits, spa treatments, golf rounds, entertainment tickets, or nightlife access. Check wynnlasvegas.com for current offers."
+    },
+    {
+      "name": "Dining Rewards",
+      "type": "dining",
+      "description": "Wynn Rewards members earn points on all dining purchases at participating Wynn and Encore restaurants. Special dining promotions available throughout the year."
+    }
+  ],
+  "faq": [
+    {
+      "question": "What are the casino hours?",
+      "answer": "Wynn Las Vegas' casino is open 24 hours a day, 7 days a week, 365 days a year."
+    },
+    {
+      "question": "What is the minimum gambling age?",
+      "answer": "You must be 21 years of age or older to gamble or consume alcohol at Wynn Las Vegas."
+    },
+    {
+      "question": "Is there free parking?",
+      "answer": "Self-parking is available at Wynn Las Vegas. Valet parking is also available. Parking fees may apply; Wynn Rewards members at higher tiers may receive complimentary parking."
+    },
+    {
+      "question": "Is there a dress code?",
+      "answer": "The casino floor has a smart casual dress code befitting a luxury resort. Fine dining restaurants like Wing Lei, Mizumi, and SW Steakhouse recommend business casual to formal attire. Nightclubs (XS, Intrigue) have specific dress codes — no athletic wear, flip-flops, or hats."
+    },
+    {
+      "question": "How do I get to Wynn Las Vegas?",
+      "answer": "Wynn Las Vegas is located at 3131 Las Vegas Boulevard South, on the Las Vegas Strip. It is approximately 10 minutes from Harry Reid International Airport (LAS) by car or rideshare. The resort entrance is on Las Vegas Boulevard."
+    },
+    {
+      "question": "Does Wynn Las Vegas allow smoking?",
+      "answer": "Nevada law permits smoking in casinos. Wynn Las Vegas has designated smoking and non-smoking areas on the casino floor. All restaurants, hotel rooms, and most public areas are non-smoking."
+    },
+    {
+      "question": "How do I join the Wynn Rewards program?",
+      "answer": "Joining is free! Sign up at any Wynn Rewards desk on the casino floor, online at wynnlasvegas.com, or through the Wynn mobile app."
+    },
+    {
+      "question": "What is the check-in and check-out time?",
+      "answer": "Standard check-in time is 3:00 PM and check-out time is 11:00 AM. Early check-in and late check-out may be available based on room availability. Higher-tier Wynn Rewards members may receive complimentary late check-out."
+    },
+    {
+      "question": "Does Wynn Las Vegas have a pool?",
+      "answer": "Yes, Wynn Las Vegas features a pool complex with three pool areas, cabanas, daybeds, poolside dining, and the Encore Beach Club. Pool hours are seasonal, generally 9:00 AM to 6:00 PM."
+    },
+    {
+      "question": "Does Wynn have a golf course?",
+      "answer": "Yes, the Wynn Golf Club is an exclusive 18-hole championship course designed by Tom Fazio, located directly on the Las Vegas Strip. It is the only resort golf course on the Strip. Tee times and caddie service available through the resort."
+    },
+    {
+      "question": "Are there ATMs at Wynn Las Vegas?",
+      "answer": "Yes, ATMs are located throughout the casino floor and near the hotel lobbies. Please note that transaction fees may apply."
+    },
+    {
+      "question": "Does Wynn have a responsible gaming program?",
+      "answer": "Yes, Wynn Las Vegas is committed to responsible gaming. The resort provides resources for guests who may need assistance, including self-exclusion options through the Nevada Gaming Control Board (gaming.nv.gov). For help, call the National Problem Gambling Helpline at 1-800-522-4700."
+    },
+    {
+      "question": "What shows are playing at Wynn?",
+      "answer": "Wynn features world-class entertainment at the Wynn Theater and Encore Theater, including headliner concerts and residency shows. The Lake of Dreams is a complimentary nightly attraction. Check wynnlasvegas.com/entertainment for the current schedule."
+    },
+    {
+      "question": "What attractions are near Wynn Las Vegas?",
+      "answer": "Wynn Las Vegas is located on the Las Vegas Strip, providing easy access to all Strip attractions. Nearby destinations include Fashion Show Mall (adjacent), The Venetian and Palazzo, Resorts World, and the Las Vegas Convention Center. The resort also offers luxury shopping at Wynn Plaza."
+    },
+    {
+      "question": "Can I host a private event at Wynn?",
+      "answer": "Yes, Wynn Las Vegas offers extensive event space including ballrooms, meeting rooms, and unique venues. The Wynn Events team can customize experiences for corporate events, weddings, and private celebrations. Contact wynnlasvegas.com/meetings for more information."
+    }
+  ]
+}

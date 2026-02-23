@@ -56,6 +56,17 @@ _INJECTION_PATTERNS = [
     re.compile(r"---\s*(?:system|admin|root|override)", re.I),
     # Jailbreak prompt framing
     re.compile(r"\bjailbreak\b", re.I),
+    # Tagalog/Taglish injection patterns (significant Filipino-American casino clientele)
+    re.compile(r"\bkalimutan\s+(?:ang\s+)?(?:mga\s+)?(?:tagubilin|instruksyon)", re.I),  # forget instructions
+    re.compile(r"\bhuwag\s+(?:mong?\s+)?(?:sundin|pansinin)", re.I),  # don't follow / ignore
+    re.compile(r"\bmagkunwari\s+(?:ka|kang)\b", re.I),  # pretend you are
+    re.compile(r"\bikaw\s+(?:ay\s+)?(?:ngayon|na)\s+(?:isang?\s+)?", re.I),  # you are now a
+    re.compile(r"\bkumilos\s+(?:bilang|na\s+parang)\b", re.I),  # act as
+    re.compile(r"\bi[- ]?override\s+(?:ang\s+)?(?:mga\s+)?(?:patakaran|rules?)", re.I),  # override rules/policies
+    re.compile(r"\bipakita\s+(?:ang\s+)?(?:mga\s+)?(?:lihim|sikreto)", re.I),  # reveal secrets
+    # Taglish hybrid injection (English words with Filipino structure)
+    re.compile(r"\bignore\s+na\s+(?:ang\s+)?(?:mga\s+)?instructions?", re.I),  # Taglish: ignore the instructions
+    re.compile(r"\bforget\s+na\s+(?:yung|ang)\s+(?:previous\s+)?instructions?", re.I),  # Taglish: forget previous instructions
 ]
 
 # ---------------------------------------------------------------------------
@@ -92,6 +103,12 @@ _NON_LATIN_INJECTION_PATTERNS = [
     re.compile(r"bây giờ bạn là", re.I),  # you are now
     re.compile(r"hệ thống mới", re.I),  # new system
     re.compile(r"tiết lộ bí mật", re.I),  # reveal secrets
+    # Hindi/Devanagari (significant US casino Indian-American clientele)
+    re.compile(r"(?:पिछले|पहले)\s*(?:निर्देशों?|नियमों?)\s*(?:को\s+)?(?:अनदेखा|भूल)", re.I),  # ignore previous instructions
+    re.compile(r"(?:तुम|आप)\s+अब\s+(?:एक\s+)?", re.I),  # you are now
+    re.compile(r"(?:की\s+तरह|बनकर|का\s+(?:रोल|किरदार))\s*(?:करो|कीजिए)", re.I),  # act as / pretend to be
+    re.compile(r"(?:अपने|आपके)\s*(?:निर्देश|नियम)\s*(?:भूल|बदलो|हटाओ)", re.I),  # forget your instructions
+    re.compile(r"(?:राज़?|सीक्रेट|गुप्त)\s*(?:बताओ|दिखाओ|खोलो)", re.I),  # reveal secrets
 ]
 
 # ---------------------------------------------------------------------------
@@ -144,6 +161,26 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     re.compile(r"nghiện\s+(?:cờ\s+)?bạc", re.I),  # gambling addiction
     re.compile(r"vấn đề\s+(?:cờ\s+)?bạc", re.I),  # gambling problem
     re.compile(r"không\s+thể\s+ngừng\s+(?:chơi|đánh\s+bạc)", re.I),  # can't stop gambling
+    # Hindi responsible gaming patterns (NJ/CT significant Indian-American clientele)
+    re.compile(r"जु(?:ए|आ)\s*(?:की|का)\s*(?:लत|आदत|नशा)", re.I),  # gambling addiction (जुए की लत)
+    re.compile(r"(?:जुआ|सट्टा)\s*(?:रोक|छोड़|बंद)\s*नहीं", re.I),  # can't stop gambling
+    re.compile(r"(?:जुए?|सट्टे?)\s*(?:की|का)\s*(?:समस्या|दिक्कत)", re.I),  # gambling problem
+    re.compile(r"(?:जुआ|सट्टा|गैंबलिंग)\s*(?:छोड़ना|बंद\s*करना)\s*(?:चाहता|चाहती|चाहिए)", re.I),  # want to stop gambling
+    re.compile(r"(?:जुए?|सट्टे?|गैंबलिंग)\s*(?:में|से)?\s*(?:मदद|सहायता|हेल्प)", re.I),  # need help with gambling
+    re.compile(r"(?:कर्ज़?|कर्ज)\s*(?:में\s+(?:डूब|फंस)|का\s+जाल)", re.I),  # drowning in debt
+    re.compile(r"(?:जुए?|सट्टे?)\s*(?:से|की\s+वजह\s+से)\s*(?:परिवार|घर|रिश्ते?)", re.I),  # family problems from gambling
+    # Tagalog/Taglish responsible gaming patterns (significant Filipino-American clientele)
+    re.compile(r"\badik\s+sa\s+(?:sugal|pustahan|gambling)", re.I),  # addicted to gambling
+    re.compile(r"\bhindi\s+(?:ko\s+)?(?:na\s+)?(?:makatigil|mapigilan|maiwasan)", re.I),  # can't stop
+    re.compile(r"\bproblema\s+sa\s+(?:sugal|pustahan|gambling)", re.I),  # gambling problem
+    re.compile(r"\bnatalo\s+(?:ng|ako\s+ng)\s+malaki", re.I),  # lost big
+    re.compile(r"\bbaon\s+sa\s+utang", re.I),  # drowning in debt
+    re.compile(r"\bwala\s+(?:na\s+)?(?:akong?\s+)?pera", re.I),  # no more money
+    re.compile(r"\bkailangan\s+(?:ko\s+(?:ng\s+)?)?(?:tulong|help)", re.I),  # need help
+    re.compile(r"\bipagbawal\s+(?:ang\s+)?(?:sarili|ako)", re.I),  # self-exclusion (ban myself)
+    # Taglish hybrid responsible gaming
+    re.compile(r"\badik\s+(?:na\s+)?(?:ako\s+)?sa\s+gambling", re.I),  # Taglish: addicted to gambling
+    re.compile(r"\blost\s+everything\s+sa\s+casino", re.I),  # Taglish: lost everything at casino
 ]
 
 # ---------------------------------------------------------------------------
@@ -159,6 +196,15 @@ _AGE_VERIFICATION_PATTERNS = [
     re.compile(r"\b(?:minimum|legal)\s+(?:gambling|gaming|casino)\s+age\b", re.I),
     re.compile(r"\bhow\s+old\s+(?:do\s+you\s+have\s+to\s+be|to\s+(?:gamble|play|enter))", re.I),
     re.compile(r"\bminors?\b.*\b(?:allow|enter|visit|casino|gambl|play)", re.I),
+    # Hindi age verification patterns
+    re.compile(r"नाबालिग", re.I),  # minor (नाबालिग)
+    re.compile(r"(?:बच्चे?|बच्चों?)\s*(?:को\s+)?(?:कैसीनो|अंदर|खेल)", re.I),  # child entering casino
+    re.compile(r"(?:कितने?\s+(?:साल|उम्र)|न्यूनतम\s+(?:उम्र|आयु))", re.I),  # how old / minimum age
+    # Tagalog age verification patterns
+    re.compile(r"\bmenor\s+de\s+edad", re.I),  # minor (menor de edad)
+    re.compile(r"\bhindi\s+pa\s+(?:21|dalawampu)", re.I),  # not yet 21
+    re.compile(r"\bpwede\s+(?:ba\s+)?(?:ang\s+)?bata", re.I),  # can the child
+    re.compile(r"\bilang\s+taon\s+(?:ba\s+)?(?:ang\s+)?(?:kailangan|dapat)", re.I),  # how old must you be
 ]
 
 # ---------------------------------------------------------------------------
@@ -209,6 +255,18 @@ _BSA_AML_PATTERNS = [
     re.compile(r"rửa\s*tiền", re.I),                               # money laundering (rửa tiền)
     re.compile(r"(?:giấu|che\s+giấu)\s+tiền", re.I),              # hide money
     re.compile(r"trốn\s+thuế", re.I),                              # tax evasion (trốn thuế)
+    # Hindi BSA/AML patterns (NJ/CT significant Indian-American clientele)
+    re.compile(r"(?:धन\s*शोधन|मनी\s*लॉन्ड्रिंग)", re.I),  # money laundering (धन शोधन)
+    re.compile(r"काल[ाे]?\s*(?:धन|पैसे?)", re.I),  # black money (काला धन)
+    re.compile(r"(?:छोटे[- ]?छोटे|बांटकर)\s*(?:जमा|डिपॉज़िट|कैश)", re.I),  # structuring deposits
+    re.compile(r"(?:पैसे?|धन|कैश)\s*(?:छुपा|छिपा|हाइड)", re.I),  # hide money
+    re.compile(r"(?:कर\s*चोरी|टैक्स\s*(?:चोरी|से\s+बच))", re.I),  # tax evasion (कर चोरी)
+    # Tagalog BSA/AML patterns
+    re.compile(r"\blabada\s+ng\s+pera", re.I),  # money laundering (labada ng pera)
+    re.compile(r"\bpaano\s+(?:mag[- ]?)?launder", re.I),  # how to launder
+    re.compile(r"\bitago\s+(?:ang\s+)?(?:mga\s+)?pera", re.I),  # hide money
+    re.compile(r"\bputol[- ]?putol\s+(?:na\s+)?(?:deposit|deposito)", re.I),  # structuring deposits
+    re.compile(r"\biwasan\s+(?:ang\s+)?(?:report|ulat)", re.I),  # avoid report
 ]
 
 # ---------------------------------------------------------------------------
@@ -344,6 +402,14 @@ def _check_patterns(
 
 def audit_input(message: str) -> bool:
     """Check user input for prompt injection patterns.
+
+    **INVERTED SEMANTICS** — This is the original API with counterintuitive
+    return values:
+    - Returns ``True`` when input is SAFE (no injection detected)
+    - Returns ``False`` when injection IS detected
+
+    Prefer ``detect_prompt_injection()`` which uses consistent semantics
+    (True = detected, matching ``detect_responsible_gaming()`` etc.).
 
     Deterministic regex-based guardrail that runs before any LLM call.
     Runs patterns against BOTH the raw input (to catch zero-width chars

@@ -1,0 +1,374 @@
+{
+  "property": {
+    "name": "Hard Rock Hotel & Casino Atlantic City",
+    "location": "1000 Boardwalk, Atlantic City, NJ 08401",
+    "phone": "1-609-449-1000",
+    "website": "hardrockhotelatlanticcity.com",
+    "type": "Commercial Casino Resort",
+    "description": "Hard Rock Hotel & Casino Atlantic City is a rock-and-roll themed casino resort located on the iconic Atlantic City Boardwalk. Formerly the Trump Taj Mahal, the property was completely reimagined and reopened in 2018 with world-class entertainment venues, diverse dining, a luxury hotel tower, beach club, and expansive gaming floor.",
+    "opened": "June 28, 2018 (reopened)",
+    "total_area_sqft": 2200000
+  },
+  "restaurants": [
+    {
+      "name": "Council Oak Fish",
+      "cuisine": "Seafood",
+      "price_range": "$$$",
+      "hours": "Thursday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Premium seafood restaurant featuring fresh catches, raw bar selections, and ocean-inspired dishes. A refined dining experience with an emphasis on sustainable and seasonal ingredients.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Council Oak Steaks & Seafood",
+      "cuisine": "Steakhouse/Seafood",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Upscale steakhouse and seafood restaurant serving USDA Prime steaks, fresh seafood, and classic sides. Features an extensive wine list and elegant atmosphere with live music.",
+      "dress_code": "Business casual",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "Hard Rock Cafe",
+      "cuisine": "American",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 11:00 PM",
+      "location": "Boardwalk Level",
+      "description": "The iconic rock-and-roll themed restaurant serving classic American fare including legendary burgers, ribs, and fajitas. Features authentic rock memorabilia and a lively atmosphere with music.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Il Mulino New York",
+      "cuisine": "Italian",
+      "price_range": "$$$$",
+      "hours": "Wednesday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Award-winning Italian restaurant from the famed Il Mulino group in New York. Features classic Italian cuisine with generous portions, complimentary antipasti, and an exceptional wine selection.",
+      "dress_code": "Business casual",
+      "reservations": "Highly recommended"
+    },
+    {
+      "name": "Kuro",
+      "cuisine": "Japanese",
+      "price_range": "$$$",
+      "hours": "Thursday-Sunday 5:00 PM - 10:00 PM",
+      "location": "Casino",
+      "description": "Contemporary Japanese restaurant featuring sushi, sashimi, robata grill items, and modern Japanese cuisine. Sleek, sophisticated atmosphere with a premium sake and cocktail menu.",
+      "dress_code": "Smart casual",
+      "reservations": "Recommended"
+    },
+    {
+      "name": "Sugar Factory",
+      "cuisine": "American/Dessert",
+      "price_range": "$$$",
+      "hours": "Daily 11:00 AM - 12:00 AM",
+      "location": "Boardwalk Level",
+      "description": "Instagram-famous restaurant and candy shop known for over-the-top milkshakes, signature goblet cocktails, and an American menu. A sweet and savory dining experience with vibrant, colorful decor.",
+      "dress_code": "Casual",
+      "reservations": "Recommended for dinner"
+    },
+    {
+      "name": "Flavor by Hard Rock",
+      "cuisine": "American Diner",
+      "price_range": "$",
+      "hours": "Open 24 hours",
+      "location": "Casino",
+      "description": "24-hour diner serving breakfast all day, burgers, sandwiches, comfort food, and late-night favorites. The go-to spot for a quick meal at any hour.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Youyu Noodle Bar",
+      "cuisine": "Asian",
+      "price_range": "$$",
+      "hours": "Daily 11:00 AM - 10:00 PM",
+      "location": "Casino",
+      "description": "Quick-service Asian noodle bar serving ramen, pho, stir-fry noodle dishes, and Asian appetizers. Fresh, flavorful bowls in a casual, modern setting.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    },
+    {
+      "name": "Fresh Harvest Buffet",
+      "cuisine": "Buffet",
+      "price_range": "$$",
+      "hours": "Friday-Sunday 4:00 PM - 9:00 PM (hours vary seasonally)",
+      "location": "Casino",
+      "description": "All-you-can-eat buffet with rotating international stations including seafood, Asian, Italian, American, and carving stations. Special holiday and themed buffet events throughout the year.",
+      "dress_code": "Casual",
+      "reservations": "Not required"
+    }
+  ],
+  "entertainment": [
+    {
+      "name": "Sound Waves",
+      "type": "Concert & Event Venue",
+      "capacity": "9,000+ seats",
+      "location": "Casino Resort",
+      "description": "The main concert and event arena at Hard Rock Atlantic City, hosting major headliner concerts, comedy shows, boxing matches, and special events. State-of-the-art sound and lighting in a world-class venue.",
+      "schedule": "Events vary; check hardrockhotelatlanticcity.com for schedule"
+    },
+    {
+      "name": "Etess Arena",
+      "type": "Arena",
+      "capacity": "5,500 seats",
+      "location": "Casino Resort",
+      "description": "Multi-purpose arena hosting concerts, comedy shows, MMA fights, and special events. Features flexible seating configurations for intimate or large-scale productions.",
+      "schedule": "Events vary; check entertainment calendar"
+    },
+    {
+      "name": "Hard Rock Live",
+      "type": "Live Music Venue",
+      "capacity": "2,500 seats",
+      "location": "Casino",
+      "description": "Intimate live music and performance venue hosting touring artists, tribute acts, and special events in a classic rock club atmosphere.",
+      "schedule": "Shows vary; check entertainment calendar"
+    },
+    {
+      "name": "DAER Nightclub & Dayclub",
+      "type": "Nightclub/Dayclub",
+      "capacity": "3,000",
+      "location": "Rooftop",
+      "description": "Premier rooftop nightclub and dayclub featuring top DJs, bottle service, pool parties (seasonal), and ocean views. The ultimate Atlantic City nightlife destination. Must be 21+ to enter.",
+      "schedule": "Seasonal; Friday-Sunday, times vary"
+    },
+    {
+      "name": "The Lobby Bar",
+      "type": "Lounge",
+      "capacity": "200",
+      "location": "Hotel Lobby",
+      "description": "Stylish lobby lounge featuring live acoustic performances, craft cocktails, and a relaxed atmosphere. The perfect spot for pre-dinner drinks or post-show nightcaps.",
+      "schedule": "Daily, live music Thursday-Saturday evenings"
+    }
+  ],
+  "hotel": {
+    "overview": "Hard Rock Hotel & Casino Atlantic City features a single iconic tower with over 2,000 rooms and suites, offering a range of rock-themed accommodations from classic rooms to lavish rock star suites.",
+    "towers": [
+      {
+        "name": "Hard Rock Hotel Tower",
+        "floors": 39,
+        "rooms": 2000,
+        "opened": "2018 (renovated)",
+        "description": "The main hotel tower featuring rock-and-roll themed rooms with modern amenities, ocean and city views, and the signature Hard Rock style. Completely renovated during the 2018 reopening."
+      }
+    ],
+    "room_types": [
+      {
+        "name": "Classic Rock Room",
+        "description": "Well-appointed room with king or two queen beds, rock-themed decor, and views of the city or partial ocean views. Includes flat-screen TV, mini-fridge, in-room safe, and complimentary Wi-Fi.",
+        "size": "400 sq ft",
+        "rate": "Starting from $129/night (varies by season)"
+      },
+      {
+        "name": "Hard Rock Room",
+        "description": "Enhanced room with premium bedding, upgraded amenities, and preferred floor location. Features a sitting area, enhanced bathroom, and better ocean views.",
+        "size": "475 sq ft",
+        "rate": "Starting from $199/night"
+      },
+      {
+        "name": "Signature Suite",
+        "description": "Spacious suite with separate living area, king bed, sofa bed, wet bar, and luxury bathroom. Features ocean views, premium amenities, and VIP perks.",
+        "size": "800 sq ft",
+        "rate": "Starting from $399/night"
+      },
+      {
+        "name": "Rock Star Suite",
+        "description": "The ultimate rock-and-roll experience with multiple rooms, premium entertainment system, luxury furnishings, panoramic ocean views, and exclusive VIP services. Each suite is uniquely themed.",
+        "size": "1,500+ sq ft",
+        "rate": "Inquire for pricing"
+      }
+    ],
+    "amenities": [
+      "Complimentary Wi-Fi",
+      "24-hour room service",
+      "Flat-screen TVs",
+      "In-room safe",
+      "Mini-fridge",
+      "Premium bedding",
+      "Blackout curtains",
+      "Fitness center access",
+      "Valet parking available",
+      "Beach access (seasonal)"
+    ]
+  },
+  "amenities": [
+    {
+      "name": "Rock Spa",
+      "type": "Full-Service Spa",
+      "description": "Full-service spa offering a rock-inspired menu of treatments including massages, facials, body wraps, and wellness therapies. Features a relaxation lounge, steam room, and sauna with music-themed amenities.",
+      "hours": "Daily 9:00 AM - 7:00 PM"
+    },
+    {
+      "name": "Hard Rock Beach Club",
+      "type": "Beach Club",
+      "description": "Seasonal beachfront experience on the Atlantic City beach. Features cabanas, beach chairs, food and drink service, and live entertainment. Available to hotel guests and day pass holders.",
+      "hours": "Seasonal (Memorial Day - Labor Day), 10:00 AM - 6:00 PM"
+    },
+    {
+      "name": "Rooftop Pool",
+      "type": "Pool & Recreation",
+      "description": "Seasonal rooftop pool featuring cabanas, daybeds, poolside food and drink service, and ocean views. Connected to the DAER Dayclub for a vibrant atmosphere.",
+      "hours": "Seasonal (Memorial Day - Labor Day), 10:00 AM - 6:00 PM"
+    },
+    {
+      "name": "Fitness Center",
+      "type": "Gym",
+      "description": "State-of-the-art fitness center with cardio equipment, free weights, strength machines, and personal training available. Complimentary for hotel guests.",
+      "hours": "Open 24 hours"
+    },
+    {
+      "name": "Rock Shop",
+      "type": "Retail",
+      "description": "The iconic Hard Rock merchandise store featuring exclusive Hard Rock Atlantic City branded clothing, accessories, pins, and memorabilia. The perfect place to take home a souvenir.",
+      "hours": "Daily 10:00 AM - 10:00 PM"
+    }
+  ],
+  "gaming": {
+    "casino_size_sqft": 160000,
+    "slot_machines": 2100,
+    "table_games": 120,
+    "poker_room": true,
+    "sportsbook": true,
+    "description": "Hard Rock Hotel & Casino Atlantic City features 160,000 square feet of gaming space with a rock-and-roll energy. The casino floor offers a wide variety of slot machines, table games, a poker room, and a state-of-the-art sportsbook.",
+    "areas": [
+      {
+        "name": "Main Casino Floor",
+        "description": "The primary gaming floor featuring slot machines, electronic table games, and traditional table games in a vibrant, music-filled atmosphere."
+      },
+      {
+        "name": "High Limit Lounge",
+        "description": "Exclusive high-limit gaming area with elevated minimum bets, premium amenities, and dedicated service."
+      }
+    ],
+    "table_games_offered": [
+      "Blackjack",
+      "Roulette",
+      "Craps",
+      "Baccarat",
+      "Poker",
+      "Pai Gow Poker",
+      "Three Card Poker",
+      "Spanish 21",
+      "Let It Ride",
+      "Casino War"
+    ],
+    "poker_room_details": {
+      "name": "Hard Rock Poker Room",
+      "tables": 30,
+      "games": ["No-Limit Texas Hold'em", "Pot-Limit Omaha", "Limit Hold'em"],
+      "tournaments": "Daily tournaments with varying buy-ins; regular special event series",
+      "hours": "Open 24 hours, 7 days a week",
+      "description": "Dedicated poker room featuring 30 tables, daily tournaments, and cash games. A comfortable, well-appointed room for serious poker players."
+    },
+    "sportsbook_details": {
+      "name": "BetMGM Sportsbook at Hard Rock",
+      "description": "Full-service sportsbook powered by BetMGM featuring a massive LED video wall, individual betting stations, comfortable lounge seating, and full bar service. Offers betting on professional and college sports.",
+      "hours": "Daily, hours vary by sport season"
+    },
+    "high_limit_areas": {
+      "description": "VIP high-limit gaming areas available for table games and slots with elevated minimum bets, premium drink service, and dedicated hosts.",
+      "minimum_bets": "Vary by game and time of day"
+    }
+  },
+  "promotions": [
+    {
+      "name": "Hard Rock Wild Card Rewards",
+      "type": "loyalty_program",
+      "description": "Hard Rock's official loyalty rewards program. Earn points by playing slots, table games, and poker, as well as through hotel stays, dining, and entertainment purchases. Points can be redeemed for free play, dining, hotel stays, and merchandise.",
+      "tiers": [
+        {
+          "name": "Wild Card",
+          "description": "Entry level. Earn points on all gaming and resort spending."
+        },
+        {
+          "name": "Encore",
+          "description": "Enhanced rewards, priority access, and select event invitations."
+        },
+        {
+          "name": "Icon",
+          "description": "Premium benefits including complimentary valet, room upgrades, and exclusive events."
+        },
+        {
+          "name": "Chairman",
+          "description": "By invitation only. The highest tier with full VIP treatment, personalized service, and exclusive access."
+        }
+      ],
+      "how_to_join": "Free to join. Sign up at any Wild Card Rewards desk, online at hardrockhotelatlanticcity.com, or through the Hard Rock app."
+    },
+    {
+      "name": "Hard Rock App",
+      "type": "mobile_app",
+      "description": "Download the Hard Rock mobile app to manage your Wild Card account, view promotions, check points balance, book hotel rooms, and see upcoming entertainment events. Available on iOS and Android."
+    },
+    {
+      "name": "Hotel Packages",
+      "type": "packages",
+      "description": "Various seasonal hotel packages combining room stays with dining credits, spa treatments, entertainment tickets, or beach club access. Check hardrockhotelatlanticcity.com for current offers."
+    },
+    {
+      "name": "Dining Rewards",
+      "type": "dining",
+      "description": "Wild Card Rewards members earn points on all dining purchases at participating Hard Rock restaurants. Special dining promotions and discounts available throughout the year."
+    }
+  ],
+  "faq": [
+    {
+      "question": "What are the casino hours?",
+      "answer": "Hard Rock Hotel & Casino Atlantic City's casino is open 24 hours a day, 7 days a week."
+    },
+    {
+      "question": "What is the minimum gambling age?",
+      "answer": "You must be 21 years of age or older to gamble or consume alcohol at Hard Rock Hotel & Casino Atlantic City."
+    },
+    {
+      "question": "Is there free parking?",
+      "answer": "Self-parking is available in the attached parking garage. Valet parking is also available for a fee. Wild Card Rewards members at higher tiers may receive complimentary parking."
+    },
+    {
+      "question": "Is there a dress code?",
+      "answer": "The casino floor has no formal dress code. Upscale restaurants like Council Oak and Il Mulino recommend business casual attire. DAER Nightclub has a specific dress code (no athletic wear, flip-flops, or hats)."
+    },
+    {
+      "question": "How do I get to Hard Rock Atlantic City?",
+      "answer": "Hard Rock Hotel & Casino Atlantic City is located at 1000 Boardwalk, Atlantic City, NJ 08401. It is accessible by car via the Atlantic City Expressway or Garden State Parkway. NJ Transit provides bus and rail service to Atlantic City."
+    },
+    {
+      "question": "Does Hard Rock Atlantic City allow smoking?",
+      "answer": "New Jersey law allows smoking on up to 25% of the casino gaming floor. Hard Rock designates specific smoking areas on the gaming floor. The remainder of the resort, including restaurants and hotel rooms, is smoke-free."
+    },
+    {
+      "question": "Is there beach access?",
+      "answer": "Yes, Hard Rock Atlantic City is located directly on the Boardwalk with beach access. The Hard Rock Beach Club (seasonal, Memorial Day through Labor Day) offers cabanas, chairs, and beachside service."
+    },
+    {
+      "question": "How do I join the Wild Card Rewards program?",
+      "answer": "Joining is free! Sign up at any Wild Card Rewards desk on the casino floor, online at hardrockhotelatlanticcity.com, or through the Hard Rock mobile app. You'll receive your Wild Card immediately."
+    },
+    {
+      "question": "What is the check-in and check-out time?",
+      "answer": "Standard check-in time is 4:00 PM and check-out time is 11:00 AM. Early check-in and late check-out may be available based on room availability."
+    },
+    {
+      "question": "Does Hard Rock Atlantic City have a pool?",
+      "answer": "Yes, Hard Rock features a seasonal rooftop pool (Memorial Day through Labor Day) with cabanas, daybeds, and poolside service. Connected to the DAER Dayclub."
+    },
+    {
+      "question": "Are there ATMs at Hard Rock Atlantic City?",
+      "answer": "Yes, ATMs are located throughout the casino floor and near the hotel lobby. Please note that transaction fees may apply."
+    },
+    {
+      "question": "Does Hard Rock have a responsible gaming program?",
+      "answer": "Yes, Hard Rock Hotel & Casino Atlantic City is committed to responsible gaming. The resort provides resources for guests who may need assistance, including self-exclusion options through the NJ Division of Gaming Enforcement (nj.gov/oag/ge/selfexclusion.html). Self-exclusion options include 1-year, 5-year, or lifetime bans. For help, call 1-800-GAMBLER."
+    },
+    {
+      "question": "Is there a shuttle or bus service?",
+      "answer": "NJ Transit provides bus and rail service to Atlantic City. Various bus operators also offer casino bus packages from the greater New York, Philadelphia, and New Jersey areas. Contact 1-609-449-1000 for information."
+    },
+    {
+      "question": "What entertainment venues are at Hard Rock?",
+      "answer": "Hard Rock features three entertainment venues: Sound Waves (9,000+ seats for major concerts), Etess Arena (5,500 seats), and Hard Rock Live. The DAER Nightclub & Dayclub offers top DJs and nightlife. Check hardrockhotelatlanticcity.com/entertainment for upcoming shows."
+    }
+  ]
+}

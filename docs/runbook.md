@@ -250,6 +250,72 @@ gcloud run deploy hey-seven \
 
 ---
 
+## Stateful Components (Per-Process)
+
+All in-memory state is **per-process** — each Cloud Run instance has its own copy.
+This is a known architectural choice for the demo/MVP. Production upgrade paths documented below.
+
+### Circuit Breaker (`src/agent/circuit_breaker.py`)
+
+| Aspect | Current | Upgrade Path |
+|--------|---------|-------------|
+| Scope | Per-process | Redis-backed (shared state across instances) |
+| Parameters | `CB_FAILURE_THRESHOLD=5`, `CB_COOLDOWN_SECONDS=60`, `CB_ROLLING_WINDOW_SECONDS=300` | Same, but coordinated |
+| Behavior | Each instance tracks failures independently | Redis `INCR` with `EXPIRE` for rolling window |
+| Risk | Instance A trips, Instance B still sends traffic | Shared state eliminates this |
+
+**Known limitation**: With N Cloud Run instances, the effective failure threshold before ALL instances trip is `N * CB_FAILURE_THRESHOLD`. During a partial LLM API degradation, some instances may serve fallbacks while others don't, causing inconsistent user experience.
+
+**Mitigation**: `--min-instances=1` + `--max-instances=10` bounds the inconsistency window. In practice, LLM outages are usually total (not partial), so all instances trip within seconds of each other.
+
+### Rate Limiter (`src/api/middleware.py` — `RateLimitMiddleware`)
+
+| Aspect | Current | Upgrade Path |
+|--------|---------|-------------|
+| Scope | Per-process | Cloud Armor / Redis |
+| Storage | `OrderedDict` with LRU eviction (max 10,000 clients) | Redis sorted sets |
+| Stale cleanup | Every 60s, removes entries older than 60s window | Redis `EXPIRE` handles this |
+| Risk | Each instance allows `RATE_LIMIT_CHAT` req/min independently | Effective limit = N * limit |
+
+**Known limitation**: With 10 max instances, the effective rate limit is 200 req/min per IP (10 * 20). For demo this is acceptable. Production should use Cloud Armor rate limiting.
+
+### InMemorySaver (State Backend)
+
+| Aspect | Current (dev) | Production |
+|--------|--------------|------------|
+| Backend | `langgraph.checkpoint.memory.MemorySaver` | `langgraph-checkpoint-firestore.FirestoreSaver` |
+| Guard | `MAX_ACTIVE_THREADS=1000` (in config) | Firestore handles scaling |
+| Risk | Data lost on restart | Firestore persists across restarts |
+| Threads | Memory-bound (1000 conversations max) | Firestore-bound (practically unlimited) |
+
+**Selection**: `STATE_BACKEND` env var. `memory.py` factory returns MemorySaver (dev) or FirestoreSaver (prod).
+
+### Settings Cache (`src/config.py`)
+
+| Aspect | Current | Rationale |
+|--------|---------|-----------|
+| Cache | TTLCache (1 hour TTL) | Allows runtime config changes without restart |
+| Clear | `clear_settings_cache()` | For incident response (tune thresholds) |
+| Thread-safe | `threading.Lock` | Settings is synchronous |
+
+### LLM Singleton Caches (`src/agent/nodes.py`)
+
+| Aspect | Current | Rationale |
+|--------|---------|-----------|
+| Cache | `TTLCache(maxsize=1, ttl=3600)` | GCP credential rotation (Workload Identity) |
+| Lock | `asyncio.Lock` | Async code paths |
+| Clear | `_get_llm.cache_clear()` -> manual clear in conftest | Prevents test leakage |
+
+### Casino Config Cache (`src/casino/config.py`)
+
+| Aspect | Current | Rationale |
+|--------|---------|-----------|
+| Cache | `TTLCache(maxsize=100, ttl=300)` | 5-min hot-reload from Firestore |
+| Lock | `asyncio.Lock` | Prevents thundering herd on TTL expiry |
+| Clear | `clear_config_cache()` | For testing and manual refresh |
+
+---
+
 ## Alert Thresholds
 
 | Metric | Warning | Critical | Action |

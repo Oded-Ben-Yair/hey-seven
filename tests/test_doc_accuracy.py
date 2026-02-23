@@ -279,8 +279,8 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 118, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 118. "
+        assert len(patterns) == 166, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 166. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -303,35 +303,35 @@ class TestGuardrailPatternCount:
             assert len(cat) > 0, f"Category {i} is empty"
 
     def test_injection_pattern_count(self):
-        """Prompt injection has 11 Latin patterns."""
+        """Prompt injection has 20 Latin patterns (11 English + 9 Tagalog/Taglish)."""
         from src.agent.guardrails import _INJECTION_PATTERNS
 
-        assert len(_INJECTION_PATTERNS) == 11, (
-            f"_INJECTION_PATTERNS has {len(_INJECTION_PATTERNS)}, expected 11."
+        assert len(_INJECTION_PATTERNS) == 20, (
+            f"_INJECTION_PATTERNS has {len(_INJECTION_PATTERNS)}, expected 20."
         )
 
     def test_non_latin_injection_pattern_count(self):
-        """Non-Latin injection has 22 patterns (Arabic + Japanese + Korean + French + Vietnamese)."""
+        """Non-Latin injection has 27 patterns (Arabic + Japanese + Korean + French + Vietnamese + Hindi)."""
         from src.agent.guardrails import _NON_LATIN_INJECTION_PATTERNS
 
-        assert len(_NON_LATIN_INJECTION_PATTERNS) == 22, (
-            f"_NON_LATIN_INJECTION_PATTERNS has {len(_NON_LATIN_INJECTION_PATTERNS)}, expected 22."
+        assert len(_NON_LATIN_INJECTION_PATTERNS) == 27, (
+            f"_NON_LATIN_INJECTION_PATTERNS has {len(_NON_LATIN_INJECTION_PATTERNS)}, expected 27."
         )
 
     def test_responsible_gaming_pattern_count(self):
-        """Responsible gaming has 37 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese)."""
+        """Responsible gaming has 54 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese + Hindi + Tagalog)."""
         from src.agent.guardrails import _RESPONSIBLE_GAMING_PATTERNS
 
-        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 37, (
-            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 37."
+        assert len(_RESPONSIBLE_GAMING_PATTERNS) == 54, (
+            f"_RESPONSIBLE_GAMING_PATTERNS has {len(_RESPONSIBLE_GAMING_PATTERNS)}, expected 54."
         )
 
     def test_bsa_aml_pattern_count(self):
-        """BSA/AML has 31 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese)."""
+        """BSA/AML has 41 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese + Hindi + Tagalog)."""
         from src.agent.guardrails import _BSA_AML_PATTERNS
 
-        assert len(_BSA_AML_PATTERNS) == 31, (
-            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 31."
+        assert len(_BSA_AML_PATTERNS) == 41, (
+            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 41."
         )
 
 

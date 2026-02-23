@@ -18,6 +18,7 @@ __all__ = [
     "DispatchOutput",
     "ValidationResult",
     "RetrievedChunk",
+    "GuestContext",
 ]
 
 
@@ -76,6 +77,24 @@ class RetrievedChunk(TypedDict):
     score: float
 
 
+class GuestContext(TypedDict, total=False):
+    """Structured guest context passed to specialist agents.
+
+    Populated by _dispatch_to_specialist via get_agent_context(extracted_fields).
+    Using TypedDict instead of dict[str, Any] for IDE autocompletion and
+    documentation of expected keys.
+
+    total=False: all fields optional — not every turn extracts every field.
+    """
+
+    name: str | None
+    party_size: int | None
+    occasion: str | None
+    visit_date: str | None
+    dietary: str | None
+    preferences: list[str]
+
+
 class PropertyQAState(TypedDict):
     """Typed state flowing through the property Q&A graph.
 
@@ -110,9 +129,8 @@ class PropertyQAState(TypedDict):
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
     # v3 fields (Phase 3: Agent Quality Revolution)
     guest_sentiment: str | None  # positive/negative/neutral/frustrated (from VADER)
-    # Expected keys: name, party_size, occasion, visit_date, dietary, etc.
     # Populated by _dispatch_to_specialist via get_agent_context(extracted_fields).
-    guest_context: dict[str, Any]
+    guest_context: GuestContext
     # Denormalized from extracted_fields["name"] for O(1) access in
     # persona_envelope_node (which runs on every response turn).
     # Updated by _dispatch_to_specialist when guest_profile_enabled.

@@ -33,6 +33,29 @@
 
 ---
 
+## Tribal Gaming Jurisdiction
+
+### Federal Framework
+- Indian Gaming Regulatory Act (IGRA) 1988 establishes three classes of gaming
+- Class III gaming (slot machines, table games, sports betting) requires Tribal-State compact
+- National Indian Gaming Commission (NIGC) provides federal oversight
+- Tribal gaming operations are sovereign entities with their own regulatory bodies
+
+### Connecticut Tribal Casinos
+- **Mohegan Tribal Gaming Authority (MTGA)**: Self-regulates Mohegan Sun under Mohegan-CT compact
+- **Mashantucket Pequot Tribal Nation**: Self-regulates Foxwoods under Pequot-CT compact
+- Both compacts require 25% slot revenue contribution to State of Connecticut
+- CT Department of Consumer Protection handles patron self-exclusion (applies to both tribal casinos)
+- Self-exclusion phone: 1-860-713-6300, URL: ct.gov/selfexclusion
+
+### AI Implications for Tribal Properties
+- Tribal sovereignty: AI systems must comply with BOTH tribal regulations AND applicable state compact terms
+- Data sovereignty: Guest data at tribal casinos may be subject to tribal privacy laws
+- Self-exclusion: CT self-exclusion program applies across both tribal casinos (shared program)
+- Responsible gaming: Both properties participate in CT Council on Problem Gambling programs
+
+---
+
 ## Nevada
 
 **Regulator**: Nevada Gaming Control Board / Nevada Gaming Commission
@@ -53,6 +76,11 @@
 - Regulation 5A.135: "Reasonable steps" to prevent marketing to self-excluded
 - No explicit push notification ban (unlike NJ) but self-exclusion check mandatory
 - No explicit AI disclosure requirement yet
+
+### AI Disclosure
+- No explicit AI disclosure law but general consumer protection applies
+- FTC deception framework covers misrepresentation of AI capabilities
+- Best practice: disclose AI nature proactively even without specific mandate
 
 ### AML Enforcement
 - 2025: ~$27M in penalties across major Strip operators
@@ -75,6 +103,11 @@
 - Definition covers automatic messages when platform is not actively open
 - Penalty: not less than $500 per offense per violation
 - SB 3420: BANS promotional offers to players using responsible gaming tools
+
+### AI Disclosure
+- Emerging AI disclosure bills under consideration in NJ legislature
+- SB 3401 scope may extend to AI-generated communications soliciting wagers
+- Best practice: disclose AI nature in all automated communications
 
 ### Payment Restrictions
 - SB 3461: BANS credit card payments for online casino games
@@ -104,6 +137,11 @@
 - Deceased individual detection required
 - Multi-jurisdiction account checks required
 - Device account limits enforced
+
+### AI Disclosure
+- PGCB requires review of all platform services, including AI vendors, through licensing process
+- AI systems used for KYC, responsible gaming, or patron communication may require PGCB approval
+- Best practice: disclose AI nature and maintain audit trail for all AI decisions
 
 ### Third-Party AI
 - Operators cannot delegate verification to unlicensed AI vendors
