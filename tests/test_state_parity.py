@@ -124,6 +124,25 @@ class TestMergeDictsProperties:
         result = _merge_dicts({"name": "Sara"}, {"name": "Sarah"})
         assert result == {"name": "Sarah"}
 
+    @given(
+        st.dictionaries(st.text(min_size=1, max_size=5), st.one_of(st.text(min_size=1), st.integers())),
+        st.dictionaries(st.text(min_size=1, max_size=5), st.one_of(st.text(min_size=1), st.integers())),
+        st.dictionaries(st.text(min_size=1, max_size=5), st.one_of(st.text(min_size=1), st.integers())),
+    )
+    @h_settings(max_examples=50)
+    def test_merge_dicts_associativity(self, a, b, c):
+        """R40 fix D5-M005: merge(merge(a, b), c) == merge(a, merge(b, c)).
+
+        Associativity matters because extracted_fields accumulates across 3+
+        turns. If merge is not associative, the order of node execution
+        could produce different final states.
+        """
+        from src.agent.state import _merge_dicts
+
+        left = _merge_dicts(_merge_dicts(a, b), c)
+        right = _merge_dicts(a, _merge_dicts(b, c))
+        assert left == right
+
 
 class TestKeepMaxProperties:
     """R38 fix C-005: Property-based tests for _keep_max reducer."""

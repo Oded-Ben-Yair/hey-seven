@@ -1,6 +1,6 @@
 """Tests for the RAG pipeline (ingestion, retrieval, metadata, formatters, embeddings)."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -392,6 +392,30 @@ class TestReciprocalRankFusion:
         fused = rerank_by_rrf([list_a, list_b], top_k=5)
         assert len(fused) == 2, "Same content from different sources must not merge"
 
+    def test_one_empty_strategy(self):
+        """R40 fix D5-M004: One strategy returns results, other returns empty list."""
+        from langchain_core.documents import Document
+
+        from src.rag.reranking import rerank_by_rrf
+
+        list_a = [
+            (Document(page_content="doc1"), 0.9),
+            (Document(page_content="doc2"), 0.7),
+        ]
+        list_b: list[tuple] = []  # Empty strategy
+
+        fused = rerank_by_rrf([list_a, list_b], top_k=5)
+        assert len(fused) == 2, "Results from non-empty strategy must be returned"
+        assert fused[0][0].page_content == "doc1"
+        assert fused[1][0].page_content == "doc2"
+
+    def test_all_empty_strategies(self):
+        """R40 fix D5-M004: All strategies return empty lists."""
+        from src.rag.reranking import rerank_by_rrf
+
+        fused = rerank_by_rrf([[], []], top_k=5)
+        assert fused == []
+
 
 class TestChunkCount:
     def test_chunk_count_greater_or_equal_to_doc_count(self, test_property_file, tmp_path, no_kb_dir):
@@ -769,6 +793,74 @@ class TestEmbeddings:
             assert r1 is r2
             assert mock_cls.call_count == 1
             get_embeddings.cache_clear()
+
+
+class TestEmbeddingsHealthCheck:
+    """R40 fix D5-M003: Tests for R39 embedding health check failure path.
+
+    Verifies that:
+    - A broken client is NOT cached
+    - The exception is re-raised to the caller
+    - Subsequent calls retry creation (not stuck with broken cache)
+    """
+
+    def test_health_check_failure_prevents_caching(self):
+        """Broken embedding client is NOT cached after health check failure."""
+        from src.rag.embeddings import _embeddings_cache, get_embeddings
+
+        get_embeddings.cache_clear()
+
+        mock_instance = MagicMock()
+        mock_instance.embed_query.side_effect = RuntimeError("API quota exceeded")
+
+        with patch("src.rag.embeddings.GoogleGenerativeAIEmbeddings", return_value=mock_instance):
+            with pytest.raises(RuntimeError, match="API quota exceeded"):
+                get_embeddings()
+
+            # Cache should be empty — broken client NOT cached
+            assert _embeddings_cache.get("__default__") is None
+
+        get_embeddings.cache_clear()
+
+    def test_health_check_failure_reraises_exception(self):
+        """Health check failure re-raises the original exception."""
+        from src.rag.embeddings import get_embeddings
+
+        get_embeddings.cache_clear()
+
+        mock_instance = MagicMock()
+        mock_instance.embed_query.side_effect = ConnectionError("Network unreachable")
+
+        with patch("src.rag.embeddings.GoogleGenerativeAIEmbeddings", return_value=mock_instance):
+            with pytest.raises(ConnectionError, match="Network unreachable"):
+                get_embeddings(task_type="RETRIEVAL_DOCUMENT")
+
+        get_embeddings.cache_clear()
+
+    def test_retry_after_health_check_failure(self):
+        """After health check failure, next call retries creation (not stuck)."""
+        from src.rag.embeddings import get_embeddings
+
+        get_embeddings.cache_clear()
+
+        broken_instance = MagicMock()
+        broken_instance.embed_query.side_effect = RuntimeError("Temporary failure")
+
+        healthy_instance = MagicMock()
+        healthy_instance.embed_query.return_value = [0.1, 0.2, 0.3]
+
+        with patch("src.rag.embeddings.GoogleGenerativeAIEmbeddings") as mock_cls:
+            # First call: broken
+            mock_cls.return_value = broken_instance
+            with pytest.raises(RuntimeError):
+                get_embeddings()
+
+            # Second call: healthy — should succeed (not return cached broken)
+            mock_cls.return_value = healthy_instance
+            result = get_embeddings()
+            assert result is healthy_instance
+
+        get_embeddings.cache_clear()
 
 
 class TestLoadPropertyJsonEdgeCases:

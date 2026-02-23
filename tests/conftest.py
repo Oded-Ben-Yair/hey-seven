@@ -19,6 +19,20 @@ def _disable_semantic_injection_in_tests(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _disable_api_key_in_tests(monkeypatch):
+    """Ensure API_KEY is empty for all tests by default.
+
+    R40 fix D5-C001: ApiKeyMiddleware protects /chat, /graph, /property,
+    /feedback. When API_KEY leaks from one test to another via os.environ
+    or cached Settings, 52 tests return HTTP 401 instead of expected codes.
+    Setting API_KEY="" disables authentication (middleware passes through).
+    Tests that specifically test auth (TestGraphEndpointAuth) override via
+    patch.dict("os.environ", {"API_KEY": "..."}).
+    """
+    monkeypatch.setenv("API_KEY", "")
+
+
+@pytest.fixture(autouse=True)
 def _clear_singleton_caches():
     """Reset all @lru_cache singletons between tests.
 

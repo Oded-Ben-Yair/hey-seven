@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
@@ -338,11 +339,29 @@ async def reingest_item(
         doc_id = _compute_chunk_id(text, source)
 
         if hasattr(retriever, "vectorstore") and retriever.vectorstore is not None:
-            retriever.vectorstore.add_texts(
-                texts=[text],
-                metadatas=[metadata],
-                ids=[doc_id],
-            )
+            # R40 fix D2-M002: Retry add_texts() for transient embedding API
+            # failures during CMS webhook re-ingestion. Without retry, CMS
+            # content updates are silently lost during embedding API outages.
+            _REINGEST_MAX_RETRIES = 2
+            for _attempt in range(1, _REINGEST_MAX_RETRIES + 1):
+                try:
+                    retriever.vectorstore.add_texts(
+                        texts=[text],
+                        metadatas=[metadata],
+                        ids=[doc_id],
+                    )
+                    break
+                except Exception:
+                    if _attempt == _REINGEST_MAX_RETRIES:
+                        raise
+                    logger.warning(
+                        "add_texts() failed for %s/%s (attempt %d/%d), retrying...",
+                        category,
+                        item_id,
+                        _attempt,
+                        _REINGEST_MAX_RETRIES,
+                        exc_info=True,
+                    )
             # Purge stale CMS chunks for the same source with a different
             # ingestion version (edited content creates new IDs; old chunks
             # linger as ghost data).  Non-critical — log and continue on failure.
@@ -737,15 +756,42 @@ def ingest_property(
     embeddings = get_embeddings(task_type="RETRIEVAL_DOCUMENT")
     property_id = settings.PROPERTY_NAME.lower().replace(" ", "_")
 
-    vectorstore = Chroma.from_texts(
-        texts=texts,
-        metadatas=metadatas,
-        ids=ids,
-        collection_name="property_knowledge",
-        embedding=embeddings,
-        persist_directory=persist_dir,
-        collection_metadata={"hnsw:space": "cosine"},
-    )
+    # R40 fix D2-M001: Retry Chroma.from_texts() with exponential backoff.
+    # A transient embedding API outage (503) during startup would cause the
+    # container to start with empty RAG — all queries get no-context fallback
+    # for the container's lifetime. Retry up to 3 times before propagating.
+    _INGEST_MAX_RETRIES = 3
+    vectorstore = None
+    for attempt in range(1, _INGEST_MAX_RETRIES + 1):
+        try:
+            vectorstore = Chroma.from_texts(
+                texts=texts,
+                metadatas=metadatas,
+                ids=ids,
+                collection_name="property_knowledge",
+                embedding=embeddings,
+                persist_directory=persist_dir,
+                collection_metadata={"hnsw:space": "cosine"},
+            )
+            break
+        except Exception:
+            if attempt == _INGEST_MAX_RETRIES:
+                logger.error(
+                    "Chroma.from_texts() failed after %d attempts. "
+                    "Container will start with empty RAG.",
+                    _INGEST_MAX_RETRIES,
+                    exc_info=True,
+                )
+                raise
+            backoff = 2 ** attempt  # 2s, 4s
+            logger.warning(
+                "Chroma.from_texts() failed (attempt %d/%d), retrying in %ds...",
+                attempt,
+                _INGEST_MAX_RETRIES,
+                backoff,
+                exc_info=True,
+            )
+            time.sleep(backoff)
 
     # Purge stale chunks from previous ingestion versions.
     # After successful upsert, any chunks for the same property_id with

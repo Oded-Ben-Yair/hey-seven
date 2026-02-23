@@ -122,10 +122,14 @@ def _get_last_human_message(messages: list) -> str:
 # construction stalls (e.g., network hiccup during lazy init), it must NOT
 # block main LLM acquisition.  This prevents cascading latency spikes and
 # request pileups during partial outages.
+# R40 fix D8-C001: Stagger TTLs with random jitter (0-300s) to prevent
+# thundering herd when all singletons expire simultaneously after startup.
+import random as _random
+
 _LLM_CACHE_TTL = 3600
-_llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL)
+_llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
 _llm_lock = asyncio.Lock()
-_validator_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL)
+_validator_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
 _validator_lock = asyncio.Lock()
 
 
@@ -490,8 +494,8 @@ _KNOWN_CATEGORY_LABELS: dict[str, str] = {
 """Curated labels for known property-data categories."""
 
 
-_greeting_cache: TTLCache = TTLCache(maxsize=8, ttl=3600)
-"""Per-casino greeting categories cache (multi-tenant safe, 1-hour TTL)."""
+_greeting_cache: TTLCache = TTLCache(maxsize=8, ttl=3600 + _random.randint(0, 300))
+"""Per-casino greeting categories cache (multi-tenant safe, 1-hour TTL + jitter)."""
 
 
 def _build_greeting_categories(casino_id: str | None = None) -> dict[str, str]:

@@ -7,6 +7,7 @@ and pure ASGI middleware (no BaseHTTPMiddleware).
 import asyncio
 import json
 import logging
+import signal
 from contextlib import asynccontextmanager, aclosing
 from pathlib import Path
 from typing import AsyncGenerator
@@ -41,6 +42,16 @@ from .models import (
 # frozen at module level.  This ensures test monkeypatching works and
 # avoids stale config values.  Logging is configured at app creation time.
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# R40 fix: SIGTERM graceful drain for active SSE streams.
+# Cloud Run sends SIGTERM and allows up to --timeout (180s) for graceful
+# shutdown. This tracker lets the lifespan wait for active SSE streams to
+# finish (up to _DRAIN_TIMEOUT_S) before exiting.
+# ---------------------------------------------------------------------------
+_active_streams: set[asyncio.Task] = set()
+_shutting_down = asyncio.Event()
+_DRAIN_TIMEOUT_S = 30
 
 
 @asynccontextmanager
@@ -98,9 +109,35 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("Property data file not found at %s", property_path)
         app.state.property_data = {}
 
+    # R40 fix: Register SIGTERM handler to initiate graceful drain.
+    # On SIGTERM, set the _shutting_down event so new /chat requests return 503,
+    # then wait for active SSE streams to finish before proceeding with shutdown.
+    loop = asyncio.get_running_loop()
+
+    def _sigterm_handler():
+        logger.info("SIGTERM received, initiating graceful drain (%d active streams)", len(_active_streams))
+        _shutting_down.set()
+
+    try:
+        loop.add_signal_handler(signal.SIGTERM, _sigterm_handler)
+    except (NotImplementedError, ValueError, RuntimeError):
+        # Windows, non-main-thread, or test runner: signal handlers not supported.
+        # RuntimeError: "set_wakeup_fd only works in main thread" (Starlette TestClient)
+        logger.debug("SIGTERM handler not supported on this platform")
+
     app.state.ready = True
     yield
     app.state.ready = False
+
+    # Drain active SSE streams (up to _DRAIN_TIMEOUT_S)
+    if _active_streams:
+        logger.info("Draining %d active SSE streams (timeout=%ds)", len(_active_streams), _DRAIN_TIMEOUT_S)
+        done, pending = await asyncio.wait(_active_streams, timeout=_DRAIN_TIMEOUT_S)
+        if pending:
+            logger.warning("Force-closing %d SSE streams after drain timeout", len(pending))
+            for task in pending:
+                task.cancel()
+
     app.state.agent = None
     logger.info("Application shutdown complete.")
 
@@ -190,6 +227,17 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
     @app.post("/chat")
     async def chat_endpoint(request: Request, body: ChatRequest):
+        # R40 fix: Reject new chat requests during graceful shutdown.
+        # Active streams continue to drain, but new connections get 503.
+        if _shutting_down.is_set():
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=503,
+                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Server is shutting down. Please retry."),
+                headers={"Retry-After": "5"},
+            )
+
         agent = getattr(request.app.state, "agent", None)
         if agent is None:
             from fastapi.responses import JSONResponse
@@ -272,7 +320,20 @@ def create_app() -> FastAPI:
                 }
                 yield {"event": "done", "data": json.dumps({"done": True})}
 
-        return EventSourceResponse(event_generator())
+        # R40 fix: Track active SSE streams for graceful drain on SIGTERM.
+        # Wrap generator so the stream is registered/unregistered automatically.
+        async def _tracked_generator():
+            task = asyncio.current_task()
+            if task is not None:
+                _active_streams.add(task)
+            try:
+                async for event in event_generator():
+                    yield event
+            finally:
+                if task is not None:
+                    _active_streams.discard(task)
+
+        return EventSourceResponse(_tracked_generator())
 
     # ------------------------------------------------------------------
     # GET /live — Lightweight liveness probe (Cloud Run)

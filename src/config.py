@@ -179,7 +179,13 @@ class Settings(BaseSettings):
         return self
 
 
-_settings_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+# R40 fix D8-C001: Add TTL jitter to prevent thundering herd on synchronized
+# cache expiry. All singletons previously used identical ttl=3600, causing
+# all 6+ caches to expire within a 2-second window on container startup + 1 hour.
+# Jitter spreads reconstruction over a ~5-minute window.
+import random as _random
+
+_settings_cache: TTLCache = TTLCache(maxsize=1, ttl=3600 + _random.randint(0, 300))
 _settings_lock = threading.Lock()
 
 

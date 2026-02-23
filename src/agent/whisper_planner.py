@@ -43,7 +43,10 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
-_whisper_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+# R40 fix D8-C001: TTL jitter to prevent thundering herd on synchronized expiry.
+import random as _random
+
+_whisper_cache: TTLCache = TTLCache(maxsize=1, ttl=3600 + _random.randint(0, 300))
 _whisper_lock = asyncio.Lock()
 
 

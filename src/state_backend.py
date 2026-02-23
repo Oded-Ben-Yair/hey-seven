@@ -200,7 +200,8 @@ class RedisBackend(StateBackend):
 
 # R35 CRITICAL fix: Migrate from @lru_cache to TTLCache for credential rotation.
 # Redis connection may drop; TTLCache allows periodic reconnection attempt.
-_state_backend_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+# R40 fix D8-C001: TTL jitter to prevent thundering herd on synchronized expiry.
+_state_backend_cache: TTLCache = TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))
 _state_backend_lock = threading.Lock()
 
 

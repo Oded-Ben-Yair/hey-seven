@@ -46,7 +46,10 @@ MAX_ACTIVE_THREADS = 1000
 # TTL-cached checkpointer: refreshes every hour for credential rotation
 # (FirestoreSaver uses GCP credentials that rotate under Workload Identity
 # Federation). Consistent with _get_llm() / _get_validator_llm() in nodes.py.
-_checkpointer_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+# R40 fix D8-C001: TTL jitter to prevent thundering herd on synchronized expiry.
+import random as _random
+
+_checkpointer_cache: TTLCache = TTLCache(maxsize=1, ttl=3600 + _random.randint(0, 300))
 _checkpointer_lock = asyncio.Lock()
 
 

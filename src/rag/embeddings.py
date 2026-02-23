@@ -30,7 +30,10 @@ logger = logging.getLogger(__name__)
 # TTLCache with 1-hour TTL for GCP Workload Identity credential rotation.
 # maxsize=4 allows separate cached instances per task_type (default,
 # RETRIEVAL_QUERY, RETRIEVAL_DOCUMENT, etc.).
-_embeddings_cache: TTLCache = TTLCache(maxsize=4, ttl=3600)
+# R40 fix D8-C001: TTL jitter to prevent thundering herd on synchronized expiry.
+import random as _random
+
+_embeddings_cache: TTLCache = TTLCache(maxsize=4, ttl=3600 + _random.randint(0, 300))
 
 # R17 fix: DeepSeek F-001 (MEDIUM).  TTLCache is not thread-safe.
 # get_embeddings() is called from both async contexts (lifespan startup)

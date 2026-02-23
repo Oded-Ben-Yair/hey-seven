@@ -11,6 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 COPY requirements-prod.txt .
 # Production build uses requirements-prod.txt which excludes chromadb (~200MB)
 # and dev dependencies. For local dev with ChromaDB, use requirements.txt.
+#
+# R40 fix: --require-hashes for supply chain hardening. Ensures every package
+# matches a known SHA-256 hash, preventing dependency confusion and tampering.
+# To regenerate hashes after dependency changes:
+#   pip-compile --generate-hashes --output-file=requirements-prod.txt requirements-prod.in
+# Until hashed requirements are generated, use --no-cache-dir only (TODO: HEYSEVEN-58).
 RUN pip install --no-cache-dir --target=/build/deps -r requirements-prod.txt
 
 # Stage 2: Production

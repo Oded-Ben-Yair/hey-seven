@@ -358,6 +358,11 @@ class RateLimitMiddleware:
         3. **Cloud Armor rate limiting** -- zero-code, CDN-level enforcement.
            No application changes needed. Suitable for production scale
            with DDoS protection. Recommended for GA launch.
+
+    Upgrade trigger (R40 D8-M001):
+        Upgrade to Cloud Armor when ANY of: (a) daily traffic exceeds 1000
+        requests, (b) before any paid client deployment, (c) max-instances
+        regularly scales above 3 (checked via Cloud Run metrics).
     """
 
     def __init__(self, app: ASGIApp) -> None:

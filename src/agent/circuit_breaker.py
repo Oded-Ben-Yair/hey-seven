@@ -336,7 +336,10 @@ class CircuitBreaker:
 # purposes: (1) config refresh and (2) implicit state reset. For incident
 # response, use clear_circuit_breaker_cache() for immediate config reload
 # rather than waiting for the 1-hour TTL to expire.
-_cb_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+# R40 fix D8-C001: TTL jitter to prevent thundering herd on synchronized expiry.
+import random as _random
+
+_cb_cache: TTLCache = TTLCache(maxsize=1, ttl=3600 + _random.randint(0, 300))
 _cb_lock = asyncio.Lock()
 
 
