@@ -1,8 +1,9 @@
-"""Tests for state schema parity and serialization safety."""
+"""Tests for state schema parity, serialization safety, and reducer properties."""
 
 import json
 
 import pytest
+from hypothesis import given, settings as h_settings, strategies as st
 
 
 class TestInitialStateParity:
@@ -76,3 +77,103 @@ class TestValidationResultLiterals:
 
         with pytest.raises(Exception):
             ValidationResult(status="INVALID", reason="test")
+
+
+class TestMergeDictsProperties:
+    """R38 fix C-005: Property-based tests for _merge_dicts reducer.
+
+    Verifies algebraic invariants:
+    - Identity element: merging with {} preserves existing state
+    - None-filtering: None values in b do not overwrite a
+    - Empty-string-filtering (R38 fix C-003): "" values in b do not overwrite a
+    """
+
+    @given(st.dictionaries(st.text(min_size=1, max_size=5), st.one_of(st.text(min_size=1), st.integers())))
+    @h_settings(max_examples=50)
+    def test_merge_dicts_identity(self, d):
+        """Merging with empty dict preserves all keys and values."""
+        from src.agent.state import _merge_dicts
+
+        result = _merge_dicts(d, {})
+        assert result == d
+
+    @given(st.dictionaries(st.text(min_size=1, max_size=5), st.text(min_size=1)))
+    @h_settings(max_examples=50)
+    def test_merge_dicts_none_filtered(self, d):
+        """None values in b do not overwrite existing keys in a."""
+        from src.agent.state import _merge_dicts
+
+        none_dict = {k: None for k in d}
+        result = _merge_dicts(d, none_dict)
+        assert result == d
+
+    @given(st.dictionaries(st.text(min_size=1, max_size=5), st.text(min_size=1)))
+    @h_settings(max_examples=50)
+    def test_merge_dicts_empty_string_filtered(self, d):
+        """Empty string values in b do not overwrite existing keys in a (R38 fix C-003)."""
+        from src.agent.state import _merge_dicts
+
+        empty_dict = {k: "" for k in d}
+        result = _merge_dicts(d, empty_dict)
+        assert result == d
+
+    def test_merge_dicts_new_values_overwrite(self):
+        """Non-None, non-empty values in b overwrite a."""
+        from src.agent.state import _merge_dicts
+
+        result = _merge_dicts({"name": "Sara"}, {"name": "Sarah"})
+        assert result == {"name": "Sarah"}
+
+
+class TestKeepMaxProperties:
+    """R38 fix C-005: Property-based tests for _keep_max reducer."""
+
+    @given(st.integers(min_value=0, max_value=1000), st.integers(min_value=0, max_value=1000))
+    @h_settings(max_examples=50)
+    def test_keep_max_commutative(self, a, b):
+        """_keep_max(a, b) == _keep_max(b, a)."""
+        from src.agent.state import _keep_max
+
+        assert _keep_max(a, b) == _keep_max(b, a)
+
+    @given(st.integers(min_value=0, max_value=1000))
+    @h_settings(max_examples=50)
+    def test_keep_max_identity(self, a):
+        """_keep_max(a, 0) == a for non-negative a."""
+        from src.agent.state import _keep_max
+
+        assert _keep_max(a, 0) == a
+
+    def test_keep_max_none_guard(self):
+        """_keep_max handles None input without TypeError (R38 fix M-007)."""
+        from src.agent.state import _keep_max
+
+        assert _keep_max(5, None) == 5
+        assert _keep_max(None, 3) == 3
+        assert _keep_max(None, None) == 0
+
+
+class TestKeepTruthyProperties:
+    """R38 fix C-005: Property-based tests for _keep_truthy reducer."""
+
+    @given(st.booleans(), st.booleans())
+    @h_settings(max_examples=10)
+    def test_keep_truthy_commutative(self, a, b):
+        """_keep_truthy(a, b) == _keep_truthy(b, a)."""
+        from src.agent.state import _keep_truthy
+
+        assert _keep_truthy(a, b) == _keep_truthy(b, a)
+
+    def test_keep_truthy_identity(self):
+        """_keep_truthy(a, False) == a."""
+        from src.agent.state import _keep_truthy
+
+        assert _keep_truthy(True, False) is True
+        assert _keep_truthy(False, False) is False
+
+    def test_keep_truthy_sticky(self):
+        """Once True, stays True."""
+        from src.agent.state import _keep_truthy
+
+        assert _keep_truthy(True, False) is True
+        assert _keep_truthy(True, True) is True

@@ -185,6 +185,80 @@ class TestStreamingPIIRedactor:
         assert "[EMAIL]" in text
 
 
+class TestStreamingPIIBoundary:
+    """R38 fix C-006: Boundary tests for streaming PII redaction.
+
+    Tests critical edge cases at MAX_BUFFER=500 and _MAX_PATTERN_LEN=120
+    boundaries that were previously untested.
+    """
+
+    def test_pii_at_force_flush_boundary(self):
+        """PII pattern starting near the force-flush boundary (buffer ~490 chars)."""
+        r = StreamingPIIRedactor()
+        # Fill buffer to just below MAX_BUFFER, then add PII
+        padding = "a" * 489
+        pii_chunk = " 860-555-0123 "
+        output = list(r.feed(padding + pii_chunk)) + list(r.flush())
+        text = "".join(output)
+        assert "860-555-0123" not in text
+        assert "[PHONE]" in text
+
+    def test_pii_within_lookahead_before_force_flush(self):
+        """PII that fits within the lookahead window before force-flush is caught.
+
+        When buffer approaches MAX_BUFFER, PII near the end is within the
+        retained lookahead. As long as the PII starts within the lookahead
+        window (_MAX_PATTERN_LEN chars from end), it is caught.
+        """
+        from src.agent.streaming_pii import _MAX_PATTERN_LEN
+
+        r = StreamingPIIRedactor()
+        # Fill buffer to just within lookahead range, then PII
+        padding = "a" * (r.MAX_BUFFER - _MAX_PATTERN_LEN - 5)
+        output = (
+            list(r.feed(padding))
+            + list(r.feed("Call 860-555-0123 please"))
+            + list(r.flush())
+        )
+        text = "".join(output)
+        assert "860-555-0123" not in text
+        assert "[PHONE]" in text
+
+    def test_multiple_consecutive_force_flushes_with_pii(self):
+        """PII patterns across 3 consecutive force-flush cycles."""
+        r = StreamingPIIRedactor()
+        # Send 3 batches, each exceeding MAX_BUFFER, each containing PII
+        for phone in ["860-555-0001", "860-555-0002", "860-555-0003"]:
+            padding = "a" * (r.MAX_BUFFER - 20)
+            list(r.feed(padding + f" {phone} "))
+        output = list(r.flush())
+        text = "".join(output)
+        for phone in ["860-555-0001", "860-555-0002", "860-555-0003"]:
+            assert phone not in text
+
+    def test_long_address_within_lookahead_window(self):
+        """Formatted mailing address (90+ chars) within the 120-char lookahead.
+
+        R38 fix C-001: _MAX_PATTERN_LEN increased from 80 to 120.
+        """
+        from src.agent.streaming_pii import _MAX_PATTERN_LEN
+
+        assert _MAX_PATTERN_LEN >= 120, "Lookahead must be >= 120 for long addresses"
+
+    def test_non_ascii_pii_in_buffer(self):
+        """Non-ASCII characters in buffer don't break PII detection."""
+        r = StreamingPIIRedactor()
+        # Unicode text followed by PII
+        output = (
+            list(r.feed("Bonjour! Appelez-moi au "))
+            + list(r.feed("860-555-0123 s'il vous plait"))
+            + list(r.flush())
+        )
+        text = "".join(output)
+        assert "860-555-0123" not in text
+        assert "[PHONE]" in text
+
+
 class TestStreamingVsFullTextParity:
     """R37 fix C-002: Verify streaming and full-text PII redaction produce
     identical output for known PII patterns.

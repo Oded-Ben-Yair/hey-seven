@@ -41,7 +41,10 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     new fields, they merge into the existing dict. When the same key is
     re-extracted with a non-None value, the newer value wins.
     """
-    return {**a, **{k: v for k, v in b.items() if v is not None}}
+    # R38 fix C-003: Also filter empty strings from b. An extraction or CRM
+    # import returning {"name": ""} would overwrite a previously-extracted
+    # valid name. Empty string is not a valid guest data value.
+    return {**a, **{k: v for k, v in b.items() if v is not None and v != ""}}
 
 
 def _keep_max(a: int, b: int) -> int:
@@ -52,7 +55,9 @@ def _keep_max(a: int, b: int) -> int:
     max(existing, 0) preserves the count.  When a node increments,
     max(existing, new) updates the count.
     """
-    return max(a, b)
+    # R38 fix M-007: Guard against None input from buggy nodes.
+    # max(5, None) raises TypeError in Python. Defensive: treat None as 0.
+    return max(a or 0, b or 0)
 
 
 def _keep_truthy(a: bool, b: bool) -> bool:

@@ -282,10 +282,15 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
             {c.get("metadata", {}).get("category", "") for c in retrieved if c.get("metadata", {}).get("category")},
         )
 
+    # R38 fix M-002: Cache both feature flag results at function start to avoid
+    # TOCTOU issues from calling is_feature_enabled() twice (flag could flip
+    # between calls during Firestore write propagation).
+    specialist_enabled = await is_feature_enabled(settings.CASINO_ID, "specialist_agents_enabled")
+    profile_enabled = await is_feature_enabled(settings.CASINO_ID, "guest_profile_enabled")
+
     # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
     # When disabled, all queries route to the general host concierge.
-    # Uses async is_feature_enabled() for multi-tenant support (per-casino overrides).
-    if agent_name != "host" and not await is_feature_enabled(settings.CASINO_ID, "specialist_agents_enabled"):
+    if agent_name != "host" and not specialist_enabled:
         logger.info("Specialist agents disabled; routing %s to host", agent_name)
         agent_name = "host"
 
@@ -293,7 +298,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # Fail-silent: profile lookup failure = empty context, not crash.
     guest_context_update: dict[str, Any] = {}
     try:
-        if await is_feature_enabled(settings.CASINO_ID, "guest_profile_enabled"):
+        if profile_enabled:
             from src.data.guest_profile import get_agent_context
             extracted = state.get("extracted_fields", {})
             if extracted:

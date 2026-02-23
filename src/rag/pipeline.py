@@ -5,6 +5,7 @@ content, embeds with Google GenAI, and stores in ChromaDB for local
 vector search.
 """
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -934,6 +935,15 @@ _retriever_cache: dict[str, AbstractRetriever] = {}
 _retriever_cache_time: dict[str, float] = {}
 _retriever_lock = _threading.Lock()
 _RETRIEVER_TTL_SECONDS = 3600  # 1 hour
+# R38 fix C-002: asyncio-level gate to prevent thread pool starvation at TTL
+# expiry. Without this, when multiple concurrent requests hit TTL expiry
+# simultaneously, ALL to_thread workers block on _retriever_lock while one
+# creates a new retriever (1-5s). The default asyncio thread pool is
+# min(32, cpu_count+4), so 30+ concurrent requests exhaust it, blocking ALL
+# other to_thread() operations. This asyncio.Lock ensures only ONE event loop
+# task enters to_thread for cache refresh; others await the asyncio.Lock
+# (non-blocking to the event loop) and find the cache already populated.
+_retriever_async_gate = asyncio.Lock()
 
 
 def _get_retriever_cached() -> AbstractRetriever:
@@ -948,6 +958,13 @@ def _get_retriever_cached() -> AbstractRetriever:
     pool, not the event loop.  All other singletons use ``asyncio.Lock``
     because they run in coroutines.  R16 fix (3/3 reviewer consensus).
 
+    R38 fix C-002: Lock-free fast path added. When the cache is populated
+    and not expired, return immediately without acquiring the lock. Only
+    acquire the lock when the cache is empty or expired (creation/refresh).
+    This prevents thread pool starvation at TTL expiry: the common case
+    (cache hit) is lock-free, and the rare case (cache miss/expiry) is
+    serialized as before.
+
     Internal helper for ``get_retriever()`` — separated so that the
     ``persist_dir`` override path does not pollute the cache key.
     """
@@ -957,10 +974,13 @@ def _get_retriever_cached() -> AbstractRetriever:
     cache_key = f"{settings.CASINO_ID}:default"
     now = time.monotonic()
 
-    # Full lock: prevents concurrent to_thread workers from racing on
-    # TTL expiry and both creating new retriever instances (resource leak,
-    # duplicate Firestore/ChromaDB connections).  Matches the double-check
-    # pattern used by _get_llm, _get_circuit_breaker, get_checkpointer.
+    # Lock-free fast path: if cache is valid, return without locking.
+    # The threading.Lock is only needed for creation/refresh.
+    if cache_key in _retriever_cache:
+        if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
+            return _retriever_cache[cache_key]
+
+    # Slow path: cache miss or TTL expired. Acquire lock for creation.
     with _retriever_lock:
         # Double-check after acquiring lock (another thread may have filled it)
         if cache_key in _retriever_cache:

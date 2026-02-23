@@ -19,9 +19,11 @@ from src.api.pii_redaction import redact_pii
 # Credit card with spaces: "4111 1111 1111 1111" = 19 chars.
 # Player card prefix + number: "player card number: 123456789012" = ~32 chars.
 # Email addresses with long domains: "firstname.lastname@department.casino-resort.com" = ~48 chars.
-# Formatted street addresses: "123 West Main Street, Uncasville, CT 06382" = ~43 chars.
-# 80 provides safe coverage for these longer patterns.
-_MAX_PATTERN_LEN = 80
+# Formatted mailing addresses: "123 West Main Street Suite 400, Uncasville, CT 06382-1234" = ~58 chars.
+# R38 fix C-001: Increased from 80 to 120 to cover formatted mailing addresses
+# with zip+4 and suite numbers that can approach 80+ chars with surrounding
+# context triggering address detection.
+_MAX_PATTERN_LEN = 120
 
 
 class StreamingPIIRedactor:

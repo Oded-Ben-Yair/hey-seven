@@ -13,10 +13,12 @@ logic.
 """
 
 import asyncio
+import html
 import logging
 from string import Template
 import re
 import unicodedata
+import urllib.parse
 
 from pydantic import BaseModel, Field
 
@@ -40,7 +42,9 @@ _INJECTION_PATTERNS = [
     re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)", re.I),
     re.compile(r"you\s+are\s+now\s+(?:a|an|the)\b", re.I),
     re.compile(r"system\s*:\s*", re.I),
-    re.compile(r"\bDAN\b.*\bmode\b", re.I),
+    # R38 fix D7-M1: re.DOTALL so .* matches newlines. Without it,
+    # "DAN\n\n\n[filler]\n\nmode" bypasses this pattern entirely.
+    re.compile(r"\bDAN\b.*\bmode\b", re.I | re.DOTALL),
     re.compile(r"pretend\s+(?:you(?:'re|\s+are)\s+)?(?:a|an|the)\b", re.I),
     re.compile(r"disregard\s+(?:all\s+)?(?:previous|prior|your)\b", re.I),
     # "act as" — require role-play framing (article + noun), exclude hospitality
@@ -387,6 +391,12 @@ def _normalize_input(text: str) -> str:
     collapses whitespace. This makes regex patterns effective against
     Unicode homoglyph attacks and encoding tricks.
     """
+    # R38 CRITICAL fix D7-C1: Decode URL-encoded and HTML-entity-encoded
+    # payloads BEFORE any other normalization. LLMs natively understand these
+    # encodings, so attackers can send "ignore%20previous%20instructions" or
+    # "&#105;gnore previous instructions" to bypass regex patterns.
+    text = urllib.parse.unquote(text)
+    text = html.unescape(text)
     # Remove ALL Unicode format characters (category Cf) — zero-width joiners,
     # bidi isolates/overrides, word joiners, interlinear annotations, etc.
     # R35 CRITICAL fix: previous regex only covered \u200b-\u200f, \u2028-\u202f,
@@ -403,6 +413,10 @@ def _normalize_input(text: str) -> str:
     text = "".join(c for c in text if not unicodedata.combining(c))
     # Replace cross-script homoglyphs (Cyrillic/Greek → Latin) — O(n) single pass
     text = text.translate(_CONFUSABLES_TABLE)
+    # R38 fix D7-M3: Strip single-character delimiters between alphanumeric chars.
+    # Catches token-smuggling via punctuation: "i.g.n.o.r.e" and
+    # "ignore_previous_instructions" bypass word-boundary regex patterns.
+    text = re.sub(r"(?<=\w)[._\-](?=\w)", "", text)
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
     return text

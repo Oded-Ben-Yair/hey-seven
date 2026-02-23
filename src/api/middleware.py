@@ -361,14 +361,24 @@ class RateLimitMiddleware:
         self.window_seconds = 60.0
         # {ip: deque of request timestamps} — OrderedDict for LRU eviction semantics
         self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
-        # Protects _requests mutations under concurrent async requests
-        self._lock = asyncio.Lock()
+        # R38 CRITICAL fix D8-C1: Per-client locks instead of a single global
+        # lock. The global lock serialized ALL concurrent /chat requests through
+        # one lock, creating a bottleneck at 50 concurrent SSE streams. Per-client
+        # locks allow concurrent requests from different IPs to proceed in parallel.
+        # The _requests_lock protects ONLY structural mutations to _requests dict
+        # (adding/removing keys, LRU eviction). Per-client bucket operations use
+        # per-client locks stored in _client_locks.
+        self._requests_lock = asyncio.Lock()
+        self._client_locks: dict[str, asyncio.Lock] = {}
         # Stale-client sweep counter. R16 fix: initialized in __init__
         # instead of lazy getattr (Gemini F-009, Grok M-006 consensus).
         self._request_counter: int = 0
         # R36 fix B6: Time-based sweep fallback. Under low traffic, stale
         # clients accumulate without cleanup (never reach 100 request threshold).
         self._last_sweep: float = time.monotonic()
+        # R38 fix: Background sweep task (lazy-started on first request).
+        # Sweep runs outside the request path so it never blocks incoming requests.
+        self._sweep_task: asyncio.Task | None = None
 
     @staticmethod
     def _normalize_ip(ip: str) -> str:
@@ -414,8 +424,47 @@ class RateLimitMiddleware:
         client = scope.get("client")
         return self._normalize_ip(client[0] if client else "unknown")
 
+    async def _ensure_sweep_task(self) -> None:
+        """Lazily start the background sweep task on first request.
+
+        R38 fix: Sweep runs in a background asyncio.Task every 60s instead
+        of inline during _is_allowed(). This prevents the sweep from blocking
+        concurrent requests under high load.
+        """
+        if self._sweep_task is None or self._sweep_task.done():
+            self._sweep_task = asyncio.create_task(self._background_sweep())
+
+    async def _background_sweep(self) -> None:
+        """Periodically remove stale clients whose deques are fully expired.
+
+        Runs every 60s in the background. Acquires _requests_lock only briefly
+        to collect stale keys and delete them. Does NOT block _is_allowed().
+        """
+        try:
+            while True:
+                await asyncio.sleep(60)
+                now = time.monotonic()
+                window_start = now - self.window_seconds
+                async with self._requests_lock:
+                    stale = [
+                        ip for ip, dq in self._requests.items()
+                        if not dq or dq[-1] < window_start
+                    ]
+                    for ip in stale:
+                        del self._requests[ip]
+                        self._client_locks.pop(ip, None)
+                    self._last_sweep = now
+        except asyncio.CancelledError:
+            pass
+
     async def _is_allowed(self, client_ip: str) -> bool:
         """Check if a request from client_ip is within the rate limit.
+
+        R38 CRITICAL fix D8-C1: Uses per-client locks instead of a global lock.
+        The _requests_lock is held only briefly to ensure the client bucket
+        and per-client lock exist. The actual rate-limit check (deque ops)
+        happens under a per-client lock, allowing concurrent requests from
+        different IPs to proceed in parallel.
 
         Only allowed requests are recorded in the deque. Rejected requests
         do NOT consume deque memory. Per-client deque is bounded to
@@ -427,36 +476,29 @@ class RateLimitMiddleware:
         now = time.monotonic()
         window_start = now - self.window_seconds
 
-        async with self._lock:
-            # Periodic stale-client sweep: every 100 requests OR every 300s,
-            # remove clients whose deques are fully expired. Prevents slow
-            # memory growth from transient IPs.
-            # R11 fix: DeepSeek F-006, Gemini F-001, GPT F-002 (3/3 consensus).
-            # R36 fix B6: Added time-based fallback for low-traffic scenarios.
-            self._request_counter += 1
-            time_since_sweep = now - self._last_sweep
-            if self._request_counter % 100 == 0 or time_since_sweep > 300:
-                stale = [
-                    ip for ip, dq in self._requests.items()
-                    if not dq or dq[-1] < window_start
-                ]
-                for ip in stale:
-                    del self._requests[ip]
-                self._last_sweep = now
+        # Start background sweep if not running
+        await self._ensure_sweep_task()
 
+        # Brief structural lock: ensure bucket and per-client lock exist
+        async with self._requests_lock:
             # Memory guard: evict LEAST recently used client if at capacity
             if client_ip not in self._requests and len(self._requests) >= self.max_clients:
-                self._requests.popitem(last=False)  # LRU eviction
+                evicted_ip, _ = self._requests.popitem(last=False)  # LRU eviction
+                self._client_locks.pop(evicted_ip, None)
 
             if client_ip not in self._requests:
-                # maxlen = max_tokens: only allowed requests are recorded,
-                # so the deque never exceeds the rate limit count.
                 self._requests[client_ip] = collections.deque(maxlen=self.max_tokens)
 
-            bucket = self._requests[client_ip]
+            if client_ip not in self._client_locks:
+                self._client_locks[client_ip] = asyncio.Lock()
+
             # Move to end (most recently used) on access
             self._requests.move_to_end(client_ip)
+            bucket = self._requests[client_ip]
+            client_lock = self._client_locks[client_ip]
 
+        # Per-client lock: only serializes requests from the SAME IP
+        async with client_lock:
             # Evict expired entries
             while bucket and bucket[0] < window_start:
                 bucket.popleft()

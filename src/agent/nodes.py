@@ -339,6 +339,26 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _degraded_pass_result(retry_count: int) -> dict[str, Any]:
+    """Return degraded-pass or fail-closed result based on attempt number.
+
+    R38 fix M-001: Extracted from duplicate try/except blocks in validate_node.
+    Strategy: first attempt + validator failure = PASS (availability over safety,
+    deterministic guardrails already ran). Retry attempt + validator failure =
+    FAIL (safety over availability, prior issue + failure = suspect content).
+    """
+    if retry_count == 0:
+        logger.warning(
+            "Degraded-pass: serving unvalidated response (first attempt, "
+            "validator unavailable)"
+        )
+        return {"validation_result": "PASS"}
+    return {
+        "validation_result": "FAIL",
+        "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
+    }
+
+
 async def validate_node(state: PropertyQAState) -> dict[str, Any]:
     """Adversarial review of the generated response against 6 criteria.
 
@@ -396,33 +416,10 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
 
     except (ValueError, TypeError) as exc:
         logger.warning("Validation structured output parsing failed: %s", exc)
-        # Degraded-pass strategy: balance availability vs safety.
-        if retry_count == 0:
-            # First attempt: generate succeeded, only validator failed.
-            # Deterministic guardrails already passed. Serve unvalidated.
-            logger.warning(
-                "Degraded-pass: serving unvalidated response (first attempt, "
-                "validator unavailable)"
-            )
-            return {"validation_result": "PASS"}
-        # Retry attempt: prior validation issues + validator failure = suspect.
-        # Fail-closed to protect guest safety.
-        return {
-            "validation_result": "FAIL",
-            "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
-        }
+        return _degraded_pass_result(retry_count)
     except Exception:
         logger.exception("Validation LLM call failed")
-        if retry_count == 0:
-            logger.warning(
-                "Degraded-pass: serving unvalidated response (first attempt, "
-                "validator unavailable)"
-            )
-            return {"validation_result": "PASS"}
-        return {
-            "validation_result": "FAIL",
-            "retry_feedback": "Validation unavailable — returning safe fallback for guest safety.",
-        }
+        return _degraded_pass_result(retry_count)
 
 
 # ---------------------------------------------------------------------------
