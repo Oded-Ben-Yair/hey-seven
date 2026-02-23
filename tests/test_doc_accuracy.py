@@ -279,8 +279,8 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 112, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 112. "
+        assert len(patterns) == 118, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 118. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -303,11 +303,19 @@ class TestGuardrailPatternCount:
             assert len(cat) > 0, f"Category {i} is empty"
 
     def test_injection_pattern_count(self):
-        """Prompt injection has 11 patterns."""
+        """Prompt injection has 11 Latin patterns."""
         from src.agent.guardrails import _INJECTION_PATTERNS
 
         assert len(_INJECTION_PATTERNS) == 11, (
             f"_INJECTION_PATTERNS has {len(_INJECTION_PATTERNS)}, expected 11."
+        )
+
+    def test_non_latin_injection_pattern_count(self):
+        """Non-Latin injection has 22 patterns (Arabic + Japanese + Korean + French + Vietnamese)."""
+        from src.agent.guardrails import _NON_LATIN_INJECTION_PATTERNS
+
+        assert len(_NON_LATIN_INJECTION_PATTERNS) == 22, (
+            f"_NON_LATIN_INJECTION_PATTERNS has {len(_NON_LATIN_INJECTION_PATTERNS)}, expected 22."
         )
 
     def test_responsible_gaming_pattern_count(self):
@@ -319,11 +327,11 @@ class TestGuardrailPatternCount:
         )
 
     def test_bsa_aml_pattern_count(self):
-        """BSA/AML has 25 patterns (English + Spanish + Portuguese + Mandarin)."""
+        """BSA/AML has 31 patterns (English + Spanish + Portuguese + Mandarin + French + Vietnamese)."""
         from src.agent.guardrails import _BSA_AML_PATTERNS
 
-        assert len(_BSA_AML_PATTERNS) == 25, (
-            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 25."
+        assert len(_BSA_AML_PATTERNS) == 31, (
+            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 31."
         )
 
 

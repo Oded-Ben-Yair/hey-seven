@@ -104,7 +104,13 @@ def redact_pii(text: str) -> str:
 
         return result
     except Exception:
-        logger.warning("PII redaction failed; returning redacted placeholder", exc_info=True)
+        # Log without exc_info=True: stack trace may contain function
+        # arguments with the original PII text, defeating the purpose
+        # of fail-closed redaction. Log input length for debugging.
+        logger.warning(
+            "PII redaction failed for input length=%d; returning redacted placeholder",
+            len(text),
+        )
         return "[PII_REDACTION_ERROR]"
 
 

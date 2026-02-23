@@ -6,6 +6,19 @@ is exceeded.
 
 States: closed (normal) -> open (blocking) -> half_open (probe one request).
 Thread-safe via ``asyncio.Lock`` for concurrent coroutine access.
+
+**Known limitation (multi-instance)**: Circuit breaker state is per-process
+(``TTLCache`` singleton). With N Cloud Run instances, each has independent CB
+state. During an LLM outage, instance A may trip its CB while instances B-N
+continue sending requests to the failed LLM. This is acceptable for MVP
+(single-digit instances). Production mitigation path:
+
+1. **Short-term (v1.x)**: Accept per-process CB; LLM outage affects all
+   instances within ~30s as each independently detects failure.
+2. **Medium-term (v2.0)**: Shared CB state via Redis (Memorystore) with
+   atomic increment/decrement for failure counts.
+3. **Long-term**: Cloud Run service mesh with circuit breaker policy
+   (Istio/Envoy) at the infrastructure level.
 """
 
 import asyncio

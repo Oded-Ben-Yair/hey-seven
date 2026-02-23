@@ -127,7 +127,7 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     re.compile(r"juego\s+compulsivo", re.I),
     re.compile(r"auto[- ]?exclusi[oó]n", re.I),   # self-exclusion in Spanish
     re.compile(r"l[ií]mite\s+(?:de\s+)?(?:juego|apuesta)", re.I),  # betting limit
-    re.compile(r"per[ií]\s+todo\s+(?:en\s+el\s+)?(?:casino|juego)", re.I),  # lost everything
+    re.compile(r"perd[ií]\s+todo\s+(?:en\s+el\s+)?(?:casino|juego)", re.I),  # lost everything
     # Portuguese patterns (CT casino diverse clientele)
     re.compile(r"problema\s+(?:com|de)\s+jogo", re.I),  # gambling problem
     re.compile(r"v[ií]cio\s+(?:em|de)\s+jogo", re.I),   # gambling addiction
@@ -201,6 +201,14 @@ _BSA_AML_PATTERNS = [
     re.compile(r"洗\s*钱", re.I),                                   # money laundering (洗钱)
     re.compile(r"逃\s*税", re.I),                                   # tax evasion (逃税)
     re.compile(r"(?:隐藏|藏)\s*(?:钱|现金)", re.I),                  # hide money/cash
+    # French BSA/AML patterns (R34 fix: parity with injection+RG coverage)
+    re.compile(r"\bblanchiment\s+(?:d[e']?\s*)?argent", re.I),      # money laundering
+    re.compile(r"\b(?:cacher|dissimuler)\s+(?:mon\s+|l'?\s*)?argent", re.I),  # hide money
+    re.compile(r"\b[eé]viter\s+(?:le\s+)?(?:rapport|signalement)", re.I),     # avoid report
+    # Vietnamese BSA/AML patterns (R34 fix: parity with injection+RG coverage)
+    re.compile(r"rửa\s*tiền", re.I),                               # money laundering (rửa tiền)
+    re.compile(r"(?:giấu|che\s+giấu)\s+tiền", re.I),              # hide money
+    re.compile(r"trốn\s+thuế", re.I),                              # tax evasion (trốn thuế)
 ]
 
 # ---------------------------------------------------------------------------
@@ -260,6 +268,8 @@ _CONFUSABLES: dict[str, str] = {
     "\u039a": "K",  # Kappa
     "\u0397": "H",  # Eta
     "\u039c": "M",  # Mu
+    "\u039d": "N",  # Nu (R34 fix: missing uppercase confusable)
+    "\u03a1": "P",  # Rho uppercase (R34 fix: lowercase mapped but uppercase missing)
     "\u03a4": "T",  # Tau
     "\u0392": "B",  # Beta
     "\u03a7": "X",  # Chi
@@ -272,6 +282,11 @@ _CONFUSABLES: dict[str, str] = {
     "\uff5a": "z",
 }
 
+# Pre-built translation table for O(n) single-pass confusable replacement.
+# str.translate() is implemented in C and avoids per-character Python dict
+# lookups. R34 fix: replaces O(n*m) _CONFUSABLES.get() loop.
+_CONFUSABLES_TABLE = str.maketrans(_CONFUSABLES)
+
 
 def _normalize_input(text: str) -> str:
     """Normalize input for more robust pattern matching.
@@ -283,8 +298,8 @@ def _normalize_input(text: str) -> str:
     """
     # Remove zero-width characters (already caught by regex, but defense in depth)
     text = re.sub(r"[\u200b-\u200f\u2028-\u202f\ufeff]", "", text)
-    # Replace cross-script homoglyphs (Cyrillic/Greek → Latin)
-    text = "".join(_CONFUSABLES.get(c, c) for c in text)
+    # Replace cross-script homoglyphs (Cyrillic/Greek → Latin) — O(n) single pass
+    text = text.translate(_CONFUSABLES_TABLE)
     # Normalize Unicode to NFKD (decomposes characters to base + combining marks)
     text = unicodedata.normalize("NFKD", text)
     # Remove combining marks (diacritics) to collapse homoglyphs

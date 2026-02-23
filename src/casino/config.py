@@ -288,6 +288,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "state_helpline": "1-888-789-7777",
             "self_exclusion_authority": "CT Department of Consumer Protection",
             "self_exclusion_url": "ct.gov/selfexclusion",
+            "self_exclusion_phone": "1-860-713-6300",
         },
         "operational": {
             "timezone": "America/New_York",
@@ -543,7 +544,14 @@ def get_casino_profile(casino_id: str) -> dict[str, Any]:
     Returns:
         A config dict with all sections populated.
     """
-    return CASINO_PROFILES.get(casino_id, DEFAULT_CONFIG)
+    profile = CASINO_PROFILES.get(casino_id)
+    if profile is None:
+        logger.warning(
+            "Unknown casino_id=%s, falling back to DEFAULT_CONFIG (Mohegan Sun defaults)",
+            casino_id,
+        )
+        return DEFAULT_CONFIG
+    return profile
 
 
 # ---------------------------------------------------------------------------

@@ -282,7 +282,26 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         agent_name,
         dispatch_method,
     )
-    result = await agent_fn({**state, **guest_context_update})
+    # R34 fix A1: Wrap agent execution in timeout to prevent unbounded execution.
+    # Uses 2x MODEL_TIMEOUT because agents may make multiple LLM calls internally
+    # (prompt assembly + LLM invoke + retries). Without this, a hung specialist
+    # blocks the entire graph indefinitely.
+    try:
+        async with asyncio.timeout(get_settings().MODEL_TIMEOUT * 2):
+            result = await agent_fn({**state, **guest_context_update})
+    except TimeoutError:
+        logger.error(
+            "Specialist %s timed out after %ds — returning fallback",
+            agent_name,
+            get_settings().MODEL_TIMEOUT * 2,
+        )
+        result = {
+            "messages": [AIMessage(content=(
+                "I apologize, but I'm having trouble generating a response right now. "
+                "Please try again, or contact us directly for assistance."
+            ))],
+            "skip_validation": True,
+        }
 
     # Guard: warn if specialist result contains keys that should only be
     # set by _dispatch_to_specialist (not the specialist agent itself).

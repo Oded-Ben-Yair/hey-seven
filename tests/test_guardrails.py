@@ -618,6 +618,74 @@ class TestVietnamesePatterns:
         assert detect_responsible_gaming("Bạn có trò chơi gì?") is False
 
 
+class TestFrenchBsaAml:
+    """French BSA/AML pattern detection (R34 fix)."""
+
+    @pytest.mark.parametrize(
+        "message,description",
+        [
+            ("blanchiment d'argent au casino", "French: money laundering"),
+            ("cacher mon argent des autorités", "French: hide my money"),
+            ("éviter le rapport de transaction", "French: avoid transaction report"),
+        ],
+    )
+    def test_french_bsa_aml_detected(self, message, description):
+        from src.agent.guardrails import detect_bsa_aml
+
+        assert detect_bsa_aml(message) is True, f"Not caught: {description}"
+
+    def test_benign_french_not_flagged(self):
+        """Legitimate French money question does not trigger BSA/AML."""
+        from src.agent.guardrails import detect_bsa_aml
+
+        assert detect_bsa_aml("Où est le distributeur d'argent?") is False
+
+
+class TestVietnameseBsaAml:
+    """Vietnamese BSA/AML pattern detection (R34 fix)."""
+
+    @pytest.mark.parametrize(
+        "message,description",
+        [
+            ("rửa tiền tại sòng bạc", "Vietnamese: money laundering"),
+            ("giấu tiền khỏi chính phủ", "Vietnamese: hide money"),
+            ("trốn thuế với tiền thắng", "Vietnamese: tax evasion"),
+        ],
+    )
+    def test_vietnamese_bsa_aml_detected(self, message, description):
+        from src.agent.guardrails import detect_bsa_aml
+
+        assert detect_bsa_aml(message) is True, f"Not caught: {description}"
+
+    def test_benign_vietnamese_not_flagged(self):
+        """Legitimate Vietnamese money question does not trigger BSA/AML."""
+        from src.agent.guardrails import detect_bsa_aml
+
+        assert detect_bsa_aml("Tôi muốn đổi tiền") is False
+
+
+class TestSpanishRgPatternFix:
+    """Spanish responsible gaming pattern fix: perd[ií] instead of per[ií] (R34 fix)."""
+
+    @pytest.mark.parametrize(
+        "message,description",
+        [
+            ("perdí todo en el casino", "Spanish: I lost everything at the casino"),
+            ("perdi todo en el juego", "Spanish: I lost everything gambling"),
+        ],
+    )
+    def test_spanish_lost_everything_detected(self, message, description):
+        from src.agent.guardrails import detect_responsible_gaming
+
+        assert detect_responsible_gaming(message) is True, f"Not caught: {description}"
+
+    def test_peri_no_longer_matches(self):
+        """'peri' (irrelevant word) should NOT trigger responsible gaming."""
+        from src.agent.guardrails import detect_responsible_gaming
+
+        assert detect_responsible_gaming("peri todo en el casino") is False
+
+
 class TestPatronPrivacyFalsePositives:
     """Patron privacy guardrail false positive refinement (R33 fix)."""
 

@@ -132,7 +132,20 @@ steps:
           PREV=$(cat /workspace/previous-revision.txt)
           if [ "$PREV" != "none" ]; then
             gcloud run services update-traffic hey-seven --region=us-central1 --to-revisions=$PREV=100
-            echo "Rolled back to $PREV"
+            echo "Rolled back to $PREV — verifying rollback health..."
+            sleep 15
+            for j in 1 2 3; do
+              RB_STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$SERVICE_URL/health" --max-time 15)
+              echo "Rollback health attempt $j: HTTP $RB_STATUS"
+              if [ "$RB_STATUS" = "200" ]; then
+                echo "Rollback verified: $PREV is healthy"
+                break
+              fi
+              sleep 10
+            done
+            if [ "$RB_STATUS" != "200" ]; then
+              echo "CRITICAL: Rollback to $PREV also unhealthy (HTTP $RB_STATUS). Manual intervention required."
+            fi
           fi
           exit 1
         fi
