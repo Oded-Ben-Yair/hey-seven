@@ -28,7 +28,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.api.pii_redaction import contains_pii, redact_pii
+from src.api.pii_redaction import redact_pii
 from src.agent.streaming_pii import StreamingPIIRedactor
 from src.casino.feature_flags import DEFAULT_FEATURES, is_feature_enabled
 from src.config import get_settings
@@ -767,9 +767,11 @@ async def chat_stream(
                     for msg in msgs:
                         if isinstance(msg, AIMessage) and msg.content:
                             content = msg.content if isinstance(msg.content, str) else str(msg.content)
-                            # PII gate: redact before emitting to client
-                            if contains_pii(content):
-                                content = redact_pii(content)
+                            # R39 fix M-005: Single-pass PII redaction. Previously
+                            # called contains_pii() then redact_pii() — two full
+                            # regex passes. redact_pii() returns the original text
+                            # when no matches found, so the check is redundant.
+                            content = redact_pii(content)
                             yield {
                                 "event": "replace",
                                 "data": json.dumps({"content": content}),

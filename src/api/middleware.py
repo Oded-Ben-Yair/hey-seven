@@ -177,12 +177,13 @@ class ErrorHandlingMiddleware:
 class SecurityHeadersMiddleware:
     """Add security headers to every HTTP response.
 
-    R36 fix A11: CSP uses strict policy without nonce. This backend serves
-    JSON API responses only — no server-rendered HTML templates. The frontend
-    is a separate Next.js app served from a different origin. Nonce-based CSP
-    requires passing nonces to template rendering, which is not applicable
-    for an API-only backend. The CSP blocks inline scripts/styles as defense
-    in depth against accidental HTML responses.
+    R36 fix A11: CSP uses strict policy without nonce for API endpoints.
+    R39 fix M-007: CSP is NOT applied to static file paths. The app mounts
+    StaticFiles(html=True) at "/" for the Next.js frontend, which uses inline
+    styles. Applying strict CSP to those HTML files would block rendering.
+    Static files get standard security headers but no CSP; API endpoints get
+    full CSP. Production recommendation: serve frontend from a separate CDN
+    origin to avoid this split entirely.
     """
 
     # Static security headers (shared with ErrorHandlingMiddleware).
@@ -193,7 +194,7 @@ class SecurityHeadersMiddleware:
         (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
     ]
 
-    # R36 fix A11: Static CSP for API-only backend — no nonce needed.
+    # R36 fix A11: Static CSP for API-only endpoints — no nonce needed.
     _CSP = (
         b"default-src 'self'; "
         b"script-src 'self'; "
@@ -201,6 +202,11 @@ class SecurityHeadersMiddleware:
         b"font-src 'self' https://fonts.gstatic.com; "
         b"img-src 'self' data:; connect-src 'self'"
     )
+
+    # API paths that benefit from strict CSP. Paths NOT in this set
+    # (including static files served at /) get security headers but no CSP.
+    _API_PATHS = frozenset({"/chat", "/health", "/live", "/metrics", "/graph",
+                            "/property", "/feedback", "/docs", "/openapi.json"})
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -210,11 +216,15 @@ class SecurityHeadersMiddleware:
             await self.app(scope, receive, send)
             return
 
+        path = scope.get("path", "/").rstrip("/") or "/"
+        apply_csp = path in self._API_PATHS
+
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
-                message["headers"] = list(message.get("headers", [])) + list(
-                    self._STATIC_HEADERS
-                ) + [(b"content-security-policy", self._CSP)]
+                headers = list(message.get("headers", [])) + list(self._STATIC_HEADERS)
+                if apply_csp:
+                    headers.append((b"content-security-policy", self._CSP))
+                message["headers"] = headers
             await send(message)
 
         await self.app(scope, receive, send_wrapper)
@@ -361,15 +371,16 @@ class RateLimitMiddleware:
         self.window_seconds = 60.0
         # {ip: deque of request timestamps} — OrderedDict for LRU eviction semantics
         self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
-        # R38 CRITICAL fix D8-C1: Per-client locks instead of a single global
-        # lock. The global lock serialized ALL concurrent /chat requests through
-        # one lock, creating a bottleneck at 50 concurrent SSE streams. Per-client
-        # locks allow concurrent requests from different IPs to proceed in parallel.
-        # The _requests_lock protects ONLY structural mutations to _requests dict
-        # (adding/removing keys, LRU eviction). Per-client bucket operations use
-        # per-client locks stored in _client_locks.
+        # R39 CRITICAL fix D8-C001: Removed per-client asyncio.Lock objects.
+        # asyncio is single-threaded cooperative multitasking — context switches
+        # only happen at await points. The deque operations in _is_allowed()
+        # (popleft, append, len) have ZERO await points, making them inherently
+        # atomic. Per-client locks added 10K Lock objects at max capacity for
+        # no correctness benefit. The _requests_lock IS still needed for
+        # structural dict mutations (adding/removing keys, LRU eviction) because
+        # _ensure_sweep_task() can context-switch between dict membership check
+        # and mutation.
         self._requests_lock = asyncio.Lock()
-        self._client_locks: dict[str, asyncio.Lock] = {}
         # Stale-client sweep counter. R16 fix: initialized in __init__
         # instead of lazy getattr (Gemini F-009, Grok M-006 consensus).
         self._request_counter: int = 0
@@ -452,7 +463,6 @@ class RateLimitMiddleware:
                     ]
                     for ip in stale:
                         del self._requests[ip]
-                        self._client_locks.pop(ip, None)
                     self._last_sweep = now
         except asyncio.CancelledError:
             pass
@@ -460,11 +470,12 @@ class RateLimitMiddleware:
     async def _is_allowed(self, client_ip: str) -> bool:
         """Check if a request from client_ip is within the rate limit.
 
-        R38 CRITICAL fix D8-C1: Uses per-client locks instead of a global lock.
-        The _requests_lock is held only briefly to ensure the client bucket
-        and per-client lock exist. The actual rate-limit check (deque ops)
-        happens under a per-client lock, allowing concurrent requests from
-        different IPs to proceed in parallel.
+        R39 CRITICAL fix D8-C001: Removed per-client asyncio.Lock objects.
+        asyncio is single-threaded cooperative multitasking — deque operations
+        (popleft, append, len) have zero await points and are inherently atomic.
+        The _requests_lock protects only structural dict mutations (add/remove
+        keys, LRU eviction). After the lock releases, bucket operations proceed
+        without locking since no await points exist between them.
 
         Only allowed requests are recorded in the deque. Rejected requests
         do NOT consume deque memory. Per-client deque is bounded to
@@ -479,35 +490,30 @@ class RateLimitMiddleware:
         # Start background sweep if not running
         await self._ensure_sweep_task()
 
-        # Brief structural lock: ensure bucket and per-client lock exist
+        # Brief structural lock: ensure bucket exists
         async with self._requests_lock:
             # Memory guard: evict LEAST recently used client if at capacity
             if client_ip not in self._requests and len(self._requests) >= self.max_clients:
-                evicted_ip, _ = self._requests.popitem(last=False)  # LRU eviction
-                self._client_locks.pop(evicted_ip, None)
+                self._requests.popitem(last=False)  # LRU eviction
 
             if client_ip not in self._requests:
                 self._requests[client_ip] = collections.deque(maxlen=self.max_tokens)
 
-            if client_ip not in self._client_locks:
-                self._client_locks[client_ip] = asyncio.Lock()
-
             # Move to end (most recently used) on access
             self._requests.move_to_end(client_ip)
             bucket = self._requests[client_ip]
-            client_lock = self._client_locks[client_ip]
 
-        # Per-client lock: only serializes requests from the SAME IP
-        async with client_lock:
-            # Evict expired entries
-            while bucket and bucket[0] < window_start:
-                bucket.popleft()
+        # No per-client lock needed: deque ops below have zero await points,
+        # so they execute atomically in the single-threaded event loop.
+        # Evict expired entries
+        while bucket and bucket[0] < window_start:
+            bucket.popleft()
 
-            if len(bucket) >= self.max_tokens:
-                return False
+        if len(bucket) >= self.max_tokens:
+            return False
 
-            bucket.append(now)
-            return True
+        bucket.append(now)
+        return True
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":

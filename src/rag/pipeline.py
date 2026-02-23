@@ -931,19 +931,19 @@ class CasinoKnowledgeRetriever(AbstractRetriever):
 
 import threading as _threading
 
-_retriever_cache: dict[str, AbstractRetriever] = {}
-_retriever_cache_time: dict[str, float] = {}
+# R39 fix M-002: Combined retriever + timestamp into single dict with tuple
+# values. Previously used two separate dicts (_retriever_cache, _retriever_cache_time)
+# updated sequentially, creating a TOCTOU window in the lock-free fast path.
+# Single dict assignment is atomic under GIL.
+_retriever_cache: dict[str, tuple[AbstractRetriever, float]] = {}
 _retriever_lock = _threading.Lock()
 _RETRIEVER_TTL_SECONDS = 3600  # 1 hour
-# R38 fix C-002: asyncio-level gate to prevent thread pool starvation at TTL
-# expiry. Without this, when multiple concurrent requests hit TTL expiry
-# simultaneously, ALL to_thread workers block on _retriever_lock while one
-# creates a new retriever (1-5s). The default asyncio thread pool is
-# min(32, cpu_count+4), so 30+ concurrent requests exhaust it, blocking ALL
-# other to_thread() operations. This asyncio.Lock ensures only ONE event loop
-# task enters to_thread for cache refresh; others await the asyncio.Lock
-# (non-blocking to the event loop) and find the cache already populated.
-_retriever_async_gate = asyncio.Lock()
+# R39 fix M-001: Removed _retriever_async_gate (asyncio.Lock). It was declared
+# in R38 but never wired into retrieve_node or _get_retriever_cached. The
+# thread pool starvation concern it addressed is mitigated by the
+# asyncio.wait_for(timeout=RETRIEVAL_TIMEOUT) in retrieve_node — concurrent
+# requests that block on _retriever_lock during TTL refresh are bounded by
+# the retrieval timeout, not the thread pool size.
 
 
 def _get_retriever_cached() -> AbstractRetriever:
@@ -975,17 +975,22 @@ def _get_retriever_cached() -> AbstractRetriever:
     now = time.monotonic()
 
     # Lock-free fast path: if cache is valid, return without locking.
-    # The threading.Lock is only needed for creation/refresh.
-    if cache_key in _retriever_cache:
-        if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
-            return _retriever_cache[cache_key]
+    # R39 fix M-002: Single dict lookup (atomic under GIL) replaces two-dict
+    # read that had a TOCTOU window.
+    cached = _retriever_cache.get(cache_key)
+    if cached is not None:
+        retriever, cached_at = cached
+        if (now - cached_at) < _RETRIEVER_TTL_SECONDS:
+            return retriever
 
     # Slow path: cache miss or TTL expired. Acquire lock for creation.
     with _retriever_lock:
         # Double-check after acquiring lock (another thread may have filled it)
-        if cache_key in _retriever_cache:
-            if (now - _retriever_cache_time.get(cache_key, 0)) < _RETRIEVER_TTL_SECONDS:
-                return _retriever_cache[cache_key]
+        cached = _retriever_cache.get(cache_key)
+        if cached is not None:
+            retriever, cached_at = cached
+            if (now - cached_at) < _RETRIEVER_TTL_SECONDS:
+                return retriever
             logger.info("Retriever TTL expired, recreating (credential rotation safety).")
 
         if settings.VECTOR_DB == "firestore":
@@ -998,8 +1003,7 @@ def _get_retriever_cached() -> AbstractRetriever:
                     embeddings=get_embeddings(task_type="RETRIEVAL_QUERY"),
                 )
                 logger.info("Using Firestore retriever (project=%s)", settings.FIRESTORE_PROJECT)
-                _retriever_cache[cache_key] = retriever
-                _retriever_cache_time[cache_key] = now
+                _retriever_cache[cache_key] = (retriever, now)
                 return retriever
             except Exception:
                 logger.warning(
@@ -1039,8 +1043,7 @@ def _get_retriever_cached() -> AbstractRetriever:
             )
             retriever = CasinoKnowledgeRetriever()
 
-        _retriever_cache[cache_key] = retriever
-        _retriever_cache_time[cache_key] = now
+        _retriever_cache[cache_key] = (retriever, now)
         return retriever
 
 
@@ -1099,7 +1102,6 @@ def clear_retriever_cache() -> None:
     """
     with _retriever_lock:
         _retriever_cache.clear()
-        _retriever_cache_time.clear()
 
 
 # Backward-compatible attribute: callers using ``get_retriever.cache_clear()``

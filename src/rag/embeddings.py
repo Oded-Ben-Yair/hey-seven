@@ -16,6 +16,7 @@ expires, causing embedding calls to fail after credential rotation
 credential-bearing singletons already use TTLCache.
 """
 
+import logging
 import threading
 
 from cachetools import TTLCache
@@ -23,6 +24,8 @@ from cachetools import TTLCache
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from src.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 # TTLCache with 1-hour TTL for GCP Workload Identity credential rotation.
 # maxsize=4 allows separate cached instances per task_type (default,
@@ -68,6 +71,23 @@ def get_embeddings(task_type: str | None = None) -> GoogleGenerativeAIEmbeddings
         if task_type:
             kwargs["task_type"] = task_type
         instance = GoogleGenerativeAIEmbeddings(**kwargs)
+        # R39 fix M-004: Health check before caching. A misconfigured client
+        # (wrong API key, wrong model, quota exceeded) would be cached for 1 hour,
+        # silently degrading all retrieval to no-context fallback. This single
+        # embed call validates the client is functional before committing to cache.
+        # Guard: only run when instance has embed_query (skip for test mocks).
+        if hasattr(instance, "embed_query") and callable(instance.embed_query):
+            try:
+                instance.embed_query("health check")
+            except Exception:
+                logger.warning(
+                    "Embedding health check failed for model=%s task_type=%s. "
+                    "Not caching broken client.",
+                    settings.EMBEDDING_MODEL,
+                    task_type,
+                    exc_info=True,
+                )
+                raise
         _embeddings_cache[cache_key] = instance
         return instance
 

@@ -216,9 +216,14 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "quiet_hours_end": "08:00",
             "responsible_gaming_helpline": "1-800-MY-RESET",
             "state_helpline": "1-888-789-7777",
-            "self_exclusion_authority": "CT Department of Consumer Protection",
+            # R39 fix D10-M003: Tribal casinos self-exclude through their own
+            # gaming commissions, NOT CT DCP. CT DCP handles commercial gaming only.
+            "self_exclusion_authority": "Mohegan Tribal Gaming Commission",
             "self_exclusion_url": "ct.gov/selfexclusion",
             "self_exclusion_phone": "1-860-713-6300",
+            # R39 fix D10-M001: CT self-exclusion is 1-year minimum, with option
+            # to request longer duration through the tribal gaming commission.
+            "self_exclusion_options": "1-year minimum (longer durations available upon request)",
         },
         "operational": {
             "timezone": "America/New_York",
@@ -287,9 +292,13 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "quiet_hours_end": "08:00",
             "responsible_gaming_helpline": "1-800-MY-RESET",
             "state_helpline": "1-888-789-7777",
-            "self_exclusion_authority": "CT Department of Consumer Protection",
+            # R39 fix D10-M003: Tribal casinos self-exclude through their own
+            # gaming commissions, NOT CT DCP.
+            "self_exclusion_authority": "Mashantucket Pequot Tribal Nation Gaming Commission",
             "self_exclusion_url": "ct.gov/selfexclusion",
             "self_exclusion_phone": "1-860-713-6300",
+            # R39 fix D10-M001: CT self-exclusion options for tribal casino.
+            "self_exclusion_options": "1-year minimum (longer durations available upon request)",
         },
         "operational": {
             "timezone": "America/New_York",
@@ -361,6 +370,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "self_exclusion_authority": "PA Gaming Control Board",
             "self_exclusion_url": "gamingcontrolboard.pa.gov",
             "self_exclusion_phone": "1-855-405-1429",  # R35 fix: PGCB Self-Exclusion Program
+            # R39 fix D10-M001: PA self-exclusion options per PGCB regulations.
+            "self_exclusion_options": "1-year, 5-year, or lifetime",
         },
         "operational": {
             "timezone": "America/New_York",
@@ -427,11 +438,15 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "ai_disclosure_law": "",
             "quiet_hours_start": "22:00",
             "quiet_hours_end": "08:00",
-            "responsible_gaming_helpline": "1-800-MY-RESET",
+            # R39 fix D10-M002: NV helpline corrected. 1-800-MY-RESET is CT-specific.
+            # NV commercial casinos use the NCPG national hotline as primary.
+            "responsible_gaming_helpline": "1-800-522-4700",
             "state_helpline": "1-800-GAMBLER",
             "self_exclusion_authority": "Nevada Gaming Control Board",
             "self_exclusion_url": "gaming.nv.gov",
             "self_exclusion_phone": "1-702-486-2000",  # R35 fix: NGCB main line
+            # R39 fix D10-M001: NV self-exclusion options per NGCB regulations.
+            "self_exclusion_options": "1-year minimum (revocable after 1 year), or lifetime (irrevocable)",
         },
         "operational": {
             "timezone": "America/Los_Angeles",

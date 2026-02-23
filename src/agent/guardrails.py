@@ -395,8 +395,15 @@ def _normalize_input(text: str) -> str:
     # payloads BEFORE any other normalization. LLMs natively understand these
     # encodings, so attackers can send "ignore%20previous%20instructions" or
     # "&#105;gnore previous instructions" to bypass regex patterns.
-    text = urllib.parse.unquote(text)
-    text = html.unescape(text)
+    # R39 CRITICAL fix D7-C001+C002: Iterative decode with unquote_plus.
+    # Single-pass unquote allows double-encoding bypass (%2520 -> %20).
+    # unquote() doesn't decode form-encoded + as space. unquote_plus() does.
+    # Loop max 3 iterations to prevent infinite loops on pathological input.
+    for _ in range(3):
+        decoded = urllib.parse.unquote_plus(html.unescape(text))
+        if decoded == text:
+            break
+        text = decoded
     # Remove ALL Unicode format characters (category Cf) — zero-width joiners,
     # bidi isolates/overrides, word joiners, interlinear annotations, etc.
     # R35 CRITICAL fix: previous regex only covered \u200b-\u200f, \u2028-\u202f,
@@ -416,7 +423,11 @@ def _normalize_input(text: str) -> str:
     # R38 fix D7-M3: Strip single-character delimiters between alphanumeric chars.
     # Catches token-smuggling via punctuation: "i.g.n.o.r.e" and
     # "ignore_previous_instructions" bypass word-boundary regex patterns.
-    text = re.sub(r"(?<=\w)[._\-](?=\w)", "", text)
+    # R39 fix D7-M001: Expanded from [._-] to all non-word non-space punctuation
+    # PLUS underscore. Previous set missed : / ; ~ | which bypass equally.
+    # [^\w\s] matches all punctuation except underscore (which is in \w).
+    # The |_ alternative catches underscore-separated token smuggling.
+    text = re.sub(r"(?<=\w)(?:[^\w\s]|_)(?=\w)", "", text)
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
     return text
@@ -487,12 +498,24 @@ def _audit_input(message: str) -> bool:
         return False
     # Second pass: normalized input catches Unicode homoglyph attacks
     normalized = _normalize_input(message)
+    # R39 fix D7-M003: Post-normalization length check. NFKD can expand
+    # ligatures (1 char -> 2+ chars), so 8191 ligature chars could expand
+    # to 16K+, creating expensive regex operations downstream.
+    if len(normalized) > 8192:
+        logger.warning("Normalized input exceeds 8192 chars (%d), blocking as potential DoS", len(normalized))
+        return False
     if normalized != message:
         if _check_patterns(normalized, _INJECTION_PATTERNS, "Prompt injection (normalized)"):
             return False
     # Third pass: non-Latin script injection patterns (Arabic, Japanese, Korean)
     if _check_patterns(message, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin)"):
         return False
+    # R39 fix D7-M002: Also check non-Latin patterns on normalized input.
+    # Normalization strips Cf chars around Arabic/Japanese text — patterns
+    # that fail on raw input may match the normalized form.
+    if normalized != message:
+        if _check_patterns(normalized, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin normalized)"):
+            return False
     return True
 
 

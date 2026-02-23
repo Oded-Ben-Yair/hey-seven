@@ -57,7 +57,10 @@ def _keep_max(a: int, b: int) -> int:
     """
     # R38 fix M-007: Guard against None input from buggy nodes.
     # max(5, None) raises TypeError in Python. Defensive: treat None as 0.
-    return max(a or 0, b or 0)
+    # R39 fix M-006: Use explicit None check instead of `or 0`. The `or`
+    # idiom conflates False, 0, None, and "" — `False or 0` evaluates to 0,
+    # silently resetting the counter if a node returns bool instead of int.
+    return max(0 if a is None else a, 0 if b is None else b)
 
 
 def _keep_truthy(a: bool, b: bool) -> bool:

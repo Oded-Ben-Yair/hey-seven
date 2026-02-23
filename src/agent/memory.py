@@ -10,6 +10,23 @@ Production note: ``MemorySaver`` is process-scoped. In single-container
 Cloud Run, conversation state lives for the container lifetime. Multi-
 container or scale-to-zero deployments MUST use ``FirestoreSaver`` for
 durable cross-instance persistence.
+
+ADR: Checkpointer Choice (R39 fix D9-M002)
+-------------------------------------------
+Decision: MemorySaver (dev) / FirestoreSaver (prod)
+Rationale:
+- **MemorySaver**: Zero external dependencies for local dev. Bounded via
+  BoundedMemorySaver (LRU eviction at MAX_ACTIVE_THREADS=1000) to prevent
+  OOM. ~50 MB max at 50 KB/thread.
+- **FirestoreSaver**: Community package (langgraph-checkpoint-firestore).
+  Firestore max document size = 1 MB, adequate for ~40-message conversations
+  (~25 KB typical). Cost: ~$0.006/100 reads + $0.018/100 writes (Firestore
+  Native pricing). At 1000 conversations/day with 10 turns avg = $0.24/day.
+- **Why not Redis?**: Firestore is GCP-native (no extra infra), has built-in
+  TTL for auto-cleanup, and integrates with GCP IAM. Redis (Cloud Memorystore)
+  adds ~$30/mo for basic tier with no persistence guarantees on eviction.
+- **Latency**: FirestoreSaver adds ~10-20ms per checkpoint read/write.
+  Acceptable for conversational latency where LLM calls dominate (2-15s).
 """
 
 import asyncio

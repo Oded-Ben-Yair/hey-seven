@@ -88,10 +88,10 @@ class TestSecurityHeadersMiddleware:
         """All expected security headers are set on responses."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        resp = client.get("/test")
+        resp = client.get("/health")
         assert resp.headers["x-content-type-options"] == "nosniff"
         assert resp.headers["x-frame-options"] == "DENY"
         assert resp.headers["referrer-policy"] == "strict-origin-when-cross-origin"
@@ -109,27 +109,40 @@ class TestSecurityHeadersMiddleware:
         assert "max-age=" in resp.headers["strict-transport-security"]
 
     def test_csp_includes_self(self):
-        """CSP header includes 'self' directive."""
+        """CSP header includes 'self' directive on API paths."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        resp = client.get("/test")
+        resp = client.get("/health")
         assert "'self'" in resp.headers["content-security-policy"]
+
+    def test_csp_omitted_for_static_paths(self):
+        """R39 fix M-007: Non-API paths skip CSP (static files may need inline styles)."""
+        from src.api.middleware import SecurityHeadersMiddleware
+
+        app = Starlette(routes=[Route("/some-page", _ok_app)])
+        app.add_middleware(SecurityHeadersMiddleware)
+        client = TestClient(app)
+        resp = client.get("/some-page")
+        # Security headers still present
+        assert resp.headers["x-content-type-options"] == "nosniff"
+        # But CSP is NOT present for non-API paths
+        assert "content-security-policy" not in resp.headers
 
 
 class TestCSPNonce:
-    """CSP uses strict policy for API-only backend (R36: nonce removed)."""
+    """CSP uses strict policy for API endpoints (R36: nonce removed, R39: API-only)."""
 
     def test_csp_has_no_unsafe_inline(self):
         """CSP header must not contain unsafe-inline."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        resp = client.get("/test")
+        resp = client.get("/health")
         csp = resp.headers["content-security-policy"]
         assert "unsafe-inline" not in csp, (
             f"CSP must not contain unsafe-inline, got: {csp}"
@@ -139,10 +152,10 @@ class TestCSPNonce:
         """R36: CSP is static for API-only backend — no per-request nonce."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        csp = client.get("/test").headers["content-security-policy"]
+        csp = client.get("/health").headers["content-security-policy"]
         assert "'nonce-" not in csp, (
             f"API-only CSP should not contain nonce, got: {csp}"
         )
@@ -151,21 +164,21 @@ class TestCSPNonce:
         """R36: Static CSP produces identical headers across requests."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        csp1 = client.get("/test").headers["content-security-policy"]
-        csp2 = client.get("/test").headers["content-security-policy"]
+        csp1 = client.get("/health").headers["content-security-policy"]
+        csp2 = client.get("/health").headers["content-security-policy"]
         assert csp1 == csp2, "Static CSP should be identical across requests"
 
     def test_csp_preserves_google_fonts(self):
         """CSP still allows Google Fonts."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        csp = client.get("/test").headers["content-security-policy"]
+        csp = client.get("/health").headers["content-security-policy"]
         assert "https://fonts.googleapis.com" in csp
         assert "https://fonts.gstatic.com" in csp
 
@@ -173,10 +186,10 @@ class TestCSPNonce:
         """CSP includes script-src and style-src directives."""
         from src.api.middleware import SecurityHeadersMiddleware
 
-        app = Starlette(routes=[Route("/test", _ok_app)])
+        app = Starlette(routes=[Route("/health", _ok_app)])
         app.add_middleware(SecurityHeadersMiddleware)
         client = TestClient(app)
-        csp = client.get("/test").headers["content-security-policy"]
+        csp = client.get("/health").headers["content-security-policy"]
         assert "script-src" in csp
         assert "style-src" in csp
 

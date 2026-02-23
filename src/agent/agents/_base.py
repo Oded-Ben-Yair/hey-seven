@@ -32,13 +32,22 @@ from src.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# ADR: LLM Concurrency Limits (R39 fix D9-M001)
+#
 # LLM concurrency backpressure: limits concurrent LLM API calls across
-# all specialist agents. Prevents: (1) LLM provider 429 rate limiting
-# cascading into circuit breaker trips, (2) httpx connection pool
-# exhaustion, (3) memory pressure from concurrent response buffering.
-# Calculation: Gemini Flash rate limit = 300 RPM. With max 10 Cloud Run
-# instances (cloudbuild.yaml --max-instances=10), worst case = 10 * 20
-# = 200 concurrent requests, well under 300 RPM. 67% safety margin.
+# all specialist agents per Cloud Run instance. Each /chat request triggers
+# 1-6 LLM calls (router + optional specialist dispatch + generate +
+# optional validate + retry). With --concurrency=50 per instance, a burst
+# of 50 simultaneous /chat requests could trigger 50-300 concurrent LLM
+# API calls without this gate.
+#
+# Prevents: (1) LLM provider 429 rate limiting cascading into circuit
+# breaker trips, (2) httpx connection pool exhaustion, (3) memory pressure
+# from concurrent response buffering.
+#
+# Calculation: Gemini Flash rate limit = 300 RPM project-wide. With max 10
+# Cloud Run instances (cloudbuild.yaml --max-instances=10), worst case =
+# 10 * 20 = 200 concurrent requests, well under 300 RPM. 67% safety margin.
 # R5 fix per Gemini F3 analysis.
 _LLM_SEMAPHORE = asyncio.Semaphore(20)
 

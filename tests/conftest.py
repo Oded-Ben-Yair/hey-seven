@@ -24,11 +24,23 @@ def _clear_singleton_caches():
 
     Prevents test pollution from cached Settings, LLM instances, and
     CircuitBreaker singletons leaking state across test modules.
+
+    R39 fix M-008: Clear on SETUP (before yield) in addition to teardown.
+    Module-level code (e.g., graph.py parity check) populates caches at
+    import time. The first test in any session would see that stale state
+    without setup-phase clearing.
     """
+    _do_clear_singletons()
     yield
-    # Clear all singleton caches after each test.
-    # Uses (ImportError, AttributeError) consistently to handle both missing
-    # modules and renamed cache attributes without misleading test failures.
+    _do_clear_singletons()
+
+
+def _do_clear_singletons():
+    """Clear all singleton caches.
+
+    Uses (ImportError, AttributeError) consistently to handle both missing
+    modules and renamed cache attributes without misleading test failures.
+    """
     from src.config import get_settings
 
     get_settings.cache_clear()
