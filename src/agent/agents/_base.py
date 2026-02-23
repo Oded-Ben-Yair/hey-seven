@@ -35,8 +35,10 @@ logger = logging.getLogger(__name__)
 # all specialist agents. Prevents: (1) LLM provider 429 rate limiting
 # cascading into circuit breaker trips, (2) httpx connection pool
 # exhaustion, (3) memory pressure from concurrent response buffering.
-# Gemini API typical QPS limits: 60-300 RPM for Flash, so 20 concurrent
-# is conservative. R5 fix per Gemini F3 analysis.
+# Calculation: Gemini Flash rate limit = 300 RPM. With max 10 Cloud Run
+# instances (cloudbuild.yaml --max-instances=10), worst case = 10 * 20
+# = 200 concurrent requests, well under 300 RPM. 67% safety margin.
+# R5 fix per Gemini F3 analysis.
 _LLM_SEMAPHORE = asyncio.Semaphore(20)
 
 # Phase 4: Persona drift prevention threshold.

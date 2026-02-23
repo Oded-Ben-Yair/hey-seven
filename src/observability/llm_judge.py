@@ -35,7 +35,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Limit concurrent LLM judge calls to avoid overwhelming Gemini API
-# during batch evaluations.
+# during batch evaluations. Eval runs offline (not user-facing), so
+# 5 concurrent keeps costs manageable while completing a 7-conversation
+# golden dataset in ~15s. Higher values risk 429s on shared Gemini quota.
 _EVAL_SEMAPHORE = asyncio.Semaphore(5)
 
 # Cache evaluation results for 5 minutes to avoid re-evaluating

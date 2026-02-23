@@ -99,6 +99,16 @@ steps:
               echo "Stale container may be serving old code. Failing smoke test."
               STATUS="version_mismatch"
             fi
+            # Functional check: verify agent graph compiled successfully.
+            # agent_ready=false means the LangGraph StateGraph failed to compile
+            # (missing nodes, broken wiring) — the container is up but non-functional.
+            AGENT_READY=$(cat /tmp/health.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('agent_ready', False))" 2>/dev/null)
+            echo "Agent ready: $AGENT_READY"
+            if [ "$AGENT_READY" != "True" ]; then
+              echo "SMOKE TEST FAILED: agent not ready (agent_ready=$AGENT_READY)"
+              echo "Graph compilation may have failed. Check container logs."
+              STATUS="agent_not_ready"
+            fi
             break
           fi
           echo "Retrying in 15s..."

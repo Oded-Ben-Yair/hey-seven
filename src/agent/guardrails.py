@@ -188,16 +188,34 @@ _PATRON_PRIVACY_PATTERNS = [
 # Input normalization
 # ---------------------------------------------------------------------------
 
+# Cross-script homoglyph map: characters from other scripts that visually
+# resemble Latin letters. NFKD normalization only decomposes within the
+# same script (e.g., ﬁ → fi) — it does NOT convert Cyrillic/Greek to Latin.
+# This table covers the most common attack vectors per Unicode confusables.
+_CONFUSABLES: dict[str, str] = {
+    # Cyrillic lowercase
+    "\u0430": "a", "\u0435": "e", "\u043e": "o", "\u0440": "p",
+    "\u0441": "c", "\u0443": "y", "\u0445": "x", "\u0456": "i",
+    "\u0455": "s", "\u0458": "j", "\u04bb": "h",
+    # Cyrillic uppercase
+    "\u0410": "A", "\u0415": "E", "\u041e": "O", "\u0420": "P",
+    "\u0421": "C", "\u0422": "T", "\u0423": "Y", "\u0425": "X",
+    "\u041d": "H", "\u041c": "M", "\u0412": "B", "\u041a": "K",
+}
+
 
 def _normalize_input(text: str) -> str:
     """Normalize input for more robust pattern matching.
 
-    Removes zero-width characters, normalizes Unicode to ASCII equivalents,
-    and collapses whitespace. This makes regex patterns more effective against
+    Removes zero-width characters, replaces cross-script homoglyphs with
+    Latin equivalents, normalizes Unicode to ASCII decompositions, and
+    collapses whitespace. This makes regex patterns effective against
     Unicode homoglyph attacks and encoding tricks.
     """
     # Remove zero-width characters (already caught by regex, but defense in depth)
     text = re.sub(r"[\u200b-\u200f\u2028-\u202f\ufeff]", "", text)
+    # Replace cross-script homoglyphs (Cyrillic/Greek → Latin)
+    text = "".join(_CONFUSABLES.get(c, c) for c in text)
     # Normalize Unicode to NFKD (decomposes characters to base + combining marks)
     text = unicodedata.normalize("NFKD", text)
     # Remove combining marks (diacritics) to collapse homoglyphs
@@ -375,15 +393,29 @@ async def classify_injection_semantic(
 
         llm = await llm_fn() if asyncio.iscoroutinefunction(llm_fn) else llm_fn()
         classifier = llm.with_structured_output(InjectionClassification)
-        result = await classifier.ainvoke(
-            Template(_SEMANTIC_CLASSIFIER_PROMPT).safe_substitute(message=message)
-        )
+        # 5s hard timeout: generous for a classifier but bounded. Without this,
+        # a hanging LLM call blocks ALL inbound messages at compliance_gate.
+        # R32 DeepSeek CRITICAL fix.
+        async with asyncio.timeout(5):
+            result = await classifier.ainvoke(
+                Template(_SEMANTIC_CLASSIFIER_PROMPT).safe_substitute(message=message)
+            )
         logger.info(
             "Semantic injection classifier: is_injection=%s confidence=%.2f",
             result.is_injection,
             result.confidence,
         )
         return result
+    except TimeoutError:
+        logger.warning(
+            "Semantic injection classifier timed out (5s) — fail-closed for input (len=%d)",
+            len(message),
+        )
+        return InjectionClassification(
+            is_injection=True,
+            confidence=1.0,
+            reason="Classifier timeout (fail-closed)",
+        )
     except Exception as exc:
         logger.error(
             "Semantic injection classifier failed-CLOSED for input (len=%d): %s — "
