@@ -7,6 +7,7 @@ and pure ASGI middleware (no BaseHTTPMiddleware).
 import asyncio
 import json
 import logging
+import re
 import signal
 from contextlib import asynccontextmanager, aclosing
 from pathlib import Path
@@ -51,6 +52,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _active_streams: set[asyncio.Task] = set()
 _shutting_down = asyncio.Event()
+# R51 fix (Gemini MAJOR-D4-001): Pre-compiled regex for request ID sanitization.
+# Previously `import re` inside the request handler acquired the import lock
+# on every /chat request — contention under 50 concurrent SSE streams.
+_REQUEST_ID_SANITIZE = re.compile(r"[^a-zA-Z0-9\-_]")
 # R47 fix C11: Drain timeout must be < uvicorn's --timeout-graceful-shutdown (15s)
 # and < Cloud Run's SIGTERM timeout (180s). Previous value of 30s exceeded
 # uvicorn's 15s, meaning uvicorn force-killed connections before drain completed.
@@ -288,12 +293,13 @@ def create_app() -> FastAPI:
         # Thread X-Request-ID from middleware into graph for observability correlation.
         # Sanitize to prevent log injection / trace poisoning: allow only
         # alphanumeric chars, hyphens, and underscores (max 64 chars).
-        import re as _re
-
+        # R51 fix (Gemini MAJOR-D4-001): Pre-compiled regex at module level
+        # instead of `import re` inside the request handler (import lock contention
+        # under 50 concurrent SSE streams).
         _raw_request_id = request.headers.get("x-request-id", None)
         request_id = None
         if _raw_request_id:
-            _sanitized = _re.sub(r"[^a-zA-Z0-9\-_]", "", _raw_request_id)[:64]
+            _sanitized = _REQUEST_ID_SANITIZE.sub("", _raw_request_id)[:64]
             request_id = _sanitized or None
 
         async def event_generator():

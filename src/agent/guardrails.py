@@ -553,29 +553,22 @@ def _audit_input(message: str) -> bool:
     if len(message) > 8192:
         logger.warning("Input exceeds 8192 chars (%d), blocking as potential DoS", len(message))
         return False
-    # First pass: raw input catches zero-width chars and encoding markers
-    if _check_patterns(message, _INJECTION_PATTERNS, "Prompt injection"):
-        return False
-    # Second pass: normalized input catches Unicode homoglyph attacks
+    # R51 fix (Grok MAJOR-D7-001): Simplified to use _check_patterns' built-in
+    # normalization (R50 fix). Previously _audit_input did its own normalization
+    # AND _check_patterns also normalized — double CPU work. Now _check_patterns
+    # handles raw + normalized checking internally.
+    #
+    # Post-normalization length check is still needed (NFKD can expand ligatures).
     normalized = _normalize_input(message)
-    # R39 fix D7-M003: Post-normalization length check. NFKD can expand
-    # ligatures (1 char -> 2+ chars), so 8191 ligature chars could expand
-    # to 16K+, creating expensive regex operations downstream.
     if len(normalized) > 8192:
         logger.warning("Normalized input exceeds 8192 chars (%d), blocking as potential DoS", len(normalized))
         return False
-    if normalized != message:
-        if _check_patterns(normalized, _INJECTION_PATTERNS, "Prompt injection (normalized)"):
-            return False
-    # Third pass: non-Latin script injection patterns (Arabic, Japanese, Korean)
+    # Latin injection patterns (raw + normalized checked by _check_patterns)
+    if _check_patterns(message, _INJECTION_PATTERNS, "Prompt injection"):
+        return False
+    # Non-Latin injection patterns (Arabic, Japanese, Korean, Mandarin)
     if _check_patterns(message, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin)"):
         return False
-    # R39 fix D7-M002: Also check non-Latin patterns on normalized input.
-    # Normalization strips Cf chars around Arabic/Japanese text — patterns
-    # that fail on raw input may match the normalized form.
-    if normalized != message:
-        if _check_patterns(normalized, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin normalized)"):
-            return False
     return True
 
 

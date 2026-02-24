@@ -1,7 +1,7 @@
-# ADR 009: UNSET_SENTINEL as object()
+# ADR 009: UNSET_SENTINEL (UUID-namespaced String)
 
 ## Status
-Accepted (R48, supersedes R47 string sentinel)
+Accepted (R49, supersedes R48 object() and R47 plain string)
 
 ## Context
 `_merge_dicts` reducer accumulates extracted guest fields across turns. Fields once set become "sticky" — `None` and `""` are filtered out as "not provided", so there was no way to explicitly delete a field.
