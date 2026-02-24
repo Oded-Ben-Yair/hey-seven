@@ -27,3 +27,6 @@ cachetools==5.5.2
 sse-starlette==3.2.0
 httpx==0.28.1
 cryptography==46.0.5
+
+# --- State Backend (Redis) ---
+redis>=5.0

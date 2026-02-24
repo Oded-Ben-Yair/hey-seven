@@ -27,7 +27,8 @@ _DEV_SAMPLE_RATE = 1.0
 # R35 CRITICAL fix: Migrate from @lru_cache to TTLCache for credential rotation.
 # LangFuse credentials may rotate (GCP Workload Identity, secret manager rotation).
 # @lru_cache never expires — requires container restart. TTLCache gives 1-hour refresh.
-_langfuse_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+# R46 fix D8: Add TTL jitter to prevent thundering herd (parity with other singletons).
+_langfuse_cache: TTLCache = TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))
 _langfuse_lock = threading.Lock()
 
 

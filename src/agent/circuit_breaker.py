@@ -7,28 +7,32 @@ is exceeded.
 States: closed (normal) -> open (blocking) -> half_open (probe one request).
 Thread-safe via ``asyncio.Lock`` for concurrent coroutine access.
 
-**Known limitation (multi-instance)**: Circuit breaker state is per-process
-(``TTLCache`` singleton). With N Cloud Run instances, each has independent CB
-state. During an LLM outage, instance A may trip its CB while instances B-N
-continue sending requests to the failed LLM. This is acceptable for MVP
-(single-digit instances). Production mitigation path:
+**Multi-instance state sharing (v1.1)**: When ``STATE_BACKEND=redis``, the
+circuit breaker syncs state to Redis (Cloud Memorystore) after each mutation.
+Local in-memory deque serves as L1 cache for sub-millisecond reads; Redis
+serves as L2 for cross-instance state propagation. State promotion is
+one-directional: if ANY instance detects an LLM outage (opens its CB),
+other instances adopt the open state on their next sync. Demotion (open ->
+closed) happens locally per-instance via the standard half-open probe.
 
-1. **Short-term (v1.x)**: Accept per-process CB; LLM outage affects all
-   instances within ~30s as each independently detects failure.
-2. **Medium-term (v2.0)**: Shared CB state via Redis (Memorystore) with
-   atomic increment/decrement for failure counts.
-3. **Long-term**: Cloud Run service mesh with circuit breaker policy
-   (Istio/Envoy) at the infrastructure level.
+Fallback: If Redis is unavailable, the CB operates in local-only mode
+(identical to v1.0 behavior). Availability > consistency.
 """
+
+from __future__ import annotations
 
 import asyncio
 import collections
 import logging
 import time
+from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 
 from src.config import get_settings
+
+if TYPE_CHECKING:
+    from src.state_backend import StateBackend
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,7 @@ class CircuitBreaker:
         failure_threshold: int = 5,
         cooldown_seconds: float = 60.0,
         rolling_window_seconds: float = 300.0,
+        state_backend: StateBackend | None = None,
     ) -> None:
         self._failure_threshold = failure_threshold
         self._cooldown_seconds = cooldown_seconds
@@ -75,6 +80,13 @@ class CircuitBreaker:
         self._half_open_in_progress = False
         self._lock = asyncio.Lock()
 
+        # R46 D8: Optional Redis backend for cross-instance state sharing.
+        # Local deque = L1 (sub-ms reads), Redis = L2 (cross-instance sync).
+        # Fallback to local-only if backend is None or Redis fails.
+        self._backend = state_backend
+        self._backend_sync_interval = 5.0  # seconds between backend reads
+        self._last_backend_sync = 0.0
+
     def _prune_old_failures(self) -> None:
         """Remove failure timestamps outside the rolling window."""
         cutoff = time.monotonic() - self._rolling_window_seconds
@@ -86,6 +98,71 @@ class CircuitBreaker:
         if self._last_failure_time is None:
             return False
         return (time.monotonic() - self._last_failure_time) >= self._cooldown_seconds
+
+    def _backend_key(self, suffix: str) -> str:
+        """Redis key for circuit breaker shared state."""
+        return f"cb:{suffix}"
+
+    async def _sync_to_backend(self) -> None:
+        """Push local CB state to shared backend (best-effort, non-blocking).
+
+        Called after each state mutation (record_failure, record_success).
+        Writes state, failure count, and last failure time with TTL slightly
+        longer than the rolling window to ensure stale entries expire.
+        """
+        if not self._backend:
+            return
+        try:
+            ttl = int(self._rolling_window_seconds) + 60
+            self._backend.set(self._backend_key("state"), self._state, ttl=ttl)
+            self._backend.set(
+                self._backend_key("failure_count"),
+                str(len(self._failure_timestamps)),
+                ttl=ttl,
+            )
+            if self._last_failure_time is not None:
+                self._backend.set(
+                    self._backend_key("last_failure_time"),
+                    str(self._last_failure_time),
+                    ttl=ttl,
+                )
+        except Exception:
+            logger.debug("CB backend sync failed (non-critical)", exc_info=True)
+
+    async def _sync_from_backend(self) -> None:
+        """Pull shared CB state from backend if local state is stale.
+
+        Only promotes state from closed -> open (never demotes). This ensures
+        that if ANY instance detects an LLM outage, all instances benefit from
+        that detection. Demotion happens locally via the standard half-open
+        probe mechanism.
+
+        Rate-limited to one read per ``_backend_sync_interval`` seconds.
+        """
+        if not self._backend:
+            return
+        now = time.monotonic()
+        if now - self._last_backend_sync < self._backend_sync_interval:
+            return
+        self._last_backend_sync = now
+        try:
+            remote_state = self._backend.get(self._backend_key("state"))
+            remote_count_str = self._backend.get(self._backend_key("failure_count"))
+            if remote_state and remote_count_str:
+                remote_count = int(remote_count_str)
+                # Only promote: if remote says open and local says closed,
+                # adopt the remote state (another instance detected the outage).
+                if remote_state == "open" and self._state == "closed":
+                    if remote_count >= self._failure_threshold:
+                        self._state = "open"
+                        logger.info(
+                            "CB synced from backend: closed -> open "
+                            "(remote failure_count=%d, threshold=%d)",
+                            remote_count,
+                            self._failure_threshold,
+                        )
+        except Exception:
+            logger.debug("CB backend read failed (non-critical)", exc_info=True)
 
     @property
     def failure_count(self) -> int:
@@ -215,9 +292,13 @@ class CircuitBreaker:
         Performs the open -> half_open transition atomically under the lock.
         In ``half_open`` state, only one probe request is allowed at a time.
 
+        R46 D8: Syncs from backend before checking local state, so that
+        if another instance has tripped the CB, this instance also blocks.
+
         Returns:
             True if the request is allowed, False if blocked.
         """
+        await self._sync_from_backend()
         async with self._lock:
             # Perform open -> half_open transition under the lock (race-safe)
             if self._state == "open" and self._cooldown_expired():
@@ -271,6 +352,7 @@ class CircuitBreaker:
                     prev_state,
                     len(self._failure_timestamps),
                 )
+        await self._sync_to_backend()
 
     async def record_cancellation(self) -> None:
         """Handle a cancelled request (client disconnect) without counting as failure.
@@ -325,6 +407,7 @@ class CircuitBreaker:
                     self._rolling_window_seconds,
                     self._cooldown_seconds,
                 )
+        await self._sync_to_backend()
 
 
 # R10 fix (DeepSeek F4): converted from @lru_cache to TTLCache to match
@@ -374,10 +457,24 @@ async def _get_circuit_breaker() -> CircuitBreaker:
         if cached is not None:
             return cached
         settings = get_settings()
+        # R46 D8: Pass state backend for cross-instance CB state sharing.
+        # Import here to avoid circular imports (state_backend imports config).
+        backend: StateBackend | None = None
+        if settings.STATE_BACKEND == "redis":
+            try:
+                from src.state_backend import get_state_backend
+
+                backend = get_state_backend()
+            except Exception:
+                logger.warning(
+                    "Redis backend unavailable for CB, using local-only",
+                    exc_info=True,
+                )
         cb = CircuitBreaker(
             failure_threshold=settings.CB_FAILURE_THRESHOLD,
             cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
             rolling_window_seconds=settings.CB_ROLLING_WINDOW_SECONDS,
+            state_backend=backend,
         )
         _cb_cache["cb"] = cb
         return cb

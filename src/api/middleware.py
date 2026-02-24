@@ -366,8 +366,6 @@ class RateLimitMiddleware:
     """
 
     def __init__(self, app: ASGIApp) -> None:
-        # TODO(production): Migrate to Cloud Memorystore (Redis) or Cloud Armor
-        # for distributed rate limiting. See ADR in class docstring for upgrade path.
         self.app = app
         settings = get_settings()
         self.max_tokens = settings.RATE_LIMIT_CHAT
@@ -376,6 +374,26 @@ class RateLimitMiddleware:
         self.window_seconds = 60.0
         # {ip: deque of request timestamps} — OrderedDict for LRU eviction semantics
         self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
+
+        # R46 D8: Optional Redis backend for distributed rate limiting.
+        # When STATE_BACKEND=redis, uses Redis sorted sets for sliding window.
+        # Falls back to in-memory on any Redis error (availability > consistency).
+        self._redis_client = None
+        if settings.STATE_BACKEND == "redis" and settings.REDIS_URL:
+            try:
+                import redis
+
+                self._redis_client = redis.Redis.from_url(
+                    settings.REDIS_URL, decode_responses=True
+                )
+                self._redis_client.ping()
+                logger.info("Rate limiter using Redis backend for distributed limiting")
+            except Exception:
+                logger.warning(
+                    "Redis unavailable for rate limiter, using in-memory fallback",
+                    exc_info=True,
+                )
+                self._redis_client = None
         # R39 CRITICAL fix D8-C001: Removed per-client asyncio.Lock objects.
         # asyncio is single-threaded cooperative multitasking — context switches
         # only happen at await points. The deque operations in _is_allowed()
@@ -526,6 +544,43 @@ class RateLimitMiddleware:
         bucket.append(now)
         return True
 
+    async def _is_allowed_redis(self, client_ip: str) -> bool:
+        """Check rate limit using Redis sorted sets (distributed).
+
+        R46 D8: Uses Redis sorted sets for sliding window rate limiting
+        across multiple Cloud Run instances. Each request is a member with
+        its timestamp as the score.
+
+        Falls back to in-memory on any Redis error.
+        """
+        if not self._redis_client:
+            return await self._is_allowed(client_ip)
+        try:
+            key = f"ratelimit:{client_ip}"
+            now = time.time()
+            window_start = now - self.window_seconds
+            member = f"{now}:{secrets.token_hex(4)}"
+
+            pipe = self._redis_client.pipeline()
+            pipe.zremrangebyscore(key, "-inf", window_start)
+            pipe.zcard(key)
+            pipe.zadd(key, {member: now})
+            pipe.expire(key, int(self.window_seconds) + 10)
+            results = pipe.execute()
+
+            count = results[1]  # zcard result (before our add)
+            if count >= self.max_tokens:
+                # Over limit — remove the entry we just added
+                self._redis_client.zrem(key, member)
+                return False
+            return True
+        except Exception:
+            logger.warning(
+                "Redis rate limit check failed, falling back to in-memory",
+                exc_info=True,
+            )
+            return await self._is_allowed(client_ip)
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
@@ -540,7 +595,12 @@ class RateLimitMiddleware:
 
         client_ip = self._get_client_ip(scope)
 
-        if await self._is_allowed(client_ip):
+        # R46 D8: Use Redis for distributed rate limiting when available.
+        if self._redis_client:
+            allowed = await self._is_allowed_redis(client_ip)
+        else:
+            allowed = await self._is_allowed(client_ip)
+        if allowed:
             await self.app(scope, receive, send)
             return
 

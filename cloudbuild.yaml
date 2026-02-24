@@ -58,20 +58,53 @@ steps:
     timeout: '120s'
     args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
 
-  # ---------------------------------------------------------------------------
-  # Image Signing ADR (R41 fix D6-M002)
-  # ---------------------------------------------------------------------------
-  # PLANNED: Cosign image signing for tamper-evidence.
-  # Requires: GCP KMS key (projects/$PROJECT_ID/locations/global/keyRings/cosign/cryptoKeys/hey-seven)
-  # Step would be:
-  #   - name: 'gcr.io/cloud-builders/docker'
-  #     entrypoint: 'bash'
-  #     args: ['-c', 'cosign sign --key gcpkms://... us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA']
-  # WHY NOT YET: KMS key provisioning not in Terraform/IaC yet. Single developer, no
-  # multi-party signing workflow. Cosign signing adds value when multiple actors can
-  # push images; currently only Cloud Build pushes.
-  # WHEN: Before first enterprise client onboards (requires supply chain attestation).
-  # ---------------------------------------------------------------------------
+  # Step 4b: Install cosign binary (pinned v2.4.1 for reproducible builds)
+  # R46 fix D6: Implements image signing ADR (R41 D6-M002) with GCP KMS key.
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    timeout: '120s'
+    args:
+      - '-c'
+      - |
+        curl -Lo /workspace/cosign https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
+        chmod +x /workspace/cosign
+
+  # Step 4c: Sign image with GCP KMS key (tamper-evidence)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    timeout: '120s'
+    args:
+      - '-c'
+      - |
+        /workspace/cosign sign \
+          --key gcpkms://projects/$PROJECT_ID/locations/us-central1/keyRings/hey-seven-signing/cryptoKeys/cosign-key \
+          --yes \
+          us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA
+
+  # Step 4d: Attest SBOM (CycloneDX format, links SBOM to signed image)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    timeout: '120s'
+    args:
+      - '-c'
+      - |
+        /workspace/cosign attest \
+          --predicate /workspace/sbom.json \
+          --type cyclonedx \
+          --key gcpkms://projects/$PROJECT_ID/locations/us-central1/keyRings/hey-seven-signing/cryptoKeys/cosign-key \
+          --yes \
+          us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA
+
+  # Step 4e: Verify signature inline (fail pipeline if signing failed)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    timeout: '60s'
+    args:
+      - '-c'
+      - |
+        /workspace/cosign verify \
+          --key gcpkms://projects/$PROJECT_ID/locations/us-central1/keyRings/hey-seven-signing/cryptoKeys/cosign-key \
+          us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA
 
   # Step 5: Capture current revision for rollback
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -104,8 +137,9 @@ steps:
       - '--timeout=180s'  # SSE_TIMEOUT(60s) + graceful_shutdown(15s) + LLM_pipeline(6_calls*15s) + buffer
       - '--concurrency=50'  # SSE streams hold connections; 50 concurrent per instance with asyncio
       - '--no-traffic'  # Deploy without routing traffic; smoke test validates first
-      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,API_KEY=hey-seven-api-key:latest,CMS_WEBHOOK_SECRET=cms-webhook-secret:latest,TELNYX_PUBLIC_KEY=telnyx-public-key:latest'
-      - '--set-env-vars=ENVIRONMENT=production,LOG_LEVEL=INFO,VERSION=$COMMIT_SHA'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,API_KEY=hey-seven-api-key:latest,CMS_WEBHOOK_SECRET=cms-webhook-secret:latest,TELNYX_PUBLIC_KEY=telnyx-public-key:latest,REDIS_URL=hey-seven-redis-url:latest'
+      - '--set-env-vars=ENVIRONMENT=production,LOG_LEVEL=INFO,VERSION=$COMMIT_SHA,STATE_BACKEND=redis'
+      - '--vpc-connector=hey-seven-vpc'  # Required for Cloud Memorystore (Redis) access
       - '--cpu-boost'  # Full CPU during startup for faster cold start
       - '--min-instances=1'  # Keep one warm instance to avoid cold-start latency
       - '--max-instances=10'  # Cap scaling to prevent DDoS-driven cost runaway
@@ -181,16 +215,63 @@ steps:
           exit 1
         fi
 
-  # Step 8: Route 100% traffic to new revision (only after smoke test passes)
+  # Step 8: Canary traffic splitting with monitoring-based rollback
+  # R46 fix D6: Graduated rollout (10% -> 50% -> 100%) with error rate checks.
+  # Replaces instant --to-latest. Rolls back to previous revision if 5xx rate > 5%.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
+    timeout: '600s'
     args:
-      - 'run'
-      - 'services'
-      - 'update-traffic'
-      - 'hey-seven'
-      - '--region=us-central1'
-      - '--to-latest'
+      - '-c'
+      - |
+        # --- Error rate check function (reused at each canary stage) ---
+        check_error_rate() {
+          local STAGE="$1"
+          echo "[$STAGE] Waiting 60s to collect error metrics..."
+          sleep 60
+          ERROR_COUNT=$(gcloud monitoring time-series list \
+            --project=$PROJECT_ID \
+            --filter='metric.type="run.googleapis.com/request_count" AND resource.labels.service_name="hey-seven" AND metric.labels.response_code_class="5xx"' \
+            --interval-start-time=$(date -u -d '60 seconds ago' +%Y-%m-%dT%H:%M:%SZ) \
+            --format='value(points.value.int64Value)' 2>/dev/null | paste -sd+ - | bc 2>/dev/null || echo 0)
+          TOTAL_COUNT=$(gcloud monitoring time-series list \
+            --project=$PROJECT_ID \
+            --filter='metric.type="run.googleapis.com/request_count" AND resource.labels.service_name="hey-seven"' \
+            --interval-start-time=$(date -u -d '60 seconds ago' +%Y-%m-%dT%H:%M:%SZ) \
+            --format='value(points.value.int64Value)' 2>/dev/null | paste -sd+ - | bc 2>/dev/null || echo 0)
+          if [ "$TOTAL_COUNT" -gt 0 ]; then
+            ERROR_RATE=$(echo "scale=2; $ERROR_COUNT * 100 / $TOTAL_COUNT" | bc)
+          else
+            ERROR_RATE=0
+          fi
+          echo "[$STAGE] Error rate: ${ERROR_RATE}% (${ERROR_COUNT}/${TOTAL_COUNT})"
+          THRESHOLD=5
+          if [ "$(echo "$ERROR_RATE > $THRESHOLD" | bc -l 2>/dev/null || echo 0)" -eq 1 ]; then
+            echo "[$STAGE] ERROR RATE ${ERROR_RATE}% exceeds threshold ${THRESHOLD}%. Rolling back..."
+            PREV=$(cat /workspace/previous-revision.txt)
+            if [ "$PREV" != "none" ]; then
+              gcloud run services update-traffic hey-seven --region=us-central1 --to-revisions=$PREV=100
+              echo "Rolled back to $PREV"
+            fi
+            exit 1
+          fi
+          echo "[$STAGE] Error rate OK — proceeding."
+        }
+
+        # --- Stage 1: 10% traffic to new revision ---
+        echo "=== Canary Stage 1: Routing 10% traffic to new revision ==="
+        gcloud run services update-traffic hey-seven --region=us-central1 --to-latest --to-revisions=LATEST=10
+        check_error_rate "10%"
+
+        # --- Stage 2: 50% traffic ---
+        echo "=== Canary Stage 2: Routing 50% traffic to new revision ==="
+        gcloud run services update-traffic hey-seven --region=us-central1 --to-revisions=LATEST=50
+        check_error_rate "50%"
+
+        # --- Stage 3: 100% traffic ---
+        echo "=== Canary Stage 3: Routing 100% traffic to new revision ==="
+        gcloud run services update-traffic hey-seven --region=us-central1 --to-latest
+        echo "=== Canary deployment complete: 100% traffic on new revision ==="
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/hey-seven/hey-seven:$COMMIT_SHA'

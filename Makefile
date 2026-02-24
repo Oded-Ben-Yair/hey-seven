@@ -1,4 +1,4 @@
-.PHONY: test-ci test-eval test-eval-quality lint run docker-up smoke-test ingest
+.PHONY: test-ci test-eval test-eval-quality lint run docker-up smoke-test ingest load-test-local load-test-cloud
 
 test-ci:
 	python3 -m pytest tests/ -v --tb=short -x --ignore=tests/test_eval.py --cov=src --cov-fail-under=90
@@ -24,3 +24,11 @@ smoke-test:
 
 ingest:
 	python3 -c "from src.rag.pipeline import ingest_property; ingest_property()"
+
+load-test-local:
+	k6 run tests/load/k6-local.js --env BASE_URL=http://localhost:8080
+
+load-test-cloud:
+	@if [ -z "$$CLOUD_RUN_URL" ]; then echo "Error: CLOUD_RUN_URL not set"; exit 1; fi
+	@if [ -z "$$API_KEY" ]; then echo "Error: API_KEY not set"; exit 1; fi
+	k6 run tests/load/k6-cloudrun.js --env CLOUD_RUN_URL=$$CLOUD_RUN_URL --env API_KEY=$$API_KEY

@@ -320,49 +320,67 @@ async def execute_specialist(
 
     llm = await get_llm_fn()
 
+    # R46 D8: Semaphore acquisition with timeout for backpressure.
+    # If all 20 LLM slots are busy for 30s, return a fallback instead of
+    # queueing indefinitely. Prevents request pile-up during LLM slowdowns.
     try:
-        async with _LLM_SEMAPHORE:
-            response = await llm.ainvoke(llm_messages)
-        await cb.record_success()
-        content = response.content if isinstance(response.content, str) else str(response.content)
-        result: dict = {"messages": [AIMessage(content=content)]}
-        # R23 fix C-003: persist suggestion_offered flag across turns
-        if suggestion_already_offered:
-            result["suggestion_offered"] = True  # _keep_truthy: once True, stays True
-        return result
-    except (ValueError, TypeError) as exc:
-        await cb.record_failure()
-        logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
-        # ValueError/TypeError may produce malformed content that still
-        # warrants validation.  Incrementing retry_count ensures the
-        # validator runs; the validate_node's "retry_count < 1" check
-        # prevents unbounded retries.  Only circuit-breaker-open and
-        # network-error paths use skip_validation=True.
-        # R10 fix (DeepSeek F3): was hard-coded to 1 which reset the
-        # retry budget when retry_count was already >= 1.
+        await asyncio.wait_for(_LLM_SEMAPHORE.acquire(), timeout=30)
+    except asyncio.TimeoutError:
+        logger.warning(
+            "%s agent semaphore acquire timeout (30s) — returning backpressure fallback",
+            agent_name.capitalize(),
+        )
         return {
-            "messages": [AIMessage(content=_fallback_message("trouble processing that response"))],
-            "skip_validation": False,
-            "retry_count": retry_count + 1,
-        }
-    except asyncio.CancelledError:
-        # Client disconnect (normal for SSE) — NOT an LLM failure.
-        # R11 fix (DeepSeek F-005): use record_cancellation() instead of
-        # record_failure() to avoid inflating CB failure count from normal
-        # SSE disconnects. record_cancellation() resets the half_open probe
-        # flag (R10 DeepSeek F1 concern) without counting toward threshold.
-        await cb.record_cancellation()
-        raise
-    except Exception:
-        # Broad catch: httpx.HTTPError, asyncio.TimeoutError, ConnectionError,
-        # and google-genai SDK exceptions (GoogleAPICallError, ResourceExhausted,
-        # DeadlineExceeded, RuntimeError, AttributeError on malformed responses).
-        # Without this catch, unhandled exceptions bypass record_failure() so the
-        # circuit breaker never trips, and the SSE stream crashes.
-        # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
-        await cb.record_failure()
-        logger.exception("%s agent LLM call failed", agent_name.capitalize())
-        return {
-            "messages": [AIMessage(content=_fallback_message("trouble generating a response right now"))],
+            "messages": [AIMessage(content=_fallback_message("high demand right now"))],
             "skip_validation": True,
         }
+
+    try:
+        try:
+            response = await llm.ainvoke(llm_messages)
+        except (ValueError, TypeError) as exc:
+            await cb.record_failure()
+            logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
+            # ValueError/TypeError may produce malformed content that still
+            # warrants validation.  Incrementing retry_count ensures the
+            # validator runs; the validate_node's "retry_count < 1" check
+            # prevents unbounded retries.  Only circuit-breaker-open and
+            # network-error paths use skip_validation=True.
+            # R10 fix (DeepSeek F3): was hard-coded to 1 which reset the
+            # retry budget when retry_count was already >= 1.
+            return {
+                "messages": [AIMessage(content=_fallback_message("trouble processing that response"))],
+                "skip_validation": False,
+                "retry_count": retry_count + 1,
+            }
+        except asyncio.CancelledError:
+            # Client disconnect (normal for SSE) — NOT an LLM failure.
+            # R11 fix (DeepSeek F-005): use record_cancellation() instead of
+            # record_failure() to avoid inflating CB failure count from normal
+            # SSE disconnects. record_cancellation() resets the half_open probe
+            # flag (R10 DeepSeek F1 concern) without counting toward threshold.
+            await cb.record_cancellation()
+            raise
+        except Exception:
+            # Broad catch: httpx.HTTPError, asyncio.TimeoutError, ConnectionError,
+            # and google-genai SDK exceptions (GoogleAPICallError, ResourceExhausted,
+            # DeadlineExceeded, RuntimeError, AttributeError on malformed responses).
+            # Without this catch, unhandled exceptions bypass record_failure() so the
+            # circuit breaker never trips, and the SSE stream crashes.
+            # KeyboardInterrupt/SystemExit propagate (not subclasses of Exception).
+            await cb.record_failure()
+            logger.exception("%s agent LLM call failed", agent_name.capitalize())
+            return {
+                "messages": [AIMessage(content=_fallback_message("trouble generating a response right now"))],
+                "skip_validation": True,
+            }
+    finally:
+        _LLM_SEMAPHORE.release()
+
+    await cb.record_success()
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    result: dict = {"messages": [AIMessage(content=content)]}
+    # R23 fix C-003: persist suggestion_offered flag across turns
+    if suggestion_already_offered:
+        result["suggestion_offered"] = True  # _keep_truthy: once True, stays True
+    return result

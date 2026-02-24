@@ -39,6 +39,9 @@ class StateBackend(ABC):
     @abstractmethod
     def delete(self, key: str) -> None: ...
 
+    @abstractmethod
+    def ping(self) -> bool: ...
+
 
 class InMemoryBackend(StateBackend):
     """In-memory state backend. Per-container, suitable for single-instance deployment.
@@ -160,6 +163,9 @@ class InMemoryBackend(StateBackend):
         with self._lock:
             self._store.pop(key, None)
 
+    def ping(self) -> bool:
+        return True
+
 
 class RedisBackend(StateBackend):
     """Redis state backend for multi-container deployments.
@@ -209,6 +215,12 @@ class RedisBackend(StateBackend):
 
     def delete(self, key: str) -> None:
         self._client.delete(key)
+
+    def ping(self) -> bool:
+        try:
+            return bool(self._client.ping())
+        except Exception:
+            return False
 
 
 # R35 CRITICAL fix: Migrate from @lru_cache to TTLCache for credential rotation.

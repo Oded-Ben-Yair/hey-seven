@@ -425,3 +425,169 @@ class TestLiveResponseModel:
             property_loaded=True,
         )
         assert resp.environment == "development"
+
+
+# ---------------------------------------------------------------------------
+# 8. Cosign Image Signing (R46 D6)
+# ---------------------------------------------------------------------------
+
+
+class TestCosignSigning:
+    """Cosign image signing is configured in the pipeline."""
+
+    @pytest.fixture(autouse=True)
+    def _load_cloudbuild(self):
+        self.cloudbuild = (PROJECT_ROOT / "cloudbuild.yaml").read_text()
+
+    def test_cosign_install_step_exists(self):
+        """Pipeline installs cosign binary."""
+        assert "cosign" in self.cloudbuild
+        assert "v2.4.1" in self.cloudbuild
+
+    def test_cosign_sign_uses_kms_key(self):
+        """Cosign sign step references GCP KMS key path."""
+        assert "gcpkms://projects/$PROJECT_ID/locations/us-central1/keyRings/hey-seven-signing/cryptoKeys/cosign-key" in self.cloudbuild
+
+    def test_cosign_attest_references_sbom(self):
+        """Cosign attest step references the SBOM file."""
+        assert "cosign attest" in self.cloudbuild
+        assert "sbom.json" in self.cloudbuild
+
+    def test_cosign_verify_step_exists(self):
+        """Pipeline verifies the signed image inline."""
+        assert "cosign verify" in self.cloudbuild
+
+    def test_cosign_pinned_version(self):
+        """Cosign version is pinned (not :latest or unversioned)."""
+        assert "v2.4.1" in self.cloudbuild
+
+
+# ---------------------------------------------------------------------------
+# 9. Canary Deployment (R46 D6)
+# ---------------------------------------------------------------------------
+
+
+class TestCanaryDeployment:
+    """Canary traffic splitting with monitoring-based rollback."""
+
+    @pytest.fixture(autouse=True)
+    def _load_cloudbuild(self):
+        self.cloudbuild = (PROJECT_ROOT / "cloudbuild.yaml").read_text()
+
+    def test_graduated_traffic_splitting(self):
+        """Pipeline uses graduated traffic split (not instant --to-latest)."""
+        assert "LATEST=10" in self.cloudbuild
+
+    def test_error_rate_monitoring(self):
+        """Pipeline checks error rate between canary stages."""
+        assert "ERROR_COUNT" in self.cloudbuild or "ERROR_RATE" in self.cloudbuild
+
+    def test_rollback_on_error_threshold(self):
+        """Pipeline rolls back if error rate exceeds threshold."""
+        assert "Rolling back" in self.cloudbuild or "rollback" in self.cloudbuild.lower()
+
+    def test_multiple_traffic_stages(self):
+        """Pipeline has at least 2 canary stages before 100% traffic."""
+        traffic_updates = self.cloudbuild.count("update-traffic")
+        assert traffic_updates >= 3, (
+            f"Expected at least 3 traffic updates (10%, 50%, 100%), found {traffic_updates}"
+        )
+
+    def test_canary_stage_wait(self):
+        """Pipeline waits between canary stages for error observation."""
+        assert "sleep 60" in self.cloudbuild or "Waiting" in self.cloudbuild
+
+
+# ---------------------------------------------------------------------------
+# 10. Secret Rotation (R46 D6)
+# ---------------------------------------------------------------------------
+
+
+class TestSecretRotation:
+    """Secret rotation script exists and is correct."""
+
+    def test_rotate_script_exists(self):
+        """scripts/rotate-secret.sh exists."""
+        script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
+        assert script.exists(), "scripts/rotate-secret.sh not found"
+
+    def test_rotate_script_executable(self):
+        """Script has executable permissions."""
+        import os
+
+        script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
+        assert os.access(script, os.X_OK), "rotate-secret.sh must be executable"
+
+    def test_rotate_script_has_health_check(self):
+        """Script verifies health after rotation."""
+        script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
+        content = script.read_text()
+        assert "/health" in content, "Rotation script must verify health after secret update"
+
+    def test_rotate_script_disables_old_versions(self):
+        """Script disables (not deletes) old secret versions."""
+        script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
+        content = script.read_text()
+        assert "disable" in content, "Script must disable old versions for rollback safety"
+
+    def test_rotate_script_no_delete(self):
+        """Script never deletes secret versions (keep for rollback)."""
+        script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
+        content = script.read_text()
+        # "delete" should not appear as a gcloud command (only in comments)
+        lines = [line for line in content.splitlines()
+                 if not line.strip().startswith("#")]
+        code_only = "\n".join(lines)
+        assert "versions delete" not in code_only, (
+            "Script must NOT delete secret versions — disable for rollback safety"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 11. Docker Compose Healthcheck (R46 D6)
+# ---------------------------------------------------------------------------
+
+
+class TestDockerComposeHealthcheck:
+    """Docker compose healthcheck uses python (not curl)."""
+
+    @pytest.fixture(autouse=True)
+    def _load_compose(self):
+        self.compose = (PROJECT_ROOT / "docker-compose.yml").read_text()
+
+    def test_healthcheck_no_curl(self):
+        """Healthcheck does not depend on curl (not in production image)."""
+        # Only check the healthcheck section, not the entire file
+        assert 'curl' not in self.compose, (
+            "docker-compose healthcheck should use python, not curl"
+        )
+
+    def test_healthcheck_uses_python(self):
+        """Healthcheck uses python urllib (available in all Python images)."""
+        assert "python" in self.compose
+        assert "urllib" in self.compose
+
+
+# ---------------------------------------------------------------------------
+# 12. VPC Connector and Redis Secret (R46 D6+D8)
+# ---------------------------------------------------------------------------
+
+
+class TestCloudRunRedisConfig:
+    """Cloud Run is configured for Redis (Memorystore) access."""
+
+    @pytest.fixture(autouse=True)
+    def _load_cloudbuild(self):
+        self.cloudbuild = (PROJECT_ROOT / "cloudbuild.yaml").read_text()
+
+    def test_redis_secret_in_deploy(self):
+        """Cloud Run deploy includes REDIS_URL secret."""
+        assert "REDIS_URL=hey-seven-redis-url" in self.cloudbuild
+
+    def test_vpc_connector_in_deploy(self):
+        """Cloud Run deploy includes VPC connector for Memorystore access."""
+        assert "vpc-connector" in self.cloudbuild
+
+    def test_state_backend_env_var(self):
+        """Cloud Run deploy sets STATE_BACKEND=redis."""
+        assert "STATE_BACKEND=redis" in self.cloudbuild

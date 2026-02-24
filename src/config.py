@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     STATE_BACKEND: str = "memory"  # "memory" | "redis"
     REDIS_URL: str = ""  # Redis connection URL for distributed state
 
+    # --- Deployment ---
+    KMS_KEY_PATH: str = ""  # GCP KMS key path for cosign image signing
+    CANARY_ERROR_THRESHOLD: float = 5.0  # Max 5xx error rate (%) before canary rollback
+    CANARY_STAGE_WAIT_SECONDS: int = 60  # Seconds to observe between canary traffic stages
+    LLM_SEMAPHORE_TIMEOUT: int = 30  # Seconds to wait for LLM semaphore before 503 backpressure
+
     # --- Vector DB ---
     VECTOR_DB: str = "chroma"  # "chroma" (local dev) or "firestore" (GCP prod)
     FIRESTORE_PROJECT: str = ""  # GCP project ID for Firestore
