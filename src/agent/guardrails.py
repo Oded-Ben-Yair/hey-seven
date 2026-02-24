@@ -485,26 +485,44 @@ def _check_patterns(
     patterns: list[re.Pattern],
     category: str,
     log_level: str = "warning",
+    normalize: bool = True,
 ) -> bool:
     """Check message against a list of compiled regex patterns.
 
     Shared helper for all deterministic guardrail checks.  Each public
     function delegates here with its pattern list and log configuration.
 
+    R50 fix (DeepSeek CRITICAL-C2): Added normalization for ALL guardrail
+    categories. Previously only injection detection normalized input —
+    responsible gaming, BSA/AML, age verification, patron privacy, and
+    self-harm could all be bypassed via URL encoding, Unicode confusables,
+    or zero-width character insertion. Now all categories normalize by
+    default (checking both raw and normalized forms).
+
     Args:
         message: The user input to check.
         patterns: List of compiled regex patterns to search.
         category: Category label for log messages (e.g., "BSA/AML").
         log_level: Log level for detections ("info" or "warning").
+        normalize: Whether to also check normalized form (default True).
 
     Returns:
         True if any pattern matches, False otherwise.
     """
     log_fn = getattr(logger, log_level, logger.warning)
+    # Check raw input first
     for pattern in patterns:
         if pattern.search(message):
             log_fn("%s detected (pattern: %s)", category, pattern.pattern[:60])
             return True
+    # R50 fix: Also check normalized form (catches URL-encoded, confusable, etc.)
+    if normalize:
+        normalized = _normalize_input(message)
+        if normalized != message:
+            for pattern in patterns:
+                if pattern.search(normalized):
+                    log_fn("%s detected (normalized, pattern: %s)", category, pattern.pattern[:60])
+                    return True
     return False
 
 
