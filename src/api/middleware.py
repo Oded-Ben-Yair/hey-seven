@@ -459,16 +459,22 @@ class RateLimitMiddleware:
         try:
             while True:
                 await asyncio.sleep(60)
-                now = time.monotonic()
-                window_start = now - self.window_seconds
-                async with self._requests_lock:
-                    stale = [
-                        ip for ip, dq in self._requests.items()
-                        if not dq or dq[-1] < window_start
-                    ]
-                    for ip in stale:
-                        del self._requests[ip]
-                    self._last_sweep = now
+                try:
+                    now = time.monotonic()
+                    window_start = now - self.window_seconds
+                    async with self._requests_lock:
+                        stale = [
+                            ip for ip, dq in self._requests.items()
+                            if not dq or dq[-1] < window_start
+                        ]
+                        for ip in stale:
+                            del self._requests[ip]
+                        self._last_sweep = now
+                except Exception:
+                    # R45 fix D8-M001: Catch unexpected errors (e.g., RuntimeError
+                    # from dict size change) to keep the sweep task alive. A dead
+                    # sweep task causes slow memory leak from unreaped stale clients.
+                    logger.warning("Background sweep iteration failed", exc_info=True)
         except asyncio.CancelledError:
             pass
 

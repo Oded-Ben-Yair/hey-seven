@@ -233,9 +233,13 @@ def get_state_backend() -> StateBackend:
         from src.config import get_settings
 
         settings = get_settings()
-        backend_type = getattr(settings, "STATE_BACKEND", "memory")
+        # R45 fix D8-M002: Use direct attribute access instead of getattr().
+        # STATE_BACKEND and REDIS_URL are defined Pydantic fields with defaults.
+        # getattr() with fallback masks typos and misconfiguration by silently
+        # returning the fallback value instead of raising AttributeError.
+        backend_type = settings.STATE_BACKEND
         if backend_type == "redis":
-            redis_url = getattr(settings, "REDIS_URL", "")
+            redis_url = settings.REDIS_URL
             if not redis_url:
                 logger.warning("STATE_BACKEND=redis but REDIS_URL not set, falling back to memory")
                 backend = InMemoryBackend()

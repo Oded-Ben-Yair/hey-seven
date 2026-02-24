@@ -217,7 +217,7 @@ def create_app() -> FastAPI:
         middleware = app.middleware_stack
         while middleware is not None:
             if isinstance(middleware, RateLimitMiddleware):
-                async with middleware._lock:
+                async with middleware._requests_lock:
                     rate_limit_clients = len(middleware._requests)
                 break
             middleware = getattr(middleware, "app", None)

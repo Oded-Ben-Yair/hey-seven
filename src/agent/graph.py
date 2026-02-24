@@ -95,6 +95,12 @@ __all__ = ["build_graph", "chat", "chat_stream"]
 # not return these.  Module-level for zero per-call allocation (R33 fix).
 _DISPATCH_OWNED_KEYS = frozenset({"guest_context", "guest_name"})
 
+# R45 fix D1-M002: Hoist valid state keys to module level. Previously computed
+# inside _execute_specialist on every call via frozenset(PropertyQAState.__annotations__).
+# Since PropertyQAState annotations are fixed at import time, this is safe and
+# eliminates per-call frozenset construction (~50 concurrent streams * 1 alloc each).
+_VALID_STATE_KEYS = frozenset(PropertyQAState.__annotations__)
+
 
 def _extract_node_metadata(node: str, output: Any) -> dict:
     """Extract per-node metadata for graph trace SSE events."""
@@ -365,7 +371,19 @@ async def _execute_specialist(
     Returns:
         Sanitized result dict ready to be returned as node output.
     """
-    agent_fn = get_agent(agent_name)
+    try:
+        agent_fn = get_agent(agent_name)
+    except KeyError:
+        # R45 fix D1-M001: Defensive catch for registry lookup failure.
+        # _route_to_specialist validates against _AGENT_REGISTRY, but a race
+        # between routing and execution (hot reload, registry mutation) could
+        # cause a KeyError. Fall back to host agent instead of crashing the graph.
+        logger.error(
+            "Agent %r not found in registry — falling back to host agent",
+            agent_name,
+        )
+        agent_fn = get_agent("host")
+        agent_name = "host"
 
     # R34 fix A1: Wrap agent execution in timeout to prevent unbounded execution.
     # Uses 2x MODEL_TIMEOUT because agents may make multiple LLM calls internally
@@ -402,14 +420,13 @@ async def _execute_specialist(
     # R37 fix M-001: Filter specialist result to known PropertyQAState keys.
     # Prevents unknown keys from polluting state and type mismatches from
     # crashing reducers (e.g., "messages": "not a list" crashes add_messages).
-    _valid_keys = frozenset(PropertyQAState.__annotations__)
-    unknown = set(result.keys()) - _valid_keys
+    unknown = set(result.keys()) - _VALID_STATE_KEYS
     if unknown:
         logger.warning(
             "Specialist %s returned unknown state keys %s — filtering out",
             agent_name, unknown,
         )
-        result = {k: v for k, v in result.items() if k in _valid_keys}
+        result = {k: v for k, v in result.items() if k in _VALID_STATE_KEYS}
 
     # R37 fix C-001: Persist specialist name in state for retry path.
     result["specialist_name"] = agent_name
