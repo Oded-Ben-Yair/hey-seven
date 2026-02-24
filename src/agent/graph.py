@@ -135,27 +135,32 @@ def _extract_node_metadata(node: str, output: Any) -> dict:
 # "spa" → "entertainment": spa services are managed by the entertainment/amenities
 # team at most casino properties; a separate spa agent would duplicate 90% of
 # entertainment agent logic for minimal retrieval benefit.
-_CATEGORY_TO_AGENT: dict[str, str] = {
+# R50 fix (Grok MAJOR-D1-002): MappingProxyType prevents accidental mutation.
+# Plain dict allows `_CATEGORY_TO_AGENT["typo"] = "value"` to corrupt routing
+# for all concurrent requests in the same process.
+from types import MappingProxyType as _MappingProxy
+
+_CATEGORY_TO_AGENT: dict[str, str] = _MappingProxy({
     "restaurants": "dining",
     "entertainment": "entertainment",
     "spa": "entertainment",
     "gaming": "comp",
     "promotions": "comp",
     "hotel": "hotel",
-}
+})
 
 # Business-priority tie-break order for specialist dispatch.
 # When two categories have equal chunk counts, the higher-priority category
 # wins. Dining > hotel > entertainment > comp because dining queries are the
 # most common guest request type and have the most actionable content.
-_CATEGORY_PRIORITY: dict[str, int] = {
+_CATEGORY_PRIORITY: dict[str, int] = _MappingProxy({
     "restaurants": 4,
     "hotel": 3,
     "entertainment": 2,
     "spa": 2,
     "gaming": 1,
     "promotions": 1,
-}
+})
 
 
 def _keyword_dispatch(retrieved: list[dict]) -> str:

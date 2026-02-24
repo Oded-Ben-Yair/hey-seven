@@ -678,6 +678,24 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
             f"directly at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
             "Is there any information I can help you with?"
         )
+    elif query_type == "self_harm":
+        # R50 fix (Grok CRITICAL-D1-001): Self-harm crisis response with 988 Lifeline.
+        # compliance_gate detects crisis language and routes here. The response
+        # prioritizes safety resources over property information. Never dismissive,
+        # never minimizing, always empathetic with concrete action steps.
+        content = (
+            "I can hear that you're going through a really difficult time, and I want "
+            "you to know that help is available right now.\n\n"
+            "**Please reach out to these confidential resources:**\n\n"
+            "- **988 Suicide & Crisis Lifeline**: Call or text **988** (24/7, free, confidential)\n"
+            "- **Crisis Text Line**: Text **HOME** to **741741**\n"
+            "- **Emergency**: Call **911** if you or someone is in immediate danger\n\n"
+            "You don't have to face this alone. Trained counselors are available "
+            "right now who understand what you're going through and can help.\n\n"
+            f"If you'd like to speak with someone at {settings.PROPERTY_NAME} in person, "
+            f"any team member can connect you with support services. You can also call us "
+            f"at {settings.PROPERTY_PHONE}."
+        )
     else:
         # General off-topic
         content = (
