@@ -601,6 +601,15 @@ User message: $message
 Classify this message."""
 
 
+# R47 fix C4: Consecutive failure counter for degradation mode.
+# When the semantic classifier LLM fails 3+ consecutive times (sustained outage),
+# degrade to regex-only instead of blocking ALL traffic. Individual failures
+# still fail-closed (safe). Only sustained outages trigger degradation.
+_classifier_consecutive_failures = 0
+_classifier_failure_lock = asyncio.Lock()
+_CLASSIFIER_DEGRADATION_THRESHOLD = 3
+
+
 async def classify_injection_semantic(
     message: str,
     llm_fn=None,
@@ -610,12 +619,16 @@ async def classify_injection_semantic(
     Runs AFTER regex guardrails pass, providing a second layer of defense
     using LLM-based semantic understanding.
 
-    **Fail-closed**: On error, returns a synthetic ``InjectionClassification``
-    with ``is_injection=True`` and ``confidence=1.0``.  In a regulated casino
-    environment, blocking a legitimate message on classifier failure is far
-    less harmful than allowing a prompt injection through.  Deterministic
-    regex guardrails (Layer 1) already passed — so the blocked message
-    was not trivially malicious, but we err on the side of caution.
+    **Fail-closed with degradation**: On individual errors, returns a synthetic
+    ``InjectionClassification`` with ``is_injection=True`` (fail-closed).
+    After ``_CLASSIFIER_DEGRADATION_THRESHOLD`` consecutive failures (sustained
+    LLM outage), degrades to regex-only mode (returns ``is_injection=False``)
+    to prevent self-DoS that blocks ALL legitimate traffic.
+
+    R47 fix C4: All 4 external models (Gemini/Grok/GPT-5.2/DeepSeek) flagged
+    unconditional fail-closed as availability risk. Gemini API outage = total
+    service outage for all guests. Degradation preserves deterministic regex
+    guardrails (Layer 1) as the safety floor.
 
     Args:
         message: The user's message to classify.
@@ -624,8 +637,9 @@ async def classify_injection_semantic(
 
     Returns:
         InjectionClassification (never None). On error, returns a synthetic
-        fail-closed classification.
+        fail-closed classification (or degraded pass after sustained outage).
     """
+    global _classifier_consecutive_failures
     try:
         if llm_fn is None:
             from src.agent.nodes import _get_llm
@@ -646,27 +660,66 @@ async def classify_injection_semantic(
             result.is_injection,
             result.confidence,
         )
+        # Reset consecutive failure counter on success
+        async with _classifier_failure_lock:
+            _classifier_consecutive_failures = 0
         return result
     except TimeoutError:
-        logger.warning(
-            "Semantic injection classifier timed out (5s) — fail-closed for input (len=%d)",
-            len(message),
-        )
-        return InjectionClassification(
-            is_injection=True,
-            confidence=1.0,
-            reason="Classifier timeout (fail-closed)",
+        return await _handle_classifier_failure(
+            len(message), "Classifier timeout (5s)"
         )
     except Exception as exc:
-        logger.error(
-            "Semantic injection classifier failed-CLOSED for input (len=%d): %s — "
-            "blocking request as precaution. Configure alerting on this log line "
-            "in production monitoring.",
-            len(message),
-            str(exc)[:100],
+        return await _handle_classifier_failure(
+            len(message), f"Classifier unavailable: {str(exc)[:80]}"
+        )
+
+
+async def _handle_classifier_failure(
+    message_len: int,
+    reason: str,
+) -> InjectionClassification:
+    """Handle semantic classifier failure with degradation after sustained outage.
+
+    R47 fix C4: Fail-closed for first N-1 failures, then degrade to regex-only
+    after N consecutive failures (sustained outage = self-DoS).
+
+    Args:
+        message_len: Length of the input message (for logging).
+        reason: Human-readable failure reason.
+
+    Returns:
+        InjectionClassification: fail-closed or degraded-pass.
+    """
+    global _classifier_consecutive_failures
+    async with _classifier_failure_lock:
+        _classifier_consecutive_failures += 1
+        failures = _classifier_consecutive_failures
+
+    if failures >= _CLASSIFIER_DEGRADATION_THRESHOLD:
+        logger.warning(
+            "Semantic classifier degraded after %d consecutive failures — "
+            "regex-only mode active (input len=%d). Deterministic guardrails "
+            "remain enforced. Configure alerting on this log line.",
+            failures,
+            message_len,
         )
         return InjectionClassification(
-            is_injection=True,
-            confidence=1.0,
-            reason=f"Classifier unavailable (fail-closed): {str(exc)[:80]}",
+            is_injection=False,
+            confidence=0.0,
+            reason=f"Classifier degraded after {failures} failures (regex-only)",
         )
+
+    logger.error(
+        "Semantic injection classifier failed-CLOSED for input (len=%d): %s — "
+        "blocking request as precaution (failure %d/%d before degradation). "
+        "Configure alerting on this log line in production monitoring.",
+        message_len,
+        reason,
+        failures,
+        _CLASSIFIER_DEGRADATION_THRESHOLD,
+    )
+    return InjectionClassification(
+        is_injection=True,
+        confidence=1.0,
+        reason=f"{reason} (fail-closed, {failures}/{_CLASSIFIER_DEGRADATION_THRESHOLD})",
+    )

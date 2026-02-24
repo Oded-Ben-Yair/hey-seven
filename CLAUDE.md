@@ -16,11 +16,11 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 ## Current State (Updated 2026-02-24)
 
 - **Codebase**: 23K+ LOC, 51 source modules across 10 packages
-- **Tests**: 2229 tests, 0 failures, 90.53% coverage
+- **Tests**: 2243 tests, 0 failures, 90.20% coverage
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
-- **Review Score**: ~96.7/100 after 46 rounds of hostile review (R35-R45 sprint + R46 focused)
+- **Review Score**: R47 external 4-model consensus 65/100 → fixes applied, targeting 80+
 - **Version**: v1.1.0
-- **Latest commit**: `c6bd000` (R46 fixes pushed)
+- **Latest commit**: R47 fixes (11 consensus findings applied)
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
@@ -137,8 +137,8 @@ Key architectural patterns:
 - **Validation loop** with generate -> validate -> retry(max 1) -> fallback
 - **Degraded-pass validation** (first attempt + validator failure = PASS; retry + failure = FAIL)
 - **Specialist agent DRY extraction** via shared `_base.py` with dependency injection
-- **Circuit breaker** with Redis L1/L2 sync (local deque + Redis distributed state), async via `to_thread()`
-- **Distributed rate limiting** via Redis sorted set sliding window (per-client, not global)
+- **Circuit breaker** with Redis L1/L2 sync (local deque + Redis distributed state), bidirectional (R47: recovery propagation), native `redis.asyncio`
+- **Distributed rate limiting** via Redis sorted set sliding window with atomic Lua script (per-client, not global)
 - **TTL-cached LLM singletons** with jitter for credential rotation (GCP Workload Identity)
 - **LLM backpressure** via asyncio.Semaphore with configurable timeout
 - **PII redaction** fails closed (safe placeholder, never pass-through)
@@ -151,7 +151,7 @@ Documented, accepted trade-offs:
 - InMemorySaver for local dev (MAX_ACTIVE_THREADS=1000 guard; prod uses FirestoreSaver)
 - LangSmith sampling requires app-level code (not just env var config)
 - HITL interrupt is config-toggled but not enabled by default in production
-- Redis calls use `asyncio.to_thread()` wrappers (not native `redis.asyncio`) — minimal-risk approach, avoids full migration
+- Redis calls use native `redis.asyncio` (R47 fix C2) — `asyncio.to_thread()` replaced to prevent thread pool exhaustion
 - InMemoryBackend uses `threading.Lock` in async context — intentional for sub-microsecond TOCTOU protection (R36 fix B5)
 - Langfuse client uses `threading.Lock` for sync init — correct for sync library, one-time per TTL cost
 - gcloud CLI at `/tmp/google-cloud-sdk/` in WSL — lost on restart, reinstall if needed

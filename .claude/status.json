@@ -1,67 +1,88 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "11-round hostile review sprint COMPLETE (R35-R45). Score 77→95. 21 CRITICALs + 82 MAJORs fixed. 2178 tests, 0 failures, 90.43% coverage. Ceiling ~95.0 reached.",
-    "lastModified": "2026-02-24T07:30:00Z",
+    "summary": "R47 consensus fixes APPLIED. 11 findings fixed: C1 strip dispatch keys, C2 redis.asyncio, C3 CB bidirectional sync, C4 classifier degradation, C7 tombstone state, C10 deque pruning, C11 drain timeout, C14 Lua rate limit, C15 lock outside I/O, C5 auth tests, C6 property-based bypass tests. 2243 tests, 90.20% coverage.",
+    "lastModified": "2026-02-24T18:00:00Z",
     "branch": "main",
-    "commitHash": "c9a492a",
+    "commitHash": "pending-commit",
     "tag": "v1.1.0",
-    "phase": "post-sprint-learning-extraction"
+    "phase": "r47-fixes-applied"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "PLAN: How to push from 95 to 98 — requires architectural changes (Redis CB, Firestore integration tests, k8s readiness)" },
-    { "priority": 1, "description": "Apply learnings to new projects from day 1 — use hostile-review-protocol.md and 95+ checklist" },
-    { "priority": 2, "description": "Deploy to GCP Cloud Run production — sprint hardened the codebase for production readiness" },
-    { "priority": 3, "description": "Next phase: load testing, real casino data ingestion, demo preparation" }
+    { "priority": 0, "description": "Re-run 4-model external review (Gemini/Grok/GPT-5.2/DeepSeek) targeting 80+" },
+    { "priority": 1, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" },
+    { "priority": 2, "description": "k6 load tests against Cloud Run (make load-test-cloud)" },
+    { "priority": 3, "description": "Real casino data ingestion + demo preparation" }
   ],
-  "sprintResults": {
-    "rounds": "R35-R45 (11 rounds)",
-    "dateRange": "2026-02-23 to 2026-02-24",
-    "scoreTrajectory": {
-      "R34": 77, "R35": 85, "R36": 84.5, "R37": 83, "R38": 81,
-      "R39": 84.5, "R40": 93.5, "R41": 94.9, "R42": 94.4, "R43": 94.3,
-      "R44": 94.5, "R45": 95.0
+  "reviewHistory": {
+    "sprintR35toR45": {
+      "rounds": "R35-R45 (11 rounds)",
+      "dateRange": "2026-02-23 to 2026-02-24",
+      "scoreTrajectory": {
+        "R34": 77, "R35": 85, "R36": 84.5, "R37": 83, "R38": 81,
+        "R39": 84.5, "R40": 93.5, "R41": 94.9, "R42": 94.4, "R43": 94.3,
+        "R44": 94.5, "R45": 95.0
+      },
+      "totalCriticals": 21,
+      "totalMajors": 82,
+      "protocolUpgrade": "R40: focused dims + calibration + split fixers = +12 points in 1 round"
     },
-    "r45_dimensions": {
-      "graph_architecture": 9.5,
-      "rag_pipeline": 9.0,
-      "data_model": 9.0,
-      "api_design": 9.0,
-      "testing_strategy": 9.0,
-      "docker_devops": 8.5,
-      "prompts_guardrails": 9.0,
-      "scalability_production": 9.0,
-      "tradeoff_documentation": 9.0,
-      "domain_intelligence": 9.0
+    "r46": {
+      "date": "2026-02-24",
+      "focus": "D6 Docker & DevOps + D8 Scalability & Production",
+      "findings": "4 CRITICAL + 7 MAJOR + 4 MINOR (15 total, 1 retracted)",
+      "fixed": "13 (4 CRITICALs + 6 MAJORs + 3 MINORs)",
+      "skipped": "2 (justified) + 1 retracted",
+      "realBugsFound": [
+        "Redis package missing from lockfile — entire Redis integration dead code in prod (D6-C001)",
+        "Conflicting gcloud canary flags would crash deploy (D6-C002)",
+        "Sync Redis calls blocking asyncio event loop in CB + rate limiter (D8-C001/C002)",
+        "Cosign binary downloaded without checksum — supply chain risk (D6-M001)",
+        "LLM_SEMAPHORE_TIMEOUT config dead — hardcoded at usage site (D8-M002)"
+      ],
+      "scoreImpact": {
+        "D6": "8.5 -> 9.5 (+1.0)",
+        "D8": "9.0 -> 9.5 (+0.5)",
+        "overall": "95.0 -> ~96.7 (+1.7)"
+      }
     },
-    "totalCriticals": 21,
-    "totalMajors": 82,
-    "testsAdded": 123,
-    "testFailuresResolved": 52,
-    "coverageDelta": "89.88% → 90.43%",
-    "protocolUpgrade": "R40: focused dims + calibration + split fixers = +12 points in 1 round",
-    "realBugsFound": [
-      "/metrics endpoint crash (R45 — missed rename from R39)",
-      "URL encoding bypass in guardrails (R38 — security)",
-      "Double-encoding bypass (R39 — security)",
-      "Mutable global state corruption (R35-R36 — correctness)",
-      "Unicode Cf invisible char bypass (R35 — security)",
-      "SSE task leak on disconnect (R37 — memory)",
-      "Streaming PII token leak risk (R37 — privacy)",
-      "TTLCache thundering herd (R40 — scalability)",
-      "52 test failures from unfixed auth fixture (R40 — testing)"
-    ],
-    "learningsCapture": [
-      "~/.claude/rules/hostile-review-protocol.md (NEW)",
-      "~/.claude/rules/code-quality.md (6 new rules added)",
-      "~/.claude/rules/langgraph-patterns.md (updated origin)",
-      "Memory MCP: hey-seven-hostile-sprint-r35-r45, hey-seven-95plus-checklist",
-      "reviews/sprint-r35-r45-learnings.md (comprehensive learning doc)"
-    ]
+    "r47_multimodel": {
+      "date": "2026-02-24",
+      "status": "COMPLETE",
+      "models": ["Gemini 3.1 Pro (thinking=high)", "Grok 4", "GPT-5.2 Codex", "DeepSeek-V3.2-Speciale"],
+      "scope": "All 10 dimensions, full codebase hostile review",
+      "outputDir": "reviews/round-47-multimodel/"
+    }
+  },
+  "r46_dimensions": {
+    "graph_architecture": 9.5,
+    "rag_pipeline": 9.0,
+    "data_model": 9.0,
+    "api_design": 9.0,
+    "testing_strategy": 9.0,
+    "docker_devops": 9.5,
+    "prompts_guardrails": 9.0,
+    "scalability_production": 9.5,
+    "tradeoff_documentation": 9.0,
+    "domain_intelligence": 9.0
+  },
+  "codebaseMetrics": {
+    "loc": "23K+",
+    "modules": 51,
+    "tests": 2243,
+    "testFailures": 0,
+    "coverage": "90.20%",
+    "coverageThreshold": "90.0%"
+  },
+  "gcpInfrastructure": {
+    "kmsKeyring": "hey-seven-signing (EC_SIGN_P256_SHA256)",
+    "redis": "10.247.175.123:6379 (Redis 7.2, basic tier, ~$30/month)",
+    "vpcConnector": "hey-seven-vpc (10.8.0.0/28)",
+    "redisSecret": "hey-seven-redis-url (Secret Manager)"
   },
   "sessionNotes": {
     "lastSessionDate": "2026-02-24",
-    "lastSessionId": "hey-seven-session-20260224-sprint-complete"
+    "lastSessionId": "hey-seven-session-20260224-r46-r47"
   }
 }

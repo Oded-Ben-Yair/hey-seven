@@ -110,8 +110,10 @@ class CircuitBreaker:
         Writes state, failure count, and last failure time with TTL slightly
         longer than the rolling window to ensure stale entries expire.
 
-        R46 fix D8-C001: Wrap synchronous Redis calls in asyncio.to_thread()
-        to prevent blocking the event loop (~0.5-2ms per Redis round-trip).
+        R47 fix C2: Uses native redis.asyncio client instead of
+        asyncio.to_thread() wrapper. to_thread() exhausts the default
+        ThreadPoolExecutor (~8-10 threads on Cloud Run) under 50 concurrent
+        SSE streams. Native async client uses zero threads.
         """
         if not self._backend:
             return
@@ -123,36 +125,40 @@ class CircuitBreaker:
                 str(time.time()) if self._last_failure_time is not None else None
             )
 
-            def _do_sync() -> None:
-                self._backend.set(self._backend_key("state"), state, ttl=ttl)
-                self._backend.set(
-                    self._backend_key("failure_count"),
-                    failure_count,
+            await self._backend.async_set(self._backend_key("state"), state, ttl=ttl)
+            await self._backend.async_set(
+                self._backend_key("failure_count"),
+                failure_count,
+                ttl=ttl,
+            )
+            if last_failure is not None:
+                await self._backend.async_set(
+                    self._backend_key("last_failure_time"),
+                    last_failure,
                     ttl=ttl,
                 )
-                if last_failure is not None:
-                    self._backend.set(
-                        self._backend_key("last_failure_time"),
-                        last_failure,
-                        ttl=ttl,
-                    )
-
-            await asyncio.to_thread(_do_sync)
         except Exception:
             logger.debug("CB backend sync failed (non-critical)", exc_info=True)
 
     async def _sync_from_backend(self) -> None:
-        """Pull shared CB state from backend if local state is stale.
+        """Pull shared CB state from backend — bidirectional sync.
 
-        Only promotes state from closed -> open (never demotes). This ensures
-        that if ANY instance detects an LLM outage, all instances benefit from
-        that detection. Demotion happens locally via the standard half-open
-        probe mechanism.
+        Promotes state from closed -> open AND recovers from open -> closed.
+        This ensures that if ANY instance detects an LLM outage, all instances
+        benefit from that detection. It also ensures that when one instance
+        successfully probes and recovers (open -> closed), other instances
+        adopt the closed state instead of remaining open until their own
+        cooldown expires.
+
+        R47 fix C3: Added bidirectional sync (recovery propagation).
+        Previously only promoted closed->open. If Instance A recovered via
+        half-open probe and synced "closed" to Redis, Instance B stayed open
+        until its own cooldown expired — defeating the purpose of shared state.
 
         Rate-limited to one read per ``_backend_sync_interval`` seconds.
 
-        R46 fix D8-C001: Wrap synchronous Redis calls in asyncio.to_thread()
-        to prevent blocking the event loop.
+        R47 fix C2: Uses native redis.asyncio client instead of
+        asyncio.to_thread(). See _sync_to_backend docstring for rationale.
         """
         if not self._backend:
             return
@@ -164,16 +170,11 @@ class CircuitBreaker:
             state_key = self._backend_key("state")
             count_key = self._backend_key("failure_count")
 
-            def _do_read() -> tuple[str | None, str | None]:
-                return (
-                    self._backend.get(state_key),
-                    self._backend.get(count_key),
-                )
-
-            remote_state, remote_count_str = await asyncio.to_thread(_do_read)
+            remote_state = await self._backend.async_get(state_key)
+            remote_count_str = await self._backend.async_get(count_key)
             if remote_state and remote_count_str:
                 remote_count = int(remote_count_str)
-                # Only promote: if remote says open and local says closed,
+                # Promote: if remote says open and local says closed,
                 # adopt the remote state (another instance detected the outage).
                 if remote_state == "open" and self._state == "closed":
                     if remote_count >= self._failure_threshold:
@@ -183,6 +184,21 @@ class CircuitBreaker:
                             "(remote failure_count=%d, threshold=%d)",
                             remote_count,
                             self._failure_threshold,
+                        )
+                # R47 fix C3: Recovery propagation. If remote says closed and
+                # local says open, another instance has successfully recovered
+                # via half-open probe. Adopt closed state to avoid serving
+                # fallback responses unnecessarily.
+                elif remote_state == "closed" and self._state == "open":
+                    if remote_count < self._failure_threshold:
+                        prev = self._state
+                        self._state = "closed"
+                        self._half_open_in_progress = False
+                        logger.info(
+                            "CB synced from backend: %s -> closed "
+                            "(remote recovered, failure_count=%d)",
+                            prev,
+                            remote_count,
                         )
         except Exception:
             logger.debug("CB backend read failed (non-critical)", exc_info=True)
@@ -318,11 +334,27 @@ class CircuitBreaker:
         R46 D8: Syncs from backend before checking local state, so that
         if another instance has tripped the CB, this instance also blocks.
 
+        R47 fix C15: Redis I/O (_sync_from_backend) runs OUTSIDE the lock.
+        Previously, sync was inside the lock, meaning a 100ms Redis stall
+        serialized all 50 concurrent callers (head-of-line blocking).
+        Now: multiple coroutines can read Redis simultaneously; only local
+        state mutation happens under the lock.
+
+        R47 fix C10: Prune old failures before state checks to prevent
+        unbounded deque growth in long-running containers.
+
         Returns:
             True if the request is allowed, False if blocked.
         """
+        # I/O outside lock — multiple coroutines can read Redis concurrently.
+        await self._sync_from_backend()
+
         async with self._lock:
-            await self._sync_from_backend()
+            # R47 fix C10: Prune stale failure timestamps to prevent unbounded
+            # memory growth. Without this, a container running for days
+            # accumulates expired timestamps that are never cleaned up.
+            self._prune_old_failures()
+
             # Perform open -> half_open transition under the lock (race-safe)
             if self._state == "open" and self._cooldown_expired():
                 self._state = "half_open"

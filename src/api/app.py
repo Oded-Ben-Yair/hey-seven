@@ -51,7 +51,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _active_streams: set[asyncio.Task] = set()
 _shutting_down = asyncio.Event()
-_DRAIN_TIMEOUT_S = 30
+# R47 fix C11: Drain timeout must be < uvicorn's --timeout-graceful-shutdown (15s)
+# and < Cloud Run's SIGTERM timeout (180s). Previous value of 30s exceeded
+# uvicorn's 15s, meaning uvicorn force-killed connections before drain completed.
+_DRAIN_TIMEOUT_S = 10
 
 
 @asynccontextmanager

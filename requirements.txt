@@ -28,6 +28,11 @@ langgraph-checkpoint-firestore==0.1.0
 deepeval==3.8.4
 vaderSentiment==3.3.2
 
+# --- State Backend (distributed) ---
+# R47 fix C2: redis[hiredis] for native async Redis (redis.asyncio).
+# hiredis provides C-extension parser for ~10x faster Redis responses.
+redis[hiredis]==5.2.1
+
 # --- Utilities ---
 sse-starlette==3.2.0
 httpx==0.28.1

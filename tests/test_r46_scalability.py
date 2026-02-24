@@ -6,7 +6,7 @@ state backend ping(), langfuse cache jitter, semaphore timeout backpressure.
 
 import asyncio
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -263,7 +263,7 @@ class TestRateLimiterRedisIntegration:
         from src.api.middleware import RateLimitMiddleware
         app = MagicMock()
         middleware = RateLimitMiddleware(app)
-        assert middleware._redis_client is None
+        assert middleware._state_backend is None
 
     @pytest.mark.asyncio
     async def test_is_allowed_redis_fallback_on_error(self):
@@ -272,10 +272,10 @@ class TestRateLimiterRedisIntegration:
         app = MagicMock()
         middleware = RateLimitMiddleware(app)
 
-        # Set up a broken redis client
-        mock_redis = MagicMock()
-        mock_redis.pipeline.side_effect = Exception("Connection refused")
-        middleware._redis_client = mock_redis
+        # Set up a broken state backend
+        mock_backend = AsyncMock()
+        mock_backend.async_rate_limit.side_effect = Exception("Connection refused")
+        middleware._state_backend = mock_backend
 
         # Should fall back to in-memory (allowed)
         result = await middleware._is_allowed_redis("127.0.0.1")
@@ -322,60 +322,47 @@ class TestRateLimiterRedisDistributed:
 
     @pytest.mark.asyncio
     async def test_is_allowed_redis_allows_under_limit(self):
-        """Redis rate limiter allows requests under the limit."""
+        """Redis rate limiter allows requests under the limit (via async_rate_limit)."""
         from src.api.middleware import RateLimitMiddleware
         app = MagicMock()
         middleware = RateLimitMiddleware(app)
 
-        # Mock a working Redis pipeline
-        mock_pipe = MagicMock()
-        mock_pipe.execute.return_value = [0, 5, True, True]  # zrem, zcard=5, zadd, expire
-        mock_redis = MagicMock()
-        mock_redis.pipeline.return_value = mock_pipe
-        middleware._redis_client = mock_redis
+        # Mock state backend with async_rate_limit returning True (allowed)
+        mock_backend = AsyncMock()
+        mock_backend.async_rate_limit.return_value = True
+        middleware._state_backend = mock_backend
         middleware.max_tokens = 20
 
         result = await middleware._is_allowed_redis("10.0.0.1")
         assert result is True
+        mock_backend.async_rate_limit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_is_allowed_redis_blocks_over_limit(self):
-        """Redis rate limiter blocks requests over the limit."""
+        """Redis rate limiter blocks requests over the limit (via async_rate_limit)."""
         from src.api.middleware import RateLimitMiddleware
         app = MagicMock()
         middleware = RateLimitMiddleware(app)
 
-        mock_pipe = MagicMock()
-        mock_pipe.execute.return_value = [0, 20, True, True]  # zcard=20 (at limit)
-        mock_redis = MagicMock()
-        mock_redis.pipeline.return_value = mock_pipe
-        middleware._redis_client = mock_redis
+        # Mock state backend with async_rate_limit returning False (blocked)
+        mock_backend = AsyncMock()
+        mock_backend.async_rate_limit.return_value = False
+        middleware._state_backend = mock_backend
         middleware.max_tokens = 20
 
         result = await middleware._is_allowed_redis("10.0.0.1")
         assert result is False
-        # Should have called zrem to remove the tentative entry
-        mock_redis.zrem.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_redis_call_chooses_redis_path(self):
-        """When redis_client is set, __call__ uses Redis path."""
+        """When state_backend is set, __call__ uses Redis path."""
         from src.api.middleware import RateLimitMiddleware
         app = MagicMock()
         middleware = RateLimitMiddleware(app)
 
-        mock_pipe = MagicMock()
-        mock_pipe.execute.return_value = [0, 1, True, True]
-        mock_redis = MagicMock()
-        mock_redis.pipeline.return_value = mock_pipe
-        middleware._redis_client = mock_redis
-
-        scope = {
-            "type": "http",
-            "path": "/chat",
-            "headers": [],
-            "client": ("10.0.0.1", 1234),
-        }
+        mock_backend = AsyncMock()
+        mock_backend.async_rate_limit.return_value = True
+        middleware._state_backend = mock_backend
 
         # _is_allowed_redis should be called (not _is_allowed)
         result = await middleware._is_allowed_redis("10.0.0.1")

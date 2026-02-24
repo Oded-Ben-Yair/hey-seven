@@ -19,7 +19,13 @@ __all__ = [
     "ValidationResult",
     "RetrievedChunk",
     "GuestContext",
+    "UNSET_SENTINEL",
 ]
+
+# R47 fix C7: Tombstone sentinel for explicit field deletion in _merge_dicts.
+# Guest says "remove the peanut allergy" → LLM returns {"dietary": UNSET_SENTINEL}
+# → _merge_dicts pops "dietary" from accumulated state.
+UNSET_SENTINEL = "__UNSET__"
 
 
 def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
@@ -44,7 +50,19 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     # R38 fix C-003: Also filter empty strings from b. An extraction or CRM
     # import returning {"name": ""} would overwrite a previously-extracted
     # valid name. Empty string is not a valid guest data value.
-    return {**a, **{k: v for k, v in b.items() if v is not None and v != ""}}
+    #
+    # R47 fix C7: Tombstone pattern for explicit deletion. If v == UNSET_SENTINEL,
+    # pop the key from merged dict. This allows LLM to explicitly clear a field
+    # (e.g., "remove the peanut allergy" → {"dietary": "__UNSET__"}).
+    # Without this, _merge_dicts filters None, making fields "sticky" — once set,
+    # they can never be unset.
+    merged = dict(a)
+    for k, v in b.items():
+        if v == UNSET_SENTINEL:
+            merged.pop(k, None)
+        elif v is not None and v != "":
+            merged[k] = v
+    return merged
 
 
 def _keep_max(a: int, b: int) -> int:

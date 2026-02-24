@@ -189,6 +189,16 @@ def _do_clear_singletons():
     except (ImportError, AttributeError):
         pass
 
+    # R47 fix C4: Reset classifier consecutive failure counter between tests.
+    # Without this, failure accumulates across test modules and later tests
+    # see degraded mode instead of fail-closed.
+    try:
+        import src.agent.guardrails as _guardrails
+
+        _guardrails._classifier_consecutive_failures = 0
+    except (ImportError, AttributeError):
+        pass
+
     try:
         import src.agent.agents._base as _base_mod
 

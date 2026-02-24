@@ -412,10 +412,15 @@ async def _execute_specialist(
     collisions = _DISPATCH_OWNED_KEYS & set(result.keys())
     if collisions:
         logger.warning(
-            "Specialist %s returned dispatch-owned keys %s — values will be "
-            "overwritten by dispatch layer (specialist should not set these)",
+            "Specialist %s returned dispatch-owned keys %s — stripping "
+            "(specialist should not set these)",
             agent_name, collisions,
         )
+        # R47 fix C1: Strip dispatch-owned keys from specialist result.
+        # Previously only warned — specialist values persisted in state,
+        # creating TOCTOU where specialist overwrites dispatch-layer context.
+        for k in collisions:
+            result.pop(k, None)
 
     # R37 fix M-001: Filter specialist result to known PropertyQAState keys.
     # Prevents unknown keys from polluting state and type mismatches from

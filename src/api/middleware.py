@@ -375,31 +375,25 @@ class RateLimitMiddleware:
         # {ip: deque of request timestamps} — OrderedDict for LRU eviction semantics
         self._requests: collections.OrderedDict[str, collections.deque] = collections.OrderedDict()
 
-        # R46 D8: Optional Redis backend for distributed rate limiting.
-        # When STATE_BACKEND=redis, uses Redis sorted sets for sliding window.
+        # R46 D8: Optional state backend for distributed rate limiting.
+        # When STATE_BACKEND=redis, uses Redis sorted sets for sliding window
+        # via the StateBackend async interface (R47 fix C2: native redis.asyncio).
         # Falls back to in-memory on any Redis error (availability > consistency).
-        self._redis_client = None
+        self._state_backend = None
         if settings.STATE_BACKEND == "redis" and settings.REDIS_URL:
             try:
-                import redis
+                from src.state_backend import get_state_backend
 
-                # R46 fix D8-M001: Set short connection timeout (2s) to prevent
-                # blocking container startup if Redis is unreachable. Default
-                # Redis timeout is 5-30s which can exceed startup probe deadline.
-                self._redis_client = redis.Redis.from_url(
-                    settings.REDIS_URL,
-                    decode_responses=True,
-                    socket_connect_timeout=2,
-                    socket_timeout=2,
-                )
-                self._redis_client.ping()
+                backend = get_state_backend()
+                backend.ping()
+                self._state_backend = backend
                 logger.info("Rate limiter using Redis backend for distributed limiting")
             except Exception:
                 logger.warning(
                     "Redis unavailable for rate limiter, using in-memory fallback",
                     exc_info=True,
                 )
-                self._redis_client = None
+                self._state_backend = None
         # R39 CRITICAL fix D8-C001: Removed per-client asyncio.Lock objects.
         # asyncio is single-threaded cooperative multitasking — context switches
         # only happen at await points. The deque operations in _is_allowed()
@@ -551,45 +545,30 @@ class RateLimitMiddleware:
         return True
 
     async def _is_allowed_redis(self, client_ip: str) -> bool:
-        """Check rate limit using Redis sorted sets (distributed).
+        """Check rate limit using Redis via atomic Lua script (distributed).
 
-        R46 D8: Uses Redis sorted sets for sliding window rate limiting
-        across multiple Cloud Run instances. Each request is a member with
-        its timestamp as the score.
-
-        R46 fix D8-C002: Wrap synchronous Redis pipeline calls in
-        asyncio.to_thread() to prevent blocking the event loop.
+        R47 fix C2+C14: Uses native redis.asyncio with atomic Lua script
+        (single Redis round-trip) instead of asyncio.to_thread() + pipeline.
+        The Lua script performs ZREMRANGEBYSCORE + ZCARD + conditional ZADD +
+        EXPIRE atomically, eliminating the race window between ZCARD and ZADD
+        that existed in the pipeline approach.
 
         Falls back to in-memory on any Redis error.
         """
-        if not self._redis_client:
+        if not self._state_backend:
             return await self._is_allowed(client_ip)
         try:
             key = f"ratelimit:{client_ip}"
             now = time.time()
-            window_start = now - self.window_seconds
             member = f"{now}:{secrets.token_hex(4)}"
-            redis_client = self._redis_client
-            max_tokens = self.max_tokens
-            window_secs = int(self.window_seconds)
 
-            def _do_redis_check() -> bool | None:
-                """Run Redis pipeline synchronously in a thread."""
-                pipe = redis_client.pipeline()
-                pipe.zremrangebyscore(key, "-inf", window_start)
-                pipe.zcard(key)
-                pipe.zadd(key, {member: now})
-                pipe.expire(key, window_secs + 10)
-                results = pipe.execute()
-
-                count = results[1]  # zcard result (before our add)
-                if count >= max_tokens:
-                    # Over limit — remove the entry we just added
-                    redis_client.zrem(key, member)
-                    return False
-                return True
-
-            return await asyncio.to_thread(_do_redis_check)
+            return await self._state_backend.async_rate_limit(
+                key=key,
+                window_seconds=int(self.window_seconds),
+                max_tokens=self.max_tokens,
+                member=member,
+                now=now,
+            )
         except Exception:
             logger.warning(
                 "Redis rate limit check failed, falling back to in-memory",
@@ -612,7 +591,7 @@ class RateLimitMiddleware:
         client_ip = self._get_client_ip(scope)
 
         # R46 D8: Use Redis for distributed rate limiting when available.
-        if self._redis_client:
+        if self._state_backend:
             allowed = await self._is_allowed_redis(client_ip)
         else:
             allowed = await self._is_allowed(client_ip)

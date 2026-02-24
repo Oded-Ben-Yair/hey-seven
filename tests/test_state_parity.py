@@ -124,6 +124,34 @@ class TestMergeDictsProperties:
         result = _merge_dicts({"name": "Sara"}, {"name": "Sarah"})
         assert result == {"name": "Sarah"}
 
+    def test_merge_dicts_tombstone_deletes_key(self):
+        """R47 fix C7: UNSET_SENTINEL in b removes the key from merged result."""
+        from src.agent.state import UNSET_SENTINEL, _merge_dicts
+
+        result = _merge_dicts({"name": "Sara", "dietary": "peanut allergy"}, {"dietary": UNSET_SENTINEL})
+        assert result == {"name": "Sara"}
+
+    def test_merge_dicts_tombstone_missing_key_noop(self):
+        """R47 fix C7: UNSET_SENTINEL for non-existent key is a no-op."""
+        from src.agent.state import UNSET_SENTINEL, _merge_dicts
+
+        result = _merge_dicts({"name": "Sara"}, {"dietary": UNSET_SENTINEL})
+        assert result == {"name": "Sara"}
+
+    @given(
+        st.dictionaries(st.text(min_size=1, max_size=5), st.text(min_size=1)),
+        st.lists(st.text(min_size=1, max_size=5), min_size=0, max_size=3),
+    )
+    @h_settings(max_examples=50)
+    def test_merge_dicts_tombstone_removes_all_targeted_keys(self, d, keys_to_remove):
+        """R47 fix C7: All tombstone keys are removed from result."""
+        from src.agent.state import UNSET_SENTINEL, _merge_dicts
+
+        tombstones = {k: UNSET_SENTINEL for k in keys_to_remove}
+        result = _merge_dicts(d, tombstones)
+        for k in keys_to_remove:
+            assert k not in result
+
     @given(
         st.dictionaries(st.text(min_size=1, max_size=5), st.one_of(st.text(min_size=1), st.integers())),
         st.dictionaries(st.text(min_size=1, max_size=5), st.one_of(st.text(min_size=1), st.integers())),

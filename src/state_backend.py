@@ -19,7 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class StateBackend(ABC):
-    """Abstract state backend for distributed counters and flags."""
+    """Abstract state backend for distributed counters and flags.
+
+    R47 fix C2: Added async_set/async_get/async_rate_limit for native async
+    Redis operations. Default implementations delegate to sync methods via
+    asyncio.to_thread() — InMemoryBackend overrides to be truly synchronous
+    (no thread overhead for in-memory operations).
+    """
 
     @abstractmethod
     def increment(self, key: str, ttl: int = 60) -> int: ...
@@ -41,6 +47,30 @@ class StateBackend(ABC):
 
     @abstractmethod
     def ping(self) -> bool: ...
+
+    # --- Async interface (R47 fix C2) ---
+    # Default: delegate to sync via to_thread. RedisBackend overrides
+    # with native redis.asyncio. InMemoryBackend overrides to avoid threads.
+
+    async def async_set(self, key: str, value: str, ttl: int = 300) -> None:
+        """Async set — default delegates to sync set via to_thread."""
+        import asyncio
+        await asyncio.to_thread(self.set, key, value, ttl)
+
+    async def async_get(self, key: str) -> str | None:
+        """Async get — default delegates to sync get via to_thread."""
+        import asyncio
+        return await asyncio.to_thread(self.get, key)
+
+    async def async_rate_limit(
+        self, key: str, window_seconds: int, max_tokens: int, member: str, now: float,
+    ) -> bool:
+        """Atomic rate limit check — default: not supported (returns None).
+
+        RedisBackend overrides with Lua script for atomic check-then-act.
+        Returns True if allowed, False if rate limited.
+        """
+        raise NotImplementedError("Subclass must implement for distributed rate limiting")
 
 
 class InMemoryBackend(StateBackend):
@@ -166,6 +196,14 @@ class InMemoryBackend(StateBackend):
     def ping(self) -> bool:
         return True
 
+    # R47 fix C2: InMemoryBackend async overrides — no thread overhead.
+    # In-memory operations are sub-microsecond; to_thread adds ~50µs overhead.
+    async def async_set(self, key: str, value: str, ttl: int = 300) -> None:
+        self.set(key, value, ttl)
+
+    async def async_get(self, key: str) -> str | None:
+        return self.get(key)
+
 
 class RedisBackend(StateBackend):
     """Redis state backend for multi-container deployments.
@@ -173,11 +211,31 @@ class RedisBackend(StateBackend):
     Requires REDIS_URL in settings (e.g., redis://10.0.0.1:6379/0).
     """
 
+    # R47 fix C14: Lua script for atomic rate limiting (single Redis round-trip).
+    # Pipeline approach (ZREMRANGEBYSCORE + ZCARD + ZADD + EXPIRE) is 4 commands
+    # with a race window between ZCARD and ZADD. Lua script is atomic.
+    _RATE_LIMIT_LUA = """\
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local max_tokens = tonumber(ARGV[3])
+local member = ARGV[4]
+local ttl = tonumber(ARGV[5])
+redis.call('ZREMRANGEBYSCORE', key, '-inf', now - window)
+local count = redis.call('ZCARD', key)
+if count < max_tokens then
+    redis.call('ZADD', key, now, member)
+    redis.call('EXPIRE', key, ttl)
+    return 1
+end
+return 0
+"""
+
     def __init__(self, redis_url: str) -> None:
         try:
-            import redis
+            import redis as sync_redis
 
-            self._client = redis.Redis.from_url(redis_url, decode_responses=True)
+            self._client = sync_redis.Redis.from_url(redis_url, decode_responses=True)
             self._client.ping()
             # Log only host info, never full URL (may contain credentials
             # in query params or non-standard formats). R11 fix: GPT F-003.
@@ -188,6 +246,21 @@ class RedisBackend(StateBackend):
                 conn.get("port", "?"),
                 conn.get("db", "?"),
                 conn.get("ssl", False),
+            )
+
+            # R47 fix C2: Native async Redis client for async_set/async_get.
+            # Uses redis.asyncio (included in redis[hiredis] package).
+            import redis.asyncio as aioredis
+
+            self._async_client = aioredis.Redis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_connect_timeout=2,
+                socket_timeout=2,
+            )
+            # Register Lua script for atomic rate limiting
+            self._rate_limit_script = self._async_client.register_script(
+                self._RATE_LIMIT_LUA
             )
         except Exception:
             logger.error("Redis connection failed", exc_info=True)
@@ -221,6 +294,26 @@ class RedisBackend(StateBackend):
             return bool(self._client.ping())
         except Exception:
             return False
+
+    # R47 fix C2: Native async Redis operations — zero thread overhead.
+    async def async_set(self, key: str, value: str, ttl: int = 300) -> None:
+        await self._async_client.setex(key, ttl, value)
+
+    async def async_get(self, key: str) -> str | None:
+        return await self._async_client.get(key)
+
+    async def async_rate_limit(
+        self, key: str, window_seconds: int, max_tokens: int, member: str, now: float,
+    ) -> bool:
+        """R47 fix C14: Atomic rate limit via Lua script (single round-trip).
+
+        Returns True if allowed, False if rate limited.
+        """
+        result = await self._rate_limit_script(
+            keys=[key],
+            args=[now, window_seconds, max_tokens, member, window_seconds + 10],
+        )
+        return bool(result)
 
 
 # R35 CRITICAL fix: Migrate from @lru_cache to TTLCache for credential rotation.
