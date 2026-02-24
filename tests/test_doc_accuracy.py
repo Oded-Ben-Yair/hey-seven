@@ -279,13 +279,14 @@ class TestGuardrailPatternCount:
 
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"re\.compile\(", source)
-        assert len(patterns) == 185, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 185. "
+        # R49: 185 -> 204 (added 6 Mandarin injection + 14 self-harm + 5 Mandarin non-Latin injection patterns)
+        assert len(patterns) == 204, (
+            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 204. "
             f"Update docs if patterns were added/removed."
         )
 
-    def test_five_guardrail_categories(self):
-        """guardrails.py defines exactly 5 guardrail pattern categories."""
+    def test_six_guardrail_categories(self):
+        """guardrails.py defines exactly 6 guardrail pattern categories."""
         from src.agent import guardrails
 
         category_lists = [
@@ -294,9 +295,10 @@ class TestGuardrailPatternCount:
             guardrails._AGE_VERIFICATION_PATTERNS,
             guardrails._BSA_AML_PATTERNS,
             guardrails._PATRON_PRIVACY_PATTERNS,
+            guardrails._SELF_HARM_PATTERNS,
         ]
-        assert len(category_lists) == 5, (
-            f"Expected 5 guardrail categories, found {len(category_lists)}."
+        assert len(category_lists) == 6, (
+            f"Expected 6 guardrail categories, found {len(category_lists)}."
         )
         # Each category must have at least 1 pattern
         for i, cat in enumerate(category_lists):
@@ -311,11 +313,12 @@ class TestGuardrailPatternCount:
         )
 
     def test_non_latin_injection_pattern_count(self):
-        """Non-Latin injection has 27 patterns (Arabic + Japanese + Korean + French + Vietnamese + Hindi)."""
+        """Non-Latin injection has 33 patterns (Arabic + Japanese + Korean + Mandarin + French + Vietnamese + Hindi)."""
         from src.agent.guardrails import _NON_LATIN_INJECTION_PATTERNS
 
-        assert len(_NON_LATIN_INJECTION_PATTERNS) == 27, (
-            f"_NON_LATIN_INJECTION_PATTERNS has {len(_NON_LATIN_INJECTION_PATTERNS)}, expected 27."
+        # R49: 27 -> 33 (added 6 Mandarin/Chinese injection patterns)
+        assert len(_NON_LATIN_INJECTION_PATTERNS) == 33, (
+            f"_NON_LATIN_INJECTION_PATTERNS has {len(_NON_LATIN_INJECTION_PATTERNS)}, expected 33."
         )
 
     def test_responsible_gaming_pattern_count(self):

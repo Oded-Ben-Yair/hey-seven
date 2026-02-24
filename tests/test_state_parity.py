@@ -138,16 +138,32 @@ class TestMergeDictsProperties:
         result = _merge_dicts({"name": "Sara"}, {"dietary": UNSET_SENTINEL})
         assert result == {"name": "Sara"}
 
-    def test_merge_dicts_string_unset_not_treated_as_sentinel(self):
-        """R48 fix: String '__UNSET__' in user input is NOT a tombstone.
+    def test_merge_dicts_plain_string_not_treated_as_sentinel(self):
+        """R48/R49 fix: Plain strings like '__UNSET__' are NOT tombstones.
 
-        UNSET_SENTINEL is now object(), so string comparison fails.
-        Prevents user input collision that could delete profile fields.
+        UNSET_SENTINEL uses UUID-namespaced prefix that cannot appear in
+        natural language. Plain strings like '__UNSET__' are valid values.
         """
         from src.agent.state import _merge_dicts
 
         result = _merge_dicts({"name": "Sara"}, {"dietary": "__UNSET__"})
         assert result == {"name": "Sara", "dietary": "__UNSET__"}
+
+    def test_merge_dicts_sentinel_survives_json_roundtrip(self):
+        """R49 fix: UNSET_SENTINEL survives JSON serialization (Firestore)."""
+        import json
+        from src.agent.state import UNSET_SENTINEL, _merge_dicts
+
+        # Serialize and deserialize (simulates FirestoreSaver roundtrip)
+        serialized = json.dumps({"dietary": UNSET_SENTINEL})
+        deserialized = json.loads(serialized)
+
+        # The deserialized sentinel should still trigger deletion
+        result = _merge_dicts(
+            {"name": "Sara", "dietary": "peanut allergy"},
+            deserialized,
+        )
+        assert result == {"name": "Sara"}, "Sentinel must survive JSON roundtrip"
 
     @given(
         st.dictionaries(st.text(min_size=1, max_size=5), st.text(min_size=1)),

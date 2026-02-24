@@ -31,6 +31,7 @@ __all__ = [
     "detect_age_verification",
     "detect_bsa_aml",
     "detect_patron_privacy",
+    "detect_self_harm",
 ]
 
 # ---------------------------------------------------------------------------
@@ -95,6 +96,14 @@ _NON_LATIN_INJECTION_PATTERNS = [
     re.compile(r"모든 지시 무시"),              # "ignore all instructions"
     re.compile(r"시스템 프롬프트"),             # "system prompt"
     re.compile(r"제한 해제"),                  # "remove restrictions"
+    # Mandarin/Chinese (R49 fix — Gemini CRITICAL-D7-002)
+    # Injection layer had zero CJK coverage while RG+BSA layers had full coverage.
+    re.compile(r"忽略(?:所有)?(?:之前的?|以前的?)?(?:指令|指示|规则)"),  # ignore instructions
+    re.compile(r"(?:你|您)(?:现在|从现在起)(?:是|变成)"),              # you are now
+    re.compile(r"假装(?:你|您)?(?:是|为)"),                           # pretend you are
+    re.compile(r"新(?:的)?系统(?:提示|指令|角色)"),                    # new system prompt/role
+    re.compile(r"(?:揭示|显示|泄露)(?:系统|隐藏)?(?:提示|指令|秘密)"), # reveal secrets/prompts
+    re.compile(r"越狱"),                                              # jailbreak (越狱)
     # French (significant US casino patron demographic)
     re.compile(r"ignorer\s+(?:toutes?\s+)?(?:les?\s+)?instructions?", re.I),  # ignore instructions
     re.compile(r"tu\s+es\s+maintenant", re.I),  # you are now
@@ -192,6 +201,36 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     re.compile(r"도박\s*중독"),                                   # gambling addiction (도박 중독)
     re.compile(r"도박을?\s*(?:그만|끊고|멈추)"),                  # stop gambling
     re.compile(r"도박\s*문제"),                                   # gambling problem
+]
+
+# ---------------------------------------------------------------------------
+# Self-harm / crisis detection (R49 fix — Gemini CRITICAL-D7-001)
+# ---------------------------------------------------------------------------
+
+#: Regex patterns for detecting suicidal ideation, self-harm, or crisis language.
+#: Casino AI hosts interact with potentially distressed guests (gambling addiction,
+#: financial distress). Detecting crisis language and routing to crisis resources
+#: (988 Suicide & Crisis Lifeline) is both a safety obligation and liability shield.
+#: False positives are acceptable — better to offer crisis resources unnecessarily
+#: than to miss a genuine cry for help.
+_SELF_HARM_PATTERNS = [
+    # English
+    re.compile(r"\b(?:want|going|planning)\s+to\s+(?:kill|end|hurt)\s+(?:myself|my\s+life)", re.I),
+    re.compile(r"\b(?:suicide|suicidal|self[- ]?harm)\b", re.I),
+    re.compile(r"\blife\s+(?:isn'?t|is\s+not)\s+worth\b", re.I),
+    re.compile(r"\b(?:don'?t|do\s+not)\s+want\s+to\s+(?:live|be\s+alive|go\s+on)\b", re.I),
+    re.compile(r"\bend\s+it\s+all\b", re.I),
+    re.compile(r"\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:living|life|going\s+on)\b", re.I),
+    re.compile(r"\bbetter\s+off\s+dead\b", re.I),
+    re.compile(r"\bcan'?t\s+(?:go\s+on|take\s+it|handle\s+it)\s+any\s*more\b", re.I),
+    # Spanish
+    re.compile(r"\bquiero\s+(?:morir|matarme|acabar\s+con\s+todo)\b", re.I),
+    re.compile(r"\bsuicid(?:io|arme)\b", re.I),
+    re.compile(r"\bno\s+(?:quiero|vale\s+la\s+pena)\s+vivir\b", re.I),
+    # Tagalog
+    re.compile(r"\bgusto\s+(?:ko\s+)?(?:na\s+)?(?:mag(?:pakamatay|sakit)|mamatay)\b", re.I),
+    # Chinese/Mandarin
+    re.compile(r"(?:想死|自杀|不想活|活不下去|了结)", re.I),
 ]
 
 # ---------------------------------------------------------------------------
@@ -559,6 +598,17 @@ def detect_patron_privacy(message: str) -> bool:
     return _check_patterns(message, _PATRON_PRIVACY_PATTERNS, "Patron privacy")
 
 
+def detect_self_harm(message: str) -> bool:
+    """Check if user message indicates self-harm or suicidal ideation.
+
+    R49 fix (Gemini CRITICAL-D7-001): Casino AI hosts interact with
+    potentially distressed guests. Detecting crisis language and routing
+    to the 988 Suicide & Crisis Lifeline is a safety obligation.
+    False positives are acceptable — better to offer resources unnecessarily.
+    """
+    return _check_patterns(message, _SELF_HARM_PATTERNS, "Self-harm/crisis", "warning")
+
+
 # ---------------------------------------------------------------------------
 # Semantic injection classifier (LLM-based second layer)
 # ---------------------------------------------------------------------------
@@ -719,9 +769,14 @@ async def _handle_classifier_failure(
             failures,
             message_len,
         )
+        # R49 fix (DeepSeek CRITICAL-D7-001): confidence MUST be >= threshold
+        # (default 0.8) or compliance_gate won't block. Previous confidence=0.5
+        # silently bypassed the gate's threshold check — effectively fail-OPEN
+        # despite is_injection=True. Use confidence=1.0 (definitive block).
+        # The "restricted mode" is distinguished by the reason field, not confidence.
         return InjectionClassification(
             is_injection=True,
-            confidence=0.5,
+            confidence=1.0,
             reason=f"Classifier degraded after {failures} failures (restricted mode)",
         )
 

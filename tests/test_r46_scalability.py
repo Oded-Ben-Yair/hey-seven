@@ -179,7 +179,9 @@ class TestCircuitBreakerBackendSync:
         cb_with_backend._last_backend_sync = 0  # Force sync
 
         assert cb_with_backend._state == "closed"
-        await cb_with_backend._sync_from_backend()
+        rs, rc = await cb_with_backend._read_backend_state()
+        if rs is not None and rc is not None:
+            cb_with_backend._apply_backend_state(rs, rc)
         assert cb_with_backend._state == "open"
 
     @pytest.mark.asyncio
@@ -189,7 +191,9 @@ class TestCircuitBreakerBackendSync:
         mock_backend.set("cb:failure_count", "1", ttl=300)  # Below threshold of 3
         cb_with_backend._last_backend_sync = 0
 
-        await cb_with_backend._sync_from_backend()
+        rs, rc = await cb_with_backend._read_backend_state()
+        if rs is not None and rc is not None:
+            cb_with_backend._apply_backend_state(rs, rc)
         assert cb_with_backend._state == "closed"  # Not promoted
 
     @pytest.mark.asyncio
@@ -200,21 +204,27 @@ class TestCircuitBreakerBackendSync:
 
         # First sync should work
         cb_with_backend._last_backend_sync = 0
-        await cb_with_backend._sync_from_backend()
+        rs, rc = await cb_with_backend._read_backend_state()
+        if rs is not None and rc is not None:
+            cb_with_backend._apply_backend_state(rs, rc)
         assert cb_with_backend._state == "open"
 
         # Reset state manually
         cb_with_backend._state = "closed"
 
         # Second sync within 5s should be skipped
-        await cb_with_backend._sync_from_backend()
+        rs, rc = await cb_with_backend._read_backend_state()
+        if rs is not None and rc is not None:
+            cb_with_backend._apply_backend_state(rs, rc)
         assert cb_with_backend._state == "closed"  # Not synced again
 
     @pytest.mark.asyncio
     async def test_no_backend_skips_sync(self, cb_without_backend):
         """Without backend, sync methods are no-ops."""
         await cb_without_backend._sync_to_backend()
-        await cb_without_backend._sync_from_backend()
+        rs, rc = await cb_without_backend._read_backend_state()
+        if rs is not None and rc is not None:
+            cb_without_backend._apply_backend_state(rs, rc)
         # Should not raise
 
     @pytest.mark.asyncio
@@ -229,7 +239,9 @@ class TestCircuitBreakerBackendSync:
         # Should not raise
         await cb_with_backend._sync_to_backend()
         cb_with_backend._last_backend_sync = 0
-        await cb_with_backend._sync_from_backend()
+        rs, rc = await cb_with_backend._read_backend_state()
+        if rs is not None and rc is not None:
+            cb_with_backend._apply_backend_state(rs, rc)
 
     @pytest.mark.asyncio
     async def test_record_success_syncs_to_backend(self, cb_with_backend, mock_backend):

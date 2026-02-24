@@ -26,15 +26,13 @@ __all__ = [
 # Guest says "remove the peanut allergy" → LLM returns {"dietary": UNSET_SENTINEL}
 # → _merge_dicts pops "dietary" from accumulated state.
 #
-# R48 fix: Changed from string "__UNSET__" to object() sentinel. The string
-# sentinel could collide with user input extracted via regex (e.g., guest
-# literally typing "__UNSET__"), causing unintended field deletion.
-# object() is impossible to produce from user input — identity comparison only.
-#
-# NOTE: For JSON serialization across checkpointer boundaries, the LLM
-# extraction layer must map the string "__UNSET__" to this sentinel object.
-# Direct JSON roundtrip will NOT preserve object() identity.
-UNSET_SENTINEL: object = object()
+# R49 fix: Changed from object() back to string, but with UUID-namespaced prefix
+# that cannot appear in natural language input. R48's object() sentinel was correct
+# for collision prevention but fails JSON serialization through FirestoreSaver
+# (Grok MAJOR-D3-001, GPT-5.2 CRITICAL, DeepSeek CRITICAL — 3/4 models agreed).
+# The UUID prefix "$$UNSET:7a3f..." makes accidental collision astronomically unlikely
+# while surviving JSON roundtrip.
+UNSET_SENTINEL = "$$UNSET:7a3f9c2e-b1d4-4e8a-9f5c-3a7d2e1b0c8f$$"
 
 
 def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
@@ -67,7 +65,7 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     # they can never be unset.
     merged = dict(a)
     for k, v in b.items():
-        if v is UNSET_SENTINEL:
+        if v == UNSET_SENTINEL:
             merged.pop(k, None)
         elif v is not None and v != "":
             merged[k] = v

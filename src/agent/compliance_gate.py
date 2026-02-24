@@ -36,6 +36,7 @@ from .guardrails import (
     detect_patron_privacy,
     detect_prompt_injection,
     detect_responsible_gaming,
+    detect_self_harm,
 )
 from .nodes import _get_last_human_message
 from .state import PropertyQAState
@@ -139,6 +140,14 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # 7. Patron privacy
     if detect_patron_privacy(user_message):
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
+
+    # 7.5 Self-harm / crisis detection (R49 fix — Gemini CRITICAL-D7-001).
+    # Route to dedicated crisis response with 988 Lifeline information.
+    # Runs after all other guardrails to avoid false positives from
+    # injection/BSA contexts ("I want to kill this money laundering scheme").
+    if detect_self_harm(user_message):
+        logger.warning("Self-harm/crisis language detected — routing to crisis response")
+        return {"query_type": "self_harm", "router_confidence": 1.0}
 
     # 8. Semantic injection — LLM second layer (configurable, fail-closed).
     # Runs AFTER all deterministic guardrails to ensure safety-critical

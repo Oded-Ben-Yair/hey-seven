@@ -222,7 +222,9 @@ class TestE2EWithClassifierEnabled:
             "safe message", llm_fn=lambda: mock_llm
         )
         assert result.is_injection is True, "Restricted mode should still fail-closed"
-        assert result.confidence == 0.5, "Restricted mode has confidence=0.5 (not 1.0)"
+        # R49 fix: confidence=1.0 (not 0.5) so compliance_gate threshold (0.8) blocks.
+        # Previous 0.5 silently bypassed the gate — DeepSeek CRITICAL-D7-001.
+        assert result.confidence == 1.0, "Restricted mode must use confidence=1.0 to pass threshold"
         assert "restricted" in result.reason.lower()
 
         # Reset for other tests
@@ -407,7 +409,8 @@ class TestClassifierLifecycle:
         mock_llm.with_structured_output.return_value = mock_classifier
 
         result = await classify_injection_semantic("test", llm_fn=lambda: mock_llm)
-        assert result.confidence == 0.5, "Restricted mode should have confidence=0.5"
+        # R49 fix: confidence=1.0 (was 0.5) to pass compliance_gate threshold
+        assert result.confidence == 1.0, "Restricted mode must use confidence=1.0"
         assert "restricted" in result.reason.lower()
 
         g._classifier_consecutive_failures = 0

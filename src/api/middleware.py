@@ -205,8 +205,11 @@ class SecurityHeadersMiddleware:
 
     # API paths that benefit from strict CSP. Paths NOT in this set
     # (including static files served at /) get security headers but no CSP.
+    # R49 fix: Added /sms/webhook and /cms/webhook (Gemini D4-M001).
+    # Webhook endpoints receive external POST requests and are attack surfaces.
     _API_PATHS = frozenset({"/chat", "/health", "/live", "/metrics", "/graph",
-                            "/property", "/feedback", "/docs", "/openapi.json"})
+                            "/property", "/feedback", "/docs", "/openapi.json",
+                            "/redoc", "/sms/webhook", "/cms/webhook"})
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
