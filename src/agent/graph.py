@@ -5,12 +5,15 @@ Topology:
     router -> {greeting, off_topic, retrieve}
     retrieve -> whisper_planner -> generate -> validate -> {persona_envelope -> respond, generate (RETRY), fallback}
 
-The ``generate`` node runs ``_dispatch_to_specialist()`` which uses structured
-LLM output (``DispatchOutput``) to classify which specialist agent should handle
-the query.  Falls back to deterministic keyword counting when the LLM is
-unavailable (circuit breaker open, parsing failure, network error).  The agent
-is resolved via ``get_agent()`` from the registry.  The node name ``"generate"``
-is preserved for SSE streaming compatibility.
+The ``generate`` node runs ``_dispatch_to_specialist()`` which orchestrates
+three extracted helpers:
+
+- ``_route_to_specialist()``: Structured LLM dispatch + keyword fallback routing.
+- ``_inject_guest_context()``: Guest profile injection (fail-silent).
+- ``_execute_specialist()``: Agent execution with timeout + result sanitization.
+
+The agent is resolved via ``get_agent()`` from the registry.  The node name
+``"generate"`` is preserved for SSE streaming compatibility.
 
 Concurrency Model
 -----------------
@@ -192,27 +195,24 @@ Available specialists:
 - host: general concierge, mixed topics, or unclear domain""")
 
 
-async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
-    """Route to the best specialist agent using structured LLM output.
+async def _route_to_specialist(
+    state: PropertyQAState,
+    settings: Any,
+) -> tuple[str, str]:
+    """Determine which specialist agent should handle this query.
 
-    Primary: Uses the LLM with ``DispatchOutput`` structured output to
-    classify which specialist should handle the query.
+    Uses structured LLM dispatch (primary) with deterministic keyword
+    fallback. Respects retry reuse and specialist_agents_enabled flag.
 
-    Fallback: When the LLM is unavailable (circuit breaker open, parsing
-    failure, network error), falls back to deterministic keyword counting
-    based on retrieved context metadata categories.
+    Args:
+        state: Current graph state.
+        settings: Hoisted settings (avoids TOCTOU from multiple get_settings calls).
 
-    Feature flag: ``specialist_agents_enabled`` controls whether non-host
-    specialists are used. When disabled, all queries route to the general
-    host concierge regardless of dispatch method.
+    Returns:
+        Tuple of (agent_name, dispatch_method).
     """
     retrieved = state.get("retrieved_context", [])
     dispatch_method = "keyword_fallback"
-
-    # R35 fix A2: Hoist settings once to eliminate TOCTOU from 5 separate calls.
-    # Settings are TTL-cached (1 hour), but if the TTL expires between call 1
-    # and call 5, the function operates with mixed configuration values.
-    settings = get_settings()
 
     # R37 fix C-001: On RETRY, reuse the previously-dispatched specialist.
     # This avoids (1) a wasted LLM dispatch call, and (2) non-deterministic
@@ -220,14 +220,13 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # specialist on retry.
     existing_specialist = state.get("specialist_name")
     if existing_specialist and existing_specialist in _AGENT_REGISTRY:
-        agent_name = existing_specialist
-        dispatch_method = "retry_reuse"
         logger.info(
             "Retry path — reusing specialist %s (skipping dispatch)",
-            agent_name,
+            existing_specialist,
         )
-    else:
-        agent_name = None
+        return existing_specialist, "retry_reuse"
+
+    agent_name: str | None = None
 
     # --- Try structured LLM dispatch first ---
     # R15 fix (DeepSeek F-001, GPT F1): acquire CB before try block to prevent
@@ -301,40 +300,73 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
             {c.get("metadata", {}).get("category", "") for c in retrieved if c.get("metadata", {}).get("category")},
         )
 
-    # R38 fix M-002: Cache both feature flag results at function start to avoid
-    # TOCTOU issues from calling is_feature_enabled() twice (flag could flip
-    # between calls during Firestore write propagation).
-    specialist_enabled = await is_feature_enabled(settings.CASINO_ID, "specialist_agents_enabled")
-    profile_enabled = await is_feature_enabled(settings.CASINO_ID, "guest_profile_enabled")
-
     # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
     # When disabled, all queries route to the general host concierge.
+    specialist_enabled = await is_feature_enabled(settings.CASINO_ID, "specialist_agents_enabled")
     if agent_name != "host" and not specialist_enabled:
         logger.info("Specialist agents disabled; routing %s to host", agent_name)
         agent_name = "host"
 
-    # Phase 3: Inject guest profile context when feature flag enabled.
-    # Fail-silent: profile lookup failure = empty context, not crash.
-    guest_context_update: dict[str, Any] = {}
+    return agent_name, dispatch_method
+
+
+def _inject_guest_context(
+    state: PropertyQAState,
+    profile_enabled: bool,
+) -> dict[str, Any]:
+    """Build guest context update dict from extracted fields.
+
+    Fail-silent: profile lookup failure = empty context, not crash.
+
+    Args:
+        state: Current graph state (reads extracted_fields).
+        profile_enabled: Whether guest_profile_enabled feature flag is on.
+
+    Returns:
+        Dict with guest_context and/or guest_name keys, or empty dict.
+    """
+    if not profile_enabled:
+        return {}
     try:
-        if profile_enabled:
-            from src.data.guest_profile import get_agent_context
-            extracted = state.get("extracted_fields", {})
-            if extracted:
-                agent_ctx = get_agent_context(extracted)
-                if agent_ctx:
-                    guest_context_update["guest_context"] = agent_ctx
-                    if agent_ctx.get("name"):
-                        guest_context_update["guest_name"] = agent_ctx["name"]
+        from src.data.guest_profile import get_agent_context
+        extracted = state.get("extracted_fields", {})
+        if not extracted:
+            return {}
+        agent_ctx = get_agent_context(extracted)
+        if not agent_ctx:
+            return {}
+        update: dict[str, Any] = {"guest_context": agent_ctx}
+        if agent_ctx.get("name"):
+            update["guest_name"] = agent_ctx["name"]
+        return update
     except Exception:
         logger.warning("Guest profile lookup failed, continuing without context", exc_info=True)
+        return {}
 
+
+async def _execute_specialist(
+    state: PropertyQAState,
+    agent_name: str,
+    guest_context_update: dict[str, Any],
+    settings: Any,
+) -> dict[str, Any]:
+    """Execute the specialist agent with timeout and result sanitization.
+
+    Handles: timeout fallback, dispatch-owned key collision logging,
+    unknown state key filtering, specialist name persistence, and
+    guest context merging.
+
+    Args:
+        state: Current graph state.
+        agent_name: Resolved specialist agent name.
+        guest_context_update: Guest context dict to merge into agent input and result.
+        settings: Hoisted settings.
+
+    Returns:
+        Sanitized result dict ready to be returned as node output.
+    """
     agent_fn = get_agent(agent_name)
-    logger.info(
-        "Dispatching to %s agent (method=%s)",
-        agent_name,
-        dispatch_method,
-    )
+
     # R34 fix A1: Wrap agent execution in timeout to prevent unbounded execution.
     # Uses 2x MODEL_TIMEOUT because agents may make multiple LLM calls internally
     # (prompt assembly + LLM invoke + retries). Without this, a hung specialist
@@ -359,7 +391,6 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # Guard: warn if specialist result contains keys that should only be
     # set by _dispatch_to_specialist (not the specialist agent itself).
     # R33 fix: _DISPATCH_OWNED_KEYS moved to module level (see below call site).
-
     collisions = _DISPATCH_OWNED_KEYS & set(result.keys())
     if collisions:
         logger.warning(
@@ -387,6 +418,45 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     if guest_context_update:
         result.update(guest_context_update)
     return result
+
+
+async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
+    """Route to the best specialist agent and execute it.
+
+    Orchestrates three phases:
+    1. **Routing** (_route_to_specialist): Determine which specialist handles
+       the query via structured LLM dispatch or keyword fallback.
+    2. **Guest context** (_inject_guest_context): Inject guest profile data
+       when the feature flag is enabled.
+    3. **Execution** (_execute_specialist): Run the specialist with timeout,
+       sanitize the result, and merge guest context.
+
+    Feature flag: ``specialist_agents_enabled`` controls whether non-host
+    specialists are used. When disabled, all queries route to the general
+    host concierge regardless of dispatch method.
+    """
+    # R35 fix A2: Hoist settings once to eliminate TOCTOU from 5 separate calls.
+    # Settings are TTL-cached (1 hour), but if the TTL expires between call 1
+    # and call 5, the function operates with mixed configuration values.
+    settings = get_settings()
+
+    # Phase 1: Route to specialist
+    agent_name, dispatch_method = await _route_to_specialist(state, settings)
+
+    # R38 fix M-002: Cache profile feature flag alongside routing to avoid
+    # TOCTOU issues from calling is_feature_enabled() at different times.
+    profile_enabled = await is_feature_enabled(settings.CASINO_ID, "guest_profile_enabled")
+
+    # Phase 2: Inject guest profile context
+    guest_context_update = _inject_guest_context(state, profile_enabled)
+
+    # Phase 3: Execute specialist agent
+    logger.info(
+        "Dispatching to %s agent (method=%s)",
+        agent_name,
+        dispatch_method,
+    )
+    return await _execute_specialist(state, agent_name, guest_context_update, settings)
 
 
 # ---------------------------------------------------------------------------
