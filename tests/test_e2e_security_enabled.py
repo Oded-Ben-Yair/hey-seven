@@ -351,6 +351,109 @@ class TestMiddlewareChainOrdering:
         assert response_headers[b"x-content-type-options"] == b"nosniff"
 
 
+class TestFullMiddlewareStack:
+    """R50 fix: Test the full 6-layer middleware chain as composed in create_app.
+
+    Previous tests tested individual middleware layers in isolation. This verifies
+    that the full composition works — ErrorHandling catches ApiKey's 401,
+    Security headers are present on rate-limited 429, etc.
+    """
+
+    @pytest.mark.asyncio
+    async def test_full_stack_rejects_unauthenticated_chat(self, _enable_auth):
+        """Full 6-layer stack: BodyLimit→ErrorHandling→Logging→Security→RateLimit→ApiKey."""
+        from src.api.middleware import (
+            ApiKeyMiddleware,
+            ErrorHandlingMiddleware,
+            RateLimitMiddleware,
+            RequestBodyLimitMiddleware,
+            RequestLoggingMiddleware,
+            SecurityHeadersMiddleware,
+        )
+
+        async def inner_app(scope, receive, send):
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"OK"})
+
+        # Build chain matching app.py order (add order, reverse execution)
+        stack = inner_app
+        stack = ApiKeyMiddleware(stack)
+        stack = RateLimitMiddleware(stack)
+        stack = SecurityHeadersMiddleware(stack)
+        stack = RequestLoggingMiddleware(stack)
+        stack = ErrorHandlingMiddleware(stack)
+        stack = RequestBodyLimitMiddleware(stack)
+
+        scope = {
+            "type": "http",
+            "path": "/chat",
+            "method": "POST",
+            "headers": [(b"content-length", b"50")],
+            "client": ("10.0.0.1", 1234),
+        }
+
+        response_status = []
+        response_headers = {}
+
+        async def mock_send(message):
+            if message["type"] == "http.response.start":
+                response_status.append(message["status"])
+                for k, v in message.get("headers", []):
+                    response_headers[k] = v
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b'{"message": "test"}'}
+
+        await stack(scope, mock_receive, mock_send)
+        assert response_status[0] == 401, "Unauthenticated /chat should get 401"
+        # Security headers should be present even on 401
+        assert b"x-content-type-options" in response_headers
+
+    @pytest.mark.asyncio
+    async def test_full_stack_allows_health_without_auth(self, _enable_auth):
+        """Health endpoint passes through all layers without auth."""
+        from src.api.middleware import (
+            ApiKeyMiddleware,
+            ErrorHandlingMiddleware,
+            RateLimitMiddleware,
+            RequestBodyLimitMiddleware,
+            RequestLoggingMiddleware,
+            SecurityHeadersMiddleware,
+        )
+
+        called = []
+
+        async def inner_app(scope, receive, send):
+            called.append(True)
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"OK"})
+
+        stack = inner_app
+        stack = ApiKeyMiddleware(stack)
+        stack = RateLimitMiddleware(stack)
+        stack = SecurityHeadersMiddleware(stack)
+        stack = RequestLoggingMiddleware(stack)
+        stack = ErrorHandlingMiddleware(stack)
+        stack = RequestBodyLimitMiddleware(stack)
+
+        scope = {
+            "type": "http",
+            "path": "/health",
+            "method": "GET",
+            "headers": [],
+            "client": ("10.0.0.1", 1234),
+        }
+
+        async def mock_send(msg):
+            pass
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b""}
+
+        await stack(scope, mock_receive, mock_send)
+        assert called, "/health should reach inner app without auth"
+
+
 class TestClassifierLifecycle:
     """R48: Full classifier lifecycle — success, failure, degradation, recovery."""
 

@@ -192,8 +192,29 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     content = _inject_guest_name(content, guest_name)
 
     # Step 4: SMS truncation (only when max_chars > 0)
+    # R49 fix (Gemini CRITICAL-D10-001): Truncate at sentence boundary, not mid-word.
+    # Hard truncation can chop TCPA-required compliance footer (STOP/HELP keywords)
+    # and destroy actionable info (phone numbers, reservation codes).
     if max_chars > 0 and len(content) > max_chars:
-        content = content[: max_chars - 3] + "..."
+        # Try sentence boundary first (period, exclamation, question mark)
+        truncated = content[: max_chars - 3]
+        last_sentence_end = max(
+            truncated.rfind(". "),
+            truncated.rfind("! "),
+            truncated.rfind("? "),
+            truncated.rfind(".\n"),
+        )
+        if last_sentence_end > max_chars // 2:
+            # Found a sentence boundary in the second half — use it
+            content = truncated[: last_sentence_end + 1].rstrip()
+        else:
+            # No good sentence boundary — fall back to word boundary
+            last_space = truncated.rfind(" ")
+            if last_space > max_chars // 2:
+                content = truncated[:last_space].rstrip() + "..."
+            else:
+                # Very long word or no spaces — hard truncate as last resort
+                content = truncated + "..."
 
     # Only return messages update if content actually changed
     original = last_ai_msg.content if isinstance(last_ai_msg.content, str) else str(last_ai_msg.content)
