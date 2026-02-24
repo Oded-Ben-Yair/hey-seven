@@ -258,7 +258,7 @@ gcloud run deploy hey-seven \
 - **Mechanism**: On SIGTERM, `src/api/app.py` sets a `_shutting_down` asyncio.Event.
   - New `/chat` requests return 503 immediately during drain.
   - Active SSE streams are tracked via `_active_streams: set[asyncio.Task]`.
-  - Lifespan waits up to `_DRAIN_TIMEOUT_S` (30s) for active streams to complete.
+  - Lifespan waits up to `_DRAIN_TIMEOUT_S` (10s) for active streams to complete.
   - After drain timeout, pending streams are force-cancelled via `task.cancel()`.
 - **Interaction with Cloud Run**:
   - Cloud Run sends SIGTERM and allows `--timeout=180s` for graceful shutdown (outer bound).
@@ -510,9 +510,9 @@ Starlette executes middleware in reverse add order. Actual execution from outerm
 1. **RequestBodyLimitMiddleware** (outermost) -- rejects payloads > 64KB before processing
 2. **ErrorHandlingMiddleware** -- catches unhandled exceptions, returns structured 500 JSON
 3. **RequestLoggingMiddleware** -- injects X-Request-ID, emits structured access logs
-4. **SecurityHeadersMiddleware** -- CSP (nonce-based), HSTS, X-Frame-Options, X-Content-Type-Options
-5. **ApiKeyMiddleware** -- `hmac.compare_digest()` on X-API-Key for protected endpoints
-6. **RateLimitMiddleware** (innermost) -- sliding-window per IP on /chat and /feedback
+4. **SecurityHeadersMiddleware** -- CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+5. **RateLimitMiddleware** -- sliding-window per IP on /chat and /feedback (R48: executes BEFORE auth to prevent key brute-force)
+6. **ApiKeyMiddleware** (innermost) -- `hmac.compare_digest()` on X-API-Key for protected endpoints
 7. **CORSMiddleware** -- configured per environment via `ALLOWED_ORIGINS`
 
 ### API Key Authentication
@@ -530,12 +530,15 @@ Starlette executes middleware in reverse add order. Actual execution from outerm
 
 ### Guardrails (Pre-LLM)
 
-Five deterministic guardrail layers run before any LLM call:
+Six deterministic guardrail layers run before any LLM call:
 1. Prompt injection detection (regex + optional semantic classifier)
-2. Responsible gaming detection
+2. Responsible gaming detection (with session-level escalation)
 3. Age verification detection
 4. BSA/AML detection
 5. Patron privacy detection
+6. Self-harm/crisis detection (R49: routes to 988 Lifeline response)
+
+All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable, and zero-width character bypass attempts. 204 regex patterns across 12 languages.
 
 ---
 
