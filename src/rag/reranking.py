@@ -34,8 +34,20 @@ def rerank_by_rrf(
         k: RRF constant (default 60, per original RRF paper).
 
     Returns:
-        Top-k fused results as (Document, original_score) tuples,
+        Top-k fused results as (Document, best_cosine_score, rrf_score) tuples,
         sorted by fused RRF score descending.
+
+        **Score contract (R44 fix D2-M001)**:
+        - ``result[1]`` = best raw cosine similarity across all lists.
+          Use this for **quality filtering** (e.g., RAG_MIN_RELEVANCE_SCORE).
+        - ``result[2]`` = RRF fusion score.  Use this for **ranking** and
+          **monitoring**.  Higher means the doc appeared in more lists
+          and/or ranked higher across strategies.
+
+        Previously, only the cosine score was returned and the RRF score
+        was discarded.  Downstream consumers could not distinguish "ranked
+        high by RRF" from "high cosine in one strategy."  Now both are
+        available.
     """
     rrf_scores: dict[str, float] = {}
     doc_map: dict[str, tuple] = {}
@@ -52,7 +64,12 @@ def rerank_by_rrf(
             rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
 
     sorted_ids = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)
-    fused = [doc_map[doc_id] for doc_id in sorted_ids[:top_k]]
+    # R44 fix D2-M001: Return both cosine and RRF scores.
+    # Cosine score for quality filtering, RRF score for ranking/monitoring.
+    fused = [
+        (doc_map[doc_id][0], doc_map[doc_id][1], rrf_scores[doc_id])
+        for doc_id in sorted_ids[:top_k]
+    ]
     logger.debug(
         "RRF fusion: %d lists, %d unique docs, returning top %d",
         len(result_lists),

@@ -95,6 +95,7 @@ class InMemoryBackend(StateBackend):
             return
 
         now = time.monotonic()
+        is_full = len(self._store) >= self._MAX_STORE_SIZE
         expired_keys = []
         for k, (_, expiry) in self._store.items():
             if expiry < now:
@@ -104,6 +105,18 @@ class InMemoryBackend(StateBackend):
 
         for k in expired_keys:
             del self._store[k]
+
+        # R44 fix D8-M001: If the store is at capacity and no expired keys
+        # were found, evict the oldest entry (FIFO) to prevent a death spiral
+        # where every write triggers a full sweep that finds nothing to evict.
+        # This converts the worst case from O(BATCH_SIZE)-per-write overhead
+        # to bounded LRU behavior.
+        if is_full and not expired_keys and self._store:
+            oldest_key = next(iter(self._store))
+            del self._store[oldest_key]
+            logger.debug(
+                "InMemoryBackend sweep: FIFO eviction of oldest entry (store at capacity, 0 expired)"
+            )
 
         if expired_keys:
             logger.debug(

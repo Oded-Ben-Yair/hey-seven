@@ -880,3 +880,127 @@ class TestFirestoreClientCaching:
         clear_firestore_client_cache()
         result = await _get_firestore_client()
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# R44 fix D5-M002: Firestore batch overflow in CCPA cascade delete
+# ---------------------------------------------------------------------------
+
+
+class TestDeleteGuestProfileBatchOverflow:
+    """R44 fix D3-M001 / D5-M002: Verify batch overflow guard for >500 ops."""
+
+    @pytest.fixture(autouse=True)
+    def _reset(self):
+        from src.data.guest_profile import clear_memory_store
+
+        clear_memory_store()
+
+    @pytest.mark.asyncio
+    async def test_firestore_batch_commits_in_chunks(self):
+        """A guest with >500 subcollection docs triggers multiple batch commits."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        # Helper to create an async iterator from a list
+        class AsyncIterFromList:
+            def __init__(self, items):
+                self._items = list(items)
+                self._index = 0
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self._index >= len(self._items):
+                    raise StopAsyncIteration
+                item = self._items[self._index]
+                self._index += 1
+                return item
+
+        # Build mock Firestore client
+        # Firestore collection/document calls are synchronous; only get/stream are async
+        mock_db = MagicMock()
+
+        # Guest doc exists
+        mock_guest_doc = AsyncMock()
+        mock_guest_doc.exists = True
+
+        mock_guest_ref = MagicMock()
+        mock_guest_ref.get = AsyncMock(return_value=mock_guest_doc)
+
+        mock_db.collection.return_value.document.return_value = mock_guest_ref
+
+        # Create 600 message mocks across 1 conversation
+        message_mocks = []
+        for i in range(600):
+            msg = MagicMock()
+            msg.reference = MagicMock()
+            message_mocks.append(msg)
+
+        conv_mock = MagicMock()
+        conv_mock.reference = MagicMock()
+        # messages stream under the conversation
+        conv_mock.reference.collection.return_value.stream.return_value = (
+            AsyncIterFromList(message_mocks)
+        )
+
+        # guest_ref.collection("conversations").stream() -> 1 conversation
+        # guest_ref.collection("behavioral_signals").stream() -> empty
+        conv_collections = {
+            "conversations": MagicMock(
+                stream=MagicMock(return_value=AsyncIterFromList([conv_mock]))
+            ),
+            "behavioral_signals": MagicMock(
+                stream=MagicMock(return_value=AsyncIterFromList([]))
+            ),
+        }
+
+        def guest_collection(name):
+            return conv_collections.get(name, MagicMock(
+                stream=MagicMock(return_value=AsyncIterFromList([]))
+            ))
+
+        mock_guest_ref.collection = guest_collection
+
+        # Audit log: empty
+        mock_audit_collection = MagicMock()
+        mock_audit_collection.where.return_value.stream.return_value = AsyncIterFromList([])
+
+        # Route db.collection() calls
+        def route_collection(path):
+            if path.startswith("casinos/"):
+                col = MagicMock()
+                col.document.return_value = mock_guest_ref
+                return col
+            if path == "audit_log":
+                return mock_audit_collection
+            return MagicMock()
+
+        mock_db.collection = route_collection
+
+        # Track batch commits
+        commit_calls = []
+
+        def make_batch():
+            b = MagicMock()
+            b.commit = AsyncMock(side_effect=lambda: commit_calls.append(1))
+            b.delete = MagicMock()
+            b.update = MagicMock()
+            return b
+
+        mock_db.batch = make_batch
+
+        with patch(
+            "src.data.guest_profile._get_firestore_client",
+            new=AsyncMock(return_value=mock_db),
+        ):
+            from src.data.guest_profile import delete_guest_profile
+
+            result = await delete_guest_profile("+12035551234", "mohegan_sun")
+
+        assert result is True
+        # With 600 messages + 1 conversation + 1 guest doc = 602 ops
+        # At batch limit 490, we expect at least 2 batch commits
+        assert len(commit_calls) >= 2, (
+            f"Expected multiple batch commits for 602 ops, got {len(commit_calls)}"
+        )

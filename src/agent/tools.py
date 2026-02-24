@@ -1,7 +1,7 @@
 """Tool functions for the Property Q&A agent.
 
 Plain functions (no @tool decorators) called directly by graph nodes.
-Each returns list[RetrievedChunk] with keys: content, metadata, score.
+Each returns list[RetrievedChunk] with keys: content, metadata, score, rrf_score.
 Respects RAG_TOP_K and RAG_MIN_RELEVANCE_SCORE from settings.
 
 RAG retrieval architecture (dual-strategy + RRF fusion):
@@ -80,20 +80,21 @@ def _get_augmentation_terms(query: str) -> str:
 
 
 def _filter_by_relevance(results: list[tuple], min_score: float) -> list[tuple]:
-    """Filter retrieval results by minimum relevance score.
+    """Filter retrieval results by minimum cosine relevance score.
 
-    Scores are normalized to [0, 1] where 1.0 = exact match (cosine
-    similarity).  The collection uses ``hnsw:space=cosine``, so scores
-    are cosine similarities directly.
+    R44 fix D2-M001: RRF now returns 3-tuples (doc, cosine_score, rrf_score).
+    Filtering uses the cosine score (index 1) for quality gating, since
+    cosine similarity is the absolute relevance metric.  The RRF score
+    is for ranking, not quality filtering.
 
     Args:
-        results: List of (Document, relevance_score) tuples from retriever.
-        min_score: Minimum relevance score to keep (0-1, higher = more relevant).
+        results: List of (Document, cosine_score, rrf_score) tuples from RRF.
+        min_score: Minimum cosine similarity to keep (0-1, higher = more relevant).
 
     Returns:
-        Filtered list of (Document, score) tuples above the threshold.
+        Filtered list of tuples above the cosine threshold.
     """
-    return [(doc, score) for doc, score in results if score >= min_score]
+    return [r for r in results if r[1] >= min_score]
 
 
 
@@ -151,9 +152,10 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
         {
             "content": doc.page_content,
             "metadata": doc.metadata,
-            "score": score,
+            "score": cosine_score,
+            "rrf_score": rrf_score,
         }
-        for doc, score in fused
+        for doc, cosine_score, rrf_score in fused
     ]
 
 
@@ -202,7 +204,8 @@ def search_hours(query: str) -> list[RetrievedChunk]:
         {
             "content": doc.page_content,
             "metadata": doc.metadata,
-            "score": score,
+            "score": cosine_score,
+            "rrf_score": rrf_score,
         }
-        for doc, score in fused
+        for doc, cosine_score, rrf_score in fused
     ]

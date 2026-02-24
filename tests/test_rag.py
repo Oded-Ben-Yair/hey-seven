@@ -368,8 +368,8 @@ class TestReciprocalRankFusion:
 
         assert rerank_by_rrf([], top_k=5) == []
 
-    def test_keeps_best_score_for_duplicates(self):
-        """When a doc appears in multiple lists, keeps the highest original score."""
+    def test_returns_both_cosine_and_rrf_scores(self):
+        """R44 fix D2-M001: Returns (doc, cosine_score, rrf_score) 3-tuples."""
         from langchain_core.documents import Document
 
         from src.rag.reranking import rerank_by_rrf
@@ -377,7 +377,12 @@ class TestReciprocalRankFusion:
         list_a = [(Document(page_content="doc"), 0.6)]
         list_b = [(Document(page_content="doc"), 0.9)]
         fused = rerank_by_rrf([list_a, list_b], top_k=1)
-        assert fused[0][1] == 0.9  # Higher score kept
+        # 3-tuple: (doc, best_cosine, rrf_score)
+        assert len(fused[0]) == 3
+        assert fused[0][1] == 0.9  # Best cosine kept
+        # RRF score = 1/(60+0+1) + 1/(60+0+1) = 2/61
+        expected_rrf = 2.0 / 61.0
+        assert abs(fused[0][2] - expected_rrf) < 1e-9
 
     def test_different_source_not_merged(self):
         """Same content from different sources stays separate (hash includes source)."""
@@ -534,8 +539,8 @@ class TestSearchKnowledgeBaseDualStrategyRRF:
 
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever), \
              patch("src.agent.tools.rerank_by_rrf") as mock_rrf:
-            # RRF returns fused results
-            mock_rrf.return_value = [(doc_a, 0.9), (doc_b, 0.85)]
+            # RRF returns fused results (3-tuple: doc, cosine, rrf)
+            mock_rrf.return_value = [(doc_a, 0.9, 0.033), (doc_b, 0.85, 0.016)]
 
             from src.agent.tools import search_knowledge_base
             results = search_knowledge_base("steakhouse")
@@ -563,7 +568,7 @@ class TestSearchKnowledgeBaseDualStrategyRRF:
         mock_retriever.retrieve_with_scores.return_value = [(doc, 0.8)]
 
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever), \
-             patch("src.agent.tools.rerank_by_rrf", return_value=[(doc, 0.8)]):
+             patch("src.agent.tools.rerank_by_rrf", return_value=[(doc, 0.8, 0.016)]):
             from src.agent.tools import search_knowledge_base
             search_knowledge_base("steakhouse")
 
@@ -1190,3 +1195,180 @@ class TestTaskTypeWiring:
             )
 
         assert "RETRIEVAL_DOCUMENT" in calls, f"Expected RETRIEVAL_DOCUMENT in calls: {calls}"
+
+
+class TestIngestRetryLogic:
+    """R44 fix D5-M001: Tests for R40 retry/backoff logic in ingest_property."""
+
+    def test_ingest_retries_on_transient_failure_then_succeeds(self, test_property_file, tmp_path, monkeypatch, no_kb_dir):
+        """Ingest retries up to _INGEST_MAX_RETRIES and succeeds on 2nd attempt."""
+        from unittest.mock import MagicMock, patch as std_patch
+
+        from src.rag.pipeline import ingest_property
+
+        call_count = {"n": 0}
+        real_from_texts = None
+
+        def failing_then_succeeding(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise RuntimeError("Transient embedding API failure")
+            return real_from_texts(*args, **kwargs)
+
+        # Patch time.sleep to avoid actual delays
+        monkeypatch.setattr("src.rag.pipeline.time.sleep", lambda _: None)
+
+        persist_dir = str(tmp_path / "chroma_retry")
+        # Patch Chroma.from_texts at the class level
+        import langchain_community.vectorstores.chroma as chroma_mod
+        real_from_texts = chroma_mod.Chroma.from_texts
+        with std_patch.object(chroma_mod.Chroma, "from_texts", side_effect=failing_then_succeeding):
+            retriever = ingest_property(
+                test_property_file,
+                persist_dir=persist_dir,
+                knowledge_base_dir=str(tmp_path / "nonexistent_kb"),
+            )
+        assert retriever is not None
+        assert call_count["n"] == 2  # 1 failure + 1 success
+
+    def test_ingest_raises_after_max_retries(self, test_property_file, tmp_path, monkeypatch, no_kb_dir):
+        """Ingest raises the original exception after exhausting all retries."""
+        from unittest.mock import patch as std_patch
+
+        from src.rag.pipeline import ingest_property
+
+        monkeypatch.setattr("src.rag.pipeline.time.sleep", lambda _: None)
+
+        import langchain_community.vectorstores.chroma as chroma_mod
+        with std_patch.object(
+            chroma_mod.Chroma, "from_texts",
+            side_effect=RuntimeError("Persistent embedding API failure"),
+        ):
+            with pytest.raises(RuntimeError, match="Persistent embedding API failure"):
+                ingest_property(
+                    test_property_file,
+                    persist_dir=str(tmp_path / "chroma_retry_fail"),
+                    knowledge_base_dir=str(tmp_path / "nonexistent_kb"),
+                )
+
+
+class TestReingestRetryLogic:
+    """R44 fix D5-M001: Tests for R40 retry/backoff logic in reingest_item."""
+
+    @pytest.mark.asyncio
+    async def test_reingest_retries_on_transient_failure(self, monkeypatch):
+        """reingest_item retries add_texts and succeeds on 2nd attempt."""
+        from unittest.mock import AsyncMock, MagicMock, patch as std_patch
+
+        call_count = {"n": 0}
+
+        def failing_then_succeeding(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise RuntimeError("Transient add_texts failure")
+            return None
+
+        mock_vectorstore = MagicMock()
+        mock_vectorstore.add_texts = failing_then_succeeding
+        mock_retriever = MagicMock()
+        mock_retriever.vectorstore = mock_vectorstore
+
+        # Patch asyncio.sleep to avoid delays and asyncio.to_thread to run sync
+        async def fast_sleep(_):
+            pass
+
+        monkeypatch.setattr("src.rag.pipeline.asyncio.sleep", fast_sleep)
+
+        import asyncio
+        original_to_thread = asyncio.to_thread
+
+        async def passthrough_to_thread(fn, *args, **kwargs):
+            return fn(*args, **kwargs)
+
+        monkeypatch.setattr("src.rag.pipeline.asyncio.to_thread", passthrough_to_thread)
+
+        with std_patch("src.rag.pipeline.get_retriever", return_value=mock_retriever):
+            from src.rag.pipeline import reingest_item
+
+            result = await reingest_item(
+                "dining",
+                "steakhouse-001",
+                {"name": "Test Steakhouse", "cuisine": "American"},
+            )
+
+        assert result is True
+        assert call_count["n"] == 2
+
+    @pytest.mark.asyncio
+    async def test_reingest_returns_false_after_max_retries(self, monkeypatch):
+        """reingest_item returns False after exhausting all retries (outer except catches)."""
+        from unittest.mock import MagicMock, patch as std_patch
+
+        call_count = {"n": 0}
+
+        def always_failing(*args, **kwargs):
+            call_count["n"] += 1
+            raise RuntimeError("Persistent failure")
+
+        mock_vectorstore = MagicMock()
+        mock_vectorstore.add_texts = always_failing
+        mock_retriever = MagicMock()
+        mock_retriever.vectorstore = mock_vectorstore
+
+        async def fast_sleep(_):
+            pass
+
+        monkeypatch.setattr("src.rag.pipeline.asyncio.sleep", fast_sleep)
+
+        async def passthrough_to_thread(fn, *args, **kwargs):
+            return fn(*args, **kwargs)
+
+        monkeypatch.setattr("src.rag.pipeline.asyncio.to_thread", passthrough_to_thread)
+
+        with std_patch("src.rag.pipeline.get_retriever", return_value=mock_retriever):
+            from src.rag.pipeline import reingest_item
+
+            result = await reingest_item(
+                "dining",
+                "steakhouse-001",
+                {"name": "Test Steakhouse", "cuisine": "American"},
+            )
+
+        assert result is False
+        # Should have attempted _REINGEST_MAX_RETRIES times (2)
+        assert call_count["n"] == 2
+
+    @pytest.mark.asyncio
+    async def test_reingest_propagates_cancelled_error(self, monkeypatch):
+        """reingest_item re-raises CancelledError without retrying."""
+        import asyncio as aio
+        from unittest.mock import MagicMock, patch as std_patch
+
+        call_count = {"n": 0}
+
+        def cancel_on_first(*args, **kwargs):
+            call_count["n"] += 1
+            raise aio.CancelledError()
+
+        mock_vectorstore = MagicMock()
+        mock_vectorstore.add_texts = cancel_on_first
+        mock_retriever = MagicMock()
+        mock_retriever.vectorstore = mock_vectorstore
+
+        async def passthrough_to_thread(fn, *args, **kwargs):
+            return fn(*args, **kwargs)
+
+        monkeypatch.setattr("src.rag.pipeline.asyncio.to_thread", passthrough_to_thread)
+
+        with std_patch("src.rag.pipeline.get_retriever", return_value=mock_retriever):
+            from src.rag.pipeline import reingest_item
+
+            with pytest.raises(aio.CancelledError):
+                await reingest_item(
+                    "dining",
+                    "steakhouse-001",
+                    {"name": "Test", "cuisine": "Test"},
+                )
+
+        # CancelledError should not retry
+        assert call_count["n"] == 1

@@ -7,7 +7,7 @@ v2 additions: ``extracted_fields``, ``whisper_plan`` for specialist agent
 routing and background planning.
 """
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
@@ -79,11 +79,16 @@ class RetrievedChunk(TypedDict):
 
     Explicit schema prevents implicit dict contracts from drifting
     between pipeline.py and nodes.py.
+
+    R44 fix D2-M001: Added ``rrf_score`` field alongside ``score``.
+    ``score`` is the raw cosine similarity (quality gate); ``rrf_score``
+    is the RRF fusion score (ranking metric).
     """
 
     content: str
     metadata: dict[str, Any]
     score: float
+    rrf_score: NotRequired[float]
 
 
 class GuestContext(TypedDict, total=False):

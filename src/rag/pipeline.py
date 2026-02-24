@@ -342,26 +342,36 @@ async def reingest_item(
             # R40 fix D2-M002: Retry add_texts() for transient embedding API
             # failures during CMS webhook re-ingestion. Without retry, CMS
             # content updates are silently lost during embedding API outages.
+            # R44 fix D2-M002: Wrap blocking add_texts() in asyncio.to_thread()
+            # and add exponential backoff between retries. ChromaDB's add_texts
+            # writes to SQLite (blocking I/O); running it synchronously in an
+            # async function blocks the event loop during retries.
             _REINGEST_MAX_RETRIES = 2
             for _attempt in range(1, _REINGEST_MAX_RETRIES + 1):
                 try:
-                    retriever.vectorstore.add_texts(
+                    await asyncio.to_thread(
+                        retriever.vectorstore.add_texts,
                         texts=[text],
                         metadatas=[metadata],
                         ids=[doc_id],
                     )
                     break
+                except asyncio.CancelledError:
+                    raise  # Never swallow cancellation
                 except Exception:
                     if _attempt == _REINGEST_MAX_RETRIES:
                         raise
+                    backoff = 0.5 * (2 ** _attempt)  # 1s, 2s
                     logger.warning(
-                        "add_texts() failed for %s/%s (attempt %d/%d), retrying...",
+                        "add_texts() failed for %s/%s (attempt %d/%d), retrying in %.1fs...",
                         category,
                         item_id,
                         _attempt,
                         _REINGEST_MAX_RETRIES,
+                        backoff,
                         exc_info=True,
                     )
+                    await asyncio.sleep(backoff)
             # Purge stale CMS chunks for the same source with a different
             # ingestion version (edited content creates new IDs; old chunks
             # linger as ghost data).  Non-critical — log and continue on failure.

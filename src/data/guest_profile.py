@@ -293,26 +293,43 @@ async def delete_guest_profile(phone: str, casino_id: str) -> bool:
                 return False
 
             # Collect all document references for batch deletion.
-            # Firestore batches are atomic: either all operations complete or
-            # none do, preventing the partially-deleted zombie state that
-            # violates CCPA when individual deletes fail mid-cascade.
-            # Firestore batch limit is 500 operations; cascade unlikely to
-            # exceed this for a single guest profile.
+            # Firestore batches are atomic within a single batch, but
+            # Firestore limits each batch to 500 operations. A power user
+            # with heavy conversation history can exceed this. We commit
+            # and start a new batch when approaching the limit.
+            # R44 fix D3-M001: batch overflow guard for CCPA compliance.
+            _BATCH_LIMIT = 490  # Leave margin below Firestore's 500
             batch = db.batch()
             ops_count = 0
+            total_ops = 0
 
             # Cascade: conversations -> messages
             async for conv in guest_ref.collection("conversations").stream():
                 async for msg in conv.reference.collection("messages").stream():
                     batch.delete(msg.reference)
                     ops_count += 1
+                    if ops_count >= _BATCH_LIMIT:
+                        await batch.commit()
+                        batch = db.batch()
+                        total_ops += ops_count
+                        ops_count = 0
                 batch.delete(conv.reference)
                 ops_count += 1
+                if ops_count >= _BATCH_LIMIT:
+                    await batch.commit()
+                    batch = db.batch()
+                    total_ops += ops_count
+                    ops_count = 0
 
             # Cascade: behavioral signals
             async for signal in guest_ref.collection("behavioral_signals").stream():
                 batch.delete(signal.reference)
                 ops_count += 1
+                if ops_count >= _BATCH_LIMIT:
+                    await batch.commit()
+                    batch = db.batch()
+                    total_ops += ops_count
+                    ops_count = 0
 
             # De-identify audit log references (update, not delete — regulatory requirement)
             hashed = hashlib.sha256(phone.encode()).hexdigest()[:16]
@@ -323,16 +340,23 @@ async def delete_guest_profile(phone: str, casino_id: str) -> bool:
                     "entity_name": "[deleted]",
                 })
                 ops_count += 1
+                if ops_count >= _BATCH_LIMIT:
+                    await batch.commit()
+                    batch = db.batch()
+                    total_ops += ops_count
+                    ops_count = 0
 
             # Delete guest document
             batch.delete(guest_ref)
             ops_count += 1
 
-            # Commit atomically — all-or-nothing
-            await batch.commit()
+            # Commit remaining operations
+            if ops_count > 0:
+                await batch.commit()
+            total_ops += ops_count
             logger.info(
                 "CCPA cascade delete completed for %s...%s (%d batch ops)",
-                phone[:4], phone[-4:], ops_count,
+                phone[:4], phone[-4:], total_ops,
             )
             return True
 

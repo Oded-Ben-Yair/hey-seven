@@ -233,6 +233,69 @@ class TestInMemoryBackendLRUEviction:
         b._cleanup_expired("nonexistent")  # Should not raise
 
 
+class TestInMemoryBackendFIFOEviction:
+    """R44 fix D8-M001: FIFO eviction when sweep finds 0 expired entries at capacity."""
+
+    def test_fifo_eviction_when_all_unexpired(self):
+        """When store is at capacity and all entries are unexpired, oldest is evicted."""
+        b = InMemoryBackend()
+        original_max = InMemoryBackend._MAX_STORE_SIZE
+        try:
+            InMemoryBackend._MAX_STORE_SIZE = 5
+            # Fill store with unexpired entries
+            for i in range(5):
+                b._store[f"key_{i}"] = ("v", time.monotonic() + 3600)
+
+            # Force sweep — no expired keys exist
+            b._maybe_sweep()
+
+            # Oldest entry (key_0) should be evicted
+            assert len(b._store) == 4
+            assert "key_0" not in b._store
+            # Remaining entries should still be present
+            assert "key_1" in b._store
+            assert "key_4" in b._store
+        finally:
+            InMemoryBackend._MAX_STORE_SIZE = original_max
+
+    def test_no_death_spiral_under_sustained_load(self):
+        """Multiple writes at capacity don't cause O(N) sweep overhead per write."""
+        b = InMemoryBackend()
+        original_max = InMemoryBackend._MAX_STORE_SIZE
+        try:
+            InMemoryBackend._MAX_STORE_SIZE = 10
+            # Fill with unexpired entries
+            for i in range(10):
+                b._store[f"key_{i}"] = ("v", time.monotonic() + 3600)
+
+            # Each set() at capacity should evict one entry (not scan 1000)
+            for i in range(5):
+                b.set(f"new_{i}", "val", ttl=3600)
+
+            # Store should not exceed max size
+            assert len(b._store) <= InMemoryBackend._MAX_STORE_SIZE + 1
+        finally:
+            InMemoryBackend._MAX_STORE_SIZE = original_max
+
+    def test_fifo_eviction_not_triggered_when_below_capacity(self):
+        """FIFO eviction only triggers at capacity, not below."""
+        b = InMemoryBackend()
+        original_max = InMemoryBackend._MAX_STORE_SIZE
+        try:
+            InMemoryBackend._MAX_STORE_SIZE = 100
+            # Add just a few entries (well below capacity)
+            for i in range(3):
+                b._store[f"key_{i}"] = ("v", time.monotonic() + 3600)
+
+            # Force sweep (won't trigger because below max)
+            b._maybe_sweep()
+
+            # All entries should remain
+            assert len(b._store) == 3
+        finally:
+            InMemoryBackend._MAX_STORE_SIZE = original_max
+
+
 class TestGetStateBackend:
     def test_default_is_memory(self):
         backend = get_state_backend()
