@@ -26,7 +26,7 @@
 | Workers | 1 | uvicorn `--workers 1` -- single worker for demo; scale via WEB_CONCURRENCY env var for production |
 | Python | 3.12.8 | `python:3.12.8-slim-bookworm` (multi-stage build) |
 | User | appuser | Non-root user (security hardening) |
-| Traffic routing | `--no-traffic` then `--to-latest` | Deploy without routing; smoke test validates before traffic switch |
+| Traffic routing | `--no-traffic` then canary (10%/50%/100%) | Deploy without routing; smoke test validates, then graduated canary with error rate checks |
 
 ---
 
@@ -81,7 +81,7 @@ Cloud Run does not support configuring a separate `readinessProbe` via `gcloud r
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 ```
 
 Cloud Run ignores Dockerfile HEALTHCHECK. This is kept for local `docker-compose` / Docker Desktop health monitoring.
@@ -95,13 +95,18 @@ Cloud Run ignores Dockerfile HEALTHCHECK. This is kept for local `docker-compose
 | 1 | Install deps, run `ruff check`, `mypy`, `pytest` (90% coverage gate) | `python:3.12.8-slim-bookworm` |
 | 2 | Docker build to Artifact Registry (`us-central1-docker.pkg.dev`) | `gcr.io/cloud-builders/docker` |
 | 3 | Trivy vulnerability scan (CRITICAL + HIGH severity, pinned `0.58.2`) | `aquasec/trivy:0.58.2` |
+| 3b | Generate SBOM (CycloneDX format) | `aquasec/trivy:0.58.2` |
 | 4 | Push image to Artifact Registry | `gcr.io/cloud-builders/docker` |
+| 4b | Install cosign binary (pinned v2.4.1 with SHA-256 verification) | `gcr.io/cloud-builders/docker` |
+| 4c | Sign image with GCP KMS key | `cloud-sdk` |
+| 4d | Attest SBOM (CycloneDX, linked to signed image) | `cloud-sdk` |
+| 4e | Verify signature inline (fail pipeline if signing failed) | `cloud-sdk` |
 | 5 | Capture current revision for rollback | `cloud-sdk` |
 | 6 | Deploy to Cloud Run with `--no-traffic` (canary-safe) | `cloud-sdk` |
 | 7 | Smoke test: health check with 3 retries (15s apart), version assertion | `cloud-sdk` |
-| 8 | Route 100% traffic to new revision (`--to-latest`) | `cloud-sdk` |
+| 8 | Canary traffic rollout (10% -> 50% -> 100%) with error rate monitoring | `cloud-sdk` |
 
-**Automatic rollback**: If the smoke test in Step 7 fails (health endpoint does not return 200 after 3 attempts), the pipeline rolls back to the previous revision captured in Step 5 and exits with failure.
+**Automatic rollback**: If the smoke test in Step 7 fails (health endpoint does not return 200 after 3 attempts), or if the canary error rate in Step 8 exceeds 5% at any stage, the pipeline rolls back to the previous revision captured in Step 5 and exits with failure.
 
 ---
 

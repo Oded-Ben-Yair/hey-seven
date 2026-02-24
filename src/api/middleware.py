@@ -383,8 +383,14 @@ class RateLimitMiddleware:
             try:
                 import redis
 
+                # R46 fix D8-M001: Set short connection timeout (2s) to prevent
+                # blocking container startup if Redis is unreachable. Default
+                # Redis timeout is 5-30s which can exceed startup probe deadline.
                 self._redis_client = redis.Redis.from_url(
-                    settings.REDIS_URL, decode_responses=True
+                    settings.REDIS_URL,
+                    decode_responses=True,
+                    socket_connect_timeout=2,
+                    socket_timeout=2,
                 )
                 self._redis_client.ping()
                 logger.info("Rate limiter using Redis backend for distributed limiting")
@@ -551,6 +557,9 @@ class RateLimitMiddleware:
         across multiple Cloud Run instances. Each request is a member with
         its timestamp as the score.
 
+        R46 fix D8-C002: Wrap synchronous Redis pipeline calls in
+        asyncio.to_thread() to prevent blocking the event loop.
+
         Falls back to in-memory on any Redis error.
         """
         if not self._redis_client:
@@ -560,20 +569,27 @@ class RateLimitMiddleware:
             now = time.time()
             window_start = now - self.window_seconds
             member = f"{now}:{secrets.token_hex(4)}"
+            redis_client = self._redis_client
+            max_tokens = self.max_tokens
+            window_secs = int(self.window_seconds)
 
-            pipe = self._redis_client.pipeline()
-            pipe.zremrangebyscore(key, "-inf", window_start)
-            pipe.zcard(key)
-            pipe.zadd(key, {member: now})
-            pipe.expire(key, int(self.window_seconds) + 10)
-            results = pipe.execute()
+            def _do_redis_check() -> bool | None:
+                """Run Redis pipeline synchronously in a thread."""
+                pipe = redis_client.pipeline()
+                pipe.zremrangebyscore(key, "-inf", window_start)
+                pipe.zcard(key)
+                pipe.zadd(key, {member: now})
+                pipe.expire(key, window_secs + 10)
+                results = pipe.execute()
 
-            count = results[1]  # zcard result (before our add)
-            if count >= self.max_tokens:
-                # Over limit — remove the entry we just added
-                self._redis_client.zrem(key, member)
-                return False
-            return True
+                count = results[1]  # zcard result (before our add)
+                if count >= max_tokens:
+                    # Over limit — remove the entry we just added
+                    redis_client.zrem(key, member)
+                    return False
+                return True
+
+            return await asyncio.to_thread(_do_redis_check)
         except Exception:
             logger.warning(
                 "Redis rate limit check failed, falling back to in-memory",

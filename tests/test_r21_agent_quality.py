@@ -172,6 +172,7 @@ class TestFrustrationEscalation:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             result = await execute_specialist(
@@ -209,6 +210,7 @@ class TestFrustrationEscalation:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             await execute_specialist(
@@ -364,6 +366,7 @@ class TestProactiveSuggestions:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             await execute_specialist(
@@ -406,6 +409,7 @@ class TestProactiveSuggestions:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             await execute_specialist(
@@ -448,6 +452,7 @@ class TestProactiveSuggestions:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             await execute_specialist(
@@ -503,6 +508,7 @@ class TestPersonaDriftPrevention:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             await execute_specialist(
@@ -545,6 +551,7 @@ class TestPersonaDriftPrevention:
                 PROPERTY_NAME="Mohegan Sun",
                 PROPERTY_PHONE="1-888-226-7711",
                 MAX_HISTORY_MESSAGES=20,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             await execute_specialist(

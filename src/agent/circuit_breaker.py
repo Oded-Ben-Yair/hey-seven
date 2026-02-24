@@ -109,23 +109,35 @@ class CircuitBreaker:
         Called after each state mutation (record_failure, record_success).
         Writes state, failure count, and last failure time with TTL slightly
         longer than the rolling window to ensure stale entries expire.
+
+        R46 fix D8-C001: Wrap synchronous Redis calls in asyncio.to_thread()
+        to prevent blocking the event loop (~0.5-2ms per Redis round-trip).
         """
         if not self._backend:
             return
         try:
             ttl = int(self._rolling_window_seconds) + 60
-            self._backend.set(self._backend_key("state"), self._state, ttl=ttl)
-            self._backend.set(
-                self._backend_key("failure_count"),
-                str(len(self._failure_timestamps)),
-                ttl=ttl,
+            state = self._state
+            failure_count = str(len(self._failure_timestamps))
+            last_failure = (
+                str(time.time()) if self._last_failure_time is not None else None
             )
-            if self._last_failure_time is not None:
+
+            def _do_sync() -> None:
+                self._backend.set(self._backend_key("state"), state, ttl=ttl)
                 self._backend.set(
-                    self._backend_key("last_failure_time"),
-                    str(self._last_failure_time),
+                    self._backend_key("failure_count"),
+                    failure_count,
                     ttl=ttl,
                 )
+                if last_failure is not None:
+                    self._backend.set(
+                        self._backend_key("last_failure_time"),
+                        last_failure,
+                        ttl=ttl,
+                    )
+
+            await asyncio.to_thread(_do_sync)
         except Exception:
             logger.debug("CB backend sync failed (non-critical)", exc_info=True)
 
@@ -138,6 +150,9 @@ class CircuitBreaker:
         probe mechanism.
 
         Rate-limited to one read per ``_backend_sync_interval`` seconds.
+
+        R46 fix D8-C001: Wrap synchronous Redis calls in asyncio.to_thread()
+        to prevent blocking the event loop.
         """
         if not self._backend:
             return
@@ -146,8 +161,16 @@ class CircuitBreaker:
             return
         self._last_backend_sync = now
         try:
-            remote_state = self._backend.get(self._backend_key("state"))
-            remote_count_str = self._backend.get(self._backend_key("failure_count"))
+            state_key = self._backend_key("state")
+            count_key = self._backend_key("failure_count")
+
+            def _do_read() -> tuple[str | None, str | None]:
+                return (
+                    self._backend.get(state_key),
+                    self._backend.get(count_key),
+                )
+
+            remote_state, remote_count_str = await asyncio.to_thread(_do_read)
             if remote_state and remote_count_str:
                 remote_count = int(remote_count_str)
                 # Only promote: if remote says open and local says closed,
@@ -298,8 +321,8 @@ class CircuitBreaker:
         Returns:
             True if the request is allowed, False if blocked.
         """
-        await self._sync_from_backend()
         async with self._lock:
+            await self._sync_from_backend()
             # Perform open -> half_open transition under the lock (race-safe)
             if self._state == "open" and self._cooldown_expired():
                 self._state = "half_open"

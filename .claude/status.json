@@ -1,51 +1,67 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "Pre-sprint research complete. 166 guardrail patterns (+48 Hindi/Tagalog), 5 casino KB JSONs, TTLCache migration, ops runbook. Ready for 20-round per-dimension hostile sprint.",
-    "lastModified": "2026-02-23T10:30:00Z",
+    "summary": "11-round hostile review sprint COMPLETE (R35-R45). Score 77→95. 21 CRITICALs + 82 MAJORs fixed. 2178 tests, 0 failures, 90.43% coverage. Ceiling ~95.0 reached.",
+    "lastModified": "2026-02-24T07:30:00Z",
     "branch": "main",
-    "commitHash": "bfd4130",
+    "commitHash": "c9a492a",
     "tag": "v1.1.0",
-    "phase": "pre-sprint-complete-ready-for-20-rounds"
+    "phase": "post-sprint-learning-extraction"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "LAUNCH 20-round per-dimension hostile sprint: per-dim teams with fix-review-judge loops (R35+)" },
-    { "priority": 1, "description": "Weakest dimensions to target first: Scalability(5.0), Guardrails(5.5→improved with Hindi/Tagalog), Domain(6.5→improved with 4 casino KBs)" },
-    { "priority": 2, "description": "Use TeamCreate swarm per REVIEW ROUND PROTOCOL in CLAUDE.md. 2 reviewers + 1 fixer per round." },
-    { "priority": 3, "description": "Sprint cost: ~$850-1250 for 20 rounds. Rate limit: stagger 5 dimensions at a time, not all 10." }
+    { "priority": 0, "description": "PLAN: How to push from 95 to 98 — requires architectural changes (Redis CB, Firestore integration tests, k8s readiness)" },
+    { "priority": 1, "description": "Apply learnings to new projects from day 1 — use hostile-review-protocol.md and 95+ checklist" },
+    { "priority": 2, "description": "Deploy to GCP Cloud Run production — sprint hardened the codebase for production readiness" },
+    { "priority": 3, "description": "Next phase: load testing, real casino data ingestion, demo preparation" }
   ],
-  "preSprintResearch": {
-    "completed": "2026-02-23",
-    "guardrailPatterns": { "before": 118, "after": 166, "added": "20 Hindi/Devanagari + 28 Tagalog/Taglish" },
-    "casinoKBs": ["mohegan_sun.json", "foxwoods.json", "hard_rock_ac.json", "parx_casino.json", "wynn_las_vegas.json"],
-    "technicalFixes": ["TTLCache migration (config.py)", "GuestContext TypedDict (state.py)", "audit_input docstring"],
-    "documentation": ["ops runbook stateful components", "tribal gaming regulations", "sprint cost analysis"],
-    "testCount": 2015,
-    "researchOutputs": [
-      "~/.claude/tasks/hindi-guardrail-research-output.md",
-      "~/.claude/tasks/tagalog-guardrail-research-output.md",
-      "~/.claude/tasks/sprint-cost-analysis-output.md"
+  "sprintResults": {
+    "rounds": "R35-R45 (11 rounds)",
+    "dateRange": "2026-02-23 to 2026-02-24",
+    "scoreTrajectory": {
+      "R34": 77, "R35": 85, "R36": 84.5, "R37": 83, "R38": 81,
+      "R39": 84.5, "R40": 93.5, "R41": 94.9, "R42": 94.4, "R43": 94.3,
+      "R44": 94.5, "R45": 95.0
+    },
+    "r45_dimensions": {
+      "graph_architecture": 9.5,
+      "rag_pipeline": 9.0,
+      "data_model": 9.0,
+      "api_design": 9.0,
+      "testing_strategy": 9.0,
+      "docker_devops": 8.5,
+      "prompts_guardrails": 9.0,
+      "scalability_production": 9.0,
+      "tradeoff_documentation": 9.0,
+      "domain_intelligence": 9.0
+    },
+    "totalCriticals": 21,
+    "totalMajors": 82,
+    "testsAdded": 123,
+    "testFailuresResolved": 52,
+    "coverageDelta": "89.88% → 90.43%",
+    "protocolUpgrade": "R40: focused dims + calibration + split fixers = +12 points in 1 round",
+    "realBugsFound": [
+      "/metrics endpoint crash (R45 — missed rename from R39)",
+      "URL encoding bypass in guardrails (R38 — security)",
+      "Double-encoding bypass (R39 — security)",
+      "Mutable global state corruption (R35-R36 — correctness)",
+      "Unicode Cf invisible char bypass (R35 — security)",
+      "SSE task leak on disconnect (R37 — memory)",
+      "Streaming PII token leak risk (R37 — privacy)",
+      "TTLCache thundering herd (R40 — scalability)",
+      "52 test failures from unfixed auth fixture (R40 — testing)"
+    ],
+    "learningsCapture": [
+      "~/.claude/rules/hostile-review-protocol.md (NEW)",
+      "~/.claude/rules/code-quality.md (6 new rules added)",
+      "~/.claude/rules/langgraph-patterns.md (updated origin)",
+      "Memory MCP: hey-seven-hostile-sprint-r35-r45, hey-seven-95plus-checklist",
+      "reviews/sprint-r35-r45-learnings.md (comprehensive learning doc)"
     ]
   },
-  "scores": {
-    "trajectory": { "R20": 85.5, "R28": 87, "R30": 88, "R31": 92, "R32": 93, "R33_hostile": 79, "R34_hostile": 77 },
-    "r34_dimensions": {
-      "graph_architecture": 8.0,
-      "rag_pipeline": 8.0,
-      "data_model": 8.5,
-      "api_design": 8.0,
-      "testing_strategy": 7.5,
-      "docker_devops": 6.0,
-      "prompts_guardrails": 5.5,
-      "scalability_production": 5.0,
-      "tradeoff_documentation": 7.0,
-      "domain_intelligence": 6.5
-    },
-    "note": "R33-R34 use 4-model hostile cross-validation. Pre-sprint additions should lift Guardrails and Domain scores."
-  },
   "sessionNotes": {
-    "lastSessionDate": "2026-02-23",
-    "lastSessionId": "hey-seven-session-20260223-presprint"
+    "lastSessionDate": "2026-02-24",
+    "lastSessionId": "hey-seven-session-20260224-sprint-complete"
   }
 }

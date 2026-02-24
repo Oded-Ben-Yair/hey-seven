@@ -321,14 +321,17 @@ async def execute_specialist(
     llm = await get_llm_fn()
 
     # R46 D8: Semaphore acquisition with timeout for backpressure.
-    # If all 20 LLM slots are busy for 30s, return a fallback instead of
+    # If all 20 LLM slots are busy, return a fallback instead of
     # queueing indefinitely. Prevents request pile-up during LLM slowdowns.
+    # R46 fix D8-M002: Read timeout from config instead of hardcoding.
+    semaphore_timeout = settings.LLM_SEMAPHORE_TIMEOUT
     try:
-        await asyncio.wait_for(_LLM_SEMAPHORE.acquire(), timeout=30)
+        await asyncio.wait_for(_LLM_SEMAPHORE.acquire(), timeout=semaphore_timeout)
     except asyncio.TimeoutError:
         logger.warning(
-            "%s agent semaphore acquire timeout (30s) — returning backpressure fallback",
+            "%s agent semaphore acquire timeout (%ds) — returning backpressure fallback",
             agent_name.capitalize(),
+            semaphore_timeout,
         )
         return {
             "messages": [AIMessage(content=_fallback_message("high demand right now"))],

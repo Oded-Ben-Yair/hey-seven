@@ -886,6 +886,7 @@ class TestHITLInterrupt:
                 MAX_HISTORY_MESSAGES=20,
                 PERSONA_MAX_CHARS=0,
                 SEMANTIC_INJECTION_ENABLED=False,
+                LLM_SEMAPHORE_TIMEOUT=30,
             )
 
             graph = build_graph()

@@ -13,7 +13,7 @@
 steps:
   # Step 1: Install dependencies and run tests + lint
   # R37 fix D6-m1: Per-step timeout prevents hung steps from blocking the pipeline.
-  - name: 'python:3.12.8-slim-bookworm'
+  - name: 'python:3.12.8-slim-bookworm@sha256:8ef40398b663cf0a3a4685ad0ffcf924282e4c954283b33b7765eae0856d7e0c'
     entrypoint: 'bash'
     timeout: '600s'
     args:
@@ -67,6 +67,7 @@ steps:
       - '-c'
       - |
         curl -Lo /workspace/cosign https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
+        echo "8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b  /workspace/cosign" | sha256sum -c
         chmod +x /workspace/cosign
 
   # Step 4c: Sign image with GCP KMS key (tamper-evidence)
@@ -109,6 +110,7 @@ steps:
   # Step 5: Capture current revision for rollback
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
+    timeout: '120s'
     args:
       - '-c'
       - |
@@ -124,6 +126,7 @@ steps:
   # Production hardening path: Cloud Run IAM + API Gateway for external-facing endpoints.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
+    timeout: '300s'
     args:
       - 'run'
       - 'deploy'
@@ -155,6 +158,7 @@ steps:
   # Step 7: Post-deploy smoke test — validate before routing traffic
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
+    timeout: '300s'
     args:
       - '-c'
       - |
@@ -260,7 +264,7 @@ steps:
 
         # --- Stage 1: 10% traffic to new revision ---
         echo "=== Canary Stage 1: Routing 10% traffic to new revision ==="
-        gcloud run services update-traffic hey-seven --region=us-central1 --to-latest --to-revisions=LATEST=10
+        gcloud run services update-traffic hey-seven --region=us-central1 --to-revisions=LATEST=10
         check_error_rate "10%"
 
         # --- Stage 2: 50% traffic ---
