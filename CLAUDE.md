@@ -13,14 +13,15 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 
-## Current State (Updated 2026-02-20)
+## Current State (Updated 2026-02-24)
 
-- **Codebase**: 23K LOC, 51 source modules across 10 packages
-- **Tests**: ~1988 tests across 58 test files (run `make test-ci` for exact count)
+- **Codebase**: 23K+ LOC, 51 source modules across 10 packages
+- **Tests**: 2229 tests, 0 failures, 90.53% coverage
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
-- **Review Score**: 92/100 after 20 rounds of hostile multi-model review
+- **Review Score**: ~96.7/100 after 46 rounds of hostile review (R35-R45 sprint + R46 focused)
 - **Version**: v1.1.0
-- **Deployment**: Live demo on GCP Cloud Run
+- **Latest commit**: `c6bd000` (R46 fixes pushed)
+- **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
 
@@ -95,7 +96,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 58 test files, ~1988 tests
+tests/                       - 60+ test files, 2229 tests, 90.53% coverage
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests
@@ -106,7 +107,9 @@ tests/                       - 58 test files, ~1988 tests
   test_phase2_integration.py - Phase 2 integration tests
   test_phase3_integration.py - Phase 3 integration tests
   test_phase4_integration.py - Phase 4 integration tests
-  ...                        - (22 more test files)
+  test_r46_scalability.py      - D8 scalability tests (Redis CB, rate limiter, backpressure)
+  test_deployment.py           - D6 DevOps tests (cosign, canary, secret rotation)
+  ...                        - (20+ more test files)
 knowledge-base/              - Structured data for RAG ingestion
   casino-operations/         - Comp system, host workflow
   regulations/               - State-by-state requirements
@@ -134,8 +137,10 @@ Key architectural patterns:
 - **Validation loop** with generate -> validate -> retry(max 1) -> fallback
 - **Degraded-pass validation** (first attempt + validator failure = PASS; retry + failure = FAIL)
 - **Specialist agent DRY extraction** via shared `_base.py` with dependency injection
-- **Circuit breaker** per LLM call with fail-open safe fallback
-- **TTL-cached LLM singletons** for credential rotation (GCP Workload Identity)
+- **Circuit breaker** with Redis L1/L2 sync (local deque + Redis distributed state), async via `to_thread()`
+- **Distributed rate limiting** via Redis sorted set sliding window (per-client, not global)
+- **TTL-cached LLM singletons** with jitter for credential rotation (GCP Workload Identity)
+- **LLM backpressure** via asyncio.Semaphore with configurable timeout
 - **PII redaction** fails closed (safe placeholder, never pass-through)
 - **Pure ASGI middleware** (no BaseHTTPMiddleware — breaks SSE streaming)
 
@@ -146,6 +151,10 @@ Documented, accepted trade-offs:
 - InMemorySaver for local dev (MAX_ACTIVE_THREADS=1000 guard; prod uses FirestoreSaver)
 - LangSmith sampling requires app-level code (not just env var config)
 - HITL interrupt is config-toggled but not enabled by default in production
+- Redis calls use `asyncio.to_thread()` wrappers (not native `redis.asyncio`) — minimal-risk approach, avoids full migration
+- InMemoryBackend uses `threading.Lock` in async context — intentional for sub-microsecond TOCTOU protection (R36 fix B5)
+- Langfuse client uses `threading.Lock` for sync init — correct for sync library, one-time per TTL cost
+- gcloud CLI at `/tmp/google-cloud-sdk/` in WSL — lost on restart, reinstall if needed
 
 ---
 
