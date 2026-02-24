@@ -213,12 +213,15 @@ class TestE2EWithClassifierEnabled:
             )
             assert result.is_injection is True, f"Failure {i+1} should fail-closed"
 
-        # Nth failure should degrade (regex-only: is_injection=False)
+        # Nth failure should enter restricted mode (fail-closed with confidence=0.5)
+        # R48 fix: Restricted mode returns is_injection=True (NOT False/fail-open)
+        # to prevent attacker from forcing 3 timeouts to bypass classifier.
         result = await classify_injection_semantic(
             "safe message", llm_fn=lambda: mock_llm
         )
-        assert result.is_injection is False, "Should degrade after threshold"
-        assert "degraded" in result.reason.lower()
+        assert result.is_injection is True, "Restricted mode should still fail-closed"
+        assert result.confidence == 0.5, "Restricted mode has confidence=0.5 (not 1.0)"
+        assert "restricted" in result.reason.lower()
 
         # Reset for other tests
         guardrails_mod._classifier_consecutive_failures = 0

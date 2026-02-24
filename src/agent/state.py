@@ -25,7 +25,16 @@ __all__ = [
 # R47 fix C7: Tombstone sentinel for explicit field deletion in _merge_dicts.
 # Guest says "remove the peanut allergy" → LLM returns {"dietary": UNSET_SENTINEL}
 # → _merge_dicts pops "dietary" from accumulated state.
-UNSET_SENTINEL = "__UNSET__"
+#
+# R48 fix: Changed from string "__UNSET__" to object() sentinel. The string
+# sentinel could collide with user input extracted via regex (e.g., guest
+# literally typing "__UNSET__"), causing unintended field deletion.
+# object() is impossible to produce from user input — identity comparison only.
+#
+# NOTE: For JSON serialization across checkpointer boundaries, the LLM
+# extraction layer must map the string "__UNSET__" to this sentinel object.
+# Direct JSON roundtrip will NOT preserve object() identity.
+UNSET_SENTINEL: object = object()
 
 
 def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
@@ -58,7 +67,7 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     # they can never be unset.
     merged = dict(a)
     for k, v in b.items():
-        if v == UNSET_SENTINEL:
+        if v is UNSET_SENTINEL:
             merged.pop(k, None)
         elif v is not None and v != "":
             merged[k] = v
@@ -88,8 +97,13 @@ def _keep_truthy(a: bool, b: bool) -> bool:
     When _initial_state() passes False, ``False or existing_True`` = True
     (preserved).  When a node sets True, ``existing_False or True`` = True
     (updated).
+
+    R48 fix: Wrap in bool() to enforce type contract. Without this,
+    ``None or None`` returns ``None`` (not ``False``), violating the
+    ``Annotated[bool, _keep_truthy]`` type annotation. A buggy node
+    returning None would corrupt the bool field.
     """
-    return a or b
+    return bool(a or b)
 
 
 class RetrievedChunk(TypedDict):

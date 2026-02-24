@@ -464,9 +464,15 @@ class RateLimitMiddleware:
         R38 fix: Sweep runs in a background asyncio.Task every 60s instead
         of inline during _is_allowed(). This prevents the sweep from blocking
         concurrent requests under high load.
+
+        R48 fix: Check-then-create protected by _requests_lock to prevent
+        duplicate task spawning. Without this, two concurrent requests both
+        evaluating `_sweep_task.done()` as True spawn duplicate infinite-loop
+        sweep tasks, wasting resources.
         """
-        if self._sweep_task is None or self._sweep_task.done():
-            self._sweep_task = asyncio.create_task(self._background_sweep())
+        async with self._requests_lock:
+            if self._sweep_task is None or self._sweep_task.done():
+                self._sweep_task = asyncio.create_task(self._background_sweep())
 
     async def _background_sweep(self) -> None:
         """Periodically remove stale clients whose deques are fully expired.
@@ -534,6 +540,11 @@ class RateLimitMiddleware:
 
         # No per-client lock needed: deque ops below have zero await points,
         # so they execute atomically in the single-threaded event loop.
+        # R48 analysis: DeepSeek M4 flagged "orphaned deque reference" if sweep
+        # deletes the entry between lock release and bucket use. This is safe:
+        # no await points between line above (bucket assignment) and line below
+        # (bucket operations), so no context switch can occur. The background
+        # sweep task only runs when its asyncio.sleep(60) completes.
         # Evict expired entries
         while bucket and bucket[0] < window_start:
             bucket.popleft()

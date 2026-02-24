@@ -138,6 +138,17 @@ class TestMergeDictsProperties:
         result = _merge_dicts({"name": "Sara"}, {"dietary": UNSET_SENTINEL})
         assert result == {"name": "Sara"}
 
+    def test_merge_dicts_string_unset_not_treated_as_sentinel(self):
+        """R48 fix: String '__UNSET__' in user input is NOT a tombstone.
+
+        UNSET_SENTINEL is now object(), so string comparison fails.
+        Prevents user input collision that could delete profile fields.
+        """
+        from src.agent.state import _merge_dicts
+
+        result = _merge_dicts({"name": "Sara"}, {"dietary": "__UNSET__"})
+        assert result == {"name": "Sara", "dietary": "__UNSET__"}
+
     @given(
         st.dictionaries(st.text(min_size=1, max_size=5), st.text(min_size=1)),
         st.lists(st.text(min_size=1, max_size=5), min_size=0, max_size=3),

@@ -312,6 +312,10 @@ async def _route_to_specialist(
     if agent_name != "host" and not specialist_enabled:
         logger.info("Specialist agents disabled; routing %s to host", agent_name)
         agent_name = "host"
+        # R48 fix: Update dispatch_method when feature flag overrides routing.
+        # Previously retained "structured_output" or "keyword_fallback" from
+        # original routing, making logs misleading about why host was selected.
+        dispatch_method = "feature_flag_override"
 
     return agent_name, dispatch_method
 

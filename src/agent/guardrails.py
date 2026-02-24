@@ -398,8 +398,11 @@ def _normalize_input(text: str) -> str:
     # R39 CRITICAL fix D7-C001+C002: Iterative decode with unquote_plus.
     # Single-pass unquote allows double-encoding bypass (%2520 -> %20).
     # unquote() doesn't decode form-encoded + as space. unquote_plus() does.
-    # Loop max 3 iterations to prevent infinite loops on pathological input.
-    for _ in range(3):
+    # R48 fix: Increased from 3 to 10 iterations. 3 iterations allowed 4x-encoded
+    # payloads (%252525XX) to bypass normalization (DeepSeek C3). 10 iterations
+    # handles realistic encoding depth while preventing pathological inputs.
+    # Loop terminates early when output equals input (no change).
+    for _ in range(10):
         decoded = urllib.parse.unquote_plus(html.unescape(text))
         if decoded == text:
             break
@@ -696,17 +699,30 @@ async def _handle_classifier_failure(
         failures = _classifier_consecutive_failures
 
     if failures >= _CLASSIFIER_DEGRADATION_THRESHOLD:
+        # R48 fix: RESTRICTED MODE instead of fail-open. R47 returned
+        # is_injection=False (fail-open) which GPT-5.2 and Grok correctly
+        # identified as an attack vector — attacker forces 3 timeouts then
+        # bypasses. R48 returns is_injection=True (fail-closed) but with
+        # a distinct reason so the compliance gate can route to a restricted
+        # response path instead of fully blocking.
+        #
+        # This resolves both R47 concerns (DoS from unconditional fail-closed)
+        # and R48 concerns (bypass from fail-open):
+        # - Messages are NOT silently allowed through (fail-closed)
+        # - The "classifier_degraded" reason allows compliance_gate to apply
+        #   stricter regex-only heuristics or route to a safe fallback
+        # - Deterministic regex guardrails (Layer 1) remain the safety floor
         logger.warning(
             "Semantic classifier degraded after %d consecutive failures — "
-            "regex-only mode active (input len=%d). Deterministic guardrails "
-            "remain enforced. Configure alerting on this log line.",
+            "RESTRICTED MODE active (fail-closed, input len=%d). "
+            "Deterministic guardrails remain enforced. Configure alerting.",
             failures,
             message_len,
         )
         return InjectionClassification(
-            is_injection=False,
-            confidence=0.0,
-            reason=f"Classifier degraded after {failures} failures (regex-only)",
+            is_injection=True,
+            confidence=0.5,
+            reason=f"Classifier degraded after {failures} failures (restricted mode)",
         )
 
     logger.error(

@@ -133,9 +133,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.ready = False
 
     # Drain active SSE streams (up to _DRAIN_TIMEOUT_S)
+    # R48 fix: Copy the set before passing to asyncio.wait(). Tasks finishing
+    # during drain call _active_streams.discard(), mutating the set during
+    # iteration — RuntimeError: Set changed size during iteration.
     if _active_streams:
         logger.info("Draining %d active SSE streams (timeout=%ds)", len(_active_streams), _DRAIN_TIMEOUT_S)
-        done, pending = await asyncio.wait(_active_streams, timeout=_DRAIN_TIMEOUT_S)
+        done, pending = await asyncio.wait(set(_active_streams), timeout=_DRAIN_TIMEOUT_S)
         if pending:
             logger.warning("Force-closing %d SSE streams after drain timeout", len(pending))
             for task in pending:
@@ -172,18 +175,20 @@ def create_app() -> FastAPI:
 
     # Pure ASGI middleware — Starlette executes in REVERSE add order.
     # Add order (top to bottom) vs execution order (bottom to top):
-    #   RateLimit        (added 1st, executes last / innermost)
-    #   ApiKey           (added 2nd)
+    #   ApiKey           (added 1st, executes last / innermost)
+    #   RateLimit        (added 2nd, executes before ApiKey)
     #   Security         (added 3rd)
     #   Logging          (added 4th)
     #   ErrorHandling    (added 5th)
     #   BodyLimit        (added 6th, executes first / outermost)
+    # R48 fix: RateLimit BEFORE ApiKey in execution order. Previously ApiKey
+    # executed first, meaning wrong-key attempts were rejected (401) before
+    # rate limiting ran — enabling unlimited API key brute-force. Now rate
+    # limiting applies to ALL requests including unauthenticated ones.
     # BodyLimit is outermost so oversized payloads are rejected before any
-    # middleware processes the request body (prevents memory consumption from
-    # malicious oversized payloads). ErrorHandling wraps all inner middleware
-    # so unhandled exceptions are caught and returned as structured 500s.
-    app.add_middleware(RateLimitMiddleware)
+    # middleware processes the request body.
     app.add_middleware(ApiKeyMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
