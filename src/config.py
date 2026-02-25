@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     WHISPER_LLM_TEMPERATURE: float = 0.2  # Lower temperature for deterministic planning
 
     # --- Embeddings ---
-    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"  # Pinned. See ADR-006. Upgrade path: gemini-embedding-002 (when GA)
 
     # --- RAG ---
     CHROMA_PERSIST_DIR: str = "data/chroma"

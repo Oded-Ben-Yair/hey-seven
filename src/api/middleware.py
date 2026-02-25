@@ -53,6 +53,7 @@ _SHARED_SECURITY_HEADERS = (
     (b"x-frame-options", b"DENY"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
     (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
+    (b"x-api-version", b"1.1.0"),  # R61 fix D4: API versioning header for client compatibility
 )
 
 

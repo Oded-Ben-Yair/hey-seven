@@ -77,6 +77,15 @@ CASINO_ID=<casino_id> python -m pytest tests/ -x -q
 python -c "from src.casino.config import get_casino_profile; import json; print(json.dumps(get_casino_profile('<casino_id>'), indent=2))"
 ```
 
+### 8. Update Jurisdictional Reference
+
+If the casino's state is not already covered in `docs/jurisdictional-reference.md`, add a new section with:
+- Gaming age minimum (state law reference)
+- Self-exclusion authority (name, website, process)
+- State helpline and responsible gaming helpline numbers
+- CTR/SAR filing requirements (BSA/AML)
+- Alcohol and smoking regulations on the gaming floor
+
 ## Startup Validation
 
 The application logs a CRITICAL warning at startup if `CASINO_ID` is not found
