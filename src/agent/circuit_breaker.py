@@ -84,7 +84,7 @@ class CircuitBreaker:
         # Local deque = L1 (sub-ms reads), Redis = L2 (cross-instance sync).
         # Fallback to local-only if backend is None or Redis fails.
         self._backend = state_backend
-        self._backend_sync_interval = 5.0  # seconds between backend reads
+        self._backend_sync_interval = 2.0  # R52 fix D8: reduced from 5s for faster cross-instance propagation
         self._last_backend_sync = 0.0
 
     def _prune_old_failures(self) -> None:
@@ -114,29 +114,30 @@ class CircuitBreaker:
         asyncio.to_thread() wrapper. to_thread() exhausts the default
         ThreadPoolExecutor (~8-10 threads on Cloud Run) under 50 concurrent
         SSE streams. Native async client uses zero threads.
+
+        R52 fix D8: Batch all writes into a single pipeline (1 round-trip
+        instead of 2-3). Reduces Redis latency from ~3x RTT to ~1x RTT.
         """
         if not self._backend:
             return
         try:
             ttl = int(self._rolling_window_seconds) + 60
-            state = self._state
-            failure_count = str(len(self._failure_timestamps))
-            last_failure = (
-                str(time.time()) if self._last_failure_time is not None else None
-            )
-
-            await self._backend.async_set(self._backend_key("state"), state, ttl=ttl)
-            await self._backend.async_set(
-                self._backend_key("failure_count"),
-                failure_count,
-                ttl=ttl,
-            )
-            if last_failure is not None:
-                await self._backend.async_set(
-                    self._backend_key("last_failure_time"),
-                    last_failure,
-                    ttl=ttl,
+            items: list[tuple[str, str, int]] = [
+                (self._backend_key("state"), self._state, ttl),
+                (self._backend_key("failure_count"), str(len(self._failure_timestamps)), ttl),
+            ]
+            if self._last_failure_time is not None:
+                # R52 fix D8-1: Intentional clock domain difference documented.
+                # Local _last_failure_time uses time.monotonic() (NTP-immune,
+                # correct for cooldown calculations within this process).
+                # Redis stores time.time() (wall clock) because monotonic clocks
+                # are per-process and not comparable across instances. The Redis
+                # value is for observability/logging only — cross-instance cooldown
+                # decisions use the CB state ("open"/"closed"), not the timestamp.
+                items.append(
+                    (self._backend_key("last_failure_time"), str(time.time()), ttl)
                 )
+            await self._backend.async_pipeline_set(items)
         except Exception:
             logger.debug("CB backend sync failed (non-critical)", exc_info=True)
 
@@ -149,6 +150,9 @@ class CircuitBreaker:
         holding the lock. Now: _read_backend_state() does I/O only (safe to
         call without lock), and _apply_backend_state() mutates under lock.
 
+        R52 fix D8: Batch both reads into a single pipeline (1 round-trip
+        instead of 2). Reduces Redis latency from ~2x RTT to ~1x RTT.
+
         Returns:
             Tuple of (remote_state, remote_failure_count) or (None, None) if
             backend unavailable, not configured, or rate-limited.
@@ -160,11 +164,10 @@ class CircuitBreaker:
             return None, None
         self._last_backend_sync = now
         try:
-            state_key = self._backend_key("state")
-            count_key = self._backend_key("failure_count")
-
-            remote_state = await self._backend.async_get(state_key)
-            remote_count_str = await self._backend.async_get(count_key)
+            keys = [self._backend_key("state"), self._backend_key("failure_count")]
+            results = await self._backend.async_pipeline_get(keys)
+            remote_state = results[0]
+            remote_count_str = results[1]
             if remote_state and remote_count_str:
                 return remote_state, int(remote_count_str)
             return None, None
@@ -393,6 +396,12 @@ class CircuitBreaker:
         async with self._lock:
             prev_state = self._state
             if prev_state == "half_open":
+                # R52 fix D8-3: Prune stale entries before halving so that
+                # retained timestamps reflect actual recent failures, not
+                # expired entries. Without this, get_metrics() and
+                # _sync_to_backend() report non-zero failure_count from stale
+                # timestamps, causing other instances to perceive instability.
+                self._prune_old_failures()
                 # Halve failure count: single success reduces risk but doesn't
                 # erase evidence of prior instability.
                 # R36 fix A3: Use max(..., 1) to always retain at least 1

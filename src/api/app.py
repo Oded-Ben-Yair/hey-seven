@@ -186,6 +186,16 @@ def create_app() -> FastAPI:
     #   Logging          (added 4th)
     #   ErrorHandling    (added 5th)
     #   BodyLimit        (added 6th, executes first / outermost)
+    #
+    # Middleware execution order (outermost -> innermost):
+    # 1. RequestBodyLimit  — reject oversized payloads before any processing
+    # 2. ErrorHandling     — catches unhandled exceptions (outermost for 500 safety)
+    # 3. RequestLogging    — logs all requests including errors
+    # 4. SecurityHeaders   — adds headers to all responses
+    # 5. RateLimit         — per-client rate limiting (before auth to prevent brute-force)
+    # 6. ApiKey            — authentication gate (innermost, after rate limiting)
+    # See ADR-010 for ordering rationale.
+    #
     # R48 fix: RateLimit BEFORE ApiKey in execution order. Previously ApiKey
     # executed first, meaning wrong-key attempts were rejected (401) before
     # rate limiting ran — enabling unlimited API key brute-force. Now rate

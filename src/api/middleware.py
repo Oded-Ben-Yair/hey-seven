@@ -8,6 +8,7 @@ import asyncio
 import base64
 import collections
 import hmac
+import ipaddress
 import json
 import logging
 import secrets
@@ -44,6 +45,15 @@ def _get_access_logger() -> logging.Logger:
 
 
 _access_logger = _get_access_logger()
+
+# Module-level shared security headers (DRY: used by ErrorHandling + Security + ApiKey middlewares)
+# R53 fix D4: Immutable tuple prevents accidental mutation from any middleware.
+_SHARED_SECURITY_HEADERS = (
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
+)
 
 
 class RequestLoggingMiddleware:
@@ -112,15 +122,8 @@ class ErrorHandlingMiddleware:
     response includes the same headers that SecurityHeadersMiddleware adds.
     """
 
-    # R36 fix A13: Unified with SecurityHeadersMiddleware._STATIC_HEADERS.
-    # Removed deprecated x-xss-protection (Chrome removed in 2019), added
-    # HSTS for parity. Error responses now carry identical headers.
-    _SECURITY_HEADERS = [
-        (b"x-content-type-options", b"nosniff"),
-        (b"x-frame-options", b"DENY"),
-        (b"referrer-policy", b"strict-origin-when-cross-origin"),
-        (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
-    ]
+    # R36 fix A13 / R52 DRY: Uses module-level _SHARED_SECURITY_HEADERS.
+    _SECURITY_HEADERS = _SHARED_SECURITY_HEADERS
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -186,13 +189,8 @@ class SecurityHeadersMiddleware:
     origin to avoid this split entirely.
     """
 
-    # Static security headers (shared with ErrorHandlingMiddleware).
-    _STATIC_HEADERS = [
-        (b"x-content-type-options", b"nosniff"),
-        (b"x-frame-options", b"DENY"),
-        (b"referrer-policy", b"strict-origin-when-cross-origin"),
-        (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
-    ]
+    # R52 DRY: Uses module-level _SHARED_SECURITY_HEADERS.
+    _STATIC_HEADERS = _SHARED_SECURITY_HEADERS
 
     # R36 fix A11: Static CSP for API-only endpoints — no nonce needed.
     _CSP = (
@@ -297,7 +295,7 @@ class ApiKeyMiddleware:
                     "headers": [
                         (b"content-type", b"application/json"),
                         (b"content-length", str(len(body)).encode()),
-                    ] + list(SecurityHeadersMiddleware._STATIC_HEADERS),
+                    ] + list(_SHARED_SECURITY_HEADERS),
                 }
             )
             await send({"type": "http.response.body", "body": body})
@@ -418,6 +416,21 @@ class RateLimitMiddleware:
         self._sweep_task: asyncio.Task | None = None
 
     @staticmethod
+    def _is_valid_ip(ip_str: str) -> bool:
+        """Validate an IP address string. Invalid -> False (use peer IP instead).
+
+        R52 fix D4: Prevents spoofed/malformed X-Forwarded-For values from
+        being used as rate limit keys. Without this, an attacker can send
+        ``X-Forwarded-For: not-an-ip`` and bypass per-IP rate limiting (each
+        malformed value becomes a unique rate limit bucket).
+        """
+        try:
+            ipaddress.ip_address(ip_str)
+            return True
+        except (ValueError, TypeError):
+            return False
+
+    @staticmethod
     def _normalize_ip(ip: str) -> str:
         """Normalize IP address for consistent rate limit keying.
 
@@ -455,7 +468,12 @@ class RateLimitMiddleware:
                 return self._normalize_ip(peer_ip)
             # Explicit list: trust XFF only from listed proxy IPs
             if peer_ip in trusted:
-                return self._normalize_ip(forwarded.split(",")[0].strip())
+                xff_ip = self._normalize_ip(forwarded.split(",")[0].strip())
+                if self._is_valid_ip(xff_ip):
+                    return xff_ip
+                # R52 fix D4: Invalid XFF IP -> fall back to peer
+                logger.warning("Invalid IP in X-Forwarded-For: %r, using peer IP", xff_ip)
+                return self._normalize_ip(peer_ip)
             # Untrusted peer sent XFF — ignore it, use peer IP
             return self._normalize_ip(peer_ip)
         client = scope.get("client")
@@ -482,6 +500,9 @@ class RateLimitMiddleware:
 
         Runs every 60s in the background. Acquires _requests_lock only briefly
         to collect stale keys and delete them. Does NOT block _is_allowed().
+
+        R52 fix D8: Outer exception boundary prevents task death from unexpected
+        errors. A dead sweep task causes slow memory leak from unreaped stale clients.
         """
         try:
             while True:
@@ -504,6 +525,15 @@ class RateLimitMiddleware:
                     logger.warning("Background sweep iteration failed", exc_info=True)
         except asyncio.CancelledError:
             pass
+        except Exception:
+            # R52 fix D8: Catch-all prevents silent task death.
+            # Log at ERROR to trigger alerting — a dead sweep task
+            # causes unbounded memory growth from stale rate limit entries.
+            logger.error(
+                "Background sweep task terminated unexpectedly — "
+                "stale clients will not be cleaned up. This is a bug.",
+                exc_info=True,
+            )
 
     async def _is_allowed(self, client_ip: str) -> bool:
         """Check if a request from client_ip is within the rate limit.
@@ -621,11 +651,14 @@ class RateLimitMiddleware:
             {
                 "type": "http.response.start",
                 "status": 429,
+                # R52 fix D4-001: Include security headers on 429 responses
+                # for parity with 401 (ApiKeyMiddleware) and 500 (ErrorHandlingMiddleware).
+                # Attackers trigger 429 via brute-force; missing HSTS weakens transport security.
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode()),
                     (b"retry-after", b"60"),
-                ],
+                ] + list(_SHARED_SECURITY_HEADERS),
             }
         )
         await send({"type": "http.response.body", "body": body})
@@ -662,6 +695,14 @@ class RequestBodyLimitMiddleware:
             return
 
         # Streaming enforcement: count actual bytes for chunked/missing Content-Length
+        #
+        # Design note (R52 D4-002): ASGI spec requires the app to consume the
+        # full body stream. We cannot close the connection early without violating
+        # the protocol. The streaming enforcement provides defense-in-depth: even
+        # if Content-Length is missing or spoofed, the actual byte count is tracked
+        # and rejected. The fast-path Content-Length check above handles the common
+        # case (reject before reading). For chunked transfers, the body is consumed
+        # but the response is replaced with 413 via send_wrapper interception.
         bytes_received = 0
         exceeded = False
 
@@ -699,10 +740,12 @@ class RequestBodyLimitMiddleware:
             {
                 "type": "http.response.start",
                 "status": 413,
+                # R52 fix D4-001: Include security headers on 413 responses
+                # for parity with 401 (ApiKeyMiddleware) and 500 (ErrorHandlingMiddleware).
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode()),
-                ],
+                ] + list(_SHARED_SECURITY_HEADERS),
             }
         )
         await send({"type": "http.response.body", "body": body})

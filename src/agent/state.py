@@ -63,6 +63,12 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     # (e.g., "remove the peanut allergy" → {"dietary": "__UNSET__"}).
     # Without this, _merge_dicts filters None, making fields "sticky" — once set,
     # they can never be unset.
+    # R52 fix D3: Guard against None input from buggy nodes.
+    # A node returning {"extracted_fields": None} would crash on .items().
+    if not b:
+        return dict(a) if a else {}
+    if not a:
+        a = {}
     merged = dict(a)
     for k, v in b.items():
         if v == UNSET_SENTINEL:
@@ -72,7 +78,7 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def _keep_max(a: int, b: int) -> int:
+def _keep_max(a: int | None, b: int | None) -> int:
     """Reducer that preserves the maximum value across state updates.
 
     Used for session-level counters (e.g., responsible_gaming_count) that
@@ -142,20 +148,25 @@ class GuestContext(TypedDict, total=False):
 class PropertyQAState(TypedDict):
     """Typed state flowing through the property Q&A graph.
 
-    ``messages`` is persisted across turns via the checkpointer's ``add_messages``
-    reducer. ``responsible_gaming_count`` persists via ``_keep_max`` reducer
-    for session-level escalation tracking. ``extracted_fields`` persists via
-    ``_merge_dicts`` reducer for multi-turn guest profiling. All other fields
-    are **per-turn** — they are reset by ``_initial_state()`` at the start of
-    each ``chat()`` / ``chat_stream()`` call.
+    Field categories:
+        **Persistent** (survive across turns via custom reducers):
+        - messages: Conversation history (add_messages reducer)
+        - extracted_fields: Guest profile data (_merge_dicts reducer)
+        - responsible_gaming_count: Session escalation counter (_keep_max reducer)
+        - suggestion_offered: Sticky flag for max-1 suggestion (_keep_truthy reducer)
+
+        **Ephemeral** (reset by _initial_state() each turn):
+        - query_type, router_confidence: Router classification
+        - retrieved_context, sources_used: RAG results
+        - validation_result, retry_count, skip_validation, retry_feedback: Validate loop
+        - current_time: Injected timestamp
+        - whisper_plan: Background planner output
+        - guest_sentiment, guest_context, guest_name: Guest profiling
+        - specialist_name, dispatch_method: Dispatch observability
 
     ``skip_validation`` is set to ``True`` by the generate node (host_agent)
     when the response is a deterministic fallback (empty context, LLM error,
     circuit breaker open) that does not need adversarial validation.
-
-    v2 fields (all optional with defaults in ``_initial_state()``):
-    - ``extracted_fields``: structured fields extracted from the guest message
-    - ``whisper_plan``: background planner output (dict from WhisperPlan.model_dump())
     """
 
     messages: Annotated[list, add_messages]
@@ -189,6 +200,9 @@ class PropertyQAState(TypedDict):
     # specialist instead of re-dispatching (which wastes tokens and risks
     # non-deterministic specialist switching).
     specialist_name: str | None
+    # R52 fix D1: Persist dispatch method for observability and debugging.
+    # Values: structured_output / keyword_fallback / retry_reuse / feature_flag_override
+    dispatch_method: str | None
     # v4 fields (Phase 4: R21-R23)
     # _keep_truthy reducer: once True, stays True for the session.
     # _initial_state() passes False; ``False or existing_True`` = True (preserved).

@@ -616,6 +616,96 @@ class TestApiKeyTTLRefreshExpiry:
             assert resp.status_code == 200
 
 
+class TestMiddlewareOrdering:
+    """R55 fix D5: Verify middleware is applied in the documented order.
+
+    Uses ``app.user_middleware`` (Starlette's middleware config list) because
+    ``app.middleware_stack`` is only built when the app starts serving.
+    ``user_middleware`` is ordered outermost (index 0) to innermost (last index)
+    — Starlette prepends on each ``add_middleware()`` call.
+    """
+
+    def test_middleware_stack_contains_all_required_types(self):
+        """All 6 custom middleware types are present in the app configuration."""
+        from src.api.app import app
+        from src.api.middleware import (
+            ApiKeyMiddleware,
+            ErrorHandlingMiddleware,
+            RateLimitMiddleware,
+            RequestBodyLimitMiddleware,
+            RequestLoggingMiddleware,
+            SecurityHeadersMiddleware,
+        )
+
+        required_types = {
+            ApiKeyMiddleware,
+            ErrorHandlingMiddleware,
+            RateLimitMiddleware,
+            RequestBodyLimitMiddleware,
+            RequestLoggingMiddleware,
+            SecurityHeadersMiddleware,
+        }
+        found_types = {m.cls for m in app.user_middleware if m.cls in required_types}
+
+        assert found_types == required_types, (
+            f"Missing middleware: {required_types - found_types}"
+        )
+
+    def test_middleware_execution_order(self):
+        """Middleware executes in the documented order (ADR-010).
+
+        user_middleware is ordered outermost (index 0) to innermost (last index).
+        Required execution order:
+        1. RequestBodyLimit  (outermost — reject oversized payloads first)
+        2. ErrorHandling     (catch unhandled exceptions)
+        3. RequestLogging    (log all requests)
+        4. SecurityHeaders   (add headers to responses)
+        5. RateLimit         (per-client rate limiting, BEFORE auth)
+        6. ApiKey            (authentication gate, innermost)
+        """
+        from src.api.app import app
+        from src.api.middleware import (
+            ApiKeyMiddleware,
+            ErrorHandlingMiddleware,
+            RateLimitMiddleware,
+            RequestBodyLimitMiddleware,
+            RequestLoggingMiddleware,
+            SecurityHeadersMiddleware,
+        )
+
+        # Build ordered list of our middleware (skip CORSMiddleware)
+        our_middleware = {
+            RequestBodyLimitMiddleware, ErrorHandlingMiddleware,
+            RequestLoggingMiddleware, SecurityHeadersMiddleware,
+            RateLimitMiddleware, ApiKeyMiddleware,
+        }
+        order = [m.cls.__name__ for m in app.user_middleware if m.cls in our_middleware]
+
+        # BodyLimit must be outermost (first in list)
+        assert order[0] == "RequestBodyLimitMiddleware", (
+            f"BodyLimit must be outermost (index 0). Got: {order}"
+        )
+
+        # ErrorHandling must be before Logging, Security, RateLimit, ApiKey
+        eh_idx = order.index("ErrorHandlingMiddleware")
+        rl_idx = order.index("RequestLoggingMiddleware")
+        assert eh_idx < rl_idx, (
+            f"ErrorHandling must be before RequestLogging. Got: {order}"
+        )
+
+        # RateLimit BEFORE ApiKey (prevents brute-force: R48 fix)
+        rate_idx = order.index("RateLimitMiddleware")
+        auth_idx = order.index("ApiKeyMiddleware")
+        assert rate_idx < auth_idx, (
+            f"RateLimit must execute before ApiKey (prevent brute-force). Got: {order}"
+        )
+
+        # ApiKey must be innermost (last in our middleware list)
+        assert order[-1] == "ApiKeyMiddleware", (
+            f"ApiKey must be innermost (last). Got: {order}"
+        )
+
+
 class TestRequestBodyLimitMiddleware:
     def test_allows_normal_request(self):
         """Requests within the body size limit pass through."""

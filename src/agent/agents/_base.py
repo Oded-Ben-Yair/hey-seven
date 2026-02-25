@@ -324,21 +324,27 @@ async def execute_specialist(
     # If all 20 LLM slots are busy, return a fallback instead of
     # queueing indefinitely. Prevents request pile-up during LLM slowdowns.
     # R46 fix D8-M002: Read timeout from config instead of hardcoding.
+    #
+    # R52 fix D8: Single try/finally with acquired flag. Previous structure had
+    # acquire() outside try/finally — CancelledError between acquire() completing
+    # and entering try block leaked the semaphore count permanently.
     semaphore_timeout = settings.LLM_SEMAPHORE_TIMEOUT
+    acquired = False
     try:
-        await asyncio.wait_for(_LLM_SEMAPHORE.acquire(), timeout=semaphore_timeout)
-    except asyncio.TimeoutError:
-        logger.warning(
-            "%s agent semaphore acquire timeout (%ds) — returning backpressure fallback",
-            agent_name.capitalize(),
-            semaphore_timeout,
-        )
-        return {
-            "messages": [AIMessage(content=_fallback_message("high demand right now"))],
-            "skip_validation": True,
-        }
+        try:
+            await asyncio.wait_for(_LLM_SEMAPHORE.acquire(), timeout=semaphore_timeout)
+            acquired = True
+        except asyncio.TimeoutError:
+            logger.warning(
+                "%s agent semaphore acquire timeout (%ds) — returning backpressure fallback",
+                agent_name.capitalize(),
+                semaphore_timeout,
+            )
+            return {
+                "messages": [AIMessage(content=_fallback_message("high demand right now"))],
+                "skip_validation": True,
+            }
 
-    try:
         try:
             response = await llm.ainvoke(llm_messages)
         except (ValueError, TypeError) as exc:
@@ -378,7 +384,8 @@ async def execute_specialist(
                 "skip_validation": True,
             }
     finally:
-        _LLM_SEMAPHORE.release()
+        if acquired:
+            _LLM_SEMAPHORE.release()
 
     await cb.record_success()
     content = response.content if isinstance(response.content, str) else str(response.content)

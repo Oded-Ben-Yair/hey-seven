@@ -62,6 +62,23 @@ class StateBackend(ABC):
         import asyncio
         return await asyncio.to_thread(self.get, key)
 
+    async def async_pipeline_set(self, items: list[tuple[str, str, int]]) -> None:
+        """Batch multiple set operations into a single round-trip.
+
+        R52 fix D8: Default implementation delegates to individual async_set
+        calls. RedisBackend overrides with a true pipeline for 1 round-trip.
+        """
+        for key, value, ttl in items:
+            await self.async_set(key, value, ttl)
+
+    async def async_pipeline_get(self, keys: list[str]) -> list[str | None]:
+        """Batch multiple get operations into a single round-trip.
+
+        R52 fix D8: Default implementation delegates to individual async_get
+        calls. RedisBackend overrides with a true pipeline for 1 round-trip.
+        """
+        return [await self.async_get(k) for k in keys]
+
     async def async_rate_limit(
         self, key: str, window_seconds: int, max_tokens: int, member: str, now: float,
     ) -> bool:
@@ -220,6 +237,14 @@ class InMemoryBackend(StateBackend):
     async def async_get(self, key: str) -> str | None:
         return self.get(key)
 
+    # R52 fix D8: Pipeline overrides — delegate to sync methods directly.
+    async def async_pipeline_set(self, items: list[tuple[str, str, int]]) -> None:
+        for key, value, ttl in items:
+            self.set(key, value, ttl)
+
+    async def async_pipeline_get(self, keys: list[str]) -> list[str | None]:
+        return [self.get(k) for k in keys]
+
 
 class RedisBackend(StateBackend):
     """Redis state backend for multi-container deployments.
@@ -273,6 +298,7 @@ return 0
                 decode_responses=True,
                 socket_connect_timeout=2,
                 socket_timeout=2,
+                max_connections=20,  # R52 fix D8: bound connection pool
             )
             # Register Lua script for atomic rate limiting
             self._rate_limit_script = self._async_client.register_script(
@@ -317,6 +343,20 @@ return 0
 
     async def async_get(self, key: str) -> str | None:
         return await self._async_client.get(key)
+
+    async def async_pipeline_set(self, items: list[tuple[str, str, int]]) -> None:
+        """R52 fix D8: Batch Redis writes in a single pipeline (1 round-trip)."""
+        async with self._async_client.pipeline(transaction=False) as pipe:
+            for key, value, ttl in items:
+                pipe.setex(key, ttl, value)
+            await pipe.execute()
+
+    async def async_pipeline_get(self, keys: list[str]) -> list[str | None]:
+        """R52 fix D8: Batch Redis reads in a single pipeline (1 round-trip)."""
+        async with self._async_client.pipeline(transaction=False) as pipe:
+            for key in keys:
+                pipe.get(key)
+            return await pipe.execute()
 
     async def async_rate_limit(
         self, key: str, window_seconds: int, max_tokens: int, member: str, now: float,

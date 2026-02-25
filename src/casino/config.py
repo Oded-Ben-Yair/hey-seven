@@ -151,7 +151,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "quiet_hours_start": "21:00",
         "quiet_hours_end": "08:00",
         "responsible_gaming_helpline": "1-800-MY-RESET",
-        "state_helpline": "",
+        # R52 fix M3: National fallback — 1-800-GAMBLER is the rebranded NCPG number.
+        "state_helpline": "1-800-GAMBLER",
     },
     "operational": {
         "timezone": "America/New_York",
@@ -439,14 +440,16 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "quiet_hours_start": "22:00",
             "quiet_hours_end": "08:00",
             # R39 fix D10-M002: NV helpline corrected. 1-800-MY-RESET is CT-specific.
-            # NV commercial casinos use the NCPG national hotline as primary.
-            "responsible_gaming_helpline": "1-800-522-4700",
+            # R52 fix C2: 1-800-522-4700 rebranded to 1-800-GAMBLER (NCPG, 2022).
+            "responsible_gaming_helpline": "1-800-GAMBLER",
             "state_helpline": "1-800-GAMBLER",
             "self_exclusion_authority": "Nevada Gaming Control Board",
             "self_exclusion_url": "gaming.nv.gov",
             "self_exclusion_phone": "1-702-486-2000",  # R35 fix: NGCB main line
             # R39 fix D10-M001: NV self-exclusion options per NGCB regulations.
-            "self_exclusion_options": "1-year minimum (revocable after 1 year), or lifetime (irrevocable)",
+            # R57 fix D10: Corrected statute reference. NRS 463.368 governs involuntary
+            # exclusions (cheating). Voluntary self-exclusion is under NGC Regulation 5.170.
+            "self_exclusion_options": "1-year minimum (removal requires written petition to NGCB per NGC Reg. 5.170), or lifetime (irrevocable)",
         },
         "operational": {
             "timezone": "America/Los_Angeles",
@@ -550,6 +553,66 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Profile completeness validation (R52 fix D10)
+# ---------------------------------------------------------------------------
+
+_REQUIRED_PROFILE_FIELDS = frozenset({
+    "state",
+    "gaming_age_minimum",
+    "responsible_gaming_helpline",
+    "state_helpline",
+    "self_exclusion_authority",
+})
+
+
+def _validate_profiles_completeness() -> None:
+    """Validate all casino profiles and DEFAULT_CONFIG have required regulatory fields.
+
+    R52 fix D10: Missing regulatory fields are a compliance risk.
+    Validates at import time so misconfiguration is caught immediately.
+    R52 fix M3: Also validate DEFAULT_CONFIG — fallback config must have
+    all required fields, not just CASINO_PROFILES entries.
+    R52 fix M6: Check ai_disclosure_law is present (may be empty string).
+    """
+    # Validate DEFAULT_CONFIG first
+    default_regs = DEFAULT_CONFIG.get("regulations", {})
+    missing_default = _REQUIRED_PROFILE_FIELDS - set(default_regs.keys())
+    if missing_default:
+        logger.warning(
+            "DEFAULT_CONFIG missing required regulatory fields: %s",
+            missing_default,
+        )
+    # Check for empty state_helpline in DEFAULT_CONFIG
+    if not default_regs.get("state_helpline"):
+        logger.warning(
+            "DEFAULT_CONFIG has empty state_helpline — fallback guests will "
+            "not receive a state-specific helpline number",
+        )
+
+    # Validate each casino profile
+    for casino_id, profile in CASINO_PROFILES.items():
+        regulations = profile.get("regulations", {})
+        missing = _REQUIRED_PROFILE_FIELDS - set(regulations.keys())
+        if missing:
+            logger.warning(
+                "Casino profile %r missing required regulatory fields: %s",
+                casino_id,
+                missing,
+            )
+        # R52 fix M6: Warn if ai_disclosure_law is absent (not required but
+        # documented in onboarding checklist as expected).
+        if "ai_disclosure_law" not in regulations:
+            logger.info(
+                "Casino profile %r has no ai_disclosure_law field (optional)",
+                casino_id,
+            )
+
+
+# Run at import time
+_validate_profiles_completeness()
+
+
 def get_casino_profile(casino_id: str) -> dict[str, Any]:
     """Return static casino profile by ID, or DEFAULT_CONFIG if not found.
 
@@ -567,8 +630,13 @@ def get_casino_profile(casino_id: str) -> dict[str, Any]:
 
     profile = CASINO_PROFILES.get(casino_id)
     if profile is None:
+        # R55 fix D10: Enhanced warning for operational visibility when an
+        # unknown casino_id is passed. Guides operators to add a profile entry
+        # for jurisdiction-specific regulatory behavior (helplines, self-exclusion).
         logger.warning(
-            "Unknown casino_id=%s, falling back to DEFAULT_CONFIG (Mohegan Sun defaults)",
+            "Unknown casino_id %r — using DEFAULT_CONFIG (CT/Mohegan Sun defaults). "
+            "Add a profile to CASINO_PROFILES for jurisdiction-specific behavior "
+            "(helplines, self-exclusion authority, state regulations).",
             casino_id,
         )
         # R35 fix: return deepcopy to prevent caller mutation of global default.

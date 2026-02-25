@@ -514,10 +514,11 @@ class TestCasinoProfiles:
         regs = profile["regulations"]
         assert regs["state"] == "NV"
         assert regs["gaming_age_minimum"] == 21
-        # R39 fix D10-M002: NV uses NCPG national hotline, not CT-specific 1-800-MY-RESET
-        assert regs["responsible_gaming_helpline"] == "1-800-522-4700"
+        # R52 fix C2: 1-800-522-4700 rebranded to 1-800-GAMBLER (NCPG, 2022)
+        assert regs["responsible_gaming_helpline"] == "1-800-GAMBLER"
         assert regs["self_exclusion_authority"] == "Nevada Gaming Control Board"
-        assert regs["self_exclusion_options"] == "1-year minimum (revocable after 1 year), or lifetime (irrevocable)"
+        # R57 fix D10: NV self-exclusion per NGC Regulation 5.170 (not NRS 463.368)
+        assert "petition" in regs["self_exclusion_options"].lower()
         assert profile["operational"]["timezone"] == "America/Los_Angeles"
 
     def test_wynn_las_vegas_luxury_branding(self):

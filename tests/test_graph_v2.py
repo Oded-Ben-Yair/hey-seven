@@ -407,8 +407,8 @@ class TestSpecialistDispatch:
         )
 
         mock_dining = AsyncMock(return_value={"messages": [AIMessage(content="Dining response")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_dining) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_dining) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("dining")
@@ -430,8 +430,8 @@ class TestSpecialistDispatch:
         )
 
         mock_ent = AsyncMock(return_value={"messages": [AIMessage(content="Entertainment")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_ent) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_ent) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("entertainment")
@@ -451,8 +451,8 @@ class TestSpecialistDispatch:
         )
 
         mock_comp = AsyncMock(return_value={"messages": [AIMessage(content="Comp")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_comp) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_comp) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("comp")
@@ -474,8 +474,8 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         # With 3 categories each at count=1, tie-break uses _CATEGORY_PRIORITY:
@@ -495,8 +495,8 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("host")
@@ -516,8 +516,8 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("host")
@@ -558,9 +558,9 @@ class TestSpecialistDispatch:
             return True
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
-        with mock_patch("src.agent.graph.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
+             mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         # Should dispatch to host, not dining
@@ -611,7 +611,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -652,7 +652,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.entertainment_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -688,7 +688,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -716,7 +716,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -757,7 +757,7 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()),
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
             mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
             mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
         ):
@@ -929,8 +929,8 @@ class TestSpecialistDispatchTieBreaking:
         )
 
         mock_dining = AsyncMock(return_value={"messages": [AIMessage(content="Dining")]})
-        with mock_patch("src.agent.graph.get_agent", return_value=mock_dining) as mock_get, \
-             mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_dining) as mock_get, \
+             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
             result = await _dispatch_to_specialist(state)
 
         # restaurants (priority 4) > entertainment (priority 2) → dining agent
@@ -977,9 +977,9 @@ class TestStructuredDispatch:
 
         mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Entertainment response")]})
 
-        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
             result = await _dispatch_to_specialist(state)
 
         # Structured dispatch used LLM result
@@ -1013,9 +1013,9 @@ class TestStructuredDispatch:
 
         mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Dining response")]})
 
-        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
             result = await _dispatch_to_specialist(state)
 
         # Falls back to keyword counting: restaurants dominant → dining
@@ -1046,9 +1046,9 @@ class TestStructuredDispatch:
 
         mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
 
-        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
             result = await _dispatch_to_specialist(state)
 
         # Falls back to keyword counting: amenities not in mapping → host
@@ -1072,9 +1072,9 @@ class TestStructuredDispatch:
 
         mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Dining")]})
 
-        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=_mock_cb_blocking()), \
-             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()), \
+             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
             result = await _dispatch_to_specialist(state)
 
         # Keyword fallback used
@@ -1118,10 +1118,10 @@ class TestStructuredDispatch:
 
         mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
 
-        with mock_patch("src.agent.graph._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.graph._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.graph.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
-             mock_patch("src.agent.graph.get_agent", return_value=mock_agent) as mock_get:
+        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
+             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
+             mock_patch("src.agent.dispatch.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
+             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
             result = await _dispatch_to_specialist(state)
 
         # LLM said "dining" but feature flag forced "host"

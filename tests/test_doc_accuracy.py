@@ -22,8 +22,8 @@ class TestSettingsCount:
         # Count fields defined directly on Settings (exclude inherited)
         fields = Settings.model_fields
         actual_count = len(fields)
-        assert actual_count == 64, (
-            f"Settings has {actual_count} fields, but docs say 64. "
+        assert actual_count == 65, (
+            f"Settings has {actual_count} fields, but docs say 65. "
             f"Update README.md and .env.example if count changed."
         )
 
@@ -58,12 +58,12 @@ class TestStateFieldCount:
     """Verify the documented state field count matches code."""
 
     def test_property_qa_state_has_17_fields(self):
-        """PropertyQAState has exactly 17 fields (13 v1/v2 + 3 v3 + 1 v4)."""
+        """PropertyQAState has exactly 19 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52)."""
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 18, (
-            f"PropertyQAState has {actual} fields, expected 18. "
+        assert actual == 19, (
+            f"PropertyQAState has {actual} fields, expected 19. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 
@@ -278,10 +278,11 @@ class TestGuardrailPatternCount:
         from src.agent import guardrails
 
         source = inspect.getsource(guardrails)
-        patterns = re.findall(r"re\.compile\(", source)
+        # R52: Migrated from re.compile() to regex_engine.compile() for re2 ReDoS protection.
+        patterns = re.findall(r"regex_engine\.compile\(", source)
         # R49: 185 -> 204 (added 6 Mandarin injection + 14 self-harm + 5 Mandarin non-Latin injection patterns)
         assert len(patterns) == 204, (
-            f"guardrails.py has {len(patterns)} re.compile() patterns, expected 204. "
+            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 204. "
             f"Update docs if patterns were added/removed."
         )
 

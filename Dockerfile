@@ -31,9 +31,10 @@ WORKDIR /app
 COPY --from=builder /build/deps /usr/local/lib/python3.12/site-packages/
 
 # Copy application code (least-frequently-changed first for Docker cache)
-COPY data/ ./data/
-COPY static/ ./static/
-COPY src/ ./src/
+# --chown ensures files are owned by appuser without needing a separate chown layer.
+COPY --chown=appuser:appuser data/ ./data/
+COPY --chown=appuser:appuser static/ ./static/
+COPY --chown=appuser:appuser src/ ./src/
 
 # ChromaDB is dev-only (not in requirements-prod.txt). Production uses Vertex AI Vector Search.
 # Create data directory owned by appuser for property JSON files.
@@ -41,8 +42,10 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 # Environment
 # WEB_CONCURRENCY=1 for demo/single-container deployment.
-# Production scaling: set WEB_CONCURRENCY=2-4 based on Cloud Run vCPU
-# allocation (1 worker per vCPU). Gunicorn with uvicorn workers:
+# Production scaling: override via environment variable in Cloud Run:
+#   gcloud run services update hey-seven --set-env-vars WEB_CONCURRENCY=4
+# Rule of thumb: 1 worker per vCPU allocation.
+# For multi-worker production, switch to gunicorn with uvicorn workers:
 #   CMD gunicorn src.api.app:app -w ${WEB_CONCURRENCY} -k uvicorn.workers.UvicornWorker
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -65,13 +68,12 @@ USER appuser
 # startup/liveness probes configured via gcloud deploy flags (see cloudbuild.yaml).
 # Kept for local docker-compose / Docker Desktop health monitoring.
 # R41 fix D6-M003: Python urllib replaces curl — no extra binary in final image.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)" || exit 1
 
-# Graceful shutdown: 15s allows in-flight SSE streams to complete before
-# uvicorn force-terminates connections. Cloud Run sends SIGTERM and allows
-# up to --timeout (180s) for graceful shutdown; uvicorn's own timeout is
-# the actual bound on connection draining.
+# Graceful shutdown chain: SIGTERM → app drain (10s) → uvicorn kill (15s) → Cloud Run kill (180s).
+# The 10s app drain (_DRAIN_TIMEOUT_S in app.py) < 15s uvicorn timeout ensures the app
+# finishes draining before uvicorn force-kills connections. Cloud Run's 180s is the outer bound.
 CMD ["python", "-m", "uvicorn", "src.api.app:app", \
     "--host", "0.0.0.0", "--port", "8080", "--workers", "1", \
     "--timeout-graceful-shutdown", "15"]

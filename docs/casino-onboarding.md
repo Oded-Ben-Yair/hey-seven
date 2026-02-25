@@ -20,7 +20,8 @@ Add a new entry with casino_id as key. Required fields:
 | Section | Required Fields |
 |---------|----------------|
 | `branding` | persona_name, tone, formality_level, emoji_allowed, exclamation_limit |
-| `regulations` | state, gaming_age_minimum, ai_disclosure_required, ai_disclosure_law, quiet_hours_start/end, responsible_gaming_helpline, state_helpline |
+| `regulations` | state, gaming_age_minimum, ai_disclosure_required, quiet_hours_start/end, responsible_gaming_helpline, state_helpline, self_exclusion_authority |
+| `regulations` (optional) | ai_disclosure_law (set if state has specific AI disclosure legislation) |
 | `operational` | timezone, contact_phone |
 | `prompts` | casino_name_display, greeting_template, fallback_message |
 

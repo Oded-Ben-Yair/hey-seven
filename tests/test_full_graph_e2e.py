@@ -496,7 +496,7 @@ class TestFullGraphE2E:
             patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
             patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
             patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.graph._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
+            patch("src.agent.dispatch._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
             patch("src.agent.agents.dining_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
             patch("src.agent.agents.host_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
             patch("src.agent.agents.entertainment_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),

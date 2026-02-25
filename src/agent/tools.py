@@ -33,7 +33,19 @@ RAG retrieval architecture (dual-strategy + RRF fusion):
     retriever backend-agnostic and reusable.
 """
 
+import concurrent.futures
 import logging
+
+# R57 fix D2: Module-level reusable thread pool for concurrent retrieval.
+# Per-request ThreadPoolExecutor (R56) created/destroyed 50+ pools/minute
+# under load. Module-level pool reuses 2 threads across all requests.
+# max_workers=2: one per retrieval strategy (semantic + augmented).
+# R57 fix D2: max_workers sized for Cloud Run --concurrency=50.
+# Each /chat request submits 2 futures (semantic + augmented). With 50
+# concurrent requests, worst case = 100 futures. Workers > 50 ensures
+# no request blocks waiting for a thread. Threads are lightweight for
+# I/O-bound work (no GIL contention on network waits).
+_RETRIEVAL_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=50, thread_name_prefix="rag")
 
 from src.agent.state import RetrievedChunk
 from src.config import get_settings
@@ -71,7 +83,8 @@ def _get_augmentation_terms(query: str) -> str:
         Space-separated augmentation terms to append to the query.
     """
     query_lower = query.lower()
-    words = set(query_lower.split())
+    # R52 fix D2: Strip punctuation before word matching. "hours?" must match "hours".
+    words = {w.strip(".,;:!?\"'()[]{}") for w in query_lower.split()}
     if words & _TIME_WORDS:
         return "hours schedule open close"
     if words & _PRICE_WORDS:
@@ -119,18 +132,47 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
     settings = get_settings()
     try:
         retriever = get_retriever()
-        # Strategy 1: Direct semantic search
-        semantic_results = retriever.retrieve_with_scores(query, top_k=settings.RAG_TOP_K)
-        # Strategy 2: Query-type-aware augmented search for improved recall
         augmentation = _get_augmentation_terms(query)
-        augmented_results = retriever.retrieve_with_scores(
-            f"{query} {augmentation}",
-            top_k=settings.RAG_TOP_K,
+
+        # R57 fix D2: Concurrent retrieval via module-level _RETRIEVAL_POOL.
+        # Halves retrieval latency (both strategies are I/O-bound).
+        # Reuses thread pool across requests (R56 per-request pool was wasteful).
+        future_semantic = _RETRIEVAL_POOL.submit(
+            retriever.retrieve_with_scores, query, settings.RAG_TOP_K,
         )
+        future_augmented = _RETRIEVAL_POOL.submit(
+            retriever.retrieve_with_scores,
+            f"{query} {augmentation}",
+            settings.RAG_TOP_K,
+        )
+
+        semantic_results: list = []
+        augmented_results: list = []
+        try:
+            semantic_results = future_semantic.result(timeout=settings.RETRIEVAL_TIMEOUT)
+        except Exception:
+            logger.warning("Semantic retrieval failed", exc_info=True)
+
+        try:
+            augmented_results = future_augmented.result(timeout=settings.RETRIEVAL_TIMEOUT)
+        except Exception:
+            logger.warning("Augmented retrieval failed, using semantic-only", exc_info=True)
+
+        # Both strategies failed -- return empty
+        if not semantic_results and not augmented_results:
+            logger.warning("All retrieval strategies failed for query: %s", query[:80])
+            return []
+
         # Reciprocal Rank Fusion: merge rankings for better recall
+        result_lists = []
+        if semantic_results:
+            result_lists.append(semantic_results)
+        if augmented_results:
+            result_lists.append(augmented_results)
         fused = rerank_by_rrf(
-            [semantic_results, augmented_results],
+            result_lists,
             top_k=settings.RAG_TOP_K,
+            k=settings.RRF_K,
         )
     except (ValueError, TypeError) as exc:
         logger.warning("Retrieval parsing error for query '%s': %s", query, exc)
@@ -176,17 +218,43 @@ def search_hours(query: str) -> list[RetrievedChunk]:
     settings = get_settings()
     try:
         retriever = get_retriever()
-        # Strategy 1: Schedule-focused query
-        schedule_results = retriever.retrieve_with_scores(
+
+        # R57 fix D2: Concurrent retrieval via module-level _RETRIEVAL_POOL.
+        future_schedule = _RETRIEVAL_POOL.submit(
+            retriever.retrieve_with_scores,
             f"{query} hours schedule open close",
-            top_k=settings.RAG_TOP_K,
+            settings.RAG_TOP_K,
         )
-        # Strategy 2: Direct semantic search for broader venue context
-        semantic_results = retriever.retrieve_with_scores(query, top_k=settings.RAG_TOP_K)
+        future_semantic = _RETRIEVAL_POOL.submit(
+            retriever.retrieve_with_scores, query, settings.RAG_TOP_K,
+        )
+
+        schedule_results: list = []
+        semantic_results: list = []
+        try:
+            schedule_results = future_schedule.result(timeout=settings.RETRIEVAL_TIMEOUT)
+        except Exception:
+            logger.warning("Schedule retrieval failed", exc_info=True)
+        try:
+            semantic_results = future_semantic.result(timeout=settings.RETRIEVAL_TIMEOUT)
+        except Exception:
+            logger.warning("Semantic retrieval failed for hours query", exc_info=True)
+
+        # Both failed
+        if not schedule_results and not semantic_results:
+            logger.warning("All retrieval strategies failed for hours query: %s", query[:80])
+            return []
+
         # Reciprocal Rank Fusion
+        result_lists = []
+        if schedule_results:
+            result_lists.append(schedule_results)
+        if semantic_results:
+            result_lists.append(semantic_results)
         fused = rerank_by_rrf(
-            [schedule_results, semantic_results],
+            result_lists,
             top_k=settings.RAG_TOP_K,
+            k=settings.RRF_K,
         )
     except (ValueError, TypeError) as exc:
         logger.warning("Retrieval parsing error for hours query '%s': %s", query, exc)

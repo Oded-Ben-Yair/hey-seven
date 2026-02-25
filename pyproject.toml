@@ -19,6 +19,15 @@ source = ["src"]
 [tool.coverage.report]
 fail_under = 90
 show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING",
+    # re2 paths are environment-dependent (requires libre2-dev)
+    "import re2 as _re2",
+    "RE2_AVAILABLE = True",
+    "_re2\\.Options",
+    "_re2\\.compile",
+]
 
 [tool.black]
 line-length = 88

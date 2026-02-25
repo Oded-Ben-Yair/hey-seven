@@ -80,7 +80,7 @@ Cloud Run does not support configuring a separate `readinessProbe` via `gcloud r
 ### Dockerfile HEALTHCHECK (local only)
 
 ```dockerfile
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 ```
 
@@ -263,10 +263,10 @@ gcloud run deploy hey-seven \
 - **Interaction with Cloud Run**:
   - Cloud Run sends SIGTERM and allows `--timeout=180s` for graceful shutdown (outer bound).
   - uvicorn `--timeout-graceful-shutdown=15` handles non-SSE connections.
-  - The 30s drain timeout is for SSE streams specifically (longer than uvicorn's 15s because SSE streams may be mid-generation).
-- **Failure mode**: If all active streams complete within 30s, shutdown is clean. If streams exceed 30s, they are force-cancelled (client sees SSE connection drop; no data corruption since Firestore checkpoints are per-message, not per-stream).
+  - The 10s drain timeout is for SSE streams specifically (shorter than uvicorn's 15s graceful timeout, providing an inner bound for SSE cleanup before uvicorn's outer bound).
+- **Failure mode**: If all active streams complete within 10s, shutdown is clean. If streams exceed 10s, they are force-cancelled (client sees SSE connection drop; no data corruption since Firestore checkpoints are per-message, not per-stream).
 - **Monitoring**: SIGTERM handler logs `"SIGTERM received, initiating graceful drain (N active streams)"`. Force-close logs `"Force-closing N SSE streams after drain timeout"`.
-- **ADR (R40)**: Chose 30s drain timeout as compromise: long enough for typical LLM generation (P95 ~5s) plus validation loop, short enough to stay well within Cloud Run's 180s outer timeout. The 15s uvicorn graceful shutdown covers non-streaming HTTP requests; the 30s drain covers long-lived SSE connections.
+- **ADR (R40, updated R52)**: Chose 10s drain timeout (`_DRAIN_TIMEOUT_S=10` in `src/api/app.py`): long enough for typical LLM generation (P95 ~5s) plus validation loop, short enough to stay within uvicorn's 15s graceful shutdown and well within Cloud Run's 180s outer timeout. The 15s uvicorn graceful shutdown covers non-streaming HTTP requests; the 10s drain covers SSE stream cleanup as an inner bound.
 
 ### TTL Jitter (Thundering Herd Prevention)
 
@@ -466,7 +466,18 @@ Cloud Memorystore (Redis). Settings and LLM singletons remain per-process.
 
 ---
 
-## Observability
+## Observability Stack
+
+### Component Overview
+
+| Component | Purpose | Configuration |
+|-----------|---------|---------------|
+| LangFuse | Distributed tracing for LLM calls (latency, token usage, cost) | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` |
+| LangSmith | LangGraph trace visualization (node traversal, state evolution) | `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT` |
+| Structured logging | JSON logs for Cloud Logging (GCP native) | `RequestLoggingMiddleware` — every request logged with request_id, method, path, status, duration_ms |
+| Health endpoints | `/health` (readiness) + `/live` (liveness) | Probes configured in cloudbuild.yaml Steps 6-7 |
+| Circuit breaker metrics | `/metrics`-compatible state exposure via `/health` | CB state (`closed`/`open`/`half_open`), failure_count, cooldown timing |
+| Request ID correlation | `X-Request-ID` header | Injected by `RequestLoggingMiddleware`, propagated to LangFuse traces, returned in every HTTP response |
 
 ### Structured Logging (Cloud Logging)
 
@@ -483,21 +494,46 @@ Cloud Memorystore (Redis). Settings and LLM singletons remain per-process.
 }
 ```
 
-- `X-Request-ID` injected into every response header for correlation
-- `X-Response-Time-Ms` header on every response
-- `CancelledError` (client disconnect) logged at INFO, not ERROR
+- `X-Request-ID` injected into every response header for end-to-end correlation
+- `X-Response-Time-Ms` header on every response for client-side latency visibility
+- `CancelledError` (client disconnect) logged at INFO, not ERROR (prevents alert noise)
+- Log levels: `LOG_LEVEL` env var (default INFO). Set to DEBUG for per-node tracing.
 
-### LangFuse
+### LangFuse (Distributed Tracing)
 
-- Enabled when `LANGFUSE_PUBLIC_KEY` is set
+- Enabled when `LANGFUSE_PUBLIC_KEY` is set (non-empty)
 - Sampling: 10% in production, 100% in development
-- Traces include: thread_id (session), request_id (HTTP correlation), query_type tags
+- Traces include: `thread_id` (session), `request_id` (HTTP correlation), `query_type` tags
 - Callback handler creates trace hierarchies: Trace -> Span (per node) -> Generation (LLM call)
+- Token usage and cost tracking per LLM call (router, specialist, validator)
+- See: `src/observability/langfuse_client.py`
 
-### LangSmith
+### LangSmith (Graph Visualization)
 
 - Configured via `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT` env vars
 - Requires app-level sampling code (not just env var config)
+- Visualizes full graph traversal: which nodes executed, state at each step, retry loops
+
+### Alerting Triggers
+
+| Signal | Logger Call | Severity | Action |
+|--------|-----------|----------|--------|
+| Circuit breaker OPEN | `logger.warning("Circuit breaker OPEN")` | WARNING | Check Gemini API status page |
+| Semantic classifier degraded | `logger.warning("RESTRICTED MODE active")` | WARNING | Deterministic guardrails still active; LLM classifier bypassed |
+| PII redaction failure | `logger.error("PII redaction failed")` | ERROR | Fail-closed: `[PII_REDACTION_ERROR]` returned to client |
+| Background sweep death | `logger.error("Background sweep task terminated")` | ERROR | Rate limiter stale entries may accumulate until restart |
+| Retrieval timeout | `logger.warning("Retrieval timed out")` | WARNING | Check vector store connectivity, increase `RETRIEVAL_TIMEOUT` |
+| Validation loop stuck | High latency + recursion limit hit | ERROR | Check LangFuse traces for generate->validate loops |
+| SSE stream timeout | `logger.warning("SSE timeout")` | WARNING | Client receives structured error event; check LLM latency |
+
+### Output Guardrails (4-Layer Protection)
+
+Output quality and safety are enforced by 4 sequential layers. See `docs/output-guardrails.md` for full architecture:
+
+1. **Validation loop** (LLM-based): adversarial review against 6 compliance criteria, structured output, max 1 retry
+2. **PII redaction** (regex, fail-closed): real-time streaming redaction across chunk boundaries
+3. **Persona envelope** (branding): exclamation limits, emoji removal, guest name, SMS truncation
+4. **Response formatting** (respond_node): source citation, stale context cleanup
 
 ---
 
@@ -542,7 +578,10 @@ All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable,
 
 ---
 
-## Environment Variables (Complete Reference)
+## Environment Variables (Key Settings)
+
+> **Note**: For the complete list of all ~65 configurable settings, see `src/config.py`.
+> Override any setting via environment variable (e.g., `MODEL_NAME=gemini-2.5-pro`).
 
 | Variable | Default | Production | Purpose |
 |----------|---------|------------|---------|

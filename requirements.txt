@@ -26,6 +26,7 @@ langgraph-checkpoint-firestore==0.1.0
 
 # --- Evaluation ---
 deepeval==3.8.4
+hypothesis==6.151.9
 vaderSentiment==3.3.2
 
 # --- State Backend (distributed) ---
@@ -34,6 +35,10 @@ vaderSentiment==3.3.2
 redis[hiredis]==5.2.1
 
 # --- Utilities ---
+# R52 fix D7: google-re2 for linear-time regex (ReDoS protection).
+# Optional: falls back to stdlib re when unavailable (e.g., WSL without libre2-dev).
+# Pin to exact version when deploying to production.
+google-re2==1.1.0
 sse-starlette==3.2.0
 httpx==0.28.1
 cryptography==46.0.5

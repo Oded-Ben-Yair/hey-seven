@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     RAG_CHUNK_SIZE: int = 800
     RAG_CHUNK_OVERLAP: int = 120  # 15% of chunk size (industry recommendation)
     RAG_MIN_RELEVANCE_SCORE: float = 0.3  # Minimum relevance score (0-1, higher = more relevant)
+    RRF_K: int = 60  # Reciprocal Rank Fusion constant (see ADR-011, original RRF paper)
 
     # --- API ---
     API_KEY: SecretStr = SecretStr("")  # When set, /chat requires X-API-Key header
@@ -162,6 +163,35 @@ class Settings(BaseSettings):
                     "allowing forged inbound SMS events. "
                     "Set TELNYX_PUBLIC_KEY via environment variable or Secret Manager."
                 )
+        return self
+
+    @model_validator(mode="after")
+    def validate_property_state(self) -> "Settings":
+        """Warn if PROPERTY_STATE doesn't match expected state for CASINO_ID.
+
+        R52 fix D10: Misconfigured PROPERTY_STATE causes regulatory helplines
+        from the wrong jurisdiction to be served. This validator catches the
+        mismatch early with a warning (not a hard error, since unknown
+        CASINO_IDs are allowed for new property onboarding).
+        """
+        import logging as _logging
+
+        _state_map = {
+            "mohegan_sun": "Connecticut",
+            "foxwoods": "Connecticut",
+            "parx_casino": "Pennsylvania",
+            "wynn_las_vegas": "Nevada",
+            "hard_rock_ac": "New Jersey",
+        }
+        expected = _state_map.get(self.CASINO_ID)
+        if expected and self.PROPERTY_STATE != expected:
+            _logging.getLogger(__name__).warning(
+                "PROPERTY_STATE=%r but CASINO_ID=%r expects %r — "
+                "regulatory helplines may be incorrect",
+                self.PROPERTY_STATE,
+                self.CASINO_ID,
+                expected,
+            )
         return self
 
     @model_validator(mode="after")

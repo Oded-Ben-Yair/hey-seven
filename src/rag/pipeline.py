@@ -505,16 +505,21 @@ def _load_property_json(data_path: str | Path) -> list[dict[str, Any]]:
                     continue
 
                 if text.strip():
+                    meta = {
+                        "category": category,
+                        "item_name": item_name,
+                        "source": path.name,
+                        "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
+                        "last_updated": datetime.now(tz=timezone.utc).isoformat(),
+                        "_schema_version": "2.1",
+                    }
+                    # R52 fix D2: Tag items missing a name field for quality monitoring.
+                    # Incomplete items may produce poor embeddings and lower retrieval quality.
+                    if isinstance(item, dict) and not item.get("name"):
+                        meta["_quality"] = "incomplete"
                     documents.append({
                         "content": text,
-                        "metadata": {
-                            "category": category,
-                            "item_name": item_name,
-                            "source": path.name,
-                            "property_id": settings.PROPERTY_NAME.lower().replace(" ", "_"),
-                            "last_updated": datetime.now(tz=timezone.utc).isoformat(),
-                            "_schema_version": "2.1",
-                        },
+                        "metadata": meta,
                     })
 
     elif isinstance(data, list):
@@ -721,6 +726,8 @@ def ingest_property(
     data_path = data_path or settings.PROPERTY_DATA_PATH
     persist_dir = persist_dir or settings.CHROMA_PERSIST_DIR
     kb_dir = knowledge_base_dir or "knowledge-base"
+
+    logger.info("Starting ingestion with embedding model: %s", settings.EMBEDDING_MODEL)
 
     # Phase 1: Load structured JSON property data
     documents = _load_property_json(data_path)
