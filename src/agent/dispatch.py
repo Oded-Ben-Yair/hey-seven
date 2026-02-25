@@ -197,9 +197,10 @@ async def _route_to_specialist(
                 if c.get("metadata", {}).get("category", "")
             ]
 
+            # R62 fix D1: Clean comma-separated string instead of str(list)
             prompt = _DISPATCH_PROMPT.safe_substitute(
                 query=query,
-                categories=categories,
+                categories=", ".join(categories) if categories else "none",
             )
 
             async with asyncio.timeout(settings.MODEL_TIMEOUT):
