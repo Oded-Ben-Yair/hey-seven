@@ -63,6 +63,7 @@ class CircuitBreaker:
         cooldown_seconds: float = 60.0,
         rolling_window_seconds: float = 300.0,
         state_backend: StateBackend | None = None,
+        sync_interval: float = 2.0,
     ) -> None:
         self._failure_threshold = failure_threshold
         self._cooldown_seconds = cooldown_seconds
@@ -84,7 +85,9 @@ class CircuitBreaker:
         # Local deque = L1 (sub-ms reads), Redis = L2 (cross-instance sync).
         # Fallback to local-only if backend is None or Redis fails.
         self._backend = state_backend
-        self._backend_sync_interval = 2.0  # R52 fix D8: reduced from 5s for faster cross-instance propagation
+        # R59 fix D8: sync_interval is now configurable via CB_SYNC_INTERVAL setting.
+        # R52 reduced default from 5s to 2s for faster cross-instance propagation.
+        self._backend_sync_interval = sync_interval
         self._last_backend_sync = 0.0
 
     def _prune_old_failures(self) -> None:
@@ -546,6 +549,7 @@ async def _get_circuit_breaker() -> CircuitBreaker:
             cooldown_seconds=settings.CB_COOLDOWN_SECONDS,
             rolling_window_seconds=settings.CB_ROLLING_WINDOW_SECONDS,
             state_backend=backend,
+            sync_interval=settings.CB_SYNC_INTERVAL,
         )
         _cb_cache["cb"] = cb
         return cb

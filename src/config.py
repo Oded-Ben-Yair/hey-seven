@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
     CB_ROLLING_WINDOW_SECONDS: float = 300.0  # circuit breaker: failure counting window (R10 fix — DeepSeek F8)
+    CB_SYNC_INTERVAL: float = 2.0  # R59 fix D8: Redis CB sync interval in seconds (R52 reduced from 5s)
     RETRIEVAL_TIMEOUT: int = 10  # RAG retrieval timeout in seconds (R37 fix M-006)
     COMP_COMPLETENESS_THRESHOLD: float = 0.60  # minimum profile completeness for comp agent
     SEMANTIC_INJECTION_ENABLED: bool = True  # enable/disable semantic injection classifier (LLM second layer)

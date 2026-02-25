@@ -64,6 +64,11 @@ USER appuser
 # Data ingestion happens at STARTUP (FastAPI lifespan), not build time.
 # Build-time ingestion would require GOOGLE_API_KEY baked into the image.
 
+# R59 fix D6: SBOM generation — run in CI/CD pipeline, not Dockerfile.
+# Keeps production image lean while providing supply chain transparency.
+# Example CI step: syft packages dir:/app -o spdx-json=sbom.json
+# Alternative: pip-audit --format json --output pip-audit-report.json
+
 # NOTE: Cloud Run ignores Dockerfile HEALTHCHECK — it uses its own HTTP
 # startup/liveness probes configured via gcloud deploy flags (see cloudbuild.yaml).
 # Kept for local docker-compose / Docker Desktop health monitoring.

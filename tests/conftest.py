@@ -208,6 +208,21 @@ def _do_clear_singletons():
     except (ImportError, AttributeError):
         pass
 
+    # R59 fix D2: Recreate _RETRIEVAL_POOL if shut down by app lifespan tests.
+    # test_api.py exercises the FastAPI lifespan which calls
+    # _RETRIEVAL_POOL.shutdown(wait=False). Without recreation, subsequent tests
+    # calling async search functions hit "cannot schedule new futures after shutdown".
+    try:
+        import concurrent.futures
+        import src.agent.tools as _tools_mod
+
+        if _tools_mod._RETRIEVAL_POOL._shutdown:
+            _tools_mod._RETRIEVAL_POOL = concurrent.futures.ThreadPoolExecutor(
+                max_workers=50, thread_name_prefix="rag"
+            )
+    except (ImportError, AttributeError):
+        pass
+
 
 @pytest.fixture
 def test_property_data():

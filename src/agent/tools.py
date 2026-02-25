@@ -1,6 +1,6 @@
 """Tool functions for the Property Q&A agent.
 
-Plain functions (no @tool decorators) called directly by graph nodes.
+Async functions called directly by graph nodes (no @tool decorators).
 Each returns list[RetrievedChunk] with keys: content, metadata, score, rrf_score.
 Respects RAG_TOP_K and RAG_MIN_RELEVANCE_SCORE from settings.
 
@@ -33,18 +33,17 @@ RAG retrieval architecture (dual-strategy + RRF fusion):
     retriever backend-agnostic and reusable.
 """
 
+import asyncio
 import concurrent.futures
 import logging
 
-# R57 fix D2: Module-level reusable thread pool for concurrent retrieval.
-# Per-request ThreadPoolExecutor (R56) created/destroyed 50+ pools/minute
-# under load. Module-level pool reuses 2 threads across all requests.
-# max_workers=2: one per retrieval strategy (semantic + augmented).
-# R57 fix D2: max_workers sized for Cloud Run --concurrency=50.
-# Each /chat request submits 2 futures (semantic + augmented). With 50
-# concurrent requests, worst case = 100 futures. Workers > 50 ensures
-# no request blocks waiting for a thread. Threads are lightweight for
-# I/O-bound work (no GIL contention on network waits).
+# R59 fix D2: Module-level thread pool for bridging sync ChromaDB to async.
+# ChromaDB (dev) and Firestore retriever are sync-only; run_in_executor
+# bridges them to async without the nested threading anti-pattern
+# (previously: to_thread spawned one thread, which submitted to this pool).
+# Now: retrieve_node calls async search functions directly, which use
+# run_in_executor with this pool for the sync retriever calls.
+# max_workers=50: sized for Cloud Run --concurrency=50, 2 futures per request.
 _RETRIEVAL_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=50, thread_name_prefix="rag")
 
 from src.agent.state import RetrievedChunk
@@ -111,8 +110,34 @@ def _filter_by_relevance(results: list[tuple], min_score: float) -> list[tuple]:
 
 
 
-def search_knowledge_base(query: str) -> list[RetrievedChunk]:
-    """Search the property knowledge base using multi-strategy retrieval with RRF.
+async def _safe_await(coro, name: str) -> list:
+    """Await a coroutine with error isolation for asyncio.gather.
+
+    Returns the result on success, empty list on any failure.
+    Used by search_knowledge_base and search_hours to run strategies
+    concurrently via asyncio.gather without one failure killing the other.
+
+    Args:
+        coro: The coroutine to await (typically asyncio.wait_for wrapped).
+        name: Human-readable strategy name for logging.
+
+    Returns:
+        The coroutine result on success, or empty list on failure.
+    """
+    try:
+        return await coro
+    except Exception:
+        logger.warning("%s retrieval failed", name, exc_info=True)
+        return []
+
+
+async def search_knowledge_base(query: str) -> list[RetrievedChunk]:
+    """Search the property knowledge base using async multi-strategy retrieval with RRF.
+
+    R59 fix D2: Converted from sync to async-native. Uses loop.run_in_executor
+    with _RETRIEVAL_POOL for the sync ChromaDB calls. This eliminates the
+    nested threading anti-pattern where retrieve_node used asyncio.to_thread
+    to call a sync function that internally used ThreadPoolExecutor.submit.
 
     Combines two retrieval strategies via Reciprocal Rank Fusion:
     1. Direct semantic search (embedding cosine similarity)
@@ -133,30 +158,30 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
     try:
         retriever = get_retriever()
         augmentation = _get_augmentation_terms(query)
+        loop = asyncio.get_running_loop()
 
-        # R57 fix D2: Concurrent retrieval via module-level _RETRIEVAL_POOL.
-        # Halves retrieval latency (both strategies are I/O-bound).
-        # Reuses thread pool across requests (R56 per-request pool was wasteful).
-        future_semantic = _RETRIEVAL_POOL.submit(
+        # R59 fix D2: Native async with run_in_executor. No nested threading.
+        # ChromaDB is sync; run_in_executor bridges to async cleanly.
+        # Both strategies run concurrently in _RETRIEVAL_POOL threads.
+        semantic_task = loop.run_in_executor(
+            _RETRIEVAL_POOL,
             retriever.retrieve_with_scores, query, settings.RAG_TOP_K,
         )
-        future_augmented = _RETRIEVAL_POOL.submit(
+        augmented_task = loop.run_in_executor(
+            _RETRIEVAL_POOL,
             retriever.retrieve_with_scores,
             f"{query} {augmentation}",
             settings.RAG_TOP_K,
         )
 
-        semantic_results: list = []
-        augmented_results: list = []
-        try:
-            semantic_results = future_semantic.result(timeout=settings.RETRIEVAL_TIMEOUT)
-        except Exception:
-            logger.warning("Semantic retrieval failed", exc_info=True)
-
-        try:
-            augmented_results = future_augmented.result(timeout=settings.RETRIEVAL_TIMEOUT)
-        except Exception:
-            logger.warning("Augmented retrieval failed, using semantic-only", exc_info=True)
+        # R60 fix D2: asyncio.gather for true concurrent awaiting.
+        # Previously sequential awaits meant if semantic took 5s, augmented
+        # waited even if it finished in 1s. gather() returns when both complete.
+        # _safe_await isolates errors per strategy (one can fail, other succeeds).
+        semantic_results, augmented_results = await asyncio.gather(
+            _safe_await(asyncio.wait_for(semantic_task, timeout=settings.RETRIEVAL_TIMEOUT), "Semantic"),
+            _safe_await(asyncio.wait_for(augmented_task, timeout=settings.RETRIEVAL_TIMEOUT), "Augmented"),
+        )
 
         # Both strategies failed -- return empty
         if not semantic_results and not augmented_results:
@@ -201,8 +226,11 @@ def search_knowledge_base(query: str) -> list[RetrievedChunk]:
     ]
 
 
-def search_hours(query: str) -> list[RetrievedChunk]:
-    """Search for hours and schedule information with RRF reranking.
+async def search_hours(query: str) -> list[RetrievedChunk]:
+    """Search for hours and schedule information with async RRF reranking.
+
+    R59 fix D2: Converted from sync to async-native. Same pattern as
+    search_knowledge_base — uses loop.run_in_executor for sync retriever calls.
 
     Uses two strategies via RRF:
     1. Schedule-augmented semantic search (query + schedule keywords)
@@ -218,27 +246,25 @@ def search_hours(query: str) -> list[RetrievedChunk]:
     settings = get_settings()
     try:
         retriever = get_retriever()
+        loop = asyncio.get_running_loop()
 
-        # R57 fix D2: Concurrent retrieval via module-level _RETRIEVAL_POOL.
-        future_schedule = _RETRIEVAL_POOL.submit(
+        # R59 fix D2: Native async with run_in_executor (no nested threading).
+        schedule_task = loop.run_in_executor(
+            _RETRIEVAL_POOL,
             retriever.retrieve_with_scores,
             f"{query} hours schedule open close",
             settings.RAG_TOP_K,
         )
-        future_semantic = _RETRIEVAL_POOL.submit(
+        semantic_task = loop.run_in_executor(
+            _RETRIEVAL_POOL,
             retriever.retrieve_with_scores, query, settings.RAG_TOP_K,
         )
 
-        schedule_results: list = []
-        semantic_results: list = []
-        try:
-            schedule_results = future_schedule.result(timeout=settings.RETRIEVAL_TIMEOUT)
-        except Exception:
-            logger.warning("Schedule retrieval failed", exc_info=True)
-        try:
-            semantic_results = future_semantic.result(timeout=settings.RETRIEVAL_TIMEOUT)
-        except Exception:
-            logger.warning("Semantic retrieval failed for hours query", exc_info=True)
+        # R60 fix D2: asyncio.gather for true concurrent awaiting (same as search_knowledge_base).
+        schedule_results, semantic_results = await asyncio.gather(
+            _safe_await(asyncio.wait_for(schedule_task, timeout=settings.RETRIEVAL_TIMEOUT), "Schedule"),
+            _safe_await(asyncio.wait_for(semantic_task, timeout=settings.RETRIEVAL_TIMEOUT), "Semantic (hours)"),
+        )
 
         # Both failed
         if not schedule_results and not semantic_results:

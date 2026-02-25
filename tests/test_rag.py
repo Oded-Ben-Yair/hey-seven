@@ -471,7 +471,7 @@ class TestPropertyIdIsolation:
 class TestSearchKnowledgeBaseUnit:
     """Unit tests for search_knowledge_base with mocked retriever."""
 
-    def test_returns_results_with_rrf(self):
+    async def test_returns_results_with_rrf(self):
         """search_knowledge_base returns fused results from RRF."""
         from unittest.mock import MagicMock
 
@@ -484,11 +484,11 @@ class TestSearchKnowledgeBaseUnit:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_knowledge_base
 
-            results = search_knowledge_base("steakhouse")
+            results = await search_knowledge_base("steakhouse")
             assert len(results) >= 1
             assert results[0]["content"] == "Steakhouse info"
 
-    def test_returns_empty_on_value_error(self):
+    async def test_returns_empty_on_value_error(self):
         """search_knowledge_base returns empty on ValueError."""
         from unittest.mock import MagicMock
 
@@ -498,10 +498,10 @@ class TestSearchKnowledgeBaseUnit:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_knowledge_base
 
-            results = search_knowledge_base("test")
+            results = await search_knowledge_base("test")
             assert results == []
 
-    def test_returns_empty_on_generic_exception(self):
+    async def test_returns_empty_on_generic_exception(self):
         """search_knowledge_base returns empty on generic exception."""
         from unittest.mock import MagicMock
 
@@ -511,14 +511,14 @@ class TestSearchKnowledgeBaseUnit:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_knowledge_base
 
-            results = search_knowledge_base("test")
+            results = await search_knowledge_base("test")
             assert results == []
 
 
 class TestSearchKnowledgeBaseDualStrategyRRF:
     """Verify search_knowledge_base uses dual-strategy retrieval with RRF."""
 
-    def test_search_knowledge_base_uses_dual_strategy_rrf(self):
+    async def test_search_knowledge_base_uses_dual_strategy_rrf(self):
         """search_knowledge_base calls retrieve_with_scores twice (semantic + augmented)
         and passes both result sets to rerank_by_rrf for fusion."""
         from unittest.mock import MagicMock, call
@@ -543,7 +543,7 @@ class TestSearchKnowledgeBaseDualStrategyRRF:
             mock_rrf.return_value = [(doc_a, 0.9, 0.033), (doc_b, 0.85, 0.016)]
 
             from src.agent.tools import search_knowledge_base
-            results = search_knowledge_base("steakhouse")
+            results = await search_knowledge_base("steakhouse")
 
         # Verify retrieve_with_scores was called twice (dual strategy)
         assert mock_retriever.retrieve_with_scores.call_count == 2
@@ -557,7 +557,7 @@ class TestSearchKnowledgeBaseDualStrategyRRF:
         assert len(results) >= 1
         assert results[0]["content"] == "Steakhouse A"
 
-    def test_augmented_query_includes_entity_terms(self):
+    async def test_augmented_query_includes_entity_terms(self):
         """The augmented strategy appends domain terms to the original query."""
         from unittest.mock import MagicMock
 
@@ -570,7 +570,7 @@ class TestSearchKnowledgeBaseDualStrategyRRF:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever), \
              patch("src.agent.tools.rerank_by_rrf", return_value=[(doc, 0.8, 0.016)]):
             from src.agent.tools import search_knowledge_base
-            search_knowledge_base("steakhouse")
+            await search_knowledge_base("steakhouse")
 
         # Second call should have augmented query
         calls = mock_retriever.retrieve_with_scores.call_args_list
@@ -582,7 +582,7 @@ class TestSearchKnowledgeBaseDualStrategyRRF:
 class TestSearchHoursUnit:
     """Unit tests for search_hours with mocked retriever."""
 
-    def test_returns_results_with_rrf(self):
+    async def test_returns_results_with_rrf(self):
         """search_hours returns fused results from RRF."""
         from unittest.mock import MagicMock
 
@@ -595,11 +595,11 @@ class TestSearchHoursUnit:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_hours
 
-            results = search_hours("pool hours")
+            results = await search_hours("pool hours")
             assert len(results) >= 1
             assert "9am-9pm" in results[0]["content"]
 
-    def test_returns_empty_on_type_error(self):
+    async def test_returns_empty_on_type_error(self):
         """search_hours returns empty on TypeError."""
         from unittest.mock import MagicMock
 
@@ -609,10 +609,10 @@ class TestSearchHoursUnit:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_hours
 
-            results = search_hours("pool hours")
+            results = await search_hours("pool hours")
             assert results == []
 
-    def test_returns_empty_on_generic_exception(self):
+    async def test_returns_empty_on_generic_exception(self):
         """search_hours returns empty on generic exception."""
         from unittest.mock import MagicMock
 
@@ -622,7 +622,7 @@ class TestSearchHoursUnit:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_hours
 
-            results = search_hours("pool hours")
+            results = await search_hours("pool hours")
             assert results == []
 
 

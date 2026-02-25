@@ -854,7 +854,7 @@ class TestWebhookLiveReindexing:
         with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
             from src.agent.tools import search_knowledge_base
 
-            results = search_knowledge_base("steakhouse wagyu")
+            results = await search_knowledge_base("steakhouse wagyu")
 
         assert len(results) >= 1
         assert "wagyu" in results[0]["content"].lower()

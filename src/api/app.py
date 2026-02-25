@@ -149,6 +149,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             for task in pending:
                 task.cancel()
 
+    # R58 fix D2: Clean shutdown of the module-level retrieval thread pool.
+    # Without this, pending retrieval futures and worker threads leak on
+    # container shutdown, causing "cannot schedule new futures after shutdown"
+    # errors if the pool is reused during drain.
+    try:
+        from src.agent.tools import _RETRIEVAL_POOL
+        _RETRIEVAL_POOL.shutdown(wait=False)
+        logger.info("Retrieval thread pool shut down.")
+    except Exception:
+        logger.debug("Retrieval pool shutdown failed (non-critical)", exc_info=True)
+
     app.state.agent = None
     logger.info("Application shutdown complete.")
 

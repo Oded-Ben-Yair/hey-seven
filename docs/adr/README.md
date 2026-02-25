@@ -33,7 +33,7 @@ Architectural decisions documented inline in source code, extracted here for dis
 | 013 | [SSE Timeout (60s)](013-sse-timeout.md) | Accepted | `config.py:51` | 2026-02-25 |
 | 014 | [Message Limits (40/20)](014-message-limits.md) | Accepted | `config.py:55-56` | 2026-02-25 |
 | 015 | [Circuit Breaker Parameters](015-circuit-breaker-parameters.md) | Accepted | `config.py:59-61` | 2026-02-25 |
-| 016 | [asyncio.to_thread for Sync Retrievers](016-asyncio-to-thread-retrievers.md) | Accepted (with caveats) | `rag/pipeline.py` | 2026-02-25 |
+| 016 | [asyncio.to_thread for Sync Retrievers](016-asyncio-to-thread-retrievers.md) | Superseded by ADR-020 | `rag/pipeline.py` | 2026-02-25 |
 | 017 | [Self-Exclusion via Responsible Gaming (MVP)](017-self-exclusion-escalation.md) | Accepted | `guardrails.py`, `compliance_gate.py` | 2026-02-25 |
 | 018 | [Confusable Homoglyph Coverage (~110 entries)](018-confusable-coverage.md) | Accepted (bounded scope) | `guardrails.py` | 2026-02-25 |
 | 019 | [Single Tenant Per Deployment (MVP)](019-single-tenant-deployment.md) | Accepted (MVP) | `config.py`, `app.py` | 2026-02-25 |

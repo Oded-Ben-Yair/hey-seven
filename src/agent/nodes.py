@@ -307,29 +307,17 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
     if not query:
         return {"retrieved_context": []}
 
-    # Use schedule-focused search for hours/schedule queries.
-    # ChromaDB is sync-only in LangChain; wrap in asyncio.to_thread to avoid
-    # blocking the event loop.  Production path (Vertex AI) has native async.
-    # Timeout guard: prevents a hung ChromaDB query (e.g., corrupted SQLite)
-    # from permanently blocking the event loop thread pool.
-    # R37 fix M-006: Timeout is now configurable via settings.RETRIEVAL_TIMEOUT
-    # (default 10s). Production Vertex AI may have different latency characteristics.
-    settings = get_settings()
-    _retrieval_timeout = settings.RETRIEVAL_TIMEOUT
+    # R60 fix D2: Removed redundant outer asyncio.wait_for wrapper.
+    # search_knowledge_base and search_hours have internal per-strategy
+    # timeouts (asyncio.wait_for per strategy with settings.RETRIEVAL_TIMEOUT).
+    # The outer timeout created a race condition: it could cancel before
+    # internal timeouts fired, losing partial results from a strategy that
+    # completed successfully. Both functions return [] on total failure.
     try:
         if query_type == "hours_schedule":
-            results = await asyncio.wait_for(
-                asyncio.to_thread(search_hours, query),
-                timeout=_retrieval_timeout,
-            )
+            results = await search_hours(query)
         else:
-            results = await asyncio.wait_for(
-                asyncio.to_thread(search_knowledge_base, query),
-                timeout=_retrieval_timeout,
-            )
-    except TimeoutError:
-        logger.warning("Retrieval timed out after %ds for query: %s", _retrieval_timeout, query[:80])
-        results = []
+            results = await search_knowledge_base(query)
     except Exception:
         # Broad catch: ChromaDB can raise ChromaError, sqlite3.OperationalError;
         # Firestore can raise google.api_core.exceptions.*; embedding model can

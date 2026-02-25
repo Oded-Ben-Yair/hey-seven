@@ -400,13 +400,21 @@ _CONFUSABLES: dict[str, str] = {
     "\u03a4": "T",  # Tau
     "\u0392": "B",  # Beta
     "\u03a7": "X",  # Chi
-    # Fullwidth Latin (U+FF41-U+FF5A) — used in CJK contexts
+    # Fullwidth Latin lowercase (U+FF41-U+FF5A) — used in CJK contexts
     "\uff41": "a", "\uff42": "b", "\uff43": "c", "\uff44": "d", "\uff45": "e",
     "\uff46": "f", "\uff47": "g", "\uff48": "h", "\uff49": "i", "\uff4a": "j",
     "\uff4b": "k", "\uff4c": "l", "\uff4d": "m", "\uff4e": "n", "\uff4f": "o",
     "\uff50": "p", "\uff51": "q", "\uff52": "r", "\uff53": "s", "\uff54": "t",
     "\uff55": "u", "\uff56": "v", "\uff57": "w", "\uff58": "x", "\uff59": "y",
     "\uff5a": "z",
+    # R60 fix D7: Fullwidth Latin uppercase (U+FF21-U+FF3A)
+    # Lowercase was covered but uppercase was missing — "ＩＧＮＯＲＥ" bypassed.
+    "\uff21": "A", "\uff22": "B", "\uff23": "C", "\uff24": "D", "\uff25": "E",
+    "\uff26": "F", "\uff27": "G", "\uff28": "H", "\uff29": "I", "\uff2a": "J",
+    "\uff2b": "K", "\uff2c": "L", "\uff2d": "M", "\uff2e": "N", "\uff2f": "O",
+    "\uff30": "P", "\uff31": "Q", "\uff32": "R", "\uff33": "S", "\uff34": "T",
+    "\uff35": "U", "\uff36": "V", "\uff37": "W", "\uff38": "X", "\uff39": "Y",
+    "\uff3a": "Z",
     # R36 fix B2: IPA / Latin Extended confusables — highest-risk characters
     # that survive NFKD normalization (not decomposed to standard Latin).
     "\u0251": "a",  # ɑ — IPA open back unrounded vowel

@@ -1,7 +1,10 @@
 # ADR-016: asyncio.to_thread for Sync Retrievers
 
 ## Status
-Accepted (with caveats)
+Superseded by [ADR-020](020-concurrent-retrieval.md)
+
+> **Note (R60)**: Retrieval functions migrated from sync+to_thread to async-native
+> using `loop.run_in_executor()`. ADR-020 documents the current architecture.
 
 ## Context
 ChromaDB's retrieval API is synchronous. In the async LangGraph pipeline, blocking the event loop during retrieval stalls all concurrent SSE streams.
