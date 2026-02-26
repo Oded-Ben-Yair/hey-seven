@@ -170,6 +170,38 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Application shutdown complete.")
 
 
+def _etag_matches(if_none_match: str, etag: str) -> bool:
+    """RFC 7232 Section 3.2 compliant ETag comparison (weak comparison).
+
+    Handles:
+    - Comma-separated ETags: ``"etag1", "etag2"``
+    - Weak validator prefix: ``W/"etag"``
+    - Wildcard: ``*`` (matches any ETag)
+
+    Args:
+        if_none_match: The If-None-Match header value.
+        etag: The current ETag header value (e.g., ``'"abc123"'``).
+
+    Returns:
+        True if any token in if_none_match matches the current etag.
+    """
+    stripped = if_none_match.strip()
+    if stripped == "*":
+        return True
+    # Strip quotes from current etag for bare comparison
+    bare_etag = etag.strip('"')
+    for token in if_none_match.split(","):
+        token = token.strip()
+        # Remove weak validator prefix
+        if token.startswith("W/"):
+            token = token[2:]
+        # Strip quotes
+        token = token.strip('"')
+        if token == bare_etag:
+            return True
+    return False
+
+
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     settings = get_settings()
@@ -568,8 +600,10 @@ def create_app() -> FastAPI:
         # JSONResponse(content=None) serializes as "null" body, but HTTP 304
         # MUST NOT contain a message body (RFC 7232 Section 4.1). Using bare
         # Response with no body ensures protocol compliance.
+        # R69 fix D4: RFC 7232 Section 3.2 compliant multi-ETag parsing.
+        # Handles comma-separated ETags, W/ weak validator prefix, and * wildcard.
         if_none_match = request.headers.get("if-none-match", "")
-        if if_none_match == etag_header:
+        if if_none_match and _etag_matches(if_none_match, etag_header):
             from starlette.responses import Response
 
             return Response(

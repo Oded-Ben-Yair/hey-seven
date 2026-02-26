@@ -19,7 +19,7 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     v
 Custom 11-node StateGraph (src/agent/graph.py)
     |
-    |-- compliance_gate (204 regex patterns, 11 languages) --> greeting / off_topic / router
+    |-- compliance_gate (205 regex patterns, 11 languages) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
@@ -256,7 +256,7 @@ Logs the validation failure reason for observability.
 
 Five sub-cases based on `query_type`:
 - `off_topic`: General redirect to property topics.
-- `gambling_advice`: Redirect with responsible gaming helplines (NCPG 1-800-MY-RESET / 1-800-699-7378, CT Council 1-888-789-7777, CT Self-Exclusion ct.gov/selfexclusion via DCP).
+- `gambling_advice`: Redirect with responsible gaming helplines (NCPG 1-800-GAMBLER primary, 1-800-MY-RESET alternate, CT Council 1-888-789-7777, CT Self-Exclusion: contact tribal gaming commission directly).
 - `action_request`: Explain read-only limitations, provide contact info.
 - `age_verification`: Provide 21+ age requirement per CT gaming law with property contact info.
 - `patron_privacy`: Decline to disclose guest presence/identity/membership with privacy explanation.

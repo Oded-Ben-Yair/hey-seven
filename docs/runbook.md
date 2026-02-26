@@ -574,7 +574,7 @@ Six deterministic guardrail layers run before any LLM call:
 5. Patron privacy detection
 6. Self-harm/crisis detection (R49: routes to 988 Lifeline response)
 
-All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable, and zero-width character bypass attempts. 204 regex patterns across 12 languages.
+All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable, and zero-width character bypass attempts. 205 regex patterns across 12 languages, 145 confusable entries (Cyrillic, Greek, Fullwidth, IPA, Armenian, Cherokee, Mathematical, Georgian).
 
 ---
 
@@ -587,7 +587,7 @@ All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable,
 |----------|---------|------------|---------|
 | `ENVIRONMENT` | `development` | `production` | Enables production secret validation |
 | `LOG_LEVEL` | `INFO` | `INFO` | Logging level |
-| `VERSION` | `1.1.0` | `$COMMIT_SHA` | Version reported by /health |
+| `VERSION` | `1.3.0` | `$COMMIT_SHA` | Version reported by /health |
 | `GOOGLE_API_KEY` | (empty) | Secret Manager | Gemini LLM access |
 | `API_KEY` | (empty) | Secret Manager | Client authentication (required in production) |
 | `CMS_WEBHOOK_SECRET` | (empty) | Secret Manager | CMS webhook verification (required in production) |
@@ -626,7 +626,7 @@ All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable,
 These are handled automatically by deterministic guardrails (NO human judgment needed):
 
 - **Self-exclusion mentions**: Auto-provides state-specific helpline (e.g., CT: 1-888-789-7777, NJ: 1-800-GAMBLER, PA: 1-800-848-1880, NV: 1-800-GAMBLER)
-- **Problem gambling**: Auto-provides 1-800-MY-RESET (NCPG)
+- **Problem gambling**: Auto-provides 1-800-GAMBLER (NCPG primary), 1-800-MY-RESET (alternate)
 - **BSA/AML suspicious**: Auto-redirects to appropriate authorities
 - **Underage mentions**: Auto-provides age verification info
 
@@ -667,12 +667,12 @@ These are handled automatically by deterministic guardrails (NO human judgment n
 
 ### Per-State Regulatory Quick Reference
 
-| State | Gaming Commission | RG Helpline | Self-Exclusion Authority | AI Disclosure Law |
-|-------|-------------------|-------------|-------------------------|-------------------|
-| CT | CT DCP / Tribal Commissions | 1-888-789-7777 | Tribal Gaming Commission | CT SB 2 (Oct 2026) |
-| NV | Nevada Gaming Control Board | 1-800-GAMBLER | NGCB (NGC Reg. 5.170) | None (as of 2026) |
-| PA | PA Gaming Control Board | 1-800-848-1880 | PGCB | None (as of 2026) |
-| NJ | NJ Division of Gaming Enforcement | 1-800-GAMBLER | NJ DGE | None (as of 2026) |
+| State | Gaming Commission | RG Helpline | Responsible Gaming Helpline | Self-Exclusion Authority | AI Disclosure Law |
+|-------|-------------------|-------------|----------------------------|-------------------------|-------------------|
+| CT | CT DCP / Tribal Commissions | 1-888-789-7777 | 1-800-MY-RESET | Tribal Gaming Commission | CT SB 2 (Oct 2026) |
+| NV | Nevada Gaming Control Board | 1-800-GAMBLER | 1-800-GAMBLER | NGCB (NGC Reg. 5.170) | None (as of 2026) |
+| PA | PA Gaming Control Board | 1-800-848-1880 | 1-800-GAMBLER | PGCB | None (as of 2026) |
+| NJ | NJ Division of Gaming Enforcement | 1-800-GAMBLER | 1-800-GAMBLER | NJ DGE | None (as of 2026) |
 
 ---
 

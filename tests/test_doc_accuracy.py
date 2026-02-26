@@ -153,7 +153,7 @@ class TestMiddlewareProtectedPaths:
         """ApiKeyMiddleware._PROTECTED_PATHS matches what README documents."""
         from src.api.middleware import ApiKeyMiddleware
 
-        expected = {"/chat", "/graph", "/property", "/feedback"}
+        expected = {"/chat", "/graph", "/property", "/feedback", "/metrics"}
         assert ApiKeyMiddleware._PROTECTED_PATHS == expected
 
 
@@ -196,12 +196,12 @@ class TestVersionConsistency:
     """Verify VERSION defaults are consistent across config and .env files."""
 
     def test_config_version_default(self):
-        """config.py VERSION default is 1.1.0."""
+        """config.py VERSION default is 1.3.0."""
         from src.config import Settings
 
         default = Settings.model_fields["VERSION"].default
-        assert default == "1.1.0", (
-            f"config.py VERSION default is {default!r}, expected '1.1.0'. "
+        assert default == "1.3.0", (
+            f"config.py VERSION default is {default!r}, expected '1.3.0'. "
             f"Sync .env, .env.example, and ARCHITECTURE.md."
         )
 
@@ -211,7 +211,7 @@ class TestVersionConsistency:
         content = env_example.read_text()
         match = re.search(r"^VERSION=([^\s#]+)", content, re.MULTILINE)
         assert match, "VERSION not found in .env.example"
-        assert match.group(1).strip() == "1.1.0"
+        assert match.group(1).strip() == "1.3.0"
 
 
 class TestCategoryToAgentMapping:

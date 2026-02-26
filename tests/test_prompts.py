@@ -33,14 +33,14 @@ class TestPromptTemplates:
         )
         assert "1-800-MY-RESET" in result or "1-800-699-7378" in result
         assert "1-888-789-7777" in result
-        assert "ct.gov/selfexclusion" in result
+        assert "tribal gaming commission" in result
 
     def test_helplines_constant_contains_all_resources(self):
         """RESPONSIBLE_GAMING_HELPLINES_DEFAULT constant includes updated resources."""
         assert "1-800-MY-RESET" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
         assert "1-800-699-7378" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
         assert "1-888-789-7777" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
-        assert "ct.gov/selfexclusion" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
+        assert "tribal gaming commission" in RESPONSIBLE_GAMING_HELPLINES_DEFAULT
 
     def test_router_prompt_includes_categories(self):
         """Router prompt lists all 7 query categories."""

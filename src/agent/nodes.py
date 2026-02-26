@@ -35,6 +35,7 @@ from .extraction import extract_fields
 from .sentiment import detect_sentiment
 from .state import PropertyQAState, RouterOutput, ValidationResult
 from .tools import search_hours, search_knowledge_base
+from src.data.validators import validate_retrieved_chunk
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +329,19 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
         logger.exception("Retrieval failed for query: %s", query[:80])
         results = []
 
-    return {"retrieved_context": results}
+    # R69 fix D3: Validate each retrieved chunk before passing to graph state.
+    # Invalid chunks (missing fields, wrong types) are logged and skipped.
+    # Validation failure is non-fatal — degraded retrieval is better than crash.
+    validated: list = []
+    for chunk in results:
+        try:
+            if validate_retrieved_chunk(chunk):
+                validated.append(chunk)
+            else:
+                logger.warning("Skipping invalid retrieved chunk: %s", str(chunk)[:100])
+        except Exception:
+            logger.warning("Chunk validation raised exception, skipping", exc_info=True)
+    return {"retrieved_context": validated}
 
 
 # ---------------------------------------------------------------------------

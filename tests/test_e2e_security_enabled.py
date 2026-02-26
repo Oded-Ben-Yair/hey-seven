@@ -301,7 +301,7 @@ class TestMiddlewareChainOrdering:
         """Health and live endpoints bypass auth even when API key is set."""
         from src.api.middleware import ApiKeyMiddleware
 
-        for path in ["/health", "/live", "/metrics"]:
+        for path in ["/health", "/live"]:
             called = []
 
             async def inner_app(scope, receive, send):

@@ -20,7 +20,7 @@ docker compose up --build
 
 Casino guests need quick, reliable answers about dining, entertainment, rooms, and amenities. This agent retrieves answers from a curated knowledge base using RAG and streams responses token-by-token via Server-Sent Events.
 
-The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (204 regex patterns across 11 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
+The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (205 regex patterns across 11 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
 
 The generate node delegates to **specialist agents** (host, dining, entertainment, comp, hotel) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
 
@@ -69,7 +69,7 @@ START ──> compliance_gate ──┬──> greeting ────────
 | Specialist agent registry | `agents/registry.py` | 5 specialist agents (host, dining, entertainment, comp, hotel) dispatched by query domain |
 | Whisper planner (silent LLM) | `whisper_planner.py` | Background planning with `WhisperPlan` structured output — fail-silent, per-turn, never guest-facing |
 | Persona envelope | `persona.py` | Channel-aware formatting (web pass-through vs SMS 160-char truncation) |
-| Compliance gate (deterministic) | `compliance_gate.py` | Pre-router node with 204 regex patterns across 11 languages — zero LLM cost, zero latency |
+| Compliance gate (deterministic) | `compliance_gate.py` | Pre-router node with 205 regex patterns across 11 languages — zero LLM cost, zero latency |
 | Per-turn state reset | `_initial_state()` | Non-message fields reset every turn; only `messages` persists via checkpointer |
 
 ## Real-Time Graph Trace
@@ -229,7 +229,7 @@ Per-request: ~$0.0014 (router + generate + validate + embedding). Whisper planne
 | A/B testing | SHA-256 hash-based splitting (scaffolded) | Feature flag service (LaunchDarkly / Statsig) |
 | Load testing | Not yet implemented | Locust or Artillery for throughput and latency validation |
 | Deployment | Single revision | Blue-green/canary via Cloud Run traffic splitting |
-| Adversarial testing | 204 regex patterns + LLM validation | OWASP prompt injection benchmarks, multilingual red-team testing |
+| Adversarial testing | 205 regex patterns + LLM validation | OWASP prompt injection benchmarks, multilingual red-team testing |
 
 ## Project Structure
 

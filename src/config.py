@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     # --- Observability ---
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
-    VERSION: str = "1.1.0"  # Bumped for Phase 6. Production deploy overrides with COMMIT_SHA.
+    VERSION: str = "1.3.0"  # R69 bump. Production deploy overrides with COMMIT_SHA.
     LANGFUSE_PUBLIC_KEY: str = ""
     LANGFUSE_SECRET_KEY: SecretStr = SecretStr("")
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"

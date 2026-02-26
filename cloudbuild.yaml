@@ -36,7 +36,7 @@ steps:
       - '-c'
       - |
         pip install --no-cache-dir pip-audit
-        pip-audit -r requirements.txt --strict --desc
+        pip-audit -r requirements-prod.txt --strict --desc
 
   # Step 2: Build Docker image (Artifact Registry, not deprecated gcr.io)
   - name: 'gcr.io/cloud-builders/docker'

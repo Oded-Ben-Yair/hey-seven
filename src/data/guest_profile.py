@@ -30,6 +30,7 @@ from src.data.models import (
     filter_low_confidence,
     update_confidence,
 )
+from src.data.validators import validate_guest_profile
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,17 @@ async def get_guest_profile(phone: str, casino_id: str) -> dict:
             if doc.exists:
                 profile = doc.to_dict()
                 logger.info("Loaded guest profile for %s...%s", phone[:4], phone[-4:])
-                return _migrate_profile(profile)
+                migrated = _migrate_profile(profile)
+                # R69 fix D3: Validate after loading — observability, not blocking.
+                try:
+                    if not validate_guest_profile(migrated):
+                        logger.warning(
+                            "Guest profile validation failed for %s...%s (Firestore)",
+                            phone[:4], phone[-4:],
+                        )
+                except Exception:
+                    logger.warning("Guest profile validation raised exception", exc_info=True)
+                return migrated
             logger.debug("No profile found for %s...%s; returning empty", phone[:4], phone[-4:])
             return _empty_profile(phone)
         except Exception:
@@ -164,7 +175,17 @@ async def get_guest_profile(phone: str, casino_id: str) -> dict:
     key = _store_key(phone, casino_id)
     profile = _memory_store.get(key)
     if profile is not None:
-        return _migrate_profile(profile)
+        migrated = _migrate_profile(profile)
+        # R69 fix D3: Validate after loading — observability, not blocking.
+        try:
+            if not validate_guest_profile(migrated):
+                logger.warning(
+                    "Guest profile validation failed for %s...%s (in-memory)",
+                    phone[:4], phone[-4:],
+                )
+        except Exception:
+            logger.warning("Guest profile validation raised exception", exc_info=True)
+        return migrated
     return _empty_profile(phone)
 
 

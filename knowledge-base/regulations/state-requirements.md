@@ -45,8 +45,8 @@
 - **Mohegan Tribal Gaming Authority (MTGA)**: Self-regulates Mohegan Sun under Mohegan-CT compact
 - **Mashantucket Pequot Tribal Nation**: Self-regulates Foxwoods under Pequot-CT compact
 - Both compacts require 25% slot revenue contribution to State of Connecticut
-- CT Department of Consumer Protection handles patron self-exclusion (applies to both tribal casinos)
-- Self-exclusion phone: 1-860-713-6300, URL: ct.gov/selfexclusion
+- Tribal casinos handle self-exclusion through their own gaming commissions, NOT CT DCP
+- Self-exclusion: Contact property directly (tribal jurisdiction)
 
 ### AI Implications for Tribal Properties
 - Tribal sovereignty: AI systems must comply with BOTH tribal regulations AND applicable state compact terms

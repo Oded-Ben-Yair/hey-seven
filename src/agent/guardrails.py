@@ -504,6 +504,18 @@ _CONFUSABLES: dict[str, str] = {
     # Letterlike Symbols that survive NFKD (visually similar to Latin)
     "\u2118": "p",  # Weierstrass p (script capital P, visually similar to 'p')
     "\u2132": "F",  # Turned Capital F (visually similar to reversed F)
+    # R69 fix D7: Georgian Mkhedruli — highest-risk Latin lookalikes.
+    # Georgian script has several characters visually similar to Latin lowercase.
+    "\u10D0": "a",  # ა — Georgian ani
+    "\u10DD": "o",  # ო — Georgian oni
+    "\u10D4": "e",  # ე — Georgian eni
+    "\u10D8": "i",  # ი — Georgian ini
+    "\u10E2": "t",  # ტ — Georgian tar
+    "\u10D3": "d",  # დ — Georgian doni
+    "\u10DB": "m",  # მ — Georgian mani
+    "\u10DC": "n",  # ნ — Georgian nari
+    "\u10E1": "s",  # ს — Georgian sani
+    "\u10E0": "r",  # რ — Georgian rae
     # NOTE: Mathematical Alphanumeric Symbols (U+1D400-U+1D7FF: Bold, Italic,
     # Script, Fraktur, Double-struck, Monospace) are NOT included here because
     # NFKD normalization decomposes ALL assigned characters in this range to

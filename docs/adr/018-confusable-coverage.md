@@ -17,7 +17,7 @@ Cover the 7 most common attack scripts only:
 7. **Mathematical/Letterlike symbols** (9 entries) — partial differential, script l, Weierstrass p, etc.
 
 ## Rationale
-- Full TR39 mapping adds ~8K entries and ~50KB to memory. For 204 regex patterns, the marginal security benefit diminishes rapidly after the top scripts.
+- Full TR39 mapping adds ~8K entries and ~50KB to memory. For 205 regex patterns, the marginal security benefit diminishes rapidly after the top scripts.
 - NFKD normalization already handles many confusables (e.g., fi -> fi).
 - The confusable table is a defense-in-depth layer, not the primary defense. Regex patterns match normalized Latin text.
 - Attack sophistication: adversaries using Georgian or Bengali confusables are rare in casino guest interactions.

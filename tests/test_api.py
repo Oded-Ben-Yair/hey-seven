@@ -501,6 +501,43 @@ class TestPropertyETag:
             etag2 = c2.get("/property").headers["etag"]
             assert etag1 != etag2
 
+    def test_property_304_on_comma_separated_etags(self):
+        """R69 fix D5: Comma-separated ETags with correct one returns 304."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp1 = client.get("/property")
+            etag = resp1.headers["etag"]
+            # Include correct etag among multiple comma-separated values
+            multi_etag = f'"wrong-etag1", {etag}, "wrong-etag2"'
+            resp2 = client.get("/property", headers={"If-None-Match": multi_etag})
+            assert resp2.status_code == 304
+
+    def test_property_304_on_wildcard_etag(self):
+        """R69 fix D5: Wildcard If-None-Match (*) returns 304."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/property", headers={"If-None-Match": "*"})
+            assert resp.status_code == 304
+
+    def test_property_304_on_weak_validator_etag(self):
+        """R69 fix D5: W/ weak validator prefix returns 304."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp1 = client.get("/property")
+            etag = resp1.headers["etag"]
+            # Wrap with W/ weak validator prefix
+            weak_etag = f"W/{etag}"
+            resp2 = client.get("/property", headers={"If-None-Match": weak_etag})
+            assert resp2.status_code == 304
+
+    def test_property_200_on_non_matching_multi_etag(self):
+        """R69 fix D5: Non-matching comma-separated ETags returns 200."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/property", headers={"If-None-Match": '"wrong1", "wrong2"'})
+            assert resp.status_code == 200
+            assert "etag" in resp.headers
+
 
 class TestGraphEndpoint:
     def test_graph_returns_structure(self):

@@ -30,7 +30,7 @@ RESPONSIBLE_GAMING_HELPLINES_DEFAULT = (
     "- National Problem Gambling Helpline: 1-800-GAMBLER (1-800-426-2537)\n"
     "- NCPG Alternate Line: 1-800-MY-RESET (1-800-699-7378)\n"
     "- CT Council on Problem Gambling: 1-888-789-7777\n"
-    "- CT Self-Exclusion: Contact your casino's tribal gaming commission or visit ct.gov/selfexclusion"
+    "- CT Self-Exclusion: Contact your casino's tribal gaming commission directly"
 )
 
 

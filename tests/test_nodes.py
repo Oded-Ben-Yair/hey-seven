@@ -145,6 +145,22 @@ class TestRetrieveNode:
         result = await retrieve_node(state)
         assert result["retrieved_context"] == []
 
+    @patch("src.agent.nodes.search_knowledge_base")
+    async def test_invalid_chunks_filtered_by_validator(self, mock_search):
+        """R69 fix D3: Invalid chunks are filtered out, valid ones pass through."""
+        from src.agent.nodes import retrieve_node
+
+        mock_search.return_value = [
+            {"content": "Valid chunk", "metadata": {"category": "dining"}, "score": 0.9},
+            {"content": 123, "metadata": {}, "score": 0.5},  # invalid: content not str
+            {"metadata": {"category": "hotel"}, "score": 0.7},  # invalid: missing content
+        ]
+
+        state = _state(messages=[HumanMessage(content="What restaurants?")])
+        result = await retrieve_node(state)
+        assert len(result["retrieved_context"]) == 1
+        assert result["retrieved_context"][0]["content"] == "Valid chunk"
+
 
 class TestHostAgent:
     """Tests for host_agent (v2 generate node, replaces v1 generate_node)."""

@@ -225,7 +225,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # R39 fix D10-M003: Tribal casinos self-exclude through their own
             # gaming commissions, NOT CT DCP. CT DCP handles commercial gaming only.
             "self_exclusion_authority": "Mohegan Tribal Gaming Commission",
-            "self_exclusion_url": "ct.gov/selfexclusion",
+            # R69 fix D10-P0: Tribal casinos handle self-exclusion through
+            # their own gaming commissions, NOT CT DCP. ct.gov/selfexclusion
+            # is for commercial gaming only.
+            "self_exclusion_url": "Contact property directly",
             # R68 fix D10: Tribal gaming commissions do not publish separate
             # public phone lines for self-exclusion. Guests should contact
             # the property directly to reach the tribal commission.
@@ -238,7 +241,9 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
                 "strict_liability": False,
                 "recent_enforcement": "N/A (tribal jurisdiction — internal commission enforcement)",
                 "last_regulatory_review": "2026-02-26",
-                "commission_url": "https://ct.gov/gaming",
+                # R69 fix D10-P0: Mohegan Tribal Gaming Commission URL.
+                # Tribal casinos are NOT regulated by ct.gov/gaming.
+                "commission_url": "Contact property directly — tribal jurisdiction",
             },
         },
         "operational": {
@@ -311,7 +316,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # R39 fix D10-M003: Tribal casinos self-exclude through their own
             # gaming commissions, NOT CT DCP.
             "self_exclusion_authority": "Mashantucket Pequot Tribal Nation Gaming Commission",
-            "self_exclusion_url": "ct.gov/selfexclusion",
+            # R69 fix D10-P0: Tribal casinos handle self-exclusion through
+            # their own gaming commissions, NOT CT DCP. ct.gov/selfexclusion
+            # is for commercial gaming only.
+            "self_exclusion_url": "Contact property directly",
             # R68 fix D10: Tribal gaming commissions do not publish separate
             # public phone lines for self-exclusion. Guests should contact
             # the property directly to reach the tribal commission.
@@ -323,7 +331,9 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
                 "strict_liability": False,
                 "recent_enforcement": "N/A (tribal jurisdiction — internal commission enforcement)",
                 "last_regulatory_review": "2026-02-26",
-                "commission_url": "https://ct.gov/gaming",
+                # R69 fix D10-P0: Mashantucket Pequot Tribal Nation URL.
+                # Tribal casinos are NOT regulated by ct.gov/gaming.
+                "commission_url": "Contact property directly — tribal jurisdiction",
             },
         },
         "operational": {

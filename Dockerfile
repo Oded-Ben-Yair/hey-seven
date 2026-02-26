@@ -89,7 +89,7 @@ USER appuser
 # Kept for local docker-compose / Docker Desktop health monitoring.
 # R41 fix D6-M003: Python urllib replaces curl — no extra binary in final image.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/live', timeout=3)" || exit 1
 
 # Graceful shutdown chain: SIGTERM → app drain (10s) → uvicorn kill (15s) → Cloud Run kill (180s).
 # The 10s app drain (_DRAIN_TIMEOUT_S in app.py) < 15s uvicorn timeout ensures the app

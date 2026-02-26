@@ -20,8 +20,8 @@
   - Mohegan Sun: Mohegan Tribal Gaming Commission
   - Foxwoods: Mashantucket Pequot Tribal Nation Gaming Commission
 - **Duration**: 1-year minimum (longer durations available upon request)
-- **URL**: ct.gov/selfexclusion
-- **Phone**: 1-860-713-6300
+- **URL**: Contact property directly (tribal jurisdiction — not ct.gov/selfexclusion)
+- **Phone**: Contact property directly (tribal gaming commission)
 - **Process**: In-person enrollment at casino or tribal gaming commission office
 
 ### New Jersey (Hard Rock AC, Resorts World)

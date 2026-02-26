@@ -60,7 +60,7 @@ _SHARED_SECURITY_HEADERS = (
     # x-api-version tracks the API contract version (stable across deployments).
     # Distinct from settings.VERSION which tracks the deployment/commit version.
     # See /health endpoint for deployment version and /metrics for both.
-    (b"x-api-version", b"1.1.0"),
+    (b"x-api-version", b"1.3.0"),
 )
 
 
@@ -255,7 +255,7 @@ class ApiKeyMiddleware:
     60 seconds.
     """
 
-    _PROTECTED_PATHS = {"/chat", "/graph", "/property", "/feedback"}
+    _PROTECTED_PATHS = {"/chat", "/graph", "/property", "/feedback", "/metrics"}
     _KEY_TTL = 60  # seconds
 
     def __init__(self, app: ASGIApp) -> None:

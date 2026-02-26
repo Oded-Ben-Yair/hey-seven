@@ -144,6 +144,13 @@ class TestDockerfile:
         """HEALTHCHECK has comment noting Cloud Run ignores it."""
         assert "Cloud Run ignores" in self.dockerfile
 
+    def test_healthcheck_uses_live_endpoint(self):
+        """R69 fix D6: HEALTHCHECK uses /live (always 200), not /health (503 when degraded)."""
+        assert "localhost:8080/live" in self.dockerfile, (
+            "Dockerfile HEALTHCHECK should use /live endpoint (always 200), "
+            "not /health (returns 503 when degraded, causing container restarts)"
+        )
+
     def test_graceful_shutdown_timeout(self):
         """Graceful shutdown timeout is >= 15s to allow SSE drain."""
         match = re.search(r"--timeout-graceful-shutdown.*?(\d+)", self.dockerfile)
@@ -571,6 +578,28 @@ class TestDockerComposeHealthcheck:
 # ---------------------------------------------------------------------------
 # 12. VPC Connector and Redis Secret (R46 D6+D8)
 # ---------------------------------------------------------------------------
+
+
+class TestPipAuditAndRequireHashes:
+    """R69 fix D5: pip-audit and --require-hashes deployment regression tests."""
+
+    @pytest.fixture(autouse=True)
+    def _load_files(self):
+        self.cloudbuild = (PROJECT_ROOT / "cloudbuild.yaml").read_text()
+        self.dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
+
+    def test_pip_audit_in_cloudbuild(self):
+        """Pipeline includes pip-audit step targeting requirements-prod.txt."""
+        assert "pip-audit" in self.cloudbuild, "pip-audit step missing from cloudbuild.yaml"
+        assert "pip-audit -r requirements-prod.txt" in self.cloudbuild, (
+            "pip-audit must target requirements-prod.txt (not requirements.txt)"
+        )
+
+    def test_require_hashes_in_dockerfile(self):
+        """Dockerfile uses --require-hashes for supply chain hardening."""
+        assert "--require-hashes" in self.dockerfile, (
+            "Dockerfile must use --require-hashes for pip install"
+        )
 
 
 class TestCloudRunRedisConfig:
