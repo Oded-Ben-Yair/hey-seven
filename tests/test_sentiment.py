@@ -175,6 +175,53 @@ class TestSarcasmPatterns:
         assert detect_sentiment(text) == "frustrated"
 
 
+class TestR70SarcasmPatterns:
+    """R70 B1 fixes: backhanded compliments and passive resignation."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "It was fine I suppose.",
+            "The room was clean I suppose",
+            "Good I guess.",
+            "It was okay I guess, nothing special",
+        ],
+    )
+    def test_backhanded_i_suppose_i_guess(self, text):
+        assert detect_sentiment(text) == "frustrated"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Could have been worse.",
+            "I mean, could be worse I guess.",
+        ],
+    )
+    def test_could_have_been_worse(self, text):
+        assert detect_sentiment(text) == "frustrated"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Very helpful.",
+            "Very informative.",
+        ],
+    )
+    def test_standalone_ironic_very(self, text):
+        assert detect_sentiment(text) == "frustrated"
+
+    def test_whatever_resignation(self):
+        assert detect_sentiment("Sure whatever.") == "frustrated"
+
+    def test_if_you_say_so(self):
+        assert detect_sentiment("If you say so.") == "frustrated"
+
+    def test_sincere_very_helpful_mid_sentence(self):
+        """'Very helpful' in a longer sentence is sincere — should NOT match."""
+        result = detect_sentiment("That was very helpful information, thank you so much!")
+        assert result in ("positive", "neutral")
+
+
 class TestSarcasmFalsePositives:
     """Sincere positive statements must NOT be classified as frustrated."""
 

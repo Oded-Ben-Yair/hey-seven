@@ -19,6 +19,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.nodes import _format_context_block
 from src.agent.prompts import (
+    EMOTIONAL_CONTEXT_GUIDES,
     HEART_ESCALATION_LANGUAGE,
     SENTIMENT_TONE_GUIDES,
     get_persona_style,
@@ -216,6 +217,37 @@ async def execute_specialist(
         tone_guide = SENTIMENT_TONE_GUIDES.get(guest_sentiment, "")
         if tone_guide:
             system_prompt += f"\n\n## Tone Guidance\n{tone_guide}"
+
+    # R70 B5: Inject emotional context guides based on extracted fields and message content.
+    # These are additive to sentiment tone guides — they provide domain-specific emotional
+    # intelligence that VADER alone cannot detect (grief, anxiety, allergy concern, etc.).
+    extracted = state.get("extracted_fields") or {}
+    user_msg = ""
+    for msg in reversed(state.get("messages", [])):
+        if isinstance(msg, HumanMessage):
+            user_msg = msg.content if isinstance(msg.content, str) else str(msg.content)
+            break
+    user_msg_lower = user_msg.lower()
+
+    emotional_guides: list[str] = []
+    # Grief detection: loss/bereavement keywords
+    if any(kw in user_msg_lower for kw in ("passed away", "passed on", "lost my", "funeral", "in memory", "rest in peace")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["grief"])
+    # Anxiety detection: first-time/nervous keywords
+    if any(kw in user_msg_lower for kw in ("first time", "never been", "nervous", "anxious", "intimidat", "overwhelm")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["anxiety"])
+    # Celebration detection: from extracted occasion field
+    if extracted.get("occasion"):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["celebration"])
+    # Allergy concern: from extracted preferences or keywords
+    if any(kw in user_msg_lower for kw in ("allerg", "anaphyla", "epipen", "celiac")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["allergy_concern"])
+    # Gambling frustration: loss/losing keywords (only if not already frustrated via VADER)
+    if any(kw in user_msg_lower for kw in ("losing", "lost all", "bad day", "bad luck", "cold streak", "down a lot")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["gambling_frustration"])
+
+    if emotional_guides:
+        system_prompt += "\n\n## Emotional Context\n" + "\n\n".join(emotional_guides)
 
     # Phase 4: Frustration escalation — detect sustained negative sentiment
     # from conversation history. When guest shows 2+ consecutive frustrated

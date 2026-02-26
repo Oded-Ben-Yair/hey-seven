@@ -1,0 +1,125 @@
+scenarios:
+  - id: "engagement-01"
+    name: "Terse disengaged replies signal need for focused questions"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Recognizes monosyllabic replies as disengagement. Shifts from open-ended suggestions to focused binary or narrow questions. Does not keep listing options. By turn 3, asks a concrete either/or question rather than offering another menu of choices."
+    turns:
+      - role: "human"
+        content: "What should we do tonight?"
+        expected_keywords: ["restaurant", "Arena", "Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "ok"
+        expected_keywords: ["prefer", "interest"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "fine"
+        expected_keywords: ["dinner", "show"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "sure"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+    expected_behavior: "Adapts to disengaged communication style. Stops listing options and switches to narrow, focused questions. By the final turn, gives a concrete plan rather than more choices"
+    safety_relevant: false
+
+  - id: "engagement-02"
+    name: "Same question repeated signals inadequate prior answer"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Recognizes that repeating the same question in different words means the prior answer was unsatisfactory. By the third attempt, acknowledges the repetition explicitly, apologizes for the confusion, and delivers the answer in a different format (direct time, not prose)."
+    turns:
+      - role: "human"
+        content: "What time does the buffet open?"
+        expected_keywords: ["Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "When can I eat at the buffet?"
+        expected_keywords: ["Buffet", "11"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I ASKED about buffet hours"
+        expected_keywords: ["11", "AM"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Detects that the guest is repeating the same question with increasing frustration. By the third turn, provides a clear, direct answer with the specific time prominently stated. Does not lecture the guest or reference prior answers defensively"
+    safety_relevant: false
+
+  - id: "engagement-03"
+    name: "Direct negative feedback on response quality"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Immediately acknowledges the feedback without defensiveness. Re-reads the original question and provides a targeted answer. Does not repeat the same information in the same format. Shows adaptability by changing response structure."
+    turns:
+      - role: "human"
+        content: "Where can I get a quick lunch?"
+        expected_keywords: ["Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That's not what I asked. I said quick, not fancy."
+        expected_keywords: ["Buffet", "quick"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Thank you, that's better"
+        expected_keywords: ["help", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Accepts the correction gracefully, immediately adjusts to emphasize speed and casual dining, and acknowledges the guest's positive feedback in turn 3"
+    safety_relevant: false
+
+  - id: "engagement-04"
+    name: "Multi-part compound question"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Addresses all three parts of the compound question systematically. Does not answer only the first or last part. Uses structure (numbered list or clear sections) to show each sub-question was heard. Does not merge them into a vague general answer."
+    turns:
+      - role: "human"
+        content: "What restaurants are open now and which ones have outdoor seating and are they kid-friendly?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "You didn't mention which ones have outdoor seating"
+        expected_keywords: ["outdoor", "seating"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "OK and the kid-friendly part?"
+        expected_keywords: ["kid", "family", "children"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Attempts to address all parts of the compound question in the first response. If pressed on missed parts, provides the missing information without defensiveness and acknowledges the omission"
+    safety_relevant: false
+
+  - id: "engagement-05"
+    name: "Request to switch from verbose to concise"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Immediately shifts to a concise format when asked. Subsequent responses are noticeably shorter without losing useful content. Does not explain why it was verbose or justify the previous style. Just adapts."
+    turns:
+      - role: "human"
+        content: "Tell me about the property"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Can you just give me the quick version?"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What time does the steakhouse open?"
+        expected_keywords: ["5", "PM"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+    expected_behavior: "Delivers a detailed overview first, then compresses to bullet-point or single-sentence format when asked. Maintains concise style in subsequent turns without reverting to verbose"
+    safety_relevant: false

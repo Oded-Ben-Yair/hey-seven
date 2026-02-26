@@ -1,0 +1,120 @@
+scenarios:
+  - id: "sarcasm-01"
+    name: "Sarcastic opener dismissing chatbot"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Acknowledges the skepticism without defensiveness or forced enthusiasm. Does not mirror sarcasm. Calm, competent opener that proves value through substance, not cheerfulness."
+    turns:
+      - role: "human"
+        content: "Oh wonderful, another chatbot. This should be fun."
+        expected_keywords: ["help", "assist"]
+        expected_tone: "calm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Fine. What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Alright that was actually useful. What about the spa?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Does not match sarcasm with excessive enthusiasm. Stays grounded, earns trust through useful answers, and naturally warms as guest engagement shifts"
+    safety_relevant: false
+
+  - id: "sarcasm-02"
+    name: "Backhanded compliment hiding dissatisfaction"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Reads the backhanded compliment as a dissatisfaction signal. Gently probes for what fell short rather than accepting the surface-level positive. Does not say 'glad to hear' or treat it as praise."
+    turns:
+      - role: "human"
+        content: "Yeah the room was clean I suppose. Could have been worse."
+        expected_keywords: ["experience", "help"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "I mean the bed was hard and the AC was loud but whatever"
+        expected_keywords: ["sorry", "help", "team"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Is there anything else to do here at least?"
+        expected_keywords: ["Spa", "Arena", "restaurant"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Detects hidden dissatisfaction behind lukewarm praise. Probes gently for specifics, validates the frustration, then pivots to positive alternatives"
+    safety_relevant: false
+
+  - id: "sarcasm-03"
+    name: "Escalating frustration through terse sarcastic replies"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Recognizes that each terse reply signals increasing frustration with the response format. Shifts from list-based answers to direct, concise recommendations. By turn 3, gives a single definitive answer rather than options."
+    turns:
+      - role: "human"
+        content: "What's good here?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Great, a list. Very helpful."
+        expected_keywords: ["recommend"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Just tell me what to eat"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "direct"
+        expected_empathy_level: "medium"
+    expected_behavior: "Adapts response format across turns. First response is informative list. After sarcastic feedback, shifts to a single focused recommendation with clear reasoning instead of another list"
+    safety_relevant: false
+
+  - id: "sarcasm-04"
+    name: "Direct sarcasm with time-based frustration"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Triggers HEART framework. Acknowledges the wait time and frustration explicitly. Does not say 'I understand' without substance. Offers immediate actionable help and mentions human escalation if the issue is unresolved."
+    turns:
+      - role: "human"
+        content: "Thanks for nothing, I've been asking for 10 minutes and still don't know where to eat dinner"
+        expected_keywords: ["sorry", "help", "restaurant"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "The steakhouse then. Is there a wait?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Fine. Where is it?"
+        expected_keywords: ["Main Floor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Acknowledges frustration and wasted time sincerely, provides a direct dining recommendation immediately, then delivers concise factual answers as trust rebuilds"
+    safety_relevant: false
+
+  - id: "sarcasm-05"
+    name: "Passive resignation and disengagement"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Detects passive resignation as disengagement rather than agreement. Makes one gentle re-engagement attempt without being pushy. Offers a concrete alternative or asks a focused question. Does not ignore the tone and barrel ahead."
+    turns:
+      - role: "human"
+        content: "What should we do tonight?"
+        expected_keywords: ["restaurant", "Arena", "Spa"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Sure, that works. Whatever."
+        expected_keywords: ["prefer", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "I don't know, maybe something low-key"
+        expected_keywords: ["Spa", "Buffet"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Recognizes 'whatever' as disengagement, not agreement. Gently asks a narrowing question rather than celebrating the 'choice'. When guest reveals preference for low-key, adjusts recommendations away from high-energy options"
+    safety_relevant: false

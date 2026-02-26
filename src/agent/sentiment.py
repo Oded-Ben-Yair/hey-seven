@@ -50,6 +50,17 @@ _SARCASM_PATTERNS: list[str] = [
     r"(?i)\b(?:yeah\s+right|sure[,!]?\s+that\s+(?:helps?|works?))\b",
     # "Love waiting" / "Love how everything takes forever" (sarcastic love)
     r"(?i)\blove\s+(?:waiting|how\s+(?:long|slow|everything|nothing))\b",
+    # R70 B1 fixes: backhanded compliments and passive resignation
+    # "I suppose" / "I guess" as qualifier after statement — hedging dissatisfaction
+    r"(?i)(?:clean|fine|ok(?:ay)?|good|nice|decent)\s+I\s+(?:suppose|guess)\b",
+    # "Could have been worse" / "Could be worse" — damning with faint praise
+    r"(?i)\bcould\s+(?:have\s+been|be)\s+worse\b",
+    # Standalone "Very helpful" / "Very nice" / "Very useful" — ironic when isolated
+    # Anchored to sentence boundary to avoid false positives on sincere usage
+    r"(?i)(?:^|[.,!?]\s+)very\s+(?:helpful|nice|useful|informative)\s*[.!?]?\s*$",
+    # "Whatever" / "If you say so" / "Sure whatever" — passive resignation
+    r"(?i)\b(?:sure\s+)?whatever\b(?:\s*[.,!]?\s*$)",
+    r"(?i)\bif\s+you\s+say\s+so\b",
 ]
 
 

@@ -1,42 +1,50 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R69 4-model hostile review complete. Raw 87.0 → post-fix ~93. 1 CRITICAL (tribal URLs) resolved, 22 MAJORs → 13 fixed. 2549 tests, 0 failures, 90.01% coverage. v1.3.0.",
-    "lastModified": "2026-02-26T18:00:00Z",
+    "summary": "R70 5-model hybrid review complete. Infrastructure 92.2/100 (0 CRITICALs, 8 MAJORs). Behavioral baseline 3.8/10 (B1-B5 first measurement). Behavioral fixes applied: 5 new sarcasm patterns, EMOTIONAL_CONTEXT_GUIDES (grief/anxiety/allergy/celebration/gambling-frustration), system prompt emotional intelligence section. 2580 tests, 0 failures, 90.04% coverage.",
+    "lastModified": "2026-02-26T22:00:00Z",
     "branch": "main",
-    "commitHash": "917d959",
+    "commitHash": "pending",
     "tag": "v1.3.0",
-    "phase": "r69-review-fixes-complete"
+    "phase": "r70-hybrid-review-complete"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "Commit R69 fixes and run R70 measurement round to verify post-fix score" },
-    { "priority": 1, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" },
-    { "priority": 2, "description": "k6 load tests against Cloud Run (real infrastructure)" },
-    { "priority": 3, "description": "execute_specialist SRP refactor (293 LOC → 3 helpers, deferred since R34)" }
+    { "priority": 0, "description": "R71 behavioral sprint: target B1-B5 from 3.8 → 6-7 (repair loop, domain tracking, brevity detection)" },
+    { "priority": 1, "description": "execute_specialist SRP refactor (293 LOC → 3 helpers, deferred since R34, D1=7.8)" },
+    { "priority": 2, "description": "Auth-enabled test suite (D5=7.5, tests with auth+classifier enabled)" },
+    { "priority": 3, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" }
   ],
   "reviewHistory": {
     "structuralSprint": {
-      "rounds": "R52-R69 (18 rounds, 3 GitHub-native consensus)",
+      "rounds": "R52-R70 (19 rounds, 3 GitHub-native consensus, 1 hybrid)",
       "dateRange": "2026-02-25 to 2026-02-26",
       "trajectory": {
         "R52": 67.7, "R53": 84.3, "R54": 85.7, "R55": 88.7,
         "R56": 90.1, "R57": 92.4, "R58": 91.0, "R59": 93.2,
         "R60": 93.9, "R61": 94.4, "R62": 91.5, "R63": 74.1,
         "R64": 93.5, "R65": 97.0, "R66_github": 84.0, "R67_github": 91.6,
-        "R68_consensus": 92.9, "R69_raw": 87.0, "R69_postfix": "pending_measurement"
+        "R68_consensus": 92.9, "R69_raw": 87.0, "R69_postfix": 93.0,
+        "R70_infra": 92.2
+      },
+      "behavioralBaseline": {
+        "R70_B1_sarcasm": 4.0,
+        "R70_B2_implicit": 3.0,
+        "R70_B3_engagement": 4.0,
+        "R70_B4_agentic": 5.0,
+        "R70_B5_emotional": 3.0,
+        "R70_behavioral_avg": 3.8
       },
       "totalCriticals": 0,
-      "r69Fixes": [
-        "Tribal self_exclusion_url/commission_url → contact property directly",
-        "Runbook helpline parity (1-800-GAMBLER primary), pattern count 205",
-        "VERSION 1.1.0 → 1.3.0",
-        "validators.py wired to retrieve_node + get_guest_profile",
-        "/metrics added to ApiKeyMiddleware._PROTECTED_PATHS",
-        "pip-audit → requirements-prod.txt, HEALTHCHECK /health → /live",
-        "RFC 7232 multi-ETag parsing (comma, wildcard, W/ prefix)",
-        "10 Georgian Mkhedruli confusable entries (145 total)",
-        "7 new tests (4 ETag, 2 deployment, 1 validator)"
+      "r70Fixes": [
+        "5 new sarcasm patterns (B1): I suppose, could be worse, standalone ironic 'Very helpful', whatever, if you say so",
+        "EMOTIONAL_CONTEXT_GUIDES (B5): grief, anxiety, celebration, allergy_concern, gambling_frustration",
+        "System prompt emotional intelligence section (B5): grief, anxiety, allergy, gambling loss, sarcasm",
+        "Emotional context detection wired to execute_specialist (B5): keyword-based triggers",
+        "Pattern count parity: 205→204 fixed in 5 docs (runbook, ADR-018, fuzz test, README, ARCHITECTURE)",
+        "20 adversarial behavioral transcripts (4 YAML files, B1-B5)",
+        "Behavioral review rubric (docs/review-prompt-r70-behavioral.md)",
+        "11 new sentiment tests for R70 sarcasm patterns"
       ]
     }
   },
@@ -44,16 +52,16 @@
     "loc": "25K+",
     "modules": 59,
     "testFiles": 71,
-    "tests": 2549,
+    "tests": 2580,
     "testFailures": 0,
     "skipped": 1,
-    "coverage": "90.01%",
+    "coverage": "90.04%",
     "adrs": 22,
     "confusables": 145,
-    "guardrailPatterns": 205
+    "guardrailPatterns": 204
   },
   "sessionNotes": {
     "lastSessionDate": "2026-02-26",
-    "lastSessionId": "hey-seven-session-20260226-r69"
+    "lastSessionId": "hey-seven-session-20260226-r70"
   }
 }

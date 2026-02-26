@@ -574,7 +574,7 @@ Six deterministic guardrail layers run before any LLM call:
 5. Patron privacy detection
 6. Self-harm/crisis detection (R49: routes to 988 Lifeline response)
 
-All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable, and zero-width character bypass attempts. 205 regex patterns across 12 languages, 145 confusable entries (Cyrillic, Greek, Fullwidth, IPA, Armenian, Cherokee, Mathematical, Georgian).
+All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable, and zero-width character bypass attempts. 204 regex patterns across 12 languages, 145 confusable entries (Cyrillic, Greek, Fullwidth, IPA, Armenian, Cherokee, Mathematical, Georgian).
 
 ---
 

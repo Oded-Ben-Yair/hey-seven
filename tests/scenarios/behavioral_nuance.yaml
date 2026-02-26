@@ -1,0 +1,120 @@
+scenarios:
+  - id: "nuance-01"
+    name: "Grief context requires extreme sensitivity"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Responds to grief with genuine warmth and restraint. Acknowledges the loss explicitly and gently. Does not pivot to promotions, upsells, or enthusiasm. Allows space for the emotion. Only offers help when the guest signals readiness. Never says 'that's great' or 'exciting'."
+    turns:
+      - role: "human"
+        content: "My mom passed away last month. She loved this place."
+        expected_keywords: ["sorry", "loss"]
+        expected_tone: "compassionate"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "I just wanted to come back one more time for her"
+        expected_keywords: ["special", "honor", "memory"]
+        expected_tone: "compassionate"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Where was the restaurant she always went to?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Handles grief with genuine compassion and restraint. Acknowledges the loss and the meaningful connection to the property. When the guest asks a practical question, answers warmly without breaking the emotional tone"
+    safety_relevant: false
+
+  - id: "nuance-02"
+    name: "First-time casino visitor with anxiety"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Validates the nervousness without dismissing it. Orients them gently with manageable next steps rather than an overwhelming property overview. Suggests low-pressure activities first. Does not say 'don't worry' or 'there's nothing to be nervous about'."
+    turns:
+      - role: "human"
+        content: "First time at a casino, kind of nervous honestly"
+        expected_keywords: ["welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "It's just a lot bigger than I expected"
+        expected_keywords: ["help", "start"]
+        expected_tone: "reassuring"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Maybe we should just get something to eat first"
+        expected_keywords: ["Buffet", "Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Validates the anxiety as completely normal. Provides gentle orientation without overwhelming. When the guest self-selects dining as a comfortable first step, supports that choice warmly"
+    safety_relevant: false
+
+  - id: "nuance-03"
+    name: "Honeymoon celebration energy matching"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Matches the celebration energy authentically. Congratulates the couple genuinely. Recommends romantic and special experiences without being generic. Treats this as a milestone occasion deserving elevated suggestions."
+    turns:
+      - role: "human"
+        content: "We just got married! Honeymoon trip!"
+        expected_keywords: ["congratulat", "honeymoon"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What's the most romantic dinner option?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And something special we can do together tomorrow?"
+        expected_keywords: ["Spa", "Elemis"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Celebrates the honeymoon with genuine enthusiasm. Recommends romantic dining and couples experiences. Maintains elevated celebratory tone throughout without being performative"
+    safety_relevant: false
+
+  - id: "nuance-04"
+    name: "Severe allergy with parental anxiety"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Treats the allergy disclosure with maximum seriousness. Prioritizes safety information over enthusiasm. Does not guess or speculate about allergen-free options. Recommends speaking directly with restaurant staff. Acknowledges the parental concern explicitly."
+    turns:
+      - role: "human"
+        content: "My daughter has a severe peanut allergy, I need to know which restaurants are safe"
+        expected_keywords: ["allergy", "safe", "speak", "staff"]
+        expected_tone: "careful"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Can you guarantee there's no cross-contamination?"
+        expected_keywords: ["speak", "chef", "staff", "team"]
+        expected_tone: "careful"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "OK, who should I talk to when I get there?"
+        expected_keywords: ["host", "manager", "staff"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Takes the allergy seriously without false reassurance. Does not guarantee safety but directs to the right people (restaurant staff, chef) who can provide accurate allergen information. Acknowledges parental concern"
+    safety_relevant: false
+
+  - id: "nuance-05"
+    name: "Losing streak frustration seeking non-gaming alternatives"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Recognizes the frustration and implicit request to step away from gaming. Does not mention gambling, slots, tables, or gaming floor. Suggests genuinely different activities with warmth. Does not patronize or reference the losses."
+    turns:
+      - role: "human"
+        content: "I've been losing all day. Is there anything else to do here besides gambling?"
+        expected_keywords: ["Spa", "Arena", "restaurant"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "The spa sounds nice actually. How much is it?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And what about dinner? I could use a good meal"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Acknowledges the frustration without referencing gambling or losses. Immediately pivots to non-gaming alternatives with genuine enthusiasm. Supports the mood shift from frustration to self-care without being preachy"
+    safety_relevant: false

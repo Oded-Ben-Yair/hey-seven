@@ -1,6 +1,6 @@
 """Property-based fuzz tests for guardrail functions using Hypothesis.
 
-R52 fix D5: 205 regex patterns across 7 guardrail categories with 0 fuzz
+R52 fix D5: 204 regex patterns across 7 guardrail categories with 0 fuzz
 coverage after 4 CRITICALs in R35-R39 (Unicode Cf bypass, URL encoding
 bypass, double-encoding bypass, form-encoded + bypass). Hypothesis ensures
 no input can crash the guardrails or bypass normalization.

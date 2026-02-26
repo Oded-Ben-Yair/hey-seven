@@ -1,0 +1,120 @@
+scenarios:
+  - id: "implicit-01"
+    name: "Long drive implies high expectations"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Acknowledges the travel effort and fatigue without being asked. Elevates recommendation quality by leading with the best options, not a generic list. Signals that their investment will be worth it through thoughtful suggestions."
+    turns:
+      - role: "human"
+        content: "We drove 4 hours to get here. What should we do first?"
+        expected_keywords: ["welcome", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Yeah we're pretty tired but hungry"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What about after dinner?"
+        expected_keywords: ["Spa", "Pool"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Reads the 4-hour drive as a signal of high expectations and physical fatigue. Acknowledges the effort, recommends immediate comfort needs first (food), then suggests relaxation (spa/pool) rather than high-energy activities"
+    safety_relevant: false
+
+  - id: "implicit-02"
+    name: "Long-term loyalty member expecting recognition"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Recognizes '20 years' as a deep loyalty signal requiring elevated treatment. Acknowledges the loyalty explicitly and with genuine warmth. Does not respond generically or treat them like a new guest. References their loyalty status even without CRM data."
+    turns:
+      - role: "human"
+        content: "I'm a Momentum member, 20 years now"
+        expected_keywords: ["loyalty", "thank", "Momentum"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What's new since my last visit?"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Do I get any perks for being a long-time member?"
+        expected_keywords: ["Momentum Rewards", "tier"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+    expected_behavior: "Treats 20-year membership as a VIP signal. Acknowledges their loyalty history warmly, highlights new offerings as updates for a returning guest, and references loyalty program benefits"
+    safety_relevant: false
+
+  - id: "implicit-03"
+    name: "Partner feeling unwell implies quiet needs"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Infers that 'not feeling well' shifts the entire recommendation context toward comfort and calm. Does not suggest shows, gaming, or anything high-energy. Leads with room service, spa, or quiet dining. Expresses care for the partner without being intrusive."
+    turns:
+      - role: "human"
+        content: "My wife isn't feeling well. What can we do that's relaxing?"
+        expected_keywords: ["Spa", "hope"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "She might want to just stay in the room. Is there room service?"
+        expected_keywords: ["room"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And something I can do nearby while she rests?"
+        expected_keywords: ["Spa", "Pool", "Steakhouse"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Picks up on partner illness as a need for quiet, comfortable options. Avoids high-energy suggestions entirely. Splits recommendations when one partner needs rest and the other wants activity"
+    safety_relevant: false
+
+  - id: "implicit-04"
+    name: "Restless kids imply urgency and family context"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Reads 'restless kids' as urgency and stress. Provides quick, practical, family-friendly answers immediately. Does not give a marketing-style overview. Prioritizes activities that kids can do right now, not things that require planning or reservations."
+    turns:
+      - role: "human"
+        content: "The kids are getting restless, what can we do?"
+        expected_keywords: ["Pool"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Is the pool open right now?"
+        expected_keywords: ["Pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Great. And where can we grab a quick bite with kids?"
+        expected_keywords: ["Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Treats 'restless kids' as an urgent request for immediate, family-friendly activities. Answers are practical and actionable. Suggests casual dining for families, not fine dining"
+    safety_relevant: false
+
+  - id: "implicit-05"
+    name: "Anniversary tradition implies celebration context"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Recognizes 'every anniversary' as both a loyalty signal and a celebration context. Acknowledges the tradition warmly. Recommends special or romantic experiences. Does not treat it as a routine visit."
+    turns:
+      - role: "human"
+        content: "We come here every anniversary. It's our special place."
+        expected_keywords: ["anniversary", "special", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What would you recommend for tonight?"
+        expected_keywords: ["Steakhouse", "Spa"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Perfect. And maybe something different we haven't tried before?"
+        expected_keywords: ["Elemis Spa", "Arena"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Celebrates the anniversary tradition and returning loyalty. Recommends romantic or upscale experiences for the occasion. When asked for something new, suggests options they may not have tried as returning guests"
+    safety_relevant: false

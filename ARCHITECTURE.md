@@ -19,7 +19,7 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     v
 Custom 11-node StateGraph (src/agent/graph.py)
     |
-    |-- compliance_gate (205 regex patterns, 11 languages) --> greeting / off_topic / router
+    |-- compliance_gate (204 regex patterns, 11 languages) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
