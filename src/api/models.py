@@ -89,6 +89,7 @@ class HealthResponse(BaseModel):
     observability_enabled: bool = False
     circuit_breaker_state: str = "unknown"
     environment: str = "development"
+    re2_available: bool = False  # R66: ReDoS protection status
 
 
 class FeedbackRequest(BaseModel):

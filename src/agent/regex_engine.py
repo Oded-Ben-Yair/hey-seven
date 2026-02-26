@@ -41,12 +41,29 @@ def _flags_to_re2_options(flags: int) -> "_re2.Options | None":
     return opts
 
 
+def is_re2_active() -> bool:
+    """Check if re2 is being used for pattern compilation.
+
+    Returns True if google-re2 is installed and active. Use in health checks
+    and startup logs to surface ReDoS risk in production.
+    """
+    return RE2_AVAILABLE
+
+
+# Track stdlib fallback count for observability
+_stdlib_fallback_count = 0
+
+
 def compile(pattern: str, flags: int = 0) -> "_stdlib_re.Pattern":
     """Compile a regex pattern, preferring re2 for linear-time guarantees.
 
     Falls back to stdlib re if:
-    - re2 is not installed
+    - re2 is not installed (logs WARNING at import time)
     - The pattern uses re2-unsupported features (lookaheads, backreferences)
+
+    In production, re2 MUST be available. The fallback exists only for
+    local development without libre2-dev. Deploy with google-re2 installed
+    to prevent ReDoS attacks on the 204 guardrail patterns.
 
     Args:
         pattern: Regex pattern string.
@@ -55,15 +72,19 @@ def compile(pattern: str, flags: int = 0) -> "_stdlib_re.Pattern":
     Returns:
         Compiled pattern object (re2.Pattern or re.Pattern).
     """
+    global _stdlib_fallback_count
     if _re2 is not None:
         try:
             opts = _flags_to_re2_options(flags)
             return _re2.compile(pattern, opts)
         except Exception:
             # re2 doesn't support lookaheads, backreferences, etc.
-            # Fall back silently to stdlib re for these patterns.
-            logger.debug(
-                "Pattern incompatible with re2, falling back to stdlib re: %s",
+            # Log at WARNING (not debug) so operators know which patterns
+            # use stdlib re and are potentially vulnerable to ReDoS.
+            _stdlib_fallback_count += 1
+            logger.warning(
+                "Pattern incompatible with re2 (fallback #%d), using stdlib re: %s",
+                _stdlib_fallback_count,
                 pattern[:60],
             )
     return _stdlib_re.compile(pattern, flags)

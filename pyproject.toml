@@ -12,6 +12,11 @@ filterwarnings = [
     "ignore::RuntimeWarning:asyncio",
 ]
 addopts = "--cov=src --cov-report=term-missing"
+markers = [
+    "chaos: compound failure tests (run separately in CI: pytest -m chaos)",
+    "load: concurrent load tests (run separately in CI: pytest -m load)",
+    "slow: tests requiring >10s (skip in fast CI: pytest -m 'not slow')",
+]
 
 [tool.coverage.run]
 source = ["src"]

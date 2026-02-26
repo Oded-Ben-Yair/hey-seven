@@ -13,6 +13,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+# R66 fix D5: Mark load tests for separate CI scheduling.
+pytestmark = pytest.mark.load
+
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -467,6 +467,10 @@ def create_app() -> FastAPI:
         except Exception:
             logger.debug("Circuit breaker state check failed", exc_info=True)
 
+        # R66 fix: Surface re2 availability for ReDoS protection monitoring
+        from src.agent.regex_engine import is_re2_active
+        _re2_active = is_re2_active()
+
         # CB open means functionally degraded — report as such
         all_healthy = ready and agent_ready and property_loaded and cb_state != "open"
         settings = get_settings()
@@ -479,6 +483,7 @@ def create_app() -> FastAPI:
             observability_enabled=is_observability_enabled(),
             circuit_breaker_state=cb_state,
             environment=settings.ENVIRONMENT,
+            re2_available=_re2_active,
         )
         # Return 503 for degraded state so Cloud Run / k8s don't route
         # traffic to unhealthy containers.

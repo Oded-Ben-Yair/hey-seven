@@ -13,6 +13,10 @@ import pytest
 
 from src.agent.circuit_breaker import CircuitBreaker
 
+# R66 fix D5: Mark all chaos tests for separate CI scheduling.
+# Run via: pytest -m chaos (or exclude via: pytest -m 'not chaos')
+pytestmark = pytest.mark.chaos
+
 
 class TestCompoundFailures:
     """Test system behavior under simultaneous failure conditions."""

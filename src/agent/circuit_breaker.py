@@ -69,12 +69,14 @@ class CircuitBreaker:
         self._cooldown_seconds = cooldown_seconds
         self._rolling_window_seconds = rolling_window_seconds
 
-        # No maxlen: memory is bounded by _prune_old_failures() which removes
-        # timestamps outside the rolling window. The natural bound is
-        # failure_rate * rolling_window_seconds. Previous maxlen caused silent
-        # undercounting when failures arrived faster than maxlen / window_seconds,
-        # preventing the breaker from tripping under sustained moderate load.
-        # R5 fix: removed maxlen per DeepSeek F1 analysis.
+        # No maxlen by design (R5 fix per DeepSeek F1): memory is bounded by
+        # _prune_old_failures() which removes timestamps outside the rolling window.
+        # Worst-case memory: at 50 concurrent requests with 100% failure rate and
+        # 300s rolling window, max entries = 50 * 300 = 15,000 floats = ~120KB.
+        # The CB opens at failure_threshold=5, after which no more failures are
+        # recorded (requests blocked), so practical max is much lower.
+        # Previous maxlen caused silent undercounting, preventing the breaker
+        # from tripping under sustained moderate load.
         self._failure_timestamps: collections.deque[float] = collections.deque()
         self._last_failure_time: float | None = None
         self._state = "closed"
@@ -171,7 +173,10 @@ class CircuitBreaker:
             results = await self._backend.async_pipeline_get(keys)
             remote_state = results[0]
             remote_count_str = results[1]
-            if remote_state and remote_count_str:
+            # R66 fix: Use `is not None` instead of truthiness check.
+            # "0" is a valid failure_count but falsy in Python — truthiness
+            # check dropped valid zero counts, preventing recovery propagation.
+            if remote_state is not None and remote_count_str is not None:
                 return remote_state, int(remote_count_str)
             return None, None
         except Exception:

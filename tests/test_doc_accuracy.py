@@ -117,10 +117,10 @@ class TestHealthResponseModel:
         assert hr.circuit_breaker_state == "closed"
 
     def test_health_response_field_count(self):
-        """HealthResponse has 8 fields (including environment)."""
+        """HealthResponse has 9 fields (including re2_available)."""
         from src.api.models import HealthResponse
 
-        assert len(HealthResponse.model_fields) == 8
+        assert len(HealthResponse.model_fields) == 9
 
 
 class TestErrorTaxonomy:
