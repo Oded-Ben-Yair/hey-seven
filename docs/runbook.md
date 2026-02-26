@@ -645,3 +645,94 @@ These are handled automatically by deterministic guardrails (NO human judgment n
 | POST | `/sms/webhook` | Telnyx signature | No | Inbound SMS webhook |
 | POST | `/cms/webhook` | HMAC signature | No | CMS content update webhook |
 | GET | `/*` | None | No | Static files (frontend) |
+
+---
+
+## Regulatory Compliance Mapping
+
+### System Behavior to Legal Requirement
+
+| System Behavior | Legal Requirement | Implementation |
+|----------------|-------------------|----------------|
+| Block gambling advice | State gaming commission RG requirements | `detect_responsible_gaming()` in guardrails.py |
+| Surface 988 Lifeline | Duty of care / premises liability | `detect_self_harm()` + off_topic_node handler |
+| Redirect BSA/AML queries | Bank Secrecy Act (31 USC 5311) | `detect_bsa_aml()` in guardrails.py |
+| Block patron info sharing | State privacy laws / CCPA | `detect_patron_privacy()` in guardrails.py |
+| Enforce 21+ age info | State gaming age requirements | `detect_age_verification()` in guardrails.py |
+| Block prompt injection | Security (protects all above) | `detect_prompt_injection()` + semantic classifier |
+| Surface state-specific helplines | State gaming commission requirements | `get_responsible_gaming_helplines(casino_id)` |
+| Escalate repeated RG triggers | State RG program requirements | `responsible_gaming_count` state field + threshold |
+| PII redaction in responses | CCPA / state privacy laws | `StreamingPIIRedactor` + `redact_pii()` |
+| AI disclosure in greeting | CT SB 2 (Oct 2026), state AI laws | `ai_disclosure_enabled` feature flag |
+
+### Per-State Regulatory Quick Reference
+
+| State | Gaming Commission | RG Helpline | Self-Exclusion Authority | AI Disclosure Law |
+|-------|-------------------|-------------|-------------------------|-------------------|
+| CT | CT DCP / Tribal Commissions | 1-888-789-7777 | Tribal Gaming Commission | CT SB 2 (Oct 2026) |
+| NV | Nevada Gaming Control Board | 1-800-GAMBLER | NGCB (NGC Reg. 5.170) | None (as of 2026) |
+| PA | PA Gaming Control Board | 1-800-848-1880 | PGCB | None (as of 2026) |
+| NJ | NJ Division of Gaming Enforcement | 1-800-GAMBLER | NJ DGE | None (as of 2026) |
+
+---
+
+## New Property Onboarding Checklist
+
+### Pre-Deployment (10 steps)
+
+1. **Obtain regulatory information**
+   - State gaming commission name and contact
+   - State-specific responsible gaming helpline number
+   - Self-exclusion authority, URL, and phone number
+   - Self-exclusion duration options (1-year, 5-year, lifetime)
+   - AI disclosure requirements (if any state law applies)
+   - Quiet hours regulations (state TCPA/telemarketing rules)
+
+2. **Create casino profile** in `src/casino/config.py`
+   - Add entry to `CASINO_PROFILES` dict with all regulatory fields
+   - Validate against `_REQUIRED_PROFILE_FIELDS` (runs at import time)
+   - Set `property_type` (tribal vs commercial -- different self-exclusion authorities)
+
+3. **Configure feature flags** in profile `features` dict
+   - Start with defaults, override per-client requirements
+   - Document any disabled features with rationale
+
+4. **Prepare property data** for RAG ingestion
+   - Create `data/<property_name>.json` with restaurant, hotel, entertainment data
+   - Per-item structured data (NOT raw text dumps)
+   - Include hours, pricing, dress codes, special requirements
+
+5. **Configure environment variables**
+   - `CASINO_ID=<new_property_id>`
+   - `PROPERTY_NAME=<display name>`
+   - `PROPERTY_STATE=<full state name>` (must match CASINO_ID in Settings validator)
+   - `PROPERTY_PHONE=<main number>`
+   - `PROPERTY_WEBSITE=<URL>`
+
+6. **Run regulatory validation**
+   ```bash
+   python -c "from src.casino.config import get_casino_profile; p = get_casino_profile('<casino_id>'); print(p['regulations'])"
+   ```
+   - Verify all helpline numbers are correct
+   - Verify self-exclusion authority matches property type
+
+7. **Run test suite against new property**
+   ```bash
+   CASINO_ID=<new_id> PROPERTY_NAME="<name>" python -m pytest tests/ -v --tb=short
+   ```
+
+8. **Verify guardrail responses** include correct jurisdiction info
+   - Test responsible gaming response includes correct state helpline
+   - Test self-harm response includes 988 Lifeline (national, not property-specific)
+   - Test age verification includes correct state gaming age
+   - Test BSA/AML includes correct compliance team redirect
+
+9. **Configure deployment secrets** in GCP Secret Manager
+   - `google-api-key`, `hey-seven-api-key`, `cms-webhook-secret`
+   - Per-property Telnyx credentials (if SMS enabled)
+
+10. **Deploy and validate**
+    - Deploy to staging environment
+    - Run smoke test with property-specific queries
+    - Verify /health includes correct property metadata
+    - Verify /metrics shows expected circuit breaker state

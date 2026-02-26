@@ -33,6 +33,10 @@ from src.data.models import (
 
 logger = logging.getLogger(__name__)
 
+# Schema version for guest profiles. Increment when adding/removing/renaming fields.
+# Migration logic in _migrate_profile() handles version upgrades.
+_SCHEMA_VERSION = 2
+
 # ---------------------------------------------------------------------------
 # In-memory fallback store (keyed by "casino_id:phone")
 # ---------------------------------------------------------------------------
@@ -150,7 +154,7 @@ async def get_guest_profile(phone: str, casino_id: str) -> dict:
             if doc.exists:
                 profile = doc.to_dict()
                 logger.info("Loaded guest profile for %s...%s", phone[:4], phone[-4:])
-                return profile
+                return _migrate_profile(profile)
             logger.debug("No profile found for %s...%s; returning empty", phone[:4], phone[-4:])
             return _empty_profile(phone)
         except Exception:
@@ -160,7 +164,7 @@ async def get_guest_profile(phone: str, casino_id: str) -> dict:
     key = _store_key(phone, casino_id)
     profile = _memory_store.get(key)
     if profile is not None:
-        return profile
+        return _migrate_profile(profile)
     return _empty_profile(phone)
 
 
@@ -404,6 +408,37 @@ def get_agent_context(profile: dict, *, now: datetime | None = None) -> dict:
     return filter_low_confidence(working, threshold=CONFIDENCE_MIN_THRESHOLD)
 
 
+def _migrate_profile(profile: dict) -> dict:
+    """Apply schema migrations to bring profile up to current version.
+
+    Each migration is idempotent -- running on an already-migrated profile
+    is a no-op.
+
+    Args:
+        profile: A guest profile dict (may be at any schema version).
+
+    Returns:
+        The same dict, mutated in-place and returned for convenience.
+    """
+    schema_version = profile.get("_schema_version", 1)
+
+    if schema_version < 2:
+        # v1 -> v2: Add _schema_version field itself
+        profile["_schema_version"] = 2
+        # v2 adds engagement.sentiment_trend default
+        engagement = profile.get("engagement", {})
+        if "sentiment_trend" not in engagement:
+            engagement["sentiment_trend"] = "neutral"
+            profile["engagement"] = engagement
+        logger.info(
+            "Migrated profile %s from schema v%d to v2",
+            profile.get("_id", "?")[:4],
+            schema_version,
+        )
+
+    return profile
+
+
 def _empty_profile(phone: str) -> dict:
     """Return a minimal empty profile skeleton.
 
@@ -417,6 +452,7 @@ def _empty_profile(phone: str) -> dict:
     return {
         "_id": phone,
         "_version": 0,
+        "_schema_version": _SCHEMA_VERSION,
         "_created_at": now,
         "_updated_at": now,
         "core_identity": {

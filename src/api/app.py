@@ -5,10 +5,12 @@ and pure ASGI middleware (no BaseHTTPMiddleware).
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
 import signal
+import time as _time_mod
 from contextlib import asynccontextmanager, aclosing
 from pathlib import Path
 from typing import AsyncGenerator
@@ -28,6 +30,7 @@ from .middleware import (
     RequestBodyLimitMiddleware,
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
+    _latency_samples,
 )
 from .models import (
     ChatRequest,
@@ -43,6 +46,9 @@ from .models import (
 # frozen at module level.  This ensures test monkeypatching works and
 # avoids stale config values.  Logging is configured at app creation time.
 logger = logging.getLogger(__name__)
+
+# Application start time for uptime tracking in /metrics endpoint.
+_app_start_time = _time_mod.monotonic()
 
 # ---------------------------------------------------------------------------
 # R40 fix: SIGTERM graceful drain for active SSE streams.
@@ -256,13 +262,36 @@ def create_app() -> FastAPI:
                 break
             middleware = getattr(middleware, "app", None)
 
+        # Latency percentiles from /chat endpoint samples
+        latency_stats: dict = {}
+        if _latency_samples:
+            sorted_samples = sorted(_latency_samples)
+            n = len(sorted_samples)
+            latency_stats = {
+                "p50": round(sorted_samples[int(n * 0.5)], 1),
+                "p95": round(sorted_samples[int(n * 0.95)], 1),
+                "p99": round(sorted_samples[min(int(n * 0.99), n - 1)], 1),
+                "sample_count": n,
+            }
+
         settings = get_settings()
         return JSONResponse(content={
             "circuit_breaker": cb_metrics,
             "rate_limit_clients": rate_limit_clients,
             "version": settings.VERSION,
             "environment": settings.ENVIRONMENT,
+            "uptime_seconds": round(_time_mod.monotonic() - _app_start_time, 1),
+            "latency": latency_stats,
         })
+
+    # ---------------------------------------------------------------------------
+    # Deprecation infrastructure (ADR: no active deprecations in v1.1)
+    # ---------------------------------------------------------------------------
+    # When deprecating an endpoint:
+    # 1. Add to _DEPRECATED_ENDPOINTS with sunset date
+    # 2. Middleware adds Deprecation: true + Sunset: <date> headers
+    # 3. Monitor usage via /metrics to confirm migration before removal
+    _DEPRECATED_ENDPOINTS: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # POST /chat — SSE streaming response (real token streaming)
@@ -419,7 +448,12 @@ def create_app() -> FastAPI:
     # the instance in a loop, amplifying the outage.
     @app.get("/live", response_model=LiveResponse)
     async def liveness():
-        return LiveResponse()
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            content=LiveResponse().model_dump(),
+            headers={"Cache-Control": "no-cache, no-store"},
+        )
 
     # ------------------------------------------------------------------
     # GET /health — Health check (startup probe)
@@ -488,13 +522,19 @@ def create_app() -> FastAPI:
         # Return 503 for degraded state so Cloud Run / k8s don't route
         # traffic to unhealthy containers.
         status_code = 200 if all_healthy else 503
-        return JSONResponse(content=body.model_dump(), status_code=status_code)
+        return JSONResponse(
+            content=body.model_dump(),
+            status_code=status_code,
+            headers={"Cache-Control": "no-cache, no-store"},
+        )
 
     # ------------------------------------------------------------------
     # GET /property — Property metadata
     # ------------------------------------------------------------------
     @app.get("/property", response_model=PropertyInfoResponse)
     async def property_info(request: Request):
+        from fastapi.responses import JSONResponse
+
         data = getattr(request.app.state, "property_data", {})
         prop = data.get("property", {})
         categories = [k for k in data if k != "property"]
@@ -503,11 +543,31 @@ def create_app() -> FastAPI:
             for k, v in data.items()
             if k != "property"
         )
-        return PropertyInfoResponse(
+        response_data = PropertyInfoResponse(
             name=prop.get("name", "Unknown"),
             location=prop.get("location", "Unknown"),
             categories=categories,
             document_count=doc_count,
+        ).model_dump()
+
+        # ETag: hash of response content for conditional requests (R68 fix D4)
+        etag = hashlib.md5(  # noqa: S324 — not for security, content fingerprint only
+            json.dumps(response_data, sort_keys=True).encode()
+        ).hexdigest()
+        etag_header = f'"{etag}"'
+
+        # Check If-None-Match for 304 Not Modified
+        if_none_match = request.headers.get("if-none-match", "")
+        if if_none_match == etag_header:
+            return JSONResponse(
+                content=None,
+                status_code=304,
+                headers={"ETag": etag_header, "Cache-Control": "public, max-age=300"},
+            )
+
+        return JSONResponse(
+            content=response_data,
+            headers={"ETag": etag_header, "Cache-Control": "public, max-age=300"},
         )
 
     # ------------------------------------------------------------------
@@ -550,9 +610,14 @@ def create_app() -> FastAPI:
         Introspects the compiled LangGraph agent when available, falling
         back to a static structure when the agent is not initialized.
         """
+        from fastapi.responses import JSONResponse
+
         agent = getattr(request.app.state, "agent", None)
         if agent is None:
-            return _STATIC_GRAPH_STRUCTURE
+            return JSONResponse(
+                content=_STATIC_GRAPH_STRUCTURE,
+                headers={"Cache-Control": "public, max-age=300"},
+            )
 
         try:
             graph_data = agent.get_graph()
@@ -564,17 +629,26 @@ def create_app() -> FastAPI:
             # Sanity check: introspection must return real nodes, otherwise
             # a mock or uninitialized graph would yield empty lists.
             if not nodes:
-                return _STATIC_GRAPH_STRUCTURE
+                return JSONResponse(
+                    content=_STATIC_GRAPH_STRUCTURE,
+                    headers={"Cache-Control": "public, max-age=300"},
+                )
             edges = []
             for edge in graph_data.edges:
                 edge_dict = {"from": edge.source, "to": edge.target}
                 if hasattr(edge, "data") and edge.data:
                     edge_dict["condition"] = str(edge.data)
                 edges.append(edge_dict)
-            return {"nodes": nodes, "edges": edges}
+            return JSONResponse(
+                content={"nodes": nodes, "edges": edges},
+                headers={"Cache-Control": "public, max-age=300"},
+            )
         except Exception:
             logger.warning("Graph introspection failed, using static structure")
-            return _STATIC_GRAPH_STRUCTURE
+            return JSONResponse(
+                content=_STATIC_GRAPH_STRUCTURE,
+                headers={"Cache-Control": "public, max-age=300"},
+            )
 
     # ------------------------------------------------------------------
     # POST /sms/webhook — Telnyx inbound SMS webhook

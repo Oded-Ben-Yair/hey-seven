@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import json
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -377,6 +378,17 @@ class CircuitBreaker:
             if self._state == "open" and self._cooldown_expired():
                 self._state = "half_open"
                 self._half_open_in_progress = False
+                logger.warning(
+                    json.dumps({
+                        "severity": "ALERT",
+                        "event": "circuit_breaker_transition",
+                        "from_state": "open",
+                        "to_state": "half_open",
+                        "failure_count": len(self._failure_timestamps),
+                        "cooldown_seconds": self._cooldown_seconds,
+                        "timestamp": time.time(),
+                    })
+                )
 
             if self._state == "closed":
                 return True
@@ -425,11 +437,16 @@ class CircuitBreaker:
             self._state = "closed"
             self._half_open_in_progress = False
             if prev_state != "closed":
-                logger.info(
-                    "Circuit breaker %s -> closed (recovered after successful probe, "
-                    "%d failure timestamps retained)",
-                    prev_state,
-                    len(self._failure_timestamps),
+                logger.warning(
+                    json.dumps({
+                        "severity": "ALERT",
+                        "event": "circuit_breaker_transition",
+                        "from_state": prev_state,
+                        "to_state": "closed",
+                        "failure_count": len(self._failure_timestamps),
+                        "cooldown_seconds": self._cooldown_seconds,
+                        "timestamp": time.time(),
+                    })
                 )
         await self._sync_to_backend()
 
@@ -475,16 +492,29 @@ class CircuitBreaker:
                 self._state = "open"
                 self._half_open_in_progress = False
                 logger.warning(
-                    "Circuit breaker re-OPENED after failed half_open probe (cooldown: %ds)",
-                    self._cooldown_seconds,
+                    json.dumps({
+                        "severity": "ALERT",
+                        "event": "circuit_breaker_transition",
+                        "from_state": "half_open",
+                        "to_state": "open",
+                        "failure_count": len(self._failure_timestamps),
+                        "cooldown_seconds": self._cooldown_seconds,
+                        "timestamp": time.time(),
+                    })
                 )
             elif len(self._failure_timestamps) >= self._failure_threshold:
+                prev_state = self._state
                 self._state = "open"
                 logger.warning(
-                    "Circuit breaker OPEN after %d failures in %.0fs window (cooldown: %ds)",
-                    len(self._failure_timestamps),
-                    self._rolling_window_seconds,
-                    self._cooldown_seconds,
+                    json.dumps({
+                        "severity": "ALERT",
+                        "event": "circuit_breaker_transition",
+                        "from_state": prev_state,
+                        "to_state": "open",
+                        "failure_count": len(self._failure_timestamps),
+                        "cooldown_seconds": self._cooldown_seconds,
+                        "timestamp": time.time(),
+                    })
                 )
         await self._sync_to_backend()
 

@@ -31,6 +31,10 @@ __all__ = [
     "RequestBodyLimitMiddleware",
 ]
 
+# Rolling buffer of /chat endpoint latency samples (ms) for P50/P95/P99 metrics.
+# Module-level deque with maxlen=1000 bounds memory to ~8KB (1000 * 8 bytes).
+_latency_samples: collections.deque = collections.deque(maxlen=1000)
+
 
 def _get_access_logger() -> logging.Logger:
     """Return a logger configured for structured JSON output (Cloud Logging compatible)."""
@@ -53,7 +57,10 @@ _SHARED_SECURITY_HEADERS = (
     (b"x-frame-options", b"DENY"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
     (b"strict-transport-security", b"max-age=63072000; includeSubDomains"),
-    (b"x-api-version", b"1.1.0"),  # R61 fix D4: API versioning header for client compatibility
+    # x-api-version tracks the API contract version (stable across deployments).
+    # Distinct from settings.VERSION which tracks the deployment/commit version.
+    # See /health endpoint for deployment version and /metrics for both.
+    (b"x-api-version", b"1.1.0"),
 )
 
 
@@ -89,6 +96,9 @@ class RequestLoggingMiddleware:
             if message["type"] == "http.response.start":
                 status_code = message.get("status", 0)
                 duration_ms = (time.monotonic() - start_time) * 1000
+                # Collect latency samples for /chat endpoint (P50/P95/P99 metrics)
+                if path == "/chat":
+                    _latency_samples.append(duration_ms)
                 extra_headers = [
                     (b"x-request-id", request_id.encode()),
                     (b"x-response-time-ms", f"{duration_ms:.1f}".encode()),

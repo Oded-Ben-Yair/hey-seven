@@ -361,11 +361,13 @@ class TestRespondNode:
             ]
         )
         result = await respond_node(state)
-        assert "restaurants" in result["sources_used"]
-        assert "entertainment" in result["sources_used"]
+        # Wave 2: sources_used is now list[dict] with category/source/score
+        categories = [s["category"] for s in result["sources_used"]]
+        assert "restaurants" in categories
+        assert "entertainment" in categories
 
     async def test_deduplicates_sources(self):
-        """Respond node deduplicates same category across documents."""
+        """Respond node deduplicates same category:source across documents."""
         from src.agent.nodes import respond_node
 
         state = _state(
@@ -375,7 +377,9 @@ class TestRespondNode:
             ]
         )
         result = await respond_node(state)
-        assert result["sources_used"].count("restaurants") == 1
+        # Both chunks have same category:"restaurants" and source:"" → deduplicated to 1
+        categories = [s["category"] for s in result["sources_used"]]
+        assert categories.count("restaurants") == 1
 
     async def test_clears_retry_feedback(self):
         """Respond node clears retry_feedback."""

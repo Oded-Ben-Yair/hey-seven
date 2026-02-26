@@ -427,14 +427,27 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
 async def respond_node(state: PropertyQAState) -> dict[str, Any]:
     """Extract sources from retrieved context and prepare final response.
 
-    Clears retry_feedback. Sets sources_used from context metadata.
+    Clears retry_feedback. Sets sources_used from context metadata with
+    richer provenance (category, source file, retrieval score).
+
+    Wave 2 fix D2: Changed sources_used from list[str] (category names only)
+    to list[dict] with category, source, and score for citation provenance.
     """
     retrieved = state.get("retrieved_context", [])
-    sources = []
+    sources: list[dict[str, Any]] = []
+    seen_sources: set[str] = set()
     for doc in retrieved:
-        category = doc.get("metadata", {}).get("category", "")
-        if category and category not in sources:
-            sources.append(category)
+        meta = doc.get("metadata", {})
+        category = meta.get("category", "")
+        source = meta.get("source", "")
+        source_key = f"{category}:{source}"
+        if source_key and source_key not in seen_sources:
+            seen_sources.add(source_key)
+            sources.append({
+                "category": category,
+                "source": source,
+                "score": round(doc.get("score", 0.0), 3),
+            })
 
     return {
         "sources_used": sources,

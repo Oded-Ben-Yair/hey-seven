@@ -368,8 +368,12 @@ class TestE2EPipelinePropertyQA:
         assert "Tuscany" in last_content, "Response should include specialist LLM content"
 
         # Verify: sources_used is populated from retrieved context
+        # Wave 2: sources_used is now list[dict] with category/source/score provenance
         sources = result.get("sources_used", [])
-        assert "restaurants" in sources, "Sources should include 'restaurants' from retrieval"
+        source_categories = [
+            s["category"] if isinstance(s, dict) else s for s in sources
+        ]
+        assert "restaurants" in source_categories, "Sources should include 'restaurants' from retrieval"
 
         # Verify: validation passed (not routed to fallback)
         assert result.get("validation_result") == "PASS"

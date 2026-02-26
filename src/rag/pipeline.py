@@ -1129,7 +1129,21 @@ def get_retriever(persist_dir: str | None = None) -> AbstractRetriever:
 
     Returns:
         A retriever with ``retrieve()`` and ``retrieve_with_scores()`` methods.
+
+    Raises:
+        ValueError: If ChromaDB is requested in a production environment.
     """
+    # Wave 2 fix D2: Early guard before any ChromaDB path. _get_retriever_cached
+    # has its own guard inside the lock, but this catches the explicit persist_dir
+    # path that bypasses the cache entirely.
+    settings = get_settings()
+    if settings.VECTOR_DB == "chroma" and settings.ENVIRONMENT == "production":
+        raise ValueError(
+            "ChromaDB is not allowed in production. Use VECTOR_DB=firestore "
+            "for Vertex AI Vector Search. ChromaDB uses SQLite which does not "
+            "support concurrent writes from multiple Cloud Run instances."
+        )
+
     if persist_dir is None:
         return _get_retriever_cached()
 

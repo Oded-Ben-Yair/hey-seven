@@ -21,7 +21,9 @@ Also includes the turn-limit guard (moved from ``router_node`` to centralize
 all deterministic checks before the LLM router).
 """
 
+import json
 import logging
+import time
 from typing import Any
 
 from langchain_core.messages import HumanMessage
@@ -101,17 +103,47 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
             "Message limit exceeded (%d messages), forcing off_topic",
             len(messages),
         )
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "turn_limit",
+                "query_type": "off_topic",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "off_topic", "router_confidence": 1.0}
 
     # 2. Empty message → greeting
     user_message = _get_last_human_message(messages)
     if not user_message:
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "empty_message",
+                "query_type": "greeting",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "greeting", "router_confidence": 1.0}
 
     # 3. Prompt injection — regex (fast deterministic first layer).
     # Uses detect_prompt_injection() (True=detected) for consistency with
     # all other detect_* functions in the guardrail suite.
     if detect_prompt_injection(user_message):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "prompt_injection",
+                "query_type": "off_topic",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "off_topic", "router_confidence": 1.0}
 
     # 4. Responsible gaming (with session-level escalation)
@@ -123,6 +155,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 "adding live-support escalation",
                 rg_count,
             )
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "responsible_gaming",
+                "query_type": "gambling_advice",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {
             "query_type": "gambling_advice",
             "router_confidence": 1.0,
@@ -131,14 +173,44 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
 
     # 5. Age verification
     if detect_age_verification(user_message):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "age_verification",
+                "query_type": "age_verification",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "age_verification", "router_confidence": 1.0}
 
     # 6. BSA/AML
     if detect_bsa_aml(user_message):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "bsa_aml",
+                "query_type": "bsa_aml",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "bsa_aml", "router_confidence": 1.0}
 
     # 7. Patron privacy
     if detect_patron_privacy(user_message):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "patron_privacy",
+                "query_type": "patron_privacy",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
 
     # 7.5 Self-harm / crisis detection (R49 fix — Gemini CRITICAL-D7-001).
@@ -147,6 +219,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # injection/BSA contexts ("I want to kill this money laundering scheme").
     if detect_self_harm(user_message):
         logger.warning("Self-harm/crisis language detected — routing to crisis response")
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "self_harm",
+                "query_type": "self_harm",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
         return {"query_type": "self_harm", "router_confidence": 1.0}
 
     # 8. Semantic injection — LLM second layer (configurable, fail-closed).
@@ -165,6 +247,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 "Semantic injection detected (confidence=%.2f): %s",
                 semantic_result.confidence,
                 semantic_result.reason[:100],
+            )
+            logger.info(
+                json.dumps({
+                    "audit_event": "guardrail_triggered",
+                    "category": "semantic_injection",
+                    "query_type": "off_topic",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                })
             )
             return {
                 "query_type": "off_topic",

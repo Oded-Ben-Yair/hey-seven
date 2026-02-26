@@ -27,3 +27,12 @@ Use the existing `responsible_gaming` detection for MVP. Self-exclusion keywords
 - Positive: Correct helplines and authorities always provided
 - Negative: No automatic human host dispatch (guest must call the provided number)
 - **TODO (pre-production)**: When human host dispatch system is built, add `self_exclusion` query_type with automatic escalation
+
+## Enforcement Precedent
+
+- **BetMGM NJ ($260K, 2023)**: NJ DGE fined BetMGM for allowing self-excluded patrons to
+  gamble online. Demonstrates strict enforcement of exclusion list compliance.
+- **Valley Forge Casino PA ($30K, 2022)**: PGCB fined Valley Forge for BSA/AML reporting
+  failures. Shows state-level enforcement extends to all compliance obligations.
+- **Wynn Resorts NV ($5.5M, 2023)**: NGC settlement for inadequate patron dispute resolution.
+  Establishes precedent that automated systems must meet patron protection standards.

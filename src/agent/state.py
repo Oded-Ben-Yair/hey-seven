@@ -119,12 +119,16 @@ class RetrievedChunk(TypedDict):
     R44 fix D2-M001: Added ``rrf_score`` field alongside ``score``.
     ``score`` is the raw cosine similarity (quality gate); ``rrf_score``
     is the RRF fusion score (ranking metric).
+
+    Wave 2 fix D2: Added ``source_name`` for human-readable provenance
+    in citation metadata emitted via the SSE ``sources`` event.
     """
 
     content: str
     metadata: dict[str, Any]
     score: float
     rrf_score: NotRequired[float]
+    source_name: NotRequired[str]
 
 
 class GuestContext(TypedDict, total=False):
@@ -178,7 +182,7 @@ class PropertyQAState(TypedDict):
     skip_validation: bool           # True to bypass validator (safe fallback paths)
     retry_feedback: str | None      # why validation failed
     current_time: str               # injected at graph entry
-    sources_used: list[str]         # knowledge-base categories cited
+    sources_used: list[dict[str, Any] | str]  # knowledge-base sources (dict provenance or str category)
     # v2 fields
     extracted_fields: Annotated[dict[str, Any], _merge_dicts]  # structured fields from guest message (persists across turns via reducer)
     whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())

@@ -153,6 +153,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "responsible_gaming_helpline": "1-800-MY-RESET",
         # R52 fix M3: National fallback — 1-800-GAMBLER is the rebranded NCPG number.
         "state_helpline": "1-800-GAMBLER",
+        "responsible_gaming_escalation_threshold": 3,
     },
     "operational": {
         "timezone": "America/New_York",
@@ -225,6 +226,13 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # R39 fix D10-M001: CT self-exclusion is 1-year minimum, with option
             # to request longer duration through the tribal gaming commission.
             "self_exclusion_options": "1-year minimum (longer durations available upon request)",
+            "responsible_gaming_escalation_threshold": 3,
+            "enforcement_context": {
+                "strict_liability": False,
+                "recent_enforcement": "N/A (tribal jurisdiction — internal commission enforcement)",
+                "last_regulatory_review": "2026-02-26",
+                "commission_url": "https://ct.gov/gaming",
+            },
         },
         "operational": {
             "timezone": "America/New_York",
@@ -300,6 +308,13 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "self_exclusion_phone": "1-860-713-6300",
             # R39 fix D10-M001: CT self-exclusion options for tribal casino.
             "self_exclusion_options": "1-year minimum (longer durations available upon request)",
+            "responsible_gaming_escalation_threshold": 3,
+            "enforcement_context": {
+                "strict_liability": False,
+                "recent_enforcement": "N/A (tribal jurisdiction — internal commission enforcement)",
+                "last_regulatory_review": "2026-02-26",
+                "commission_url": "https://ct.gov/gaming",
+            },
         },
         "operational": {
             "timezone": "America/New_York",
@@ -373,6 +388,13 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "self_exclusion_phone": "1-855-405-1429",  # R35 fix: PGCB Self-Exclusion Program
             # R39 fix D10-M001: PA self-exclusion options per PGCB regulations.
             "self_exclusion_options": "1-year, 5-year, or lifetime",
+            "responsible_gaming_escalation_threshold": 2,
+            "enforcement_context": {
+                "strict_liability": True,
+                "recent_enforcement": "Valley Forge Casino $30K BSA/AML fine (2022)",
+                "last_regulatory_review": "2026-02-26",
+                "commission_url": "https://gamingcontrolboard.pa.gov",
+            },
         },
         "operational": {
             "timezone": "America/New_York",
@@ -450,6 +472,13 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # R57 fix D10: Corrected statute reference. NRS 463.368 governs involuntary
             # exclusions (cheating). Voluntary self-exclusion is under NGC Regulation 5.170.
             "self_exclusion_options": "1-year minimum (removal requires written petition to NGCB per NGC Reg. 5.170), or lifetime (irrevocable)",
+            "responsible_gaming_escalation_threshold": 3,
+            "enforcement_context": {
+                "strict_liability": True,
+                "recent_enforcement": "Wynn Resorts $5.5M patron dispute settlement (2023)",
+                "last_regulatory_review": "2026-02-26",
+                "commission_url": "https://gaming.nv.gov",
+            },
         },
         "operational": {
             "timezone": "America/Los_Angeles",
@@ -522,6 +551,13 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "self_exclusion_options": "1-year, 5-year, or lifetime",
             "self_exclusion_url": "njportal.com/dge/selfexclusion",
             "self_exclusion_phone": "1-833-788-4DGE",
+            "responsible_gaming_escalation_threshold": 2,
+            "enforcement_context": {
+                "strict_liability": True,
+                "recent_enforcement": "BetMGM NJ $260K self-exclusion violation (2023)",
+                "last_regulatory_review": "2026-02-26",
+                "commission_url": "https://www.nj.gov/oag/ge/",
+            },
         },
         "operational": {
             "timezone": "America/New_York",

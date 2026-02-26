@@ -415,6 +415,26 @@ async def chat(
     }
 
 
+def _source_key(s: dict | str) -> str:
+    """Return a dedup key for a source entry (supports str and dict formats)."""
+    if isinstance(s, dict):
+        return f"{s.get('category', '')}:{s.get('source', '')}"
+    return str(s)
+
+
+def _merge_sources(
+    target: list[dict | str],
+    new_sources: list[dict | str],
+) -> None:
+    """Merge new source entries into target list, deduplicating by key."""
+    existing_keys = {_source_key(x) for x in target}
+    for s in new_sources:
+        key = _source_key(s)
+        if key not in existing_keys:
+            existing_keys.add(key)
+            target.append(s)
+
+
 async def chat_stream(
     graph: CompiledStateGraph,
     message: str,
@@ -461,7 +481,7 @@ async def chat_stream(
         "data": json.dumps({"thread_id": thread_id, "retry": 0}),
     }
 
-    sources: list[str] = []
+    sources: list[dict | str] = []  # Support both old str and new dict format
     node_start_times: dict[str, float] = {}
     errored = False
     # Streaming PII redactor: buffers incoming tokens and applies regex-based
@@ -533,20 +553,18 @@ async def chat_stream(
                                 "data": json.dumps({"content": content}),
                             }
 
-                    # Capture sources from non-streaming nodes
+                    # Capture sources from non-streaming nodes.
+                    # Wave 2: supports both old str format and new dict format
+                    # with dedup by category:source key.
                     node_sources = output.get("sources_used", [])
-                    for s in node_sources:
-                        if s not in sources:
-                            sources.append(s)
+                    _merge_sources(sources, node_sources)
 
             # Capture sources from respond node
             elif kind == "on_chain_end" and langgraph_node == NODE_RESPOND:
                 output = event.get("data", {}).get("output", {})
                 if isinstance(output, dict):
                     node_sources = output.get("sources_used", [])
-                    for s in node_sources:
-                        if s not in sources:
-                            sources.append(s)
+                    _merge_sources(sources, node_sources)
 
             # --- Graph node lifecycle: complete ---
             if kind == "on_chain_end" and langgraph_node in node_start_times:
@@ -601,10 +619,11 @@ async def chat_stream(
 
     # After an error, sources may contain stale/partial data from a partially-
     # completed graph execution — suppress to avoid confusing the client.
+    # Wave 2: Emit richer provenance data alongside sources for citation support.
     if sources and not errored:
         yield {
             "event": "sources",
-            "data": json.dumps({"sources": sources}),
+            "data": json.dumps({"sources": sources, "citations": sources}),
         }
 
     yield {

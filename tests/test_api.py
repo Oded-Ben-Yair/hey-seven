@@ -1280,7 +1280,12 @@ class TestEndToEndGraphIntegration:
                 sources_event = next(
                     e for e in events if e["event"] == "sources"
                 )
-                assert "hotel" in sources_event["data"]["sources"]
+                # Wave 2: sources are now dicts with category/source/score provenance
+                source_categories = [
+                    s["category"] if isinstance(s, dict) else s
+                    for s in sources_event["data"]["sources"]
+                ]
+                assert "hotel" in source_categories
 
                 # No errors
                 assert "error" not in event_types
