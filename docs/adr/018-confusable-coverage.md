@@ -1,13 +1,13 @@
-# ADR-018: Confusable Homoglyph Coverage (135 entries)
+# ADR-018: Confusable Homoglyph Coverage (145 entries)
 
 ## Status
 Accepted (bounded scope)
 
 ## Context
-Unicode TR39 defines thousands of confusable character pairs. Our guardrail normalization maps 135 highest-risk confusables to Latin equivalents.
+Unicode TR39 defines thousands of confusable character pairs. Our guardrail normalization maps 145 highest-risk confusables to Latin equivalents.
 
 ## Decision
-Cover the 7 most common attack scripts only:
+Cover the 8 most common attack scripts only:
 1. **Cyrillic** (23 entries) — highest risk, most common bypass
 2. **Greek** (18 entries) — mathematical/academic contexts
 3. **Fullwidth Latin** (52 entries) — CJK contexts (lowercase + uppercase)
@@ -15,6 +15,7 @@ Cover the 7 most common attack scripts only:
 5. **Cherokee** (10 entries) — visual Latin lookalikes
 6. **IPA/Latin Extended** (7 entries) — survive NFKD
 7. **Mathematical/Letterlike symbols** (9 entries) — partial differential, script l, Weierstrass p, etc.
+8. **Georgian Mkhedruli** (10 entries) — R69 fix D7: visual Latin lookalikes (ა≈a, ო≈o, ე≈e, etc.)
 
 ## Rationale
 - Full TR39 mapping adds ~8K entries and ~50KB to memory. For 205 regex patterns, the marginal security benefit diminishes rapidly after the top scripts.
