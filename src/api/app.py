@@ -267,9 +267,13 @@ def create_app() -> FastAPI:
         if _latency_samples:
             sorted_samples = sorted(_latency_samples)
             n = len(sorted_samples)
+            # R68 fix D4: Use min(index, n-1) consistently for all percentiles.
+            # Previous code only guarded p99 but not p50/p95. For n=1, int(1*0.5)=0
+            # which is fine, but for n=2, int(2*0.95)=1 == n-1 which is fine too.
+            # Consistent guarding prevents future off-by-one if percentile values change.
             latency_stats = {
-                "p50": round(sorted_samples[int(n * 0.5)], 1),
-                "p95": round(sorted_samples[int(n * 0.95)], 1),
+                "p50": round(sorted_samples[min(int(n * 0.5), n - 1)], 1),
+                "p95": round(sorted_samples[min(int(n * 0.95), n - 1)], 1),
                 "p99": round(sorted_samples[min(int(n * 0.99), n - 1)], 1),
                 "sample_count": n,
             }
@@ -557,10 +561,15 @@ def create_app() -> FastAPI:
         etag_header = f'"{etag}"'
 
         # Check If-None-Match for 304 Not Modified
+        # R68 fix D4: Use Response instead of JSONResponse for 304.
+        # JSONResponse(content=None) serializes as "null" body, but HTTP 304
+        # MUST NOT contain a message body (RFC 7232 Section 4.1). Using bare
+        # Response with no body ensures protocol compliance.
         if_none_match = request.headers.get("if-none-match", "")
         if if_none_match == etag_header:
-            return JSONResponse(
-                content=None,
+            from starlette.responses import Response
+
+            return Response(
                 status_code=304,
                 headers={"ETag": etag_header, "Cache-Control": "public, max-age=300"},
             )
