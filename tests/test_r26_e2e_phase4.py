@@ -503,8 +503,9 @@ class TestPropertyAwareHelplines:
         helplines = get_responsible_gaming_helplines("hard_rock_ac")
         assert "1-800-GAMBLER" in helplines
         assert "NJ" in helplines
-        # Should still include national helpline
-        assert "1-800-MY-RESET" in helplines
+        # R68 fix D10: 1-800-GAMBLER is the primary NCPG national helpline
+        # (post-2022 rebrand). NJ uses 1-800-GAMBLER as state line too.
+        assert "National Problem Gambling Helpline" in helplines
 
     def test_mohegan_sun_returns_ct_helplines(self):
         """Mohegan Sun (CT) returns CT-specific helplines."""
@@ -531,9 +532,12 @@ class TestPropertyAwareHelplines:
         assert "1-800-MY-RESET" in helplines
 
     def test_nj_helplines_not_in_ct_property(self):
-        """CT property should NOT return NJ helplines."""
+        """CT property should NOT return NJ-specific state helplines."""
         helplines = get_responsible_gaming_helplines("mohegan_sun")
-        assert "1-800-GAMBLER" not in helplines
+        # R68 fix D10: 1-800-GAMBLER is now the national helpline for ALL
+        # properties (post-2022 NCPG rebrand), so it IS present in CT output.
+        # The isolation check is that NJ state-specific content is absent.
+        assert "NJ " not in helplines
 
 
 # ---------------------------------------------------------------------------

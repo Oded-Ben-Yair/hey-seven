@@ -39,3 +39,4 @@ Architectural decisions documented inline in source code, extracted here for dis
 | 019 | [Single Tenant Per Deployment (MVP)](019-single-tenant-deployment.md) | Accepted (MVP) | `config.py`, `app.py` | 2026-02-25 |
 | 020 | [Concurrent Retrieval via ThreadPoolExecutor](020-concurrent-retrieval.md) | Accepted | `agent/tools.py` | 2026-02-25 |
 | 021 | [Supply Chain Security Strategy](021-supply-chain-security.md) | Accepted | `Dockerfile`, `scripts/security-audit.sh` | 2026-02-26 |
+| 022 | [Regulatory Risk Rationale for Guardrail Categories](022-regulatory-risk-rationale.md) | Accepted | `guardrails.py`, `compliance_gate.py` | 2026-02-26 |

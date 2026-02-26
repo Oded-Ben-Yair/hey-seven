@@ -625,7 +625,7 @@ All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable,
 
 These are handled automatically by deterministic guardrails (NO human judgment needed):
 
-- **Self-exclusion mentions**: Auto-provides state-specific helpline (e.g., CT: 1-888-789-7777, NJ: 1-800-GAMBLER, PA: 1-800-GAMBLER, NV: 1-800-MY-RESET)
+- **Self-exclusion mentions**: Auto-provides state-specific helpline (e.g., CT: 1-888-789-7777, NJ: 1-800-GAMBLER, PA: 1-800-848-1880, NV: 1-800-GAMBLER)
 - **Problem gambling**: Auto-provides 1-800-MY-RESET (NCPG)
 - **BSA/AML suspicious**: Auto-redirects to appropriate authorities
 - **Underage mentions**: Auto-provides age verification info

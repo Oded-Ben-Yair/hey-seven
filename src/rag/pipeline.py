@@ -701,6 +701,14 @@ def ingest_property(
 ) -> Any:
     """Load property JSON and knowledge-base markdown, chunk, embed, and store in ChromaDB.
 
+    .. warning::
+        This function is **synchronous** (blocking I/O). It uses ChromaDB's
+        synchronous ``add_texts()`` and ``Chroma.from_texts()`` APIs, which
+        perform blocking SQLite writes and embedding API calls.  Do NOT call
+        from an async event loop without wrapping in ``asyncio.to_thread()``.
+        The lifespan handler in ``app.py`` calls this at startup (before the
+        event loop serves requests), which is safe.
+
     Args:
         data_path: Path to the property JSON file.
         persist_dir: Directory to persist ChromaDB data.
@@ -814,6 +822,15 @@ def ingest_property(
     # After successful upsert, any chunks for the same property_id with
     # a different _ingestion_version are leftover from prior runs where
     # content was edited (new ID) but old ID was never deleted.
+    #
+    # Data integrity window: If the process crashes between upsert (above)
+    # and purge (below), both old and new chunks coexist until the next
+    # successful ingestion run purges the old versions. During this window,
+    # retrieval may return duplicate results (old + new content for the same
+    # item). The window is bounded by the next ingest_property() call, which
+    # is triggered on every container startup (local dev) or CMS webhook
+    # (production). For production Firestore, reingest_item() handles
+    # per-item purging independently.
     try:
         collection = vectorstore._collection
         old_docs = collection.get(

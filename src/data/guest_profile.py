@@ -251,6 +251,13 @@ async def update_guest_profile(phone: str, casino_id: str, updates: dict) -> dic
             logger.info("Updated guest profile for %s...%s", phone[:4], phone[-4:])
         except Exception:
             logger.warning("Firestore write failed; stored in-memory only", exc_info=True)
+            logger.info(
+                '{"event": "storage_demotion", "from": "firestore", "to": "in_memory", '
+                '"phone_masked": "%s...%s", "casino_id": "%s", '
+                '"memory_store_size": %d, "memory_store_max": %d}',
+                phone[:4], phone[-4:], casino_id,
+                len(_memory_store), _MEMORY_STORE_MAX,
+            )
             key = _store_key(phone, casino_id)
             _memory_store[key] = profile
             while len(_memory_store) > _MEMORY_STORE_MAX:

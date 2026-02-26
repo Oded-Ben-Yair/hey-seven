@@ -34,7 +34,12 @@ logger = logging.getLogger(__name__)
 
 # Track whether the server-side property_id filter is working.
 # Avoids spamming the warning log on every query after the first failure.
+# R68 fix D2: Periodically retry server-side filter every _RETRY_INTERVAL
+# requests instead of permanently disabling after the first failure. The
+# composite index may be created after the app starts (async index builds).
 _server_filter_warned = False
+_server_filter_request_count = 0
+_SERVER_FILTER_RETRY_INTERVAL = 100  # Retry server-side filter every N requests
 
 
 class FirestoreRetriever(AbstractRetriever):
@@ -116,6 +121,20 @@ class FirestoreRetriever(AbstractRetriever):
             # Benefits: cross-tenant data never reaches app layer, 50% less
             # Firestore document read costs, no result starvation from skewed data.
             # Falls back to Python-side filtering if composite index missing.
+            # R68 fix D2: Periodically retry server-side filter in case
+            # the composite index was created after the initial failure.
+            global _server_filter_request_count
+            _server_filter_request_count += 1
+            if (
+                not self._use_server_filter
+                and _server_filter_request_count % _SERVER_FILTER_RETRY_INTERVAL == 0
+            ):
+                self._use_server_filter = True
+                logger.info(
+                    "Retrying server-side property_id filter (request #%d)",
+                    _server_filter_request_count,
+                )
+
             use_server = self._use_server_filter
             if use_server:
                 try:

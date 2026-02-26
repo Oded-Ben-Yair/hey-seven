@@ -16,13 +16,13 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 ## Current State (Updated 2026-02-26)
 
 - **Codebase**: 25K+ LOC, 59 source modules across 10 packages
-- **Tests**: 2487 tests, 0 failures, 0 xfails, 90.6% coverage
+- **Tests**: 2537 tests, 0 failures, 0 xfails, 90.2% coverage
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
-- **Review Score**: R67 GitHub-native 4-model consensus 91.6/100 (curated: 97.0/100)
-- **Review Trajectory**: R52(67.7) → R65(97.0 curated) → R67(91.6 GitHub-native), 0 CRITICALs
-- **Version**: v1.2.0
-- **Latest commit**: R67 GitHub re-review fixes (CB truthiness bug, re2 health check)
-- **ADRs**: 21 architectural decision records with status lifecycle
+- **Review Score**: R68 4-model consensus 92.9/100
+- **Review Trajectory**: R52(67.7) → R65(97.0 curated) → R67(91.6 GitHub-native) → R68(92.9), 0 CRITICALs
+- **Version**: v1.3.0
+- **Latest commit**: R68 perfection sprint — all 10 dimensions improved
+- **ADRs**: 22 architectural decision records with status lifecycle
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
@@ -98,7 +98,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 71 test files, 2487 tests, 90.6% coverage
+tests/                       - 71 test files, 2537 tests, 90.2% coverage
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests
@@ -145,6 +145,11 @@ Key architectural patterns:
 - **LLM backpressure** via asyncio.Semaphore with configurable timeout
 - **PII redaction** fails closed (safe placeholder, never pass-through)
 - **Pure ASGI middleware** (no BaseHTTPMiddleware — breaks SSE streaming)
+- **Structured audit logging** in compliance_gate for all guardrail triggers
+- **P50/P95/P99 latency metrics** exposed via `/metrics` endpoint
+- **Cache-Control + ETag** on cacheable API endpoints (`/property`, `/graph`, `/health`)
+- **pip-audit** in CI/CD pipeline for dependency vulnerability scanning
+- **re2-compatible guardrail patterns** across all 5 guardrail categories
 
 ## Known Limitations
 

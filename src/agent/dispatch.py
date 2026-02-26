@@ -236,6 +236,12 @@ async def _route_to_specialist(
         # returned bad JSON (prompt engineering issue). Recording failures
         # here would conflate parse quality with LLM availability, potentially
         # tripping the CB on prompt issues rather than actual outages.
+        # NOTE: google-genai SDK may also raise ValueError for quota/auth
+        # errors (e.g., "429 Resource has been exhausted"). These are
+        # conflated with parse errors here — a known limitation. The broad
+        # `except Exception` block below catches most network/API failures,
+        # but SDK-level ValueError wrapping means some availability issues
+        # are misclassified as parse errors and do not trip the CB.
         logger.warning("Structured dispatch parsing failed: %s", exc)
     except Exception:
         # Network errors, API failures, timeouts -- broad catch is intentional

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from types import MappingProxyType
 from typing import Any, Literal, TypedDict
 
 logger = logging.getLogger(__name__)
@@ -190,14 +191,18 @@ _PREF_FIELDS = (
     "spa.treatments_interested",
 )
 
-FIELD_WEIGHTS: dict[str, float] = {}
+_FIELD_WEIGHTS_MUTABLE: dict[str, float] = {}
 for _f in _CORE_FIELDS:
-    FIELD_WEIGHTS[f"core_identity.{_f}"] = 2.0
+    _FIELD_WEIGHTS_MUTABLE[f"core_identity.{_f}"] = 2.0
 for _f in _VISIT_FIELDS:
-    FIELD_WEIGHTS[f"visit_context.{_f}"] = 1.5
+    _FIELD_WEIGHTS_MUTABLE[f"visit_context.{_f}"] = 1.5
 for _f in _PREF_FIELDS:
-    FIELD_WEIGHTS[f"preferences.{_f}"] = 1.0
-FIELD_WEIGHTS["companions"] = 0.5
+    _FIELD_WEIGHTS_MUTABLE[f"preferences.{_f}"] = 1.0
+_FIELD_WEIGHTS_MUTABLE["companions"] = 0.5
+
+# R68 fix D3: Wrap in MappingProxyType to prevent accidental mutation of
+# module-level weights (cross-thread corruption risk in async apps).
+FIELD_WEIGHTS: MappingProxyType[str, float] = MappingProxyType(_FIELD_WEIGHTS_MUTABLE)
 
 _TOTAL_WEIGHT = sum(FIELD_WEIGHTS.values())
 

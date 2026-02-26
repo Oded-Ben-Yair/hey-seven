@@ -448,6 +448,60 @@ class TestSSEStreamingContract:
                 assert has_data, f"Block missing 'data:' line: {block}"
 
 
+class TestPropertyETag:
+    """R68 fix D5: ETag/304 conditional request support on GET /property."""
+
+    def test_property_returns_etag_header(self):
+        """GET /property response includes ETag and Cache-Control headers."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/property")
+            assert resp.status_code == 200
+            assert "etag" in resp.headers
+            assert resp.headers["etag"].startswith('"') and resp.headers["etag"].endswith('"')
+            assert "cache-control" in resp.headers
+            assert "max-age=300" in resp.headers["cache-control"]
+
+    def test_property_304_on_matching_etag(self):
+        """GET /property with matching If-None-Match returns 304 Not Modified."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            # First request to get the ETag
+            resp1 = client.get("/property")
+            assert resp1.status_code == 200
+            etag = resp1.headers["etag"]
+
+            # Second request with If-None-Match should return 304
+            resp2 = client.get("/property", headers={"If-None-Match": etag})
+            assert resp2.status_code == 304
+            assert resp2.content == b""  # 304 MUST NOT have a body (RFC 7232)
+
+    def test_property_200_on_mismatched_etag(self):
+        """GET /property with non-matching If-None-Match returns 200."""
+        app, _ = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.get("/property", headers={"If-None-Match": '"stale-etag"'})
+            assert resp.status_code == 200
+            assert "etag" in resp.headers
+
+    def test_property_etag_changes_with_data(self):
+        """Different property data produces different ETags."""
+        data1 = {
+            "property": {"name": "Casino A", "location": "City A"},
+            "restaurants": [{"name": "R1"}],
+        }
+        data2 = {
+            "property": {"name": "Casino B", "location": "City B"},
+            "restaurants": [{"name": "R2"}],
+        }
+        app1, _ = _make_test_app(property_data=data1)
+        app2, _ = _make_test_app(property_data=data2)
+        with TestClient(app1) as c1, TestClient(app2) as c2:
+            etag1 = c1.get("/property").headers["etag"]
+            etag2 = c2.get("/property").headers["etag"]
+            assert etag1 != etag2
+
+
 class TestGraphEndpoint:
     def test_graph_returns_structure(self):
         """GET /graph returns expected v2.1 nodes and edges."""

@@ -289,11 +289,14 @@ def create_app() -> FastAPI:
         })
 
     # ---------------------------------------------------------------------------
-    # Deprecation infrastructure (ADR: no active deprecations in v1.1)
+    # Deprecation infrastructure (scaffolded, not yet wired)
     # ---------------------------------------------------------------------------
-    # When deprecating an endpoint:
+    # This dict is populated when endpoints are deprecated. Currently empty
+    # because no endpoints have been deprecated. The middleware integration
+    # to add Deprecation/Sunset headers is not yet wired — this is the dict
+    # structure only. When deprecating an endpoint:
     # 1. Add to _DEPRECATED_ENDPOINTS with sunset date
-    # 2. Middleware adds Deprecation: true + Sunset: <date> headers
+    # 2. Wire middleware to add Deprecation: true + Sunset: <date> headers
     # 3. Monitor usage via /metrics to confirm migration before removal
     _DEPRECATED_ENDPOINTS: dict[str, str] = {}
 

@@ -244,7 +244,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     whisper_enabled = DEFAULT_FEATURES.get("whisper_planner_enabled", True)
     logger.info(
         "Feature flags at graph build: %s",
-        {k: v for k, v in DEFAULT_FEATURES.items() if v != False},  # noqa: E712 — intentional identity check for readability
+        {k: v for k, v in DEFAULT_FEATURES.items() if v is not False},
     )
 
     if whisper_enabled:

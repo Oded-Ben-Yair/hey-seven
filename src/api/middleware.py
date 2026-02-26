@@ -660,13 +660,23 @@ class RateLimitMiddleware:
             # can implement backoff before hitting 429.
             async def send_with_ratelimit(message: Message) -> None:
                 if message["type"] == "http.response.start":
-                    bucket = self._requests.get(client_ip)
-                    remaining = max(0, self.max_tokens - (len(bucket) if bucket else 0))
                     extra_headers = [
                         (b"x-ratelimit-limit", str(self.max_tokens).encode()),
-                        (b"x-ratelimit-remaining", str(remaining).encode()),
                         (b"x-ratelimit-reset", str(int(time.time()) + int(self.window_seconds)).encode()),
                     ]
+                    # R68 fix D8: When Redis backend is active, the in-memory
+                    # bucket does not reflect distributed state. Report the
+                    # backend type instead of an inaccurate remaining count.
+                    if self._state_backend:
+                        extra_headers.append(
+                            (b"x-ratelimit-backend", b"redis"),
+                        )
+                    else:
+                        bucket = self._requests.get(client_ip)
+                        remaining = max(0, self.max_tokens - (len(bucket) if bucket else 0))
+                        extra_headers.append(
+                            (b"x-ratelimit-remaining", str(remaining).encode()),
+                        )
                     message["headers"] = list(message.get("headers", [])) + extra_headers
                 await send(message)
 

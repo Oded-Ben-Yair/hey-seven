@@ -26,7 +26,7 @@ steps:
           --ignore=tests/test_eval.py \
           --cov=src --cov-fail-under=90
 
-  # Step 1b: Dependency audit (pip-audit) — fail on known vulnerabilities
+  # Step 1b: Dependency audit (pip-audit) — BLOCKING: fails pipeline on vulnerabilities
   # R68 fix D6: Supply chain security per ADR-021 and NIST SP 800-218.
   # Runs after tests (dependencies already installed) to avoid duplicate pip install.
   - name: 'python:3.12.8-slim-bookworm@sha256:8ef40398b663cf0a3a4685ad0ffcf924282e4c954283b33b7765eae0856d7e0c'
@@ -36,10 +36,7 @@ steps:
       - '-c'
       - |
         pip install --no-cache-dir pip-audit
-        pip-audit -r requirements.txt --strict --desc 2>&1 || {
-          echo "WARNING: pip-audit found vulnerabilities (non-blocking for now)"
-          echo "Review and fix before GA launch"
-        }
+        pip-audit -r requirements.txt --strict --desc
 
   # Step 2: Build Docker image (Artifact Registry, not deprecated gcr.io)
   - name: 'gcr.io/cloud-builders/docker'
@@ -290,6 +287,11 @@ steps:
         # --- Stage 3: 100% traffic ---
         echo "=== Canary Stage 3: Routing 100% traffic to new revision ==="
         gcloud run services update-traffic hey-seven --region=us-central1 --to-latest
+        # R68 fix D6: Final error rate check at 100% traffic to catch issues
+        # that only manifest under full load (e.g., cache stampede, connection
+        # pool exhaustion). Without this, errors at 100% go undetected until
+        # external monitoring fires.
+        check_error_rate "100%"
         echo "=== Canary deployment complete: 100% traffic on new revision ==="
 
 images:

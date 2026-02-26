@@ -153,6 +153,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "responsible_gaming_helpline": "1-800-MY-RESET",
         # R52 fix M3: National fallback — 1-800-GAMBLER is the rebranded NCPG number.
         "state_helpline": "1-800-GAMBLER",
+        # R68 fix D10: DEFAULT_CONFIG must include self_exclusion_authority to
+        # pass _REQUIRED_PROFILE_FIELDS validation and provide a sensible
+        # fallback for unknown casino_ids.
+        "self_exclusion_authority": "Contact your state gaming commission",
         "responsible_gaming_escalation_threshold": 3,
     },
     "operational": {
@@ -181,7 +185,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
     "mohegan_sun": {
         "_id": "mohegan_sun",
         "_version": 1,
-        "_updated_at": "",
+        "_updated_at": "2026-02-26",
         "property_description": (
             "Mohegan Sun is a premier tribal casino resort in Uncasville, Connecticut, "
             "owned by the Mohegan Tribe. It features world-class dining, entertainment, "
@@ -222,7 +226,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # gaming commissions, NOT CT DCP. CT DCP handles commercial gaming only.
             "self_exclusion_authority": "Mohegan Tribal Gaming Commission",
             "self_exclusion_url": "ct.gov/selfexclusion",
-            "self_exclusion_phone": "1-860-713-6300",
+            # R68 fix D10: Tribal gaming commissions do not publish separate
+            # public phone lines for self-exclusion. Guests should contact
+            # the property directly to reach the tribal commission.
+            "self_exclusion_phone": "Contact property directly",
             # R39 fix D10-M001: CT self-exclusion is 1-year minimum, with option
             # to request longer duration through the tribal gaming commission.
             "self_exclusion_options": "1-year minimum (longer durations available upon request)",
@@ -264,7 +271,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
     "foxwoods": {
         "_id": "foxwoods",
         "_version": 1,
-        "_updated_at": "",
+        "_updated_at": "2026-02-26",
         "property_description": (
             "Foxwoods Resort Casino is a tribal casino resort in Mashantucket, Connecticut, "
             "owned by the Mashantucket Pequot Tribal Nation. It is one of the largest casino "
@@ -305,7 +312,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # gaming commissions, NOT CT DCP.
             "self_exclusion_authority": "Mashantucket Pequot Tribal Nation Gaming Commission",
             "self_exclusion_url": "ct.gov/selfexclusion",
-            "self_exclusion_phone": "1-860-713-6300",
+            # R68 fix D10: Tribal gaming commissions do not publish separate
+            # public phone lines for self-exclusion. Guests should contact
+            # the property directly to reach the tribal commission.
+            "self_exclusion_phone": "Contact property directly",
             # R39 fix D10-M001: CT self-exclusion options for tribal casino.
             "self_exclusion_options": "1-year minimum (longer durations available upon request)",
             "responsible_gaming_escalation_threshold": 3,
@@ -346,7 +356,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
     "parx_casino": {
         "_id": "parx_casino",
         "_version": 1,
-        "_updated_at": "",
+        "_updated_at": "2026-02-26",
         "property_description": (
             "Parx Casino is a commercial casino in Bensalem, Bucks County, Pennsylvania, "
             "operated by Greenwood Racing. It is the #1 revenue-generating casino in Pennsylvania, "
@@ -388,6 +398,11 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "self_exclusion_phone": "1-855-405-1429",  # R35 fix: PGCB Self-Exclusion Program
             # R39 fix D10-M001: PA self-exclusion options per PGCB regulations.
             "self_exclusion_options": "1-year, 5-year, or lifetime",
+            # R68 fix D10: PA threshold=2 (vs CT/NV threshold=3) because
+            # PA Gaming Control Board (PGCB) imposes strict liability for RG
+            # violations — lower threshold provides an earlier escalation to
+            # live support, reducing regulatory exposure in strict-liability
+            # jurisdictions.
             "responsible_gaming_escalation_threshold": 2,
             "enforcement_context": {
                 "strict_liability": True,
@@ -426,7 +441,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
     "wynn_las_vegas": {
         "_id": "wynn_las_vegas",
         "_version": 1,
-        "_updated_at": "",
+        "_updated_at": "2026-02-26",
         "property_description": (
             "Wynn Las Vegas is a luxury casino resort on the Las Vegas Strip in Nevada. "
             "Developed by Steve Wynn, it features AAA Five Diamond-rated hotel towers (Wynn and Encore), "
@@ -510,7 +525,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
     "hard_rock_ac": {
         "_id": "hard_rock_ac",
         "_version": 1,
-        "_updated_at": "",
+        "_updated_at": "2026-02-26",
         "property_description": (
             "Hard Rock Hotel & Casino Atlantic City is a commercial casino resort on the "
             "Atlantic City Boardwalk in New Jersey. It features rock-and-roll themed gaming, "
@@ -551,6 +566,10 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "self_exclusion_options": "1-year, 5-year, or lifetime",
             "self_exclusion_url": "njportal.com/dge/selfexclusion",
             "self_exclusion_phone": "1-833-788-4DGE",
+            # R68 fix D10: NJ threshold=2 (vs CT/NV threshold=3) because
+            # NJ DGE imposes strict liability for self-exclusion violations —
+            # lower threshold provides earlier escalation to live support,
+            # reducing regulatory exposure (cf. BetMGM $260K fine, 2023).
             "responsible_gaming_escalation_threshold": 2,
             "enforcement_context": {
                 "strict_liability": True,

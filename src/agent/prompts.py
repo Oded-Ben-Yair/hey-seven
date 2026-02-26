@@ -24,8 +24,11 @@ logger = logging.getLogger(__name__)
 # or a property-specific configuration.
 
 RESPONSIBLE_GAMING_HELPLINES_DEFAULT = (
+    # R68 fix D10: Post-2022 rebrand — 1-800-GAMBLER is the primary NCPG
+    # National Problem Gambling Helpline number.  1-800-MY-RESET is the
+    # alternate/secondary NCPG line, NOT the primary.
     "- National Problem Gambling Helpline: 1-800-GAMBLER (1-800-426-2537)\n"
-    "- National Council on Problem Gambling: 1-800-MY-RESET (1-800-699-7378)\n"
+    "- NCPG Alternate Line: 1-800-MY-RESET (1-800-699-7378)\n"
     "- CT Council on Problem Gambling: 1-888-789-7777\n"
     "- CT Self-Exclusion: Contact your casino's tribal gaming commission or visit ct.gov/selfexclusion"
 )
@@ -57,7 +60,9 @@ def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
             rg_helpline = regulations.get("responsible_gaming_helpline", "")
             state_code = regulations.get("state", "")
             if state_helpline or rg_helpline:
-                lines = ["- National Problem Gambling Helpline: 1-800-MY-RESET (1-800-699-7378)"]
+                # R68 fix D10: 1-800-GAMBLER is the primary NCPG helpline
+                # (post-2022 rebrand). 1-800-MY-RESET is the alternate line.
+                lines = ["- National Problem Gambling Helpline: 1-800-GAMBLER (1-800-426-2537)"]
                 if rg_helpline:
                     lines.append(f"- {state_code} Problem Gambling Helpline: {rg_helpline}")
                 if state_helpline:

@@ -19,7 +19,7 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     v
 Custom 11-node StateGraph (src/agent/graph.py)
     |
-    |-- compliance_gate (185 regex patterns, 11 languages) --> greeting / off_topic / router
+    |-- compliance_gate (204 regex patterns, 11 languages) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
@@ -101,7 +101,7 @@ Priority order (first match wins):
 7. Patron privacy (`detect_patron_privacy()`): 18 patterns incl. Spanish/Tagalog — routes to `patron_privacy`.
 8. All pass: `query_type=None` signals the downstream router to classify via LLM.
 
-All guardrail patterns are defined in `src/agent/guardrails.py` (185 compiled regex patterns across 11 languages: EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
+All guardrail patterns are defined in `src/agent/guardrails.py` (204 compiled regex patterns across 11 languages: EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
 
 ### 2. router (`src/agent/nodes.py`)
 
@@ -371,7 +371,7 @@ Used by the `whisper_planner` node to produce structured guidance for the speaki
 
 ## Guardrails
 
-Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **185 compiled regex patterns** across 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).
+Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **204 compiled regex patterns** across 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).
 
 ### Deterministic: audit_input (`src/agent/guardrails.py`)
 
@@ -832,7 +832,7 @@ The following features were consciously deferred from the initial architecture s
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 47 patterns incl. 27 non-Latin, responsible gaming 60 patterns across 10 languages, age verification 13 patterns, BSA/AML 47 patterns across 8 languages, patron privacy 18 patterns — 185 total across 11 languages) | ~672 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 47 patterns incl. 27 non-Latin, responsible gaming 60 patterns across 10 languages, age verification 13 patterns, BSA/AML 47 patterns across 8 languages, patron privacy 18 patterns — 204 total across 11 languages) | ~672 |
 | `compliance_gate.py` | Dedicated compliance node — runs all 5 guardrail layers as single pre-router node (zero LLM calls) | ~99 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~179 |
 | `nodes.py` | 8 async graph nodes (router, retrieve, generate, validate, respond, fallback, greeting, off_topic) + routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~686 |
