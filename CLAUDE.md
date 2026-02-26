@@ -13,14 +13,16 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 
-## Current State (Updated 2026-02-24)
+## Current State (Updated 2026-02-26)
 
-- **Codebase**: 23K+ LOC, 51 source modules across 10 packages
-- **Tests**: 2243 tests, 0 failures, 90.20% coverage
+- **Codebase**: 25K+ LOC, 59 source modules across 10 packages
+- **Tests**: 2487 tests, 0 failures, 0 xfails, 90.6% coverage
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
-- **Review Score**: R47 external 4-model consensus 65/100 → fixes applied, targeting 80+
-- **Version**: v1.1.0
-- **Latest commit**: R47 fixes (11 consensus findings applied)
+- **Review Score**: R67 GitHub-native 4-model consensus 91.6/100 (curated: 97.0/100)
+- **Review Trajectory**: R52(67.7) → R65(97.0 curated) → R67(91.6 GitHub-native), 0 CRITICALs
+- **Version**: v1.2.0
+- **Latest commit**: R67 GitHub re-review fixes (CB truthiness bug, re2 health check)
+- **ADRs**: 21 architectural decision records with status lifecycle
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
@@ -96,7 +98,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 60+ test files, 2229 tests, 90.53% coverage
+tests/                       - 71 test files, 2487 tests, 90.6% coverage
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests
