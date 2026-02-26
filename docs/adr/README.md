@@ -38,3 +38,4 @@ Architectural decisions documented inline in source code, extracted here for dis
 | 018 | [Confusable Homoglyph Coverage (~110 entries)](018-confusable-coverage.md) | Accepted (bounded scope) | `guardrails.py` | 2026-02-25 |
 | 019 | [Single Tenant Per Deployment (MVP)](019-single-tenant-deployment.md) | Accepted (MVP) | `config.py`, `app.py` | 2026-02-25 |
 | 020 | [Concurrent Retrieval via ThreadPoolExecutor](020-concurrent-retrieval.md) | Accepted | `agent/tools.py` | 2026-02-25 |
+| 021 | [Supply Chain Security Strategy](021-supply-chain-security.md) | Accepted | `Dockerfile`, `scripts/security-audit.sh` | 2026-02-26 |

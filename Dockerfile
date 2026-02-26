@@ -40,6 +40,16 @@ COPY --chown=appuser:appuser src/ ./src/
 # Create data directory owned by appuser for property JSON files.
 RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
+# --- Runtime Hardening (Cloud Run config, not Dockerfile) ---
+# No new privileges: Cloud Run supports --no-new-privileges via service config.
+# Enable in Cloud Run console: Security > Container > No new privileges
+# Or via gcloud: --set-env-vars PYTHONDONTWRITEBYTECODE=1 (already set below)
+#
+# Read-only root filesystem: Cloud Run supports read-only FS.
+# Application writes only to /app/data (volume mount) and /tmp (ephemeral).
+# Enable in Cloud Run: Security > Container > Read-only file system
+# Note: ChromaDB persist dir must be on a writable volume mount.
+
 # Environment
 # WEB_CONCURRENCY=1 for demo/single-container deployment.
 # Production scaling: override via environment variable in Cloud Run:
@@ -64,10 +74,15 @@ USER appuser
 # Data ingestion happens at STARTUP (FastAPI lifespan), not build time.
 # Build-time ingestion would require GOOGLE_API_KEY baked into the image.
 
-# R59 fix D6: SBOM generation — run in CI/CD pipeline, not Dockerfile.
-# Keeps production image lean while providing supply chain transparency.
-# Example CI step: syft packages dir:/app -o spdx-json=sbom.json
-# Alternative: pip-audit --format json --output pip-audit-report.json
+# --- Supply Chain Security ---
+# SBOM generation (run in CI/CD, NOT in Dockerfile — keeps image lean):
+#   syft packages dir:/app -o spdx-json=sbom.json     # SPDX format
+#   syft packages dir:/app -o cyclonedx-json=sbom.json # CycloneDX format
+# Vulnerability scanning:
+#   grype sbom:sbom.json                                # Scan SBOM for CVEs
+#   trivy image hey-seven:latest                        # Scan built image
+# Dependency audit:
+#   ./scripts/security-audit.sh requirements.txt        # pip-audit + pin check
 
 # NOTE: Cloud Run ignores Dockerfile HEALTHCHECK — it uses its own HTTP
 # startup/liveness probes configured via gcloud deploy flags (see cloudbuild.yaml).

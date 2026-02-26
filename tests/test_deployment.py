@@ -330,7 +330,7 @@ class TestSecurityDeployment:
                 json={"data": {"event_type": "message.received", "payload": {}}},
             )
             assert resp.status_code == 404
-            assert resp.json()["error"]["code"] == "not_found"
+            assert resp.json()["code"] == "not_found"
 
     def test_not_found_error_code_exists(self):
         """ErrorCode.NOT_FOUND exists in error taxonomy."""

@@ -265,8 +265,9 @@ class TestChatAgent503:
             resp = client.post("/chat", json={"message": "hello"})
             assert resp.status_code == 503
             assert "Retry-After" in resp.headers
-            assert resp.json()["error"]["code"] == "agent_unavailable"
-            assert resp.json()["error"]["message"] == "Agent not initialized. Try again later."
+            # RFC 7807 Problem Details format
+            assert resp.json()["code"] == "agent_unavailable"
+            assert resp.json()["detail"] == "Agent not initialized. Try again later."
 
 
 class TestHealthDegraded:
@@ -496,7 +497,7 @@ class TestGraphEndpointAuth:
             with TestClient(app) as client:
                 resp = client.get("/graph")
                 assert resp.status_code == 401
-                assert resp.json()["error"]["code"] == "unauthorized"
+                assert resp.json()["code"] == "unauthorized"
 
     def test_graph_with_valid_api_key_returns_200(self):
         """GET /graph with valid API key returns 200."""
@@ -528,7 +529,7 @@ class TestGraphEndpointAuth:
                     "/graph", headers={"X-API-Key": "wrong-key"}
                 )
                 assert resp.status_code == 401
-                assert resp.json()["error"]["code"] == "unauthorized"
+                assert resp.json()["code"] == "unauthorized"
 
 
 class TestSecurityHeaders:

@@ -1,7 +1,8 @@
-"""Structured error taxonomy for the Hey Seven API.
+"""RFC 7807 Problem Details error taxonomy for the Hey Seven API.
 
-Provides a canonical set of error codes that clients can switch on, ensuring
-consistent error handling across all endpoints and middleware layers.
+Provides a canonical set of error codes and RFC 7807-compliant error response
+builder that clients can switch on, ensuring consistent error handling across
+all endpoints and middleware layers.
 
 Usage::
 
@@ -9,7 +10,8 @@ Usage::
 
     return JSONResponse(
         status_code=429,
-        content=error_response(ErrorCode.RATE_LIMITED, "Too many requests."),
+        content=error_response(ErrorCode.RATE_LIMITED, "Too many requests.", status=429),
+        media_type="application/problem+json",
     )
 """
 
@@ -19,7 +21,7 @@ from enum import Enum
 class ErrorCode(str, Enum):
     """Canonical error codes for API responses.
 
-    Client applications should switch on ``error.code`` (not HTTP status)
+    Client applications should switch on ``code`` (not HTTP status)
     to differentiate error handling paths.
     """
 
@@ -34,14 +36,24 @@ class ErrorCode(str, Enum):
     SERVICE_DEGRADED = "service_degraded"
 
 
-def error_response(code: ErrorCode, message: str) -> dict:
-    """Build a structured error response body.
+def error_response(code: ErrorCode, message: str, status: int = 500) -> dict:
+    """Build an RFC 7807 Problem Details response body.
+
+    Conforms to RFC 7807 (Problem Details for HTTP APIs) for standardized
+    error handling across all middleware and endpoint layers.
 
     Args:
         code: One of the ``ErrorCode`` enum values.
         message: Human-readable error description.
+        status: HTTP status code.
 
     Returns:
-        Dict with ``error`` object containing ``code`` and ``message``.
+        Dict conforming to RFC 7807 Problem Details.
     """
-    return {"error": {"code": code.value, "message": message}}
+    return {
+        "type": "about:blank",
+        "title": code.value.replace("_", " ").title(),
+        "status": status,
+        "detail": message,
+        "code": code.value,
+    }

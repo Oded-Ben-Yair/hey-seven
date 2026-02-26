@@ -162,14 +162,14 @@ class ErrorHandlingMiddleware:
             )
             if not response_started:
                 body = json.dumps(
-                    error_response(ErrorCode.INTERNAL_ERROR, "An unexpected error occurred.")
+                    error_response(ErrorCode.INTERNAL_ERROR, "An unexpected error occurred.", status=500)
                 ).encode()
                 await send(
                     {
                         "type": "http.response.start",
                         "status": 500,
                         "headers": [
-                            (b"content-type", b"application/json"),
+                            (b"content-type", b"application/problem+json"),
                             (b"content-length", str(len(body)).encode()),
                         ]
                         + list(self._SECURITY_HEADERS),
@@ -285,7 +285,7 @@ class ApiKeyMiddleware:
 
         if not provided or not hmac.compare_digest(provided, api_key):
             body = json.dumps(
-                error_response(ErrorCode.UNAUTHORIZED, "Invalid or missing API key.")
+                error_response(ErrorCode.UNAUTHORIZED, "Invalid or missing API key.", status=401)
             ).encode()
             await send(
                 {
@@ -294,7 +294,7 @@ class ApiKeyMiddleware:
                     # R36 fix A9: Include security headers on 401 responses
                     # for parity with ErrorHandlingMiddleware 500 responses.
                     "headers": [
-                        (b"content-type", b"application/json"),
+                        (b"content-type", b"application/problem+json"),
                         (b"content-length", str(len(body)).encode()),
                     ] + list(_SHARED_SECURITY_HEADERS),
                 }
@@ -646,12 +646,26 @@ class RateLimitMiddleware:
         else:
             allowed = await self._is_allowed(client_ip)
         if allowed:
-            await self.app(scope, receive, send)
+            # Inject rate-limit info headers on successful requests so clients
+            # can implement backoff before hitting 429.
+            async def send_with_ratelimit(message: Message) -> None:
+                if message["type"] == "http.response.start":
+                    bucket = self._requests.get(client_ip)
+                    remaining = max(0, self.max_tokens - (len(bucket) if bucket else 0))
+                    extra_headers = [
+                        (b"x-ratelimit-limit", str(self.max_tokens).encode()),
+                        (b"x-ratelimit-remaining", str(remaining).encode()),
+                        (b"x-ratelimit-reset", str(int(time.time()) + int(self.window_seconds)).encode()),
+                    ]
+                    message["headers"] = list(message.get("headers", [])) + extra_headers
+                await send(message)
+
+            await self.app(scope, receive, send_with_ratelimit)
             return
 
-        # Rate limited
+        # Rate limited — include RFC 7807 body + rate-limit info headers.
         body = json.dumps(
-            error_response(ErrorCode.RATE_LIMITED, "Too many requests.")
+            error_response(ErrorCode.RATE_LIMITED, "Too many requests.", status=429)
         ).encode()
         await send(
             {
@@ -661,9 +675,12 @@ class RateLimitMiddleware:
                 # for parity with 401 (ApiKeyMiddleware) and 500 (ErrorHandlingMiddleware).
                 # Attackers trigger 429 via brute-force; missing HSTS weakens transport security.
                 "headers": [
-                    (b"content-type", b"application/json"),
+                    (b"content-type", b"application/problem+json"),
                     (b"content-length", str(len(body)).encode()),
                     (b"retry-after", b"60"),
+                    (b"x-ratelimit-limit", str(self.max_tokens).encode()),
+                    (b"x-ratelimit-remaining", b"0"),
+                    (b"x-ratelimit-reset", str(int(time.time()) + int(self.window_seconds)).encode()),
                 ] + list(_SHARED_SECURITY_HEADERS),
             }
         )
@@ -754,6 +771,7 @@ class RequestBodyLimitMiddleware:
             error_response(
                 ErrorCode.PAYLOAD_TOO_LARGE,
                 f"Request body exceeds {self._max_size} bytes.",
+                status=413,
             )
         ).encode()
         await send(
@@ -763,7 +781,7 @@ class RequestBodyLimitMiddleware:
                 # R52 fix D4-001: Include security headers on 413 responses
                 # for parity with 401 (ApiKeyMiddleware) and 500 (ErrorHandlingMiddleware).
                 "headers": [
-                    (b"content-type", b"application/json"),
+                    (b"content-type", b"application/problem+json"),
                     (b"content-length", str(len(body)).encode()),
                 ] + list(_SHARED_SECURITY_HEADERS),
             }
@@ -781,6 +799,7 @@ class RequestBodyLimitMiddleware:
             error_response(
                 ErrorCode.UNSUPPORTED_MEDIA_TYPE,
                 "Content-Encoding not supported. Send uncompressed JSON.",
+                status=415,
             )
         ).encode()
         await send(
@@ -788,7 +807,7 @@ class RequestBodyLimitMiddleware:
                 "type": "http.response.start",
                 "status": 415,
                 "headers": [
-                    (b"content-type", b"application/json"),
+                    (b"content-type", b"application/problem+json"),
                     (b"content-length", str(len(body)).encode()),
                 ] + list(_SHARED_SECURITY_HEADERS),
             }

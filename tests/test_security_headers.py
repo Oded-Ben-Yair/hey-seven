@@ -140,7 +140,7 @@ class TestContentEncodingRejection:
             )
             assert resp.status_code == 415
             body = resp.json()
-            assert body["error"]["code"] == "unsupported_media_type"
+            assert body["code"] == "unsupported_media_type"
             _assert_security_headers(resp, "415 Unsupported Media Type")
 
     def test_identity_encoding_allowed(self):

@@ -276,8 +276,9 @@ def create_app() -> FastAPI:
 
             return JSONResponse(
                 status_code=503,
-                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Server is shutting down. Please retry."),
+                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Server is shutting down. Please retry.", status=503),
                 headers={"Retry-After": "5"},
+                media_type="application/problem+json",
             )
 
         agent = getattr(request.app.state, "agent", None)
@@ -286,8 +287,9 @@ def create_app() -> FastAPI:
 
             return JSONResponse(
                 status_code=503,
-                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Agent not initialized. Try again later."),
+                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Agent not initialized. Try again later.", status=503),
                 headers={"Retry-After": "30"},
+                media_type="application/problem+json",
             )
 
         from src.agent.graph import chat_stream
@@ -586,8 +588,9 @@ def create_app() -> FastAPI:
         settings = get_settings()
         if not settings.SMS_ENABLED:
             return JSONResponse(
-                content=error_response(ErrorCode.NOT_FOUND, "SMS channel is not enabled."),
+                content=error_response(ErrorCode.NOT_FOUND, "SMS channel is not enabled.", status=404),
                 status_code=404,
+                media_type="application/problem+json",
             )
 
         from src.sms.webhook import handle_inbound_sms, verify_webhook_signature
@@ -606,8 +609,9 @@ def create_app() -> FastAPI:
                 ):
                     logger.warning("SMS webhook signature verification failed")
                     return JSONResponse(
-                        content=error_response(ErrorCode.UNAUTHORIZED, "Invalid webhook signature."),
+                        content=error_response(ErrorCode.UNAUTHORIZED, "Invalid webhook signature.", status=401),
                         status_code=401,
+                        media_type="application/problem+json",
                     )
 
             body = json.loads(raw_body)
@@ -640,8 +644,9 @@ def create_app() -> FastAPI:
         except Exception:
             logger.exception("SMS webhook error")
             return JSONResponse(
-                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error"),
+                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error", status=500),
                 status_code=500,
+                media_type="application/problem+json",
             )
 
     # ------------------------------------------------------------------
@@ -672,8 +677,9 @@ def create_app() -> FastAPI:
         except Exception:
             logger.exception("CMS webhook error")
             return JSONResponse(
-                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error"),
+                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error", status=500),
                 status_code=500,
+                media_type="application/problem+json",
             )
 
     # ------------------------------------------------------------------

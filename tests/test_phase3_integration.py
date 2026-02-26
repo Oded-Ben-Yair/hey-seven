@@ -229,7 +229,9 @@ class TestCMSWebhookEndpoint:
             headers={"Content-Type": "application/json"},
         )
         assert response.status_code == 500
-        assert "error" in response.json()
+        # R65 fix: RFC 7807 error format — check for "code" or "detail" field
+        body = response.json()
+        assert "code" in body or "detail" in body or "error" in body
 
 
 # ---------------------------------------------------------------------------
