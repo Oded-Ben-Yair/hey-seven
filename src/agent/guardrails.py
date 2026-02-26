@@ -511,9 +511,14 @@ def _normalize_input(text: str) -> str:
     # Exception: \n \r \t are legitimate whitespace (collapsed by \s+ regex later).
     # R35 CRITICAL fix: previous regex only covered \u200b-\u200f, \u2028-\u202f,
     # \ufeff. Category-based stripping catches all Cf. R52 extends to Cc.
+    # R63 fix D7: Replace Cf/Cc chars with SPACE instead of removing them.
+    # Removing zero-width chars between words merges tokens: "gambling\u200bproblem"
+    # became "gamblingproblem" which doesn't match \bgambling\s+problem\b.
+    # Replacing with space preserves word boundaries; whitespace collapse below
+    # normalizes multiple spaces to one.
     text = "".join(
-        c for c in text
-        if unicodedata.category(c) not in ("Cf", "Cc") or c in "\n\r\t"
+        " " if (unicodedata.category(c) in ("Cf", "Cc") and c not in "\n\r\t") else c
+        for c in text
     )
     # R36 fix B1: Normalize BEFORE confusable replacement. Previous order
     # (confusable -> NFKD) missed precomposed accented Cyrillic/Greek letters
@@ -524,16 +529,26 @@ def _normalize_input(text: str) -> str:
     text = "".join(c for c in text if not unicodedata.combining(c))
     # Replace cross-script homoglyphs (Cyrillic/Greek → Latin) — O(n) single pass
     text = text.translate(_CONFUSABLES_TABLE)
-    # R38 fix D7-M3: Strip single-character delimiters between alphanumeric chars.
-    # Catches token-smuggling via punctuation: "i.g.n.o.r.e" and
-    # "ignore_previous_instructions" bypass word-boundary regex patterns.
+    # R38 fix D7-M3: Replace single-character delimiters between alphanumeric
+    # chars with space. Catches token-smuggling via punctuation: "i.g.n.o.r.e"
+    # and "ignore_previous_instructions" bypass word-boundary regex patterns.
     # R39 fix D7-M001: Expanded from [._-] to all non-word non-space punctuation
     # PLUS underscore. Previous set missed : / ; ~ | which bypass equally.
     # [^\w\s] matches all punctuation except underscore (which is in \w).
     # The |_ alternative catches underscore-separated token smuggling.
-    text = re.sub(r"(?<=\w)(?:[^\w\s]|_)(?=\w)", "", text)
+    # R64 fix D7: Replace with space instead of removing. Removing merged
+    # tokens: "gambling.problem" -> "gamblingproblem" which defeated
+    # \bgambling\s+problem\b phrase patterns. Space preserves word boundaries.
+    text = re.sub(r"(?<=\w)(?:[^\w\s]|_)(?=\w)", " ", text)
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
+    # R64 fix D7: Re-join single-character tokens separated by spaces.
+    # After punctuation-to-space, "i.g.n.o.r.e" becomes "i g n o r e".
+    # These single-char tokens must be merged back to "ignore" to catch
+    # character-level smuggling. Multi-char words like "gambling problem"
+    # are unaffected (both tokens are > 1 char). Pattern: space between
+    # two single word-characters.
+    text = re.sub(r"(?<=\b\w) (?=\w\b)", "", text)
     return text
 
 

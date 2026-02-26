@@ -27,6 +27,7 @@ class ErrorCode(str, Enum):
     NOT_FOUND = "not_found"
     RATE_LIMITED = "rate_limit_exceeded"
     PAYLOAD_TOO_LARGE = "payload_too_large"
+    UNSUPPORTED_MEDIA_TYPE = "unsupported_media_type"
     AGENT_UNAVAILABLE = "agent_unavailable"
     INTERNAL_ERROR = "internal_error"
     VALIDATION_ERROR = "validation_error"

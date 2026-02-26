@@ -127,17 +127,18 @@ class TestErrorTaxonomy:
     """Verify error taxonomy matches documentation."""
 
     def test_error_code_count(self):
-        """ErrorCode enum has 8 codes."""
+        """ErrorCode enum has 9 codes (R63: added unsupported_media_type)."""
         from src.api.errors import ErrorCode
 
-        assert len(ErrorCode) == 8
+        assert len(ErrorCode) == 9
 
     def test_error_code_values(self):
-        """All 8 documented error codes exist."""
+        """All 9 documented error codes exist."""
         from src.api.errors import ErrorCode
 
         expected = {
             "unauthorized", "not_found", "rate_limit_exceeded", "payload_too_large",
+            "unsupported_media_type",  # R63 fix D4: Content-Encoding rejection
             "agent_unavailable", "internal_error", "validation_error",
             "service_degraded",
         }

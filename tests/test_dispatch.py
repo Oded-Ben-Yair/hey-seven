@@ -177,6 +177,63 @@ class TestBackwardCompatImports:
         assert _CATEGORY_PRIORITY["restaurants"] == 4
 
 
+class TestExecuteSpecialistErrorHandling:
+    """R63 fix D1: _execute_specialist catches unexpected agent errors."""
+
+    @pytest.mark.asyncio
+    async def test_execute_specialist_catches_unexpected_error(self):
+        """_execute_specialist returns fallback on unexpected agent error."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from src.agent.dispatch import _execute_specialist
+
+        state = {
+            "retrieved_context": [],
+            "messages": [],
+            "retry_count": 0,
+        }
+
+        failing_agent = AsyncMock(side_effect=RuntimeError("unexpected LLM failure"))
+        with patch("src.agent.dispatch.get_agent", return_value=failing_agent):
+            mock_settings = MagicMock()
+            mock_settings.MODEL_TIMEOUT = 5
+
+            result = await _execute_specialist(
+                state, "dining", {}, mock_settings, "test"
+            )
+            assert result["skip_validation"] is True
+            assert len(result["messages"]) == 1
+            assert "trouble generating" in result["messages"][0].content
+
+    @pytest.mark.asyncio
+    async def test_execute_specialist_timeout_returns_fallback(self):
+        """_execute_specialist returns fallback on timeout."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from src.agent.dispatch import _execute_specialist
+
+        state = {
+            "retrieved_context": [],
+            "messages": [],
+            "retry_count": 0,
+        }
+
+        async def slow_agent(s):
+            import asyncio
+            await asyncio.sleep(999)
+
+        with patch("src.agent.dispatch.get_agent", return_value=slow_agent):
+            mock_settings = MagicMock()
+            mock_settings.MODEL_TIMEOUT = 0.01  # Very short timeout
+
+            result = await _execute_specialist(
+                state, "dining", {}, mock_settings, "test"
+            )
+            assert result["skip_validation"] is True
+            assert len(result["messages"]) == 1
+            assert "trouble generating" in result["messages"][0].content
+
+
 class TestDispatchMethodInState:
     """Verify dispatch_method field is properly wired."""
 

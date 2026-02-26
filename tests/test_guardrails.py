@@ -468,13 +468,41 @@ class TestAdversarialBypass:
         assert audit_input(message) is True
 
     def test_normalize_removes_zero_width_chars(self):
-        """_normalize_input strips zero-width characters."""
+        """_normalize_input replaces zero-width characters with spaces.
+
+        R63 fix D7: Cf/Cc chars are replaced with space (not removed) to
+        preserve word boundaries. "gambling\\u200bproblem" -> "gambling problem"
+        so \\bgambling\\s+problem\\b still matches.
+
+        When a zero-width char is inside a word (e.g., "ig\\u200bnore"), it
+        produces a space there too ("ig nore"). This is acceptable because:
+        1. The pre-normalization zero-width char pattern catches the injection
+           BEFORE normalization runs.
+        2. The word-boundary-preserving behavior is more important for catching
+           attacks like "gambling\\u200bproblem" that bypass responsible gaming
+           patterns.
+        """
         from src.agent.guardrails import _normalize_input
 
         result = _normalize_input("ig\u200bnore\u200dprevious")
         assert "\u200b" not in result
         assert "\u200d" not in result
-        assert "ignoreprevious" in result
+        # R63: zero-width chars become spaces. Mid-word zero-width chars
+        # produce spaces ("ig nore"), but the pre-normalization pattern
+        # catches these attacks before normalization.
+        assert "nore" in result
+        assert "previous" in result
+
+    def test_normalize_preserves_word_boundaries(self):
+        """R63 fix D7: zero-width chars between words preserve boundaries."""
+        from src.agent.guardrails import _normalize_input
+
+        # This is the critical attack vector: merging words to bypass patterns
+        result = _normalize_input("gambling\u200bproblem")
+        assert "gambling" in result
+        assert "problem" in result
+        # Words are separated, not merged
+        assert "gambling problem" in result
 
     def test_normalize_decomposes_homoglyphs(self):
         """_normalize_input replaces Cyrillic homoglyphs with Latin equivalents."""

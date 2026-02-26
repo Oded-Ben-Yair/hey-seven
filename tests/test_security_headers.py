@@ -123,6 +123,93 @@ class TestSecurityHeadersOnErrors:
                 _assert_security_headers(resp, "429 Rate Limited")
 
 
+class TestContentEncodingRejection:
+    """Content-Encoding bypass protection (R63 fix D4)."""
+
+    def test_compressed_payload_rejected(self):
+        """Compressed payloads should be rejected with 415."""
+        app = _make_test_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/chat",
+                content=b'{"message": "test"}',
+                headers={
+                    "content-type": "application/json",
+                    "content-encoding": "gzip",
+                },
+            )
+            assert resp.status_code == 415
+            body = resp.json()
+            assert body["error"]["code"] == "unsupported_media_type"
+            _assert_security_headers(resp, "415 Unsupported Media Type")
+
+    def test_identity_encoding_allowed(self):
+        """Content-Encoding: identity should be allowed (pass-through)."""
+        app = _make_test_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/chat",
+                json={"message": "test"},
+                headers={"content-encoding": "identity"},
+            )
+            # Should not be 415 -- may be 200 or other status depending on auth
+            assert resp.status_code != 415
+
+    def test_deflate_encoding_rejected(self):
+        """Content-Encoding: deflate should also be rejected."""
+        app = _make_test_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/chat",
+                content=b'{"message": "test"}',
+                headers={
+                    "content-type": "application/json",
+                    "content-encoding": "deflate",
+                },
+            )
+            assert resp.status_code == 415
+
+    def test_br_encoding_rejected(self):
+        """Content-Encoding: br (brotli) should also be rejected."""
+        app = _make_test_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/chat",
+                content=b'{"message": "test"}',
+                headers={
+                    "content-type": "application/json",
+                    "content-encoding": "br",
+                },
+            )
+            assert resp.status_code == 415
+
+    def test_comma_separated_encoding_rejected(self):
+        """R64 fix D4: Comma-separated Content-Encoding should be rejected."""
+        app = _make_test_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/chat",
+                content=b'{"message": "test"}',
+                headers={
+                    "content-type": "application/json",
+                    "content-encoding": "gzip, chunked",
+                },
+            )
+            assert resp.status_code == 415
+
+    def test_comma_separated_identity_only_allowed(self):
+        """R64 fix D4: identity-only comma-separated encoding should pass."""
+        app = _make_test_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
+                "/chat",
+                json={"message": "test"},
+                headers={"content-encoding": "identity, identity"},
+            )
+            # Should not be 415
+            assert resp.status_code != 415
+
+
 class TestXFFSpoofing:
     """X-Forwarded-For header handling for rate limit key extraction."""
 

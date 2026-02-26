@@ -358,6 +358,21 @@ async def _execute_specialist(
             ))],
             "skip_validation": True,
         }
+    except Exception:
+        # R63 fix D1: Catch unexpected agent errors locally for better diagnostics.
+        # Without this, errors propagate to the graph-level handler which returns
+        # a generic "error during SSE stream" without specialist context.
+        logger.exception(
+            "Specialist %s raised unexpected error -- returning fallback",
+            agent_name,
+        )
+        result = {
+            "messages": [AIMessage(content=(
+                "I apologize, but I'm having trouble generating a response right now. "
+                "Please try again, or contact us directly for assistance."
+            ))],
+            "skip_validation": True,
+        }
 
     # Guard: warn if specialist result contains keys that should only be
     # set by _dispatch_to_specialist (not the specialist agent itself).

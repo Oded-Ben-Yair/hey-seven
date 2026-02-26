@@ -458,6 +458,11 @@ class RateLimitMiddleware:
         All returned IPs are normalized via ``_normalize_ip()`` for consistent
         rate limit keying across IPv4 and IPv6 address formats.
         """
+        # ASGI headers are [(name, value), ...] tuples. dict() retains the LAST
+        # value for duplicate header names. For X-Forwarded-For, RFC 7239 specifies
+        # comma-separated values in a single header; multiple XFF headers are
+        # concatenated. dict() taking the last is safe because the rightmost XFF
+        # is from the most recent (trusted) proxy.
         headers = dict(scope.get("headers", []))
         forwarded = headers.get(b"x-forwarded-for", b"").decode()
         if forwarded:
@@ -683,7 +688,21 @@ class RequestBodyLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # R63 fix D4: Reject compressed payloads on API endpoints.
+        # Content-Encoding (gzip, deflate, br) can bypass Content-Length checks:
+        # a 1KB compressed payload may decompress to 1GB (zip bomb).
+        # Hey Seven API expects JSON text — no compression needed.
         headers = dict(scope.get("headers", []))
+        content_encoding = headers.get(b"content-encoding", b"").decode().lower().strip()
+        # R64 fix D4: Handle comma-separated encodings (e.g., "gzip, chunked").
+        # A single Content-Encoding header can list multiple encodings per RFC 7231.
+        if content_encoding:
+            encodings = [e.strip() for e in content_encoding.split(",")]
+            if any(e and e != "identity" for e in encodings):
+                await self._send_415(send)
+                return
+        # (If empty or all-identity, fall through to Content-Length checks.)
+
         content_length = headers.get(b"content-length", b"0")
 
         try:
@@ -743,6 +762,31 @@ class RequestBodyLimitMiddleware:
                 "status": 413,
                 # R52 fix D4-001: Include security headers on 413 responses
                 # for parity with 401 (ApiKeyMiddleware) and 500 (ErrorHandlingMiddleware).
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                ] + list(_SHARED_SECURITY_HEADERS),
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
+
+    async def _send_415(self, send: Send) -> None:
+        """Reject requests with unsupported Content-Encoding.
+
+        R63 fix D4: Content-Encoding (gzip, deflate, br) can bypass
+        Content-Length checks — a 1KB compressed payload may decompress
+        to 1GB (zip bomb). Hey Seven API expects uncompressed JSON.
+        """
+        body = json.dumps(
+            error_response(
+                ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                "Content-Encoding not supported. Send uncompressed JSON.",
+            )
+        ).encode()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 415,
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode()),
