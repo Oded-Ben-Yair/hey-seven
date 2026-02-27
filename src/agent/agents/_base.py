@@ -14,6 +14,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from string import Template
+from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
@@ -56,6 +57,66 @@ _LLM_SEMAPHORE = asyncio.Semaphore(20)
 # Research: persona consistency drops 20-40% over 10-15 LLM turns.
 # Re-inject condensed persona reminder after this many messages in context.
 _PERSONA_REINJECT_THRESHOLD = 10  # ~5 human turns
+
+
+def _detect_conversation_dynamics(messages: list) -> dict[str, Any]:
+    """Analyze conversation history for behavioral dynamics.
+
+    Returns a dict with detected dynamics:
+    - terse_replies: int — count of recent terse (< 5 words) human replies
+    - repeated_question: bool — last 2 human messages are semantically similar
+    - brevity_preference: bool — guest consistently uses short messages
+    - turn_count: int — number of human messages in conversation
+
+    Sub-1ms for typical conversation lengths (< 40 messages).
+    """
+    dynamics: dict[str, Any] = {
+        "terse_replies": 0,
+        "repeated_question": False,
+        "brevity_preference": False,
+        "turn_count": 0,
+    }
+
+    human_messages: list[str] = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            human_messages.append(content)
+
+    dynamics["turn_count"] = len(human_messages)
+
+    if not human_messages:
+        return dynamics
+
+    # Detect terse replies (< 5 words in recent messages)
+    recent = human_messages[-3:] if len(human_messages) >= 3 else human_messages
+    terse_count = sum(1 for msg in recent if len(msg.split()) < 5)
+    dynamics["terse_replies"] = terse_count
+
+    # Detect brevity preference (all messages are short)
+    if len(human_messages) >= 2:
+        avg_words = sum(len(m.split()) for m in human_messages) / len(human_messages)
+        dynamics["brevity_preference"] = avg_words < 6
+
+    # Detect repeated question (last 2 human messages share key words)
+    if len(human_messages) >= 2:
+        last = set(human_messages[-1].lower().split())
+        prev = set(human_messages[-2].lower().split())
+        # Remove common stop words for comparison
+        stop = {"i", "the", "a", "an", "is", "are", "was", "were", "do", "does",
+                "did", "can", "could", "what", "where", "when", "how", "about",
+                "for", "to", "at", "in", "on", "of", "and", "or", "my", "me",
+                "you", "your", "it", "that", "this", "with"}
+        last_content = last - stop
+        prev_content = prev - stop
+        if last_content and prev_content:
+            overlap = last_content & prev_content
+            # If 50%+ of content words overlap, likely repeated question
+            min_len = min(len(last_content), len(prev_content))
+            if min_len > 0 and len(overlap) / min_len >= 0.5:
+                dynamics["repeated_question"] = True
+
+    return dynamics
 
 
 def _count_consecutive_frustrated(messages: list) -> int:
@@ -249,10 +310,69 @@ async def execute_specialist(
     if emotional_guides:
         system_prompt += "\n\n## Emotional Context\n" + "\n\n".join(emotional_guides)
 
+    # B2: Inject implicit signal guidance from extracted fields
+    if extracted.get("loyalty_signal"):
+        system_prompt += (
+            "\n\n## Loyalty Context\n"
+            f"The guest has signaled loyalty: \"{extracted['loyalty_signal']}\". "
+            "Treat them as a valued long-term guest. Acknowledge their history warmly. "
+            "Recommend elevated, VIP-appropriate experiences."
+        )
+    if extracted.get("urgency"):
+        system_prompt += (
+            "\n\n## Urgency Context\n"
+            "The guest is short on time. Give short, direct answers. "
+            "Prioritize proximity and speed. Skip marketing language and preamble. "
+            "Lead with the single best option, not a list."
+        )
+    if extracted.get("fatigue"):
+        system_prompt += (
+            "\n\n## Fatigue Context\n"
+            "The guest is tired or has traveled far. Recommend restful, low-effort options: "
+            "spa, quiet dining, pool. Avoid high-energy suggestions like gaming floor, "
+            "loud venues, or activities requiring lots of walking."
+        )
+    if extracted.get("budget_conscious"):
+        system_prompt += (
+            "\n\n## Budget Context\n"
+            "The guest has signaled budget consciousness. Lead with value options, "
+            "free activities (Wolf Den, pool), and casual dining (buffet). "
+            "Do NOT suggest premium/expensive options first. Maintain this filter "
+            "throughout the conversation."
+        )
+
+    # B3: Inject conversation dynamics guidance
+    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    dynamics = _detect_conversation_dynamics(history)
+
+    dynamics_guides: list[str] = []
+    if dynamics["terse_replies"] >= 2:
+        dynamics_guides.append(
+            "The guest is giving very short replies — they may be disengaged or prefer "
+            "brevity. Switch to short, direct answers. Ask a focused either/or question "
+            "instead of listing options. Make ONE confident recommendation."
+        )
+    if dynamics["repeated_question"]:
+        dynamics_guides.append(
+            "The guest appears to be repeating a question — your prior answer may not "
+            "have been clear. Acknowledge this ('Let me be more specific'), then "
+            "answer in a different format: use a direct fact (time, location) "
+            "instead of prose."
+        )
+    if dynamics["brevity_preference"]:
+        dynamics_guides.append(
+            "The guest consistently uses short messages. Match their style: "
+            "keep responses concise and functional. Skip pleasantries and marketing."
+        )
+    if dynamics_guides:
+        system_prompt += (
+            "\n\n## Conversation Style Guidance\n" + "\n".join(dynamics_guides)
+        )
+
     # Phase 4: Frustration escalation — detect sustained negative sentiment
     # from conversation history. When guest shows 2+ consecutive frustrated
     # messages, inject soft escalation offer. Research: HEART framework.
-    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    # Note: `history` is already computed above for conversation dynamics.
     frustrated_count = _count_consecutive_frustrated(history)
     if frustrated_count >= 2 and state.get("guest_sentiment") in ("frustrated", "negative"):
         # R25 fix C-001: Use HEART framework language instead of hardcoded text.
@@ -283,18 +403,28 @@ async def execute_specialist(
         )
 
     # Phase 4: Proactive suggestion injection from whisper plan.
-    # Only inject when: confidence >= 0.8, sentiment is explicitly positive/neutral
-    # (not None — must have positive evidence), and no prior suggestion this session.
-    # R23 fix C-002: require positive evidence of non-negative sentiment (not just
-    # absence of negative). When sentiment is None (detection disabled/failed),
-    # do NOT suggest — we can't know if the guest is frustrated.
+    # R71 B4 fix: Allow suggestions on neutral sentiment when contextual signals
+    # are strong (occasion detected, building multi-turn plan, positive dynamics).
+    # Still block on frustrated/negative and None (detection failed).
     # R23 fix C-003: check suggestion_offered to enforce max-1-per-conversation.
     whisper = state.get("whisper_plan")
     suggestion_already_offered = state.get("suggestion_offered", False)
+    _sentiment = state.get("guest_sentiment")
+    _allow_suggestion = (
+        _sentiment == "positive"
+        or (
+            _sentiment == "neutral"
+            and (
+                # Strong contextual signals that make proactive suggestion welcome:
+                extracted.get("occasion")  # Guest celebrating something
+                or dynamics["turn_count"] >= 3  # Multi-turn engaged conversation
+            )
+        )
+    )
     if (
         whisper
         and not suggestion_already_offered
-        and state.get("guest_sentiment") == "positive"
+        and _allow_suggestion
     ):
         suggestion = whisper.get("proactive_suggestion")
         conf = whisper.get("suggestion_confidence", 0.0)

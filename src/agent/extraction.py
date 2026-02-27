@@ -64,6 +64,59 @@ _OCCASION_PATTERNS: list[re.Pattern] = [
     re.compile(r"(?i)(anniversary|birthday|wedding|honeymoon|graduation|retirement|bachelor(?:ette)?\s*party|promotion|engagement)"),
 ]
 
+# ---------------------------------------------------------------------------
+# Loyalty signal patterns (B2: implicit loyalty/VIP recognition)
+# ---------------------------------------------------------------------------
+
+_LOYALTY_PATTERNS: list[re.Pattern] = [
+    # "20 years" / "member for 10 years" / "coming here for 5 years"
+    re.compile(r"(?i)(?:member|coming here|visiting|been a (?:guest|member))\s+(?:for\s+)?(\d+)\s+years?"),
+    # "Momentum member" / "Gold tier" / "Platinum member"
+    re.compile(r"(?i)(momentum|gold|platinum|silver|diamond|elite|vip)\s+(?:member|tier|status|level)"),
+    re.compile(r"(?i)(?:member|tier|status|level)\s+(?:is\s+)?(momentum|gold|platinum|silver|diamond|elite|vip)"),
+    # "I spend a lot" / "high roller" / "big spender"
+    re.compile(r"(?i)(?:spend\s+a\s+lot|high\s+roller|big\s+spender|whale|i\s+come\s+(?:here\s+)?every)"),
+    # "used to be Gold" / "was a Platinum member" (with or without "member/tier" suffix)
+    re.compile(r"(?i)(?:used\s+to\s+be|was\s+(?:a\s+)?)\s*(gold|platinum|silver|diamond|elite|vip)(?:\s+(?:member|tier))?"),
+]
+
+# ---------------------------------------------------------------------------
+# Urgency signal patterns (B2: implicit urgency detection)
+# ---------------------------------------------------------------------------
+
+_URGENCY_PATTERNS: list[re.Pattern] = [
+    # "checking out in an hour" / "leaving soon" / "flight in 3 hours"
+    re.compile(r"(?i)(?:checking out|leaving|departing|flight|checkout)\s+(?:in\s+)?(?:\d+\s+|an?\s+)?(?:hour|minute|soon)"),
+    # "leaving soon" without time reference
+    re.compile(r"(?i)(?:checking out|leaving|departing)\s+soon"),
+    # "quick" / "fast" / "hurry" / "rush"
+    re.compile(r"(?i)\b(?:quick(?:ly)?|fast|hurry|rush(?:ed|ing)?|right\s+now|immediately|asap)\b"),
+    # "don't have much time" / "limited time" / "short on time"
+    re.compile(r"(?i)(?:don'?t\s+have\s+(?:much|a\s+lot\s+of)\s+time|limited\s+time|short\s+on\s+time|running\s+late)"),
+]
+
+# ---------------------------------------------------------------------------
+# Fatigue signal patterns (B2: implicit fatigue/comfort needs)
+# ---------------------------------------------------------------------------
+
+_FATIGUE_PATTERNS: list[re.Pattern] = [
+    # "exhausted" / "tired" / "long day" / "on our feet all day"
+    re.compile(r"(?i)\b(?:exhausted|tired|wiped(?:\s+out)?|beat|drained|fatigued)\b"),
+    re.compile(r"(?i)(?:long\s+(?:day|drive|flight|trip)|on\s+(?:our|my)\s+feet\s+all\s+day)"),
+    re.compile(r"(?i)(?:drove|traveled|flew)\s+(?:\d+\s+)?hours?"),
+    re.compile(r"(?i)\b(?:need\s+to\s+(?:unwind|relax|rest|decompress)|want\s+to\s+(?:unwind|relax|rest))\b"),
+]
+
+# ---------------------------------------------------------------------------
+# Budget signal patterns (B2: implicit budget consciousness)
+# ---------------------------------------------------------------------------
+
+_BUDGET_PATTERNS: list[re.Pattern] = [
+    re.compile(r"(?i)\b(?:cheap(?:er)?|affordable|budget|inexpensive|economical)\b"),
+    re.compile(r"(?i)(?:nothing\s+(?:too\s+)?expensive|not\s+(?:too\s+)?pricey|on\s+a\s+budget)"),
+    re.compile(r"(?i)(?:free|complimentary|no\s+(?:cover|charge)|don'?t\s+(?:want\s+to\s+)?spend\s+(?:too\s+)?much)"),
+]
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -129,6 +182,31 @@ def extract_fields(text: str) -> dict[str, Any]:
             match = pattern.search(text)
             if match:
                 fields["occasion"] = match.group(1).strip().lower()
+                break
+
+        # Loyalty signals (B2: implicit VIP/loyalty recognition)
+        for pattern in _LOYALTY_PATTERNS:
+            match = pattern.search(text)
+            if match:
+                fields["loyalty_signal"] = match.group(0).strip()
+                break
+
+        # Urgency signals (B2: implicit urgency detection)
+        for pattern in _URGENCY_PATTERNS:
+            if pattern.search(text):
+                fields["urgency"] = True
+                break
+
+        # Fatigue signals (B2: implicit fatigue/comfort needs)
+        for pattern in _FATIGUE_PATTERNS:
+            if pattern.search(text):
+                fields["fatigue"] = True
+                break
+
+        # Budget signals (B2: implicit budget consciousness)
+        for pattern in _BUDGET_PATTERNS:
+            if pattern.search(text):
+                fields["budget_conscious"] = True
                 break
 
         return fields
