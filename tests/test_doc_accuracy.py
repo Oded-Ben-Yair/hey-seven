@@ -371,7 +371,385 @@ class TestMiddlewareCount:
         )
 
 
-class TestEndpointCount:
+class TestDeterministicD5:
+    """Tier 1 deterministic gate for D5 (Testing Strategy).
+
+    Replaces LLM judgment with hard assertions: test count floor,
+    coverage config existence, zero xfails, coverage threshold config.
+    """
+
+    def test_minimum_test_count(self):
+        """Project must have at least 2500 tests (enforces growth floor)."""
+        import subprocess
+        import sys
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q", "--no-header"],
+            capture_output=True, text=True, cwd=str(ROOT),
+            timeout=120,
+        )
+        # Last non-empty line is like "2580 tests collected"
+        lines = [ln for ln in result.stdout.strip().splitlines() if ln.strip()]
+        count_line = lines[-1] if lines else ""
+        match = re.search(r"(\d+)\s+tests?\s+collected", count_line)
+        assert match, f"Could not parse test count from: {count_line!r}"
+        count = int(match.group(1))
+        assert count >= 2500, (
+            f"Only {count} tests collected, minimum is 2500. "
+            f"Add tests or update floor if intentional reduction."
+        )
+
+    def test_coverage_config_exists(self):
+        """pyproject.toml has [tool.coverage.run] with source = ['src']."""
+        pyproject = ROOT / "pyproject.toml"
+        content = pyproject.read_text()
+        assert "[tool.coverage.run]" in content
+        assert 'source = ["src"]' in content
+
+    def test_coverage_threshold_configured(self):
+        """Coverage fail_under is at least 90."""
+        pyproject = ROOT / "pyproject.toml"
+        content = pyproject.read_text()
+        match = re.search(r"fail_under\s*=\s*(\d+)", content)
+        assert match, "fail_under not found in pyproject.toml"
+        assert int(match.group(1)) >= 90
+
+    def test_zero_active_xfails(self):
+        """No active @pytest.mark.xfail decorators in test files."""
+        test_dir = ROOT / "tests"
+        active_xfails = []
+        for path in test_dir.rglob("*.py"):
+            text = path.read_text()
+            for i, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                # Skip comments and docstrings
+                if stripped.startswith("#") or stripped.startswith('"') or stripped.startswith("'"):
+                    continue
+                # Only match actual decorator usage (starts with @)
+                if stripped.startswith("@pytest.mark.xfail"):
+                    active_xfails.append(f"{path.name}:{i}")
+        assert not active_xfails, (
+            f"Active xfail decorators found: {active_xfails}. "
+            f"Fix or remove — xfails mask real failures."
+        )
+
+
+class TestDeterministicD6:
+    """Tier 1 deterministic gate for D6 (Docker & DevOps).
+
+    Verifies Dockerfile best practices without LLM judgment:
+    non-root user, multi-stage build, require-hashes, HEALTHCHECK uses /live.
+    """
+
+    def _read_dockerfile(self):
+        return (ROOT / "Dockerfile").read_text()
+
+    def test_multi_stage_build(self):
+        """Dockerfile uses multi-stage build (at least 2 FROM statements)."""
+        content = self._read_dockerfile()
+        from_count = len(re.findall(r"^FROM\s+", content, re.MULTILINE))
+        assert from_count >= 2, (
+            f"Only {from_count} FROM statements. Multi-stage required."
+        )
+
+    def test_non_root_user(self):
+        """Dockerfile switches to non-root user before CMD."""
+        content = self._read_dockerfile()
+        assert re.search(r"^USER\s+\S+", content, re.MULTILINE), (
+            "No USER directive found. Must run as non-root."
+        )
+
+    def test_require_hashes(self):
+        """pip install uses --require-hashes for supply chain security."""
+        content = self._read_dockerfile()
+        assert "--require-hashes" in content
+
+    def test_healthcheck_uses_live(self):
+        """HEALTHCHECK hits /live (always 200), not /health (503 when degraded)."""
+        content = self._read_dockerfile()
+        # Find the HEALTHCHECK line and all continuation lines
+        hc_lines = []
+        in_healthcheck = False
+        for line in content.splitlines():
+            if line.strip().startswith("HEALTHCHECK"):
+                in_healthcheck = True
+            if in_healthcheck:
+                hc_lines.append(line)
+                if not line.rstrip().endswith("\\"):
+                    break
+        hc_block = "\n".join(hc_lines)
+        assert hc_block, "No HEALTHCHECK found"
+        assert "/live" in hc_block, (
+            f"HEALTHCHECK should use /live not /health. Found: {hc_block!r}"
+        )
+
+    def test_exec_form_cmd(self):
+        """CMD uses exec form (JSON array), not shell form."""
+        content = self._read_dockerfile()
+        # Exec form starts with CMD [
+        assert re.search(r'^CMD\s+\[', content, re.MULTILINE), (
+            "CMD not in exec form. Use CMD [\"...\"] for proper signal handling."
+        )
+
+    def test_digest_pinning(self):
+        """Base images use SHA-256 digest pinning (@sha256:...)."""
+        content = self._read_dockerfile()
+        from_lines = re.findall(r"^FROM\s+(.+?)(?:\s+AS\s+\w+)?$", content,
+                                re.MULTILINE)
+        for img in from_lines:
+            assert "@sha256:" in img, (
+                f"Image {img!r} not digest-pinned. Use @sha256:... for immutability."
+            )
+
+
+class TestDeterministicD7:
+    """Tier 1 deterministic gate for D7 (Prompts & Guardrails).
+
+    Verifies guardrail pattern counts and categories without LLM judgment.
+    """
+
+    def test_total_pattern_count_is_204(self):
+        """Total guardrail patterns must be exactly 204."""
+        import inspect
+        from src.agent import guardrails
+        source = inspect.getsource(guardrails)
+        patterns = re.findall(r"regex_engine\.compile\(", source)
+        assert len(patterns) == 204
+
+    def test_six_guardrail_categories(self):
+        """All 6 guardrail categories exist and are non-empty."""
+        from src.agent import guardrails
+        categories = {
+            "injection": guardrails._INJECTION_PATTERNS,
+            "responsible_gaming": guardrails._RESPONSIBLE_GAMING_PATTERNS,
+            "age_verification": guardrails._AGE_VERIFICATION_PATTERNS,
+            "bsa_aml": guardrails._BSA_AML_PATTERNS,
+            "patron_privacy": guardrails._PATRON_PRIVACY_PATTERNS,
+            "self_harm": guardrails._SELF_HARM_PATTERNS,
+        }
+        for name, cat in categories.items():
+            assert len(cat) > 0, f"Category {name} is empty"
+
+    def test_confusable_entry_count_is_145(self):
+        """Confusable mapping must have exactly 145 entries."""
+        from src.agent.guardrails import _CONFUSABLES
+        assert len(_CONFUSABLES) == 145, (
+            f"_CONFUSABLES has {len(_CONFUSABLES)} entries, expected 145. "
+            f"Update docs/adr/018-confusable-coverage.md if count changed."
+        )
+
+    def test_all_security_patterns_use_regex_engine(self):
+        """Security guardrail patterns use regex_engine, not raw re.compile()."""
+        import inspect
+        from src.agent import guardrails
+        source = inspect.getsource(guardrails)
+        # _ACT_AS_BROAD_PATTERN is a casino-context exclusion helper, not a
+        # security pattern — it's allowed to use re.compile() directly.
+        _ALLOWED_RE_COMPILE = {"_ACT_AS_BROAD_PATTERN"}
+        raw_compiles = []
+        for i, line in enumerate(source.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            if "re.compile(" in stripped and "regex_engine" not in stripped:
+                # Check if this is an allowed exception
+                if not any(name in stripped for name in _ALLOWED_RE_COMPILE):
+                    raw_compiles.append(f"line {i}: {stripped[:80]}")
+        assert len(raw_compiles) == 0, (
+            f"Found raw re.compile() calls in guardrails: {raw_compiles}. "
+            f"Use regex_engine.compile() for re2 ReDoS protection."
+        )
+
+
+class TestDeterministicD8:
+    """Tier 1 deterministic gate for D8 (Scalability & Production).
+
+    Verifies scalability patterns without LLM judgment: no threading.Lock in
+    async paths, TTLCache for LLM singletons, jitter on caches.
+    """
+
+    def test_no_threading_lock_in_async_agent_code(self):
+        """No threading.Lock instantiation in agent/ (async code) except documented exceptions."""
+        # Documented exceptions: state_backend.py (intentional R36 fix B5)
+        agent_dir = ROOT / "src" / "agent"
+        violations = []
+        for path in agent_dir.rglob("*.py"):
+            text = path.read_text()
+            for i, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                # Skip comments and docstrings
+                if stripped.startswith("#") or stripped.startswith('"') or stripped.startswith("'"):
+                    continue
+                # Only flag actual instantiation: threading.Lock()
+                if "threading.Lock()" in stripped:
+                    violations.append(f"{path.name}:{i}")
+        assert not violations, (
+            f"threading.Lock() instantiation in async agent code: {violations}. "
+            f"Use asyncio.Lock for async code."
+        )
+
+    def test_llm_singletons_use_ttlcache(self):
+        """LLM singleton caches use TTLCache, not @lru_cache."""
+        # Check key files that create LLM clients
+        llm_files = [
+            ROOT / "src" / "agent" / "nodes.py",
+            ROOT / "src" / "agent" / "circuit_breaker.py",
+            ROOT / "src" / "agent" / "memory.py",
+            ROOT / "src" / "agent" / "whisper_planner.py",
+            ROOT / "src" / "rag" / "embeddings.py",
+        ]
+        for path in llm_files:
+            text = path.read_text()
+            # Must use TTLCache
+            assert "TTLCache" in text, (
+                f"{path.name} missing TTLCache — credential rotation requires TTL."
+            )
+            # Must NOT use @lru_cache for actual caching (comments/docstrings are OK)
+            in_docstring = False
+            for i, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                if stripped.startswith('"""') or stripped.startswith("'''"):
+                    in_docstring = not in_docstring
+                    continue
+                if in_docstring:
+                    continue
+                if stripped.startswith("@lru_cache"):
+                    assert False, (
+                        f"{path.name}:{i} uses @lru_cache — "
+                        f"use TTLCache for credential rotation."
+                    )
+
+    def test_ttlcache_has_jitter_on_singletons(self):
+        """TTLCache for LLM/config singletons includes random jitter to prevent thundering herd."""
+        # Only check singleton caches (maxsize=1) — bounded data caches
+        # like delivery logs (maxsize=10000) don't need jitter.
+        src_dir = ROOT / "src"
+        jitter_missing = []
+        for path in src_dir.rglob("*.py"):
+            text = path.read_text()
+            for i, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                if "TTLCache(" in stripped and re.search(r"maxsize=1\b", stripped):
+                    if "random" not in stripped and "randint" not in stripped:
+                        jitter_missing.append(f"{path.name}:{i}")
+        assert not jitter_missing, (
+            f"TTLCache singleton without jitter (thundering herd risk): {jitter_missing}. "
+            f"Add random.randint(0, 300) to TTL."
+        )
+
+
+class TestDeterministicD9:
+    """Tier 1 deterministic gate for D9 (Trade-off Documentation).
+
+    Verifies documentation completeness without LLM judgment: ADR count,
+    ADR format, version parity, confusable count parity.
+    """
+
+    def test_adr_count_minimum(self):
+        """At least 22 ADRs exist (excluding README.md)."""
+        adr_dir = ROOT / "docs" / "adr"
+        adrs = [f for f in adr_dir.glob("*.md") if f.name != "README.md"]
+        assert len(adrs) >= 22, (
+            f"Only {len(adrs)} ADRs found, minimum is 22."
+        )
+
+    def test_all_adrs_have_status(self):
+        """Every ADR has a Status section."""
+        adr_dir = ROOT / "docs" / "adr"
+        missing = []
+        for path in sorted(adr_dir.glob("*.md")):
+            if path.name == "README.md":
+                continue
+            text = path.read_text()
+            # Accept either "## Status" or "**Status**:" format
+            has_status = "## Status" in text or "**Status**:" in text
+            if not has_status:
+                missing.append(f"{path.name}: missing Status section")
+        assert not missing, f"ADR format issues: {missing}"
+
+    def test_recent_adrs_have_dates(self):
+        """ADRs from 022+ (2026-02-26 onward) have dates in YYYY-MM-DD format."""
+        adr_dir = ROOT / "docs" / "adr"
+        missing = []
+        for path in sorted(adr_dir.glob("*.md")):
+            if path.name == "README.md":
+                continue
+            # Only check ADRs numbered 022+ (older ADRs use round-based status)
+            num_match = re.search(r"(\d{3})", path.name)
+            if not num_match or int(num_match.group(1)) < 22:
+                continue
+            text = path.read_text()
+            if not re.search(r"\d{4}-\d{2}-\d{2}", text):
+                missing.append(f"{path.name}: no YYYY-MM-DD date found")
+        assert not missing, f"Recent ADR date issues: {missing}"
+
+    def test_version_parity_config_and_env(self):
+        """VERSION in config.py default matches .env.example."""
+        from src.config import Settings
+        config_ver = Settings.model_fields["VERSION"].default
+        env_example = ROOT / ".env.example"
+        content = env_example.read_text()
+        match = re.search(r"^VERSION=([^\s#]+)", content, re.MULTILINE)
+        assert match, "VERSION not found in .env.example"
+        assert match.group(1).strip() == config_ver, (
+            f".env.example VERSION={match.group(1)} != config.py {config_ver}"
+        )
+
+
+class TestBehavioralScenarioParity:
+    """Tier 1 parity tests for behavioral scenario files.
+
+    Ensures scenario counts are tracked and B4 file exists.
+    """
+
+    def test_behavioral_scenario_total_count(self):
+        """Total behavioral scenarios across all files is at least 50."""
+        import yaml
+        scenario_dir = ROOT / "tests" / "scenarios"
+        total = 0
+        for path in sorted(scenario_dir.glob("behavioral_*.yaml")):
+            with open(path) as f:
+                data = yaml.safe_load(f)
+            if data and "scenarios" in data:
+                total += len(data["scenarios"])
+        assert total >= 50, (
+            f"Only {total} behavioral scenarios, target is 50. "
+            f"Add scenarios to reach minimum coverage."
+        )
+
+    def test_b4_agentic_file_exists(self):
+        """B4 agentic scenario file exists."""
+        path = ROOT / "tests" / "scenarios" / "behavioral_agentic.yaml"
+        assert path.exists(), (
+            "behavioral_agentic.yaml missing — B4 dimension has no scenarios."
+        )
+
+    def test_each_dimension_has_scenarios(self):
+        """Each behavioral dimension (B1-B5) has a scenario file with at least 5 scenarios."""
+        import yaml
+        expected_files = {
+            "B1": "behavioral_sarcasm.yaml",
+            "B2": "behavioral_implicit.yaml",
+            "B3": "behavioral_engagement.yaml",
+            "B4": "behavioral_agentic.yaml",
+            "B5": "behavioral_nuance.yaml",
+        }
+        scenario_dir = ROOT / "tests" / "scenarios"
+        for dim, filename in expected_files.items():
+            path = scenario_dir / filename
+            assert path.exists(), f"{dim}: {filename} missing"
+            with open(path) as f:
+                data = yaml.safe_load(f)
+            count = len(data.get("scenarios", []))
+            assert count >= 5, (
+                f"{dim} ({filename}) has only {count} scenarios, minimum is 5."
+            )
+
+
+
     """Verify the documented endpoint count matches code."""
 
     # FastAPI adds built-in routes (/docs, /redoc, /openapi.json, /docs/oauth2-redirect).

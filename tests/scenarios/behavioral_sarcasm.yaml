@@ -118,3 +118,123 @@ scenarios:
         expected_empathy_level: "medium"
     expected_behavior: "Recognizes 'whatever' as disengagement, not agreement. Gently asks a narrowing question rather than celebrating the 'choice'. When guest reveals preference for low-key, adjusts recommendations away from high-energy options"
     safety_relevant: false
+
+  - id: "sarcasm-06"
+    name: "Rhetorical question masking real complaint"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Recognizes rhetorical questions as complaints, not genuine queries. Answers the underlying need (the room issue) rather than literally answering the rhetorical question. Does not say 'good question' or treat it as curiosity."
+    turns:
+      - role: "human"
+        content: "Do you think I enjoy waiting 30 minutes for an elevator?"
+        expected_keywords: ["sorry", "wait", "help"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "It's been like this every time"
+        expected_keywords: ["frustrat", "understand"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Whatever, where's the pool?"
+        expected_keywords: ["Pool"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Treats rhetorical question as frustration signal. Validates the elevator wait issue, offers to flag it, then provides direct answer when guest moves on"
+    safety_relevant: false
+
+  - id: "sarcasm-07"
+    name: "Hostile praise testing agent gullibility"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Detects that 'amazing job' following a complaint is sarcastic praise, not genuine compliment. Does not thank the guest for the compliment. Stays focused on solving the problem underneath."
+    turns:
+      - role: "human"
+        content: "My room key doesn't work. Amazing job so far."
+        expected_keywords: ["sorry", "help", "key"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Yeah this is really the premium experience I was promised"
+        expected_keywords: ["understand", "help"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Can someone actually fix this?"
+        expected_keywords: ["front desk", "help", "team"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Reads sarcastic praise as frustration signal. Focuses on resolving the room key issue rather than engaging with the sarcasm. Directs to appropriate human help"
+    safety_relevant: false
+
+  - id: "sarcasm-08"
+    name: "Passive-aggressive timing complaint"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Recognizes 'no rush' and 'whenever you get around to it' as sarcastic urgency signals. Treats the request as high-priority despite the polite surface. Responds quickly and directly without mirroring the passive aggression."
+    turns:
+      - role: "human"
+        content: "No rush, but we've been waiting for our dinner reservation for about an hour now"
+        expected_keywords: ["sorry", "reservation", "help"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Oh take your time, it's not like we're hungry or anything"
+        expected_keywords: ["understand", "right away"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Just tell me where to go eat NOW"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "direct"
+        expected_empathy_level: "medium"
+    expected_behavior: "Reads passive-aggressive 'no rush' as urgent frustration. Prioritizes solving the dining need immediately. When tone escalates to explicit in turn 3, provides a direct single recommendation"
+    safety_relevant: false
+
+  - id: "sarcasm-09"
+    name: "Sarcasm embedded in a valid request"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Extracts the valid request from the sarcastic wrapper. Answers the actual question without addressing the sarcasm directly. Does not lecture about tone or ask if they're being sarcastic."
+    turns:
+      - role: "human"
+        content: "Since your amazing AI obviously knows everything, what's the best restaurant here?"
+        expected_keywords: ["Steakhouse", "recommend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Huh. That actually sounds decent. Hours?"
+        expected_keywords: ["5", "PM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Alright, maybe you're not totally useless"
+        expected_keywords: ["help", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Strips sarcastic framing and answers the genuine restaurant question directly. Earns trust through competence, not by addressing the sarcasm. Accepts the backhanded compliment gracefully"
+    safety_relevant: false
+
+  - id: "sarcasm-10"
+    name: "Eye-roll emoji and dismissive language"
+    category: "behavioral_sarcasm"
+    behavioral_dimension: "B1_sarcasm"
+    expected_behavioral_quality: "Reads emoji signals and abbreviated dismissive language as disengagement. Does not use emojis back or try to match the casual register. Stays professional but not stiff. Proves value through substance."
+    turns:
+      - role: "human"
+        content: "lol a chatbot for a casino. sure why not"
+        expected_keywords: ["help", "assist"]
+        expected_tone: "calm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "ok fine whats there to do"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "ok the spa thing sounds kinda nice actually"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Ignores the dismissive opener without being defensive. Provides useful information that earns gradual engagement. Matches the casual register shift as the guest warms up"
+    safety_relevant: false

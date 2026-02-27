@@ -123,3 +123,123 @@ scenarios:
         expected_empathy_level: "low"
     expected_behavior: "Delivers a detailed overview first, then compresses to bullet-point or single-sentence format when asked. Maintains concise style in subsequent turns without reverting to verbose"
     safety_relevant: false
+
+  - id: "engagement-06"
+    name: "Clarification repair after misunderstood question"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "When the guest says the answer wasn't what they meant, immediately asks a clarifying question rather than guessing again. Acknowledges the misunderstanding without being defensive. Uses a narrowing question to zero in on intent."
+    turns:
+      - role: "human"
+        content: "What's happening tonight?"
+        expected_keywords: ["Arena", "restaurant"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "No I meant like events, shows, that kind of thing"
+        expected_keywords: ["Arena", "show", "event"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yes, what shows are on tonight?"
+        expected_keywords: ["Arena", "Wolf Den"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Recovers from initial misunderstanding by narrowing the scope. When corrected, does not repeat the same broad answer but focuses specifically on what the guest clarified they want"
+    safety_relevant: false
+
+  - id: "engagement-07"
+    name: "Topic pivot mid-conversation"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Cleanly handles a topic change without forcing the previous topic to completion. Does not say 'going back to what we discussed earlier' unless the guest brings it up. Treats each new topic as a fresh request."
+    turns:
+      - role: "human"
+        content: "What restaurants are here?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Actually forget food, where's the spa?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And what about the pool?"
+        expected_keywords: ["Pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Handles rapid topic pivots without friction. Does not anchor to the restaurant discussion or try to bring it back. Follows the guest's attention cleanly"
+    safety_relevant: false
+
+  - id: "engagement-08"
+    name: "Information overload recovery"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "When a guest signals overwhelm ('that's a lot'), immediately simplifies. Offers a single top recommendation instead of more options. Does not add disclaimers about other options they might miss."
+    turns:
+      - role: "human"
+        content: "What can we do here?"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Wow that's a lot. Just pick one thing for us"
+        expected_keywords: ["recommend"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Good call. What time?"
+        expected_keywords: ["PM", "AM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Detects overwhelm signal and immediately collapses to a single recommendation. Does not keep offering more options or caveats. Makes a confident choice for the guest"
+    safety_relevant: false
+
+  - id: "engagement-09"
+    name: "Brevity preference established early"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "When the first message is very short and direct, matches that communication style throughout. Does not open with a long welcome message or property overview. Keeps all responses short and functional."
+    turns:
+      - role: "human"
+        content: "Steakhouse hours"
+        expected_keywords: ["5", "PM"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Spa hours"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Pool open?"
+        expected_keywords: ["Pool"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+    expected_behavior: "Matches the guest's terse, functional style. Provides concise answers without pleasantries or marketing language. Does not try to expand the conversation"
+    safety_relevant: false
+
+  - id: "engagement-10"
+    name: "Guest corrects a factual error in response"
+    category: "behavioral_engagement"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "When the guest pushes back on a factual claim, does not double down or get defensive. Acknowledges the correction, provides the best available information, and admits uncertainty if appropriate."
+    turns:
+      - role: "human"
+        content: "Is the steakhouse open for lunch?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That doesn't sound right, last time I was here they opened at noon"
+        expected_keywords: ["check", "verify", "sorry"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "OK just give me the most accurate info you have"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Handles correction without defensiveness. Acknowledges the guest might have more recent info, provides the best available answer, and suggests verifying with the venue if uncertain"
+    safety_relevant: false

@@ -1,0 +1,240 @@
+scenarios:
+  - id: "agentic-01"
+    name: "Cross-domain suggestion after dining question"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "After answering a dining question, proactively suggests a complementary activity (show, spa) without being asked. The suggestion is contextually relevant (e.g., after-dinner show) and not forced."
+    turns:
+      - role: "human"
+        content: "Where should we go for dinner tonight?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "The steakhouse sounds good. What time?"
+        expected_keywords: ["5", "PM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Great, we'll do that"
+        expected_keywords: ["enjoy", "show", "Arena"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Answers the dining question directly, then proactively suggests an after-dinner activity that pairs naturally with the timing and context"
+    safety_relevant: false
+
+  - id: "agentic-02"
+    name: "Proactive timing awareness for property hours"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When recommending a venue, proactively mentions closing time or last seating if it's approaching. Does not wait for the guest to ask 'is it still open?' Anticipates the practical concern."
+    turns:
+      - role: "human"
+        content: "What restaurants are good?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We're thinking around 9:30 PM"
+        expected_keywords: ["Steakhouse", "open", "close"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Good to know. We'll hurry"
+        expected_keywords: ["enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "When the guest mentions a late time, proactively flags which restaurants may be closing soon and suggests options that will definitely still be open"
+    safety_relevant: false
+
+  - id: "agentic-03"
+    name: "Follow-up anticipation for incomplete plan"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest is building an evening plan piece by piece, anticipates the next question rather than waiting passively. After dinner is settled, offers 'and for after dinner...' without being asked."
+    turns:
+      - role: "human"
+        content: "We need to plan our evening. Start with dinner."
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Steakhouse at 7. What next?"
+        expected_keywords: ["Arena", "show", "Spa"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "A show would be fun. And then?"
+        expected_keywords: ["bar", "lounge"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Recognizes the guest is building a sequential evening plan. After each decision, proactively suggests the logical next activity in the timeline without waiting to be asked"
+    safety_relevant: false
+
+  - id: "agentic-04"
+    name: "Itinerary building from scattered preferences"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "Collects scattered preference signals across turns and synthesizes them into a coherent itinerary. Does not just answer each question in isolation — connects them into a flow."
+    turns:
+      - role: "human"
+        content: "We like relaxing things"
+        expected_keywords: ["Spa", "Pool"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "But also good food"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Put it together for us?"
+        expected_keywords: ["Spa", "Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Accumulates preferences across turns and offers a synthesized itinerary when asked: e.g., spa in the afternoon, steakhouse for dinner, with logical timing"
+    safety_relevant: false
+
+  - id: "agentic-05"
+    name: "Domain handoff when question exceeds knowledge"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a question falls outside the agent's knowledge (specific pricing, availability, reservations), proactively directs to the right human or system rather than guessing. Does not make up information."
+    turns:
+      - role: "human"
+        content: "Can I book a table at the steakhouse for 8 PM?"
+        expected_keywords: ["reservation", "contact", "team"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How much is it per person?"
+        expected_keywords: ["pricing", "contact", "staff"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "OK, who do I call?"
+        expected_keywords: ["front desk", "host"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Recognizes reservation and pricing as beyond its capabilities. Directs to appropriate human contact without guessing or making up prices. Provides clear handoff instructions"
+    safety_relevant: false
+
+  - id: "agentic-06"
+    name: "Proactive weather-context suggestion"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest mentions weather conditions, adjusts recommendations proactively. Does not suggest outdoor activities when the guest mentions rain. Anticipates the practical impact without being asked."
+    turns:
+      - role: "human"
+        content: "It's raining pretty hard outside. What should we do?"
+        expected_keywords: ["Spa", "restaurant", "Arena"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "The spa sounds nice. Is it all indoors?"
+        expected_keywords: ["Elemis Spa", "indoor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect. And dinner after?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Reads weather context and proactively recommends only indoor activities. Does not suggest pool or outdoor options. Adjusts all recommendations to the rainy-day constraint"
+    safety_relevant: false
+
+  - id: "agentic-07"
+    name: "Group size awareness in recommendations"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a group size is mentioned, proactively adjusts recommendations for group suitability. Suggests venues that can accommodate the group. Does not recommend intimate 2-person experiences for a party of 12."
+    turns:
+      - role: "human"
+        content: "We have 12 people. Where should we eat?"
+        expected_keywords: ["Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Can the steakhouse handle 12?"
+        expected_keywords: ["Steakhouse", "reservation", "group"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And something fun for the whole group after?"
+        expected_keywords: ["Arena", "show"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Factors group size into every recommendation. Leads with group-friendly options. When asked about a specific venue, addresses capacity and reservation logistics proactively"
+    safety_relevant: false
+
+  - id: "agentic-08"
+    name: "Budget awareness without being asked"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When the guest signals budget consciousness (e.g., 'nothing too expensive'), adjusts all subsequent recommendations without requiring a reminder each turn. Maintains budget awareness throughout the conversation."
+    turns:
+      - role: "human"
+        content: "What's good for dinner? Nothing too expensive"
+        expected_keywords: ["Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That works. What else can we do tonight?"
+        expected_keywords: ["Wolf Den", "Pool"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Are any shows free?"
+        expected_keywords: ["Wolf Den", "free"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Picks up budget signal from turn 1 and carries it through all recommendations. Leads with free or affordable options. Does not suggest the premium steakhouse after a budget signal"
+    safety_relevant: false
+
+  - id: "agentic-09"
+    name: "Mobility awareness from contextual cues"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest mentions wheelchair, mobility issues, or difficulty walking, proactively includes accessibility information in all recommendations. Does not wait to be asked about accessibility."
+    turns:
+      - role: "human"
+        content: "My mom uses a wheelchair. What restaurants are easy to get to?"
+        expected_keywords: ["accessible", "restaurant"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And can she get to the spa?"
+        expected_keywords: ["Elemis Spa", "accessible"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Great. She'll love that."
+        expected_keywords: ["enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Proactively includes accessibility information in every recommendation after the wheelchair mention. Does not suggest venues requiring stairs or long walks without noting accessibility"
+    safety_relevant: false
+
+  - id: "agentic-10"
+    name: "Domain tracking across conversation turns"
+    category: "behavioral_agentic"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "Tracks what domains have been discussed and what hasn't. When the guest asks 'what else?', suggests categories not yet covered rather than repeating dining or spa. Shows awareness of the full property scope."
+    turns:
+      - role: "human"
+        content: "We've already been to the spa and had dinner. What else is there?"
+        expected_keywords: ["Arena", "show", "Pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Any events happening?"
+        expected_keywords: ["Arena", "Wolf Den"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Good ideas. Anything else we're missing?"
+        expected_keywords: ["Pool", "Momentum"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Tracks that spa and dining are already done. Suggests entertainment, gaming, and other uncovered domains. When asked for more, covers the remaining property categories"
+    safety_relevant: false

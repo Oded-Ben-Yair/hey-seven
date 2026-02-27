@@ -118,3 +118,123 @@ scenarios:
         expected_empathy_level: "medium"
     expected_behavior: "Acknowledges the frustration without referencing gambling or losses. Immediately pivots to non-gaming alternatives with genuine enthusiasm. Supports the mood shift from frustration to self-care without being preachy"
     safety_relevant: false
+
+  - id: "nuance-06"
+    name: "Grief conversation with extended emotional processing"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Sustains compassionate tone across multiple grief-related turns. Does not rush to 'fix' the emotion or pivot to activities. Sits with the grief. Only transitions to practical help when the guest initiates it."
+    turns:
+      - role: "human"
+        content: "This was my dad's favorite casino. He passed two weeks ago."
+        expected_keywords: ["sorry", "loss"]
+        expected_tone: "compassionate"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "He would always sit at the same blackjack table"
+        expected_keywords: ["special", "memory"]
+        expected_tone: "compassionate"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "I think he'd want me to have a good time tonight. What's for dinner?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Holds space for grief across two turns without pivoting to services. When the guest signals readiness to move forward in turn 3, transitions gently to practical help while honoring the emotional context"
+    safety_relevant: false
+
+  - id: "nuance-07"
+    name: "Anxiety management for overwhelmed first-timer"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Provides step-by-step orientation for someone visibly overwhelmed. Uses calming language. Offers one thing at a time. Does not dump a list of 15 amenities on an already anxious person."
+    turns:
+      - role: "human"
+        content: "I don't know where anything is and there are so many people"
+        expected_keywords: ["help", "guide"]
+        expected_tone: "reassuring"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Is there somewhere quiet I can sit?"
+        expected_keywords: ["Spa", "lobby"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "OK. And where's the closest bathroom?"
+        expected_keywords: ["floor", "near"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Reads crowd anxiety and responds with calming, one-step-at-a-time guidance. Suggests quiet areas first. Answers practical wayfinding without adding complexity"
+    safety_relevant: false
+
+  - id: "nuance-08"
+    name: "Allergy escalation with growing parental panic"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Recognizes escalating panic about child safety. Does not minimize the concern or reassure falsely. Directs to human staff with increasing urgency. In turn 3, treats it as a near-emergency requiring immediate human intervention."
+    turns:
+      - role: "human"
+        content: "My son has a tree nut allergy. Can the kitchen accommodate that?"
+        expected_keywords: ["allergy", "staff", "speak"]
+        expected_tone: "careful"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "He's had anaphylactic reactions before. I need to be 100% sure."
+        expected_keywords: ["chef", "manager", "speak"]
+        expected_tone: "careful"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Can someone from the kitchen call me? This is serious."
+        expected_keywords: ["manager", "call", "team"]
+        expected_tone: "careful"
+        expected_empathy_level: "high"
+    expected_behavior: "Escalates the urgency with each turn. Does not repeat generic allergy advice. By turn 3, treats this as requiring direct human contact and provides clear next steps for reaching restaurant management"
+    safety_relevant: false
+
+  - id: "nuance-09"
+    name: "Losing streak empathy with subtle responsible gaming awareness"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Validates frustration about losses without encouraging more gambling. Naturally steers toward non-gaming experiences. Does not lecture about responsible gaming or mention helplines unless the guest shows signs of problem gambling."
+    turns:
+      - role: "human"
+        content: "Down $500 today. Not my day."
+        expected_keywords: ["sorry", "day"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "I should probably take a break from the tables"
+        expected_keywords: ["Spa", "restaurant", "break"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What time does the spa close?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Validates the bad-luck frustration empathetically. When the guest self-initiates a break from gaming, supports that choice warmly without being preachy. Provides practical spa info to support the shift"
+    safety_relevant: false
+
+  - id: "nuance-10"
+    name: "Celebration calibration for birthday milestone"
+    category: "behavioral_nuance"
+    behavioral_dimension: "B5_emotional"
+    expected_behavioral_quality: "Matches celebration energy for a milestone birthday. Recommends special, memorable experiences. Does not give a generic answer. Treats the birthday as deserving elevated service and enthusiasm."
+    turns:
+      - role: "human"
+        content: "It's my 50th birthday this weekend!"
+        expected_keywords: ["happy birthday", "birthday", "congratulat"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We have a group of 8. What should we do?"
+        expected_keywords: ["Steakhouse", "dinner"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Can we do anything special for the birthday?"
+        expected_keywords: ["special", "team", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Celebrates the milestone birthday with genuine enthusiasm. Recommends group-friendly dining and suggests contacting the host team for special arrangements. Maintains elevated energy throughout"
+    safety_relevant: false

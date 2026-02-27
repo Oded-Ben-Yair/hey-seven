@@ -118,3 +118,123 @@ scenarios:
         expected_empathy_level: "medium"
     expected_behavior: "Celebrates the anniversary tradition and returning loyalty. Recommends romantic or upscale experiences for the occasion. When asked for something new, suggests options they may not have tried as returning guests"
     safety_relevant: false
+
+  - id: "implicit-06"
+    name: "Loyalty tier drop implies frustration and entitlement"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Reads 'used to be Gold' as frustration about tier loss and implicit expectation of elevated treatment despite current status. Acknowledges the loyalty history, does not reference the downgrade negatively, and offers help with genuine warmth."
+    turns:
+      - role: "human"
+        content: "I used to be Gold tier. Coming back after a while."
+        expected_keywords: ["welcome", "back"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Things look different. Where's the good steakhouse?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Do returning guests get anything special?"
+        expected_keywords: ["Momentum", "reward"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+    expected_behavior: "Treats returning former-Gold guest as VIP. Acknowledges their history without dwelling on tier change. Focuses on making them feel valued and informed about current options"
+    safety_relevant: false
+
+  - id: "implicit-07"
+    name: "Urgency without explicit words"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Detects urgency from context (checking out soon, need quick answer) without the guest explicitly saying 'urgent' or 'hurry'. Provides fast, actionable answers without preamble."
+    turns:
+      - role: "human"
+        content: "Checking out in an hour. Anywhere I can grab breakfast?"
+        expected_keywords: ["Buffet"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Is it close to the lobby?"
+        expected_keywords: ["Main Floor", "walk"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Thanks. Last thing — where do I return the room key?"
+        expected_keywords: ["front desk"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Reads checkout time constraint as urgency. Provides short, direct answers focused on proximity and speed. Does not add marketing fluff or suggest long activities"
+    safety_relevant: false
+
+  - id: "implicit-08"
+    name: "Fatigue indicators implying need for low-effort options"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Detects fatigue signals (exhausted, long day, need to unwind) and shifts all recommendations toward restful, low-effort options. Does not suggest shows, gaming, or anything requiring energy."
+    turns:
+      - role: "human"
+        content: "We've been on our feet all day at the conference. Exhausted."
+        expected_keywords: ["Spa", "relax"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Something close, we don't want to walk far"
+        expected_keywords: ["Buffet", "nearby"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Perfect. Anything else low-key tonight?"
+        expected_keywords: ["Pool", "room"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Reads exhaustion and conference context as needing comfort-first recommendations. Prioritizes proximity, ease, and relaxation. Does not suggest gaming floor or shows"
+    safety_relevant: false
+
+  - id: "implicit-09"
+    name: "VIP entitlement through indirect language"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Recognizes phrases like 'I spend a lot here' as implicit VIP status claims that require elevated service tone. Does not ask for proof or membership number. Treats the claim as valid and responds with VIP-appropriate warmth."
+    turns:
+      - role: "human"
+        content: "I spend a lot of money here every month"
+        expected_keywords: ["value", "appreciate"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What's the best you can do for dinner tonight?"
+        expected_keywords: ["Steakhouse", "recommend"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Can you check on any comp availability?"
+        expected_keywords: ["comp", "host", "team"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Treats spending claim as VIP signal. Provides elevated recommendations and references comp/host team for personalized offers without questioning the guest's status"
+    safety_relevant: false
+
+  - id: "implicit-10"
+    name: "Indirect complaint via comparison to competitor"
+    category: "behavioral_implicit"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Reads competitor comparison as implicit dissatisfaction with current experience. Does not criticize the competitor or get defensive. Focuses on showcasing what makes this property special without directly competing."
+    turns:
+      - role: "human"
+        content: "At Foxwoods they have way more restaurants"
+        expected_keywords: ["dining", "restaurant", "option"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What makes your restaurants different?"
+        expected_keywords: ["Steakhouse", "quality"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "OK I'll give the steakhouse a shot"
+        expected_keywords: ["enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Reads competitor comparison as implicit complaint. Does not disparage Foxwoods. Highlights unique strengths of the property's dining rather than competing on quantity"
+    safety_relevant: false
