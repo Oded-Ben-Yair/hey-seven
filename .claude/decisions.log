@@ -60,3 +60,12 @@
 [2026-02-24] DECISION: R46 — Redis socket_connect_timeout=2 and socket_timeout=2 for startup probe safety
 [2026-02-24] DECISION: R47 — 4-model hostile review launched: Gemini 3.1 Pro (deep think), Grok 4, GPT-5.2 Codex, DeepSeek Speciale — full 10-dimension assessment
 [2026-02-27] DECISION: Building 3-tier reproducible evaluation system — deterministic gates + frozen eval prompt + execution-based behavioral scenarios. Replaces ad-hoc LLM review with convergent, measurable methodology. Target: SD < 2, ICC > 0.7.
+[2026-02-28] DECISION: R72 sarcasm approach — context-contrast (VADER + conversation history), NOT LLM classifier. Research A6 confirmed production systems design sarcasm-resilient responses, don't classify. Zero cost, sub-1ms.
+[2026-02-28] DECISION: R72 crisis escalation — graduated 4-level (none/concern/urgent/immediate) instead of binary detect_self_harm. Concern routes to gambling_advice with helplines; urgent/immediate to full crisis response with 988 Lifeline.
+[2026-02-28] DECISION: R72 slang normalization — search-only, NEVER modify original message. normalize_for_search() called before RAG retrieval. 100+ terms covering gambling slang, drunk-typing, SMS abbreviations.
+[2026-02-28] DECISION: R72 domain tracking — _append_unique reducer on list[str], not set (JSON serializable for Firestore). Cross-domain suggestion matrix injected as system prompt section.
+[2026-02-28] DECISION: R72 competitive positioning — PolyAI handles transactional voice only (60% market share). Hey Seven's SMS VIP relationship with emotional intelligence is genuinely uncontested market category.
+[2026-02-28] DECISION: R72 Session 2 — Live evaluation revealed mock-vs-real gap: 7.3 (mock) vs 4.1 (live). Real baseline must come from live agent + real LLM, not mock-based tests.
+[2026-02-28] DECISION: R72 ICC measurement — Overall ICC(2,1) = 0.797 (Excellent) across Gemini Pro + GPT-5.2 + Grok 4. B1 (sarcasm) needs rubric revision (ICC 0.348).
+[2026-02-28] DECISION: R72 dominant failure — generic "I'm your concierge" fallback fires on emotional/crisis/terse messages. Router treats non-property-Q&A as off_topic. Fix requires conversation-history-aware routing.
+[2026-02-28] DECISION: R72 safety finding — crisis first-turn detection correct (988 Lifeline), but follow-up turns degrade to generic concierge. Need crisis_active sticky state field.

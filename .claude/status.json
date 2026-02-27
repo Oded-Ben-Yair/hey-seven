@@ -1,67 +1,78 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R71 behavioral sprint COMPLETE. Behavioral score 3.8→7.3 (+92%). Implicit signals, conversation dynamics, adaptive prompts. 2681 tests, 0 failures, 90.11% coverage. 3-tier eval: Tier1 54/54, Tier2 6.6 (Gemini+GPT), Tier3 8.2 (GPT-5.3 judge).",
-    "lastModified": "2026-02-27T18:00:00Z",
+    "summary": "R72 Session 2 COMPLETE. Live agent evaluation: 74 scenarios, 225 turns, 0 errors through real Gemini Flash. 3-model judge panel (Gemini Pro + GPT-5.2 + Grok 4): behavioral consensus 4.1/10 (live baseline — down from 7.3 mock). ICC(2,1) overall 0.797 (Excellent). ADR-024 (sarcasm), ADR-025 (crisis) written. 25 ADRs total.",
+    "lastModified": "2026-02-28T21:40:00Z",
     "branch": "main",
-    "commitHash": "6cde05f",
+    "commitHash": "pending",
     "tag": "v1.3.0",
-    "phase": "behavioral-sprint"
+    "phase": "r72-live-evaluation-complete"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "R72: B4 agentic stateful domain tracking + deterministic suggestion rules (6.4→8+). B1 semantic sarcasm classifier (6.8→8+)." },
-    { "priority": 1, "description": "execute_specialist SRP refactor (293 LOC → 3 helpers, deferred since R34, D1=7.8)" },
-    { "priority": 2, "description": "Auth-enabled test suite (D5=7.5, tests with auth+classifier enabled)" },
-    { "priority": 3, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" }
+    { "priority": 0, "description": "R73: Fix generic fallback trigger — router must recognize emotional/crisis continuations, not just per-message classification" },
+    { "priority": 1, "description": "R73: Tone calibration — reduce persona envelope enthusiasm, match guest energy level" },
+    { "priority": 2, "description": "R73: Multi-turn crisis persistence — crisis_active sticky state field" },
+    { "priority": 3, "description": "R73: Verify sarcasm detection wiring — detect_sarcasm_context() effect on specialist prompts" },
+    { "priority": 4, "description": "execute_specialist full SRP completion (_execute_llm_call extraction)" },
+    { "priority": 5, "description": "Auth-enabled test suite" },
+    { "priority": 6, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" }
   ],
   "reviewHistory": {
     "structuralSprint": {
-      "rounds": "R52-R70 (19 rounds, 3 GitHub-native consensus, 1 hybrid)",
-      "dateRange": "2026-02-25 to 2026-02-26",
+      "rounds": "R52-R72 (21 rounds)",
+      "dateRange": "2026-02-25 to 2026-02-28",
       "trajectory": {
         "R52": 67.7, "R53": 84.3, "R54": 85.7, "R55": 88.7,
-        "R56": 90.1, "R57": 92.4, "R58": 91.0, "R59": 93.2,
-        "R60": 93.9, "R61": 94.4, "R62": 91.5, "R63": 74.1,
-        "R64": 93.5, "R65": 97.0, "R66_github": 84.0, "R67_github": 91.6,
-        "R68_consensus": 92.9, "R69_raw": 87.0, "R69_postfix": 93.0,
-        "R70_infra": 92.2
+        "R56": 90.1, "R57": 92.4, "R68_consensus": 92.9,
+        "R70_infra": 92.2, "R71_behavioral_mock": 7.3,
+        "R72_behavioral_live": 4.1
       },
-      "behavioralBaseline": {
-        "R70_B1_sarcasm": 4.0,
-        "R70_B2_implicit": 3.0,
-        "R70_B3_engagement": 4.0,
-        "R70_B4_agentic": 5.0,
-        "R70_B5_emotional": 3.0,
-        "R70_behavioral_avg": 3.8
+      "behavioralLiveScores": {
+        "R72_B1_sarcasm": 5.6,
+        "R72_B2_implicit": 4.5,
+        "R72_B3_engagement": 3.9,
+        "R72_B4_agentic": 3.9,
+        "R72_B5_emotional": 4.1,
+        "R72_behavioral_avg": 4.1,
+        "R72_overall_icc": 0.797
       },
-      "totalCriticals": 0,
-      "r70Fixes": [
-        "5 new sarcasm patterns (B1): I suppose, could be worse, standalone ironic 'Very helpful', whatever, if you say so",
-        "EMOTIONAL_CONTEXT_GUIDES (B5): grief, anxiety, celebration, allergy_concern, gambling_frustration",
-        "System prompt emotional intelligence section (B5): grief, anxiety, allergy, gambling loss, sarcasm",
-        "Emotional context detection wired to execute_specialist (B5): keyword-based triggers",
-        "Pattern count parity: 205→204 fixed in 5 docs (runbook, ADR-018, fuzz test, README, ARCHITECTURE)",
-        "20 adversarial behavioral transcripts (4 YAML files, B1-B5)",
-        "Behavioral review rubric (docs/review-prompt-r70-behavioral.md)",
-        "11 new sentiment tests for R70 sarcasm patterns"
-      ]
+      "iccPerDimension": {
+        "B1_sarcasm": 0.348,
+        "B2_implicit": 0.585,
+        "B3_engagement": 0.852,
+        "B4_agentic": 0.740,
+        "B5_emotional": 0.862,
+        "overall": 0.797
+      },
+      "dominantFailures": [
+        "Generic 'I'm your concierge' fallback on 15/20 scenarios",
+        "Overly enthusiastic tone (forced 'Oh!' and exclamations)",
+        "No crisis context persistence across conversation turns",
+        "Safety: first-turn crisis correct, follow-up turns degrade to generic"
+      ],
+      "totalCriticals": 0
     }
   },
   "codebaseMetrics": {
-    "loc": "25K+",
-    "modules": 59,
-    "testFiles": 72,
-    "tests": 2681,
+    "loc": "27K+",
+    "modules": 61,
+    "testFiles": 76,
+    "tests": 2822,
     "testFailures": 0,
     "skipped": 1,
-    "coverage": "90.11%",
-    "adrs": 23,
+    "coverage": "90.01%",
+    "adrs": 25,
     "confusables": 145,
-    "guardrailPatterns": 204
+    "guardrailPatterns": 204,
+    "behavioralScenarios": 74,
+    "researchDocs": 8,
+    "evaluatedScenarios": 74,
+    "evaluatedTurns": 225,
+    "judgeModels": 3
   },
   "sessionNotes": {
-    "lastSessionDate": "2026-02-26",
-    "lastSessionId": "hey-seven-session-20260226-r70"
+    "lastSessionDate": "2026-02-28",
+    "lastSessionId": "hey-seven-session-20260228-r72s2"
   }
 }

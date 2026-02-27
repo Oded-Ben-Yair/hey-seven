@@ -844,6 +844,13 @@ The following features were consciously deferred from the initial architecture s
 | `persona.py` | SMS/web persona envelope — truncation layer for 160-char SMS segments | ~49 |
 | `whisper_planner.py` | Whisper Track Planner — silent background LLM for agent guidance (fail-silent contract) | ~198 |
 | `memory.py` | Checkpointer factory — `MemorySaver` (dev) / `FirestoreSaver` (prod via `VECTOR_DB` config) | ~49 |
+| `sentiment.py` | VADER sentiment detection + context-contrast sarcasm detection (ADR-024). Zero LLM cost, sub-1ms. Overrides to "frustrated" when positive words + negative history. | ~85 |
+| `slang.py` | Gambling slang normalization for RAG search. 50+ gambling terms, 30+ drunk-typing corrections, 20+ SMS abbreviations. Search-only — never modifies original message. | ~120 |
+| `crisis.py` | Graduated 4-level crisis escalation: none/concern/urgent/immediate (ADR-025). Runs before binary self_harm in compliance_gate. 35 patterns across 3 severity levels. | ~95 |
+| `extraction.py` | Info extraction helpers + `get_guest_profile_summary()` for human host handoff. Formats accumulated `extracted_fields` as structured summary. | ~60 |
+| `streaming_pii.py` | Streaming PII redactor — buffers tokens and applies regex PII redaction before emitting to client. | ~75 |
+| `dispatch.py` | Extracted dispatch helpers from graph.py: `_route_to_specialist()`, `_inject_guest_context()`, `_execute_specialist()`. SRP refactor (ADR-0001). | ~230 |
+| `regex_engine.py` | RE2/stdlib fallback for guardrail regex patterns. Uses google-re2 in production, falls back to stdlib re in dev. | ~30 |
 
 #### Additional v2 Modules
 

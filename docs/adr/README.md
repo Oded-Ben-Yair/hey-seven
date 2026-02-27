@@ -40,3 +40,6 @@ Architectural decisions documented inline in source code, extracted here for dis
 | 020 | [Concurrent Retrieval via ThreadPoolExecutor](020-concurrent-retrieval.md) | Accepted | `agent/tools.py` | 2026-02-25 |
 | 021 | [Supply Chain Security Strategy](021-supply-chain-security.md) | Accepted | `Dockerfile`, `scripts/security-audit.sh` | 2026-02-26 |
 | 022 | [Regulatory Risk Rationale for Guardrail Categories](022-regulatory-risk-rationale.md) | Accepted | `guardrails.py`, `compliance_gate.py` | 2026-02-26 |
+| 023 | [3-Tier Reproducible Evaluation Methodology](023-evaluation-methodology.md) | Accepted | `docs/eval-prompt-v2.0.md`, `tests/test_doc_accuracy.py` | 2026-02-27 |
+| 024 | [Context-Contrast Sarcasm Detection](024-semantic-sarcasm-detection.md) | Accepted | `agent/sentiment.py` | 2026-02-28 |
+| 025 | [Graduated 4-Level Crisis Escalation](025-graduated-crisis-escalation.md) | Accepted | `agent/crisis.py`, `agent/compliance_gate.py` | 2026-02-28 |

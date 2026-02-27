@@ -13,16 +13,18 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 
-## Current State (Updated 2026-02-26)
+## Current State (Updated 2026-02-28)
 
-- **Codebase**: 25K+ LOC, 59 source modules across 10 packages
-- **Tests**: 2537 tests, 0 failures, 0 xfails, 90.2% coverage
+- **Codebase**: 27K+ LOC, 61 source modules across 10 packages
+- **Tests**: 2822 tests, 0 failures, 90.01% coverage
 - **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
-- **Review Score**: R68 4-model consensus 92.9/100
-- **Review Trajectory**: R52(67.7) → R65(97.0 curated) → R67(91.6 GitHub-native) → R68(92.9), 0 CRITICALs
+- **Review Score**: R68 infra consensus 92.9/100, R71 behavioral 7.3/10
+- **Review Trajectory**: R52(67.7) → R68(92.9) infra, R70(3.8) → R71(7.3) behavioral
 - **Version**: v1.3.0
-- **Latest commit**: R68 perfection sprint — all 10 dimensions improved
-- **ADRs**: 22 architectural decision records with status lifecycle
+- **Latest commit**: R72 deep domain research + behavioral excellence
+- **ADRs**: 25 architectural decision records with status lifecycle
+- **Research**: 8 deep domain research docs (R72)
+- **Behavioral scenarios**: 74 across 9 YAML files
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
@@ -68,6 +70,13 @@ src/                         - Production source code
     memory.py                - Checkpointer factory (MemorySaver dev, Firestore prod)
     whisper_planner.py       - Multi-turn conversation planner
     persona.py               - Agent persona configuration
+    sentiment.py             - VADER + context-contrast sarcasm detection (ADR-024)
+    slang.py                 - Gambling slang normalization for RAG search
+    crisis.py                - Graduated 4-level crisis escalation (ADR-025)
+    extraction.py            - Info extraction + guest profile summary
+    dispatch.py              - Specialist dispatch helpers (SRP extraction)
+    streaming_pii.py         - Streaming PII redactor for SSE tokens
+    regex_engine.py          - RE2/stdlib regex engine fallback
   api/                       - FastAPI backend
     app.py                   - App with lifespan, SSE streaming
     middleware.py             - Pure ASGI middleware (logging, security, rate limit)
@@ -98,7 +107,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 71 test files, 2537 tests, 90.2% coverage
+tests/                       - 76 test files, 2822 tests, 90.01% coverage
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests
@@ -111,7 +120,13 @@ tests/                       - 71 test files, 2537 tests, 90.2% coverage
   test_phase4_integration.py - Phase 4 integration tests
   test_r46_scalability.py      - D8 scalability tests (Redis CB, rate limiter, backpressure)
   test_deployment.py           - D6 DevOps tests (cosign, canary, secret rotation)
+  test_slang_normalization.py  - R72: Gambling slang normalization (34 tests)
+  test_crisis_detection.py     - R72: Crisis escalation levels (39 tests)
+  test_semantic_sarcasm.py     - R72: Context-contrast sarcasm (24 tests)
+  test_info_extraction_enhanced.py - R72: Profile summary + extraction (22 tests)
   ...                        - (20+ more test files)
+  scenarios/                   - 74 behavioral scenarios across 9 YAML files
+  evaluation/                  - Live agent evaluation scripts + judge panel
 knowledge-base/              - Structured data for RAG ingestion
   casino-operations/         - Comp system, host workflow
   regulations/               - State-by-state requirements
