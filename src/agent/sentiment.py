@@ -11,7 +11,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_sentiment"]
+__all__ = ["detect_sentiment", "detect_sarcasm_context"]
 
 # Casino-domain positive phrases that VADER may misclassify
 _CASINO_POSITIVE_OVERRIDES: set[str] = {
@@ -128,3 +128,104 @@ def detect_sentiment(text: str) -> str:
     except Exception:
         logger.warning("Sentiment detection failed, returning neutral", exc_info=True)
         return "neutral"
+
+
+# ---------------------------------------------------------------------------
+# R72 B1: Context-aware sarcasm detection (semantic incongruity)
+# ---------------------------------------------------------------------------
+# When VADER returns "positive" or "neutral" for the current message,
+# but the conversation history shows negative signals (prior frustrated
+# messages, complaints, corrections), the current message may be sarcastic.
+#
+# This is a zero-LLM-cost, sub-1ms approach that uses VADER compound
+# scores to detect incongruity between the current message and recent
+# conversation context. No additional API calls needed.
+#
+# Research basis (R72 A6): Embedding-based incongruity detection achieves
+# 70-80% sarcasm F1, but adds 10-30ms latency per call. Context-contrast
+# using existing VADER scores is free and catches the most common pattern:
+# positive-sounding text in a negative conversation context.
+
+# Positive-leaning words that appear in sarcastic messages
+_SARCASM_POSITIVE_SIGNALS: set[str] = {
+    "great", "wonderful", "fantastic", "perfect", "lovely", "amazing",
+    "awesome", "brilliant", "excellent", "beautiful", "helpful", "useful",
+    "impressive", "nice", "good", "love", "enjoy", "fun", "terrific",
+    "outstanding", "marvelous", "superb", "delightful",
+}
+
+
+def detect_sarcasm_context(
+    current_text: str,
+    current_sentiment: str,
+    recent_sentiments: list[str],
+) -> bool:
+    """Detect likely sarcasm via context contrast (no LLM call).
+
+    When the current message reads as positive/neutral but the recent
+    conversation history has been negative/frustrated, the positive tone
+    may be sarcastic. This catches patterns like:
+
+    - Guest: [frustrated] "I've been waiting forever"
+    - Guest: [frustrated] "The room was terrible"
+    - Guest: "Oh yeah this is really great service" → sarcasm
+
+    Args:
+        current_text: The current guest message.
+        current_sentiment: VADER sentiment for current message
+            ("positive", "negative", "neutral", "frustrated").
+        recent_sentiments: Sentiments of the last 2-3 human messages
+            (most recent first).
+
+    Returns:
+        True if the message is likely sarcastic, False otherwise.
+    """
+    if not current_text or not recent_sentiments:
+        return False
+
+    try:
+        # Only check when current message reads positive or neutral
+        if current_sentiment not in ("positive", "neutral"):
+            return False
+
+        # Need at least 1 recent negative/frustrated message for contrast
+        negative_count = sum(
+            1 for s in recent_sentiments[:3]
+            if s in ("frustrated", "negative")
+        )
+        if negative_count == 0:
+            return False
+
+        # Check if current message contains positive-leaning words
+        # (sarcasm uses positive words in negative context)
+        text_lower = current_text.lower()
+        words = set(text_lower.split())
+        has_positive_words = bool(words & _SARCASM_POSITIVE_SIGNALS)
+
+        if not has_positive_words:
+            return False
+
+        # Context contrast: positive words + recent negative history = likely sarcasm
+        # Require at least 2 negative signals for stronger confidence
+        # OR 1 negative + very short message (terse positive = more likely sarcastic)
+        word_count = len(current_text.split())
+        if negative_count >= 2:
+            logger.debug(
+                "Sarcasm detected via context contrast: positive words + %d recent negative",
+                negative_count,
+            )
+            return True
+        if negative_count >= 1 and word_count <= 8:
+            # Short message with positive words after negative history
+            # e.g., "Great service" after "I've been waiting forever"
+            logger.debug(
+                "Sarcasm detected: short positive (%d words) + recent negative",
+                word_count,
+            )
+            return True
+
+        return False
+
+    except Exception:
+        logger.debug("Sarcasm context detection failed", exc_info=True)
+        return False

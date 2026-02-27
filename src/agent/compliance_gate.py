@@ -30,6 +30,7 @@ from langchain_core.messages import HumanMessage
 
 from src.config import get_settings
 
+from .crisis import detect_crisis_level
 from .guardrails import (
     audit_input,
     classify_injection_semantic,
@@ -213,10 +214,61 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
         )
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
 
-    # 7.5 Self-harm / crisis detection (R49 fix — Gemini CRITICAL-D7-001).
-    # Route to dedicated crisis response with 988 Lifeline information.
-    # Runs after all other guardrails to avoid false positives from
-    # injection/BSA contexts ("I want to kill this money laundering scheme").
+    # 7.5 Crisis detection — graduated escalation protocol (R72 Phase C5).
+    # Runs BEFORE the binary self_harm detector to provide nuanced response
+    # levels: concern → gentle resource mention, urgent/immediate → full crisis.
+    # The graduated system catches problem gambling indicators (chasing losses,
+    # credit requests, financial desperation) that the binary detector misses.
+    crisis_level = detect_crisis_level(user_message)
+    if crisis_level == "immediate":
+        logger.warning("CRISIS IMMEDIATE detected — routing to crisis response")
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "crisis_immediate",
+                "query_type": "self_harm",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "CRITICAL",
+            })
+        )
+        return {"query_type": "self_harm", "router_confidence": 1.0}
+    if crisis_level == "urgent":
+        logger.warning("CRISIS URGENT detected — routing to crisis response")
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "crisis_urgent",
+                "query_type": "self_harm",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "WARNING",
+            })
+        )
+        return {"query_type": "self_harm", "router_confidence": 1.0}
+    if crisis_level == "concern":
+        # Concern level: route to gambling_advice path which includes
+        # responsible gaming helplines. Gentler than full crisis response.
+        logger.info("Crisis concern detected — routing to responsible gaming")
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "crisis_concern",
+                "query_type": "gambling_advice",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
+        rg_count = state.get("responsible_gaming_count", 0) + 1
+        return {
+            "query_type": "gambling_advice",
+            "router_confidence": 1.0,
+            "responsible_gaming_count": rg_count,
+        }
+
+    # 7.6 Self-harm / crisis detection — legacy binary detector (R49).
+    # Kept as fallback: catches patterns that the graduated system may miss.
     if detect_self_harm(user_message):
         logger.warning("Self-harm/crisis language detected — routing to crisis response")
         logger.info(

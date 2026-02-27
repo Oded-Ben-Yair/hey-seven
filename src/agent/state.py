@@ -78,6 +78,27 @@ def _merge_dicts(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+def _append_unique(a: list[str] | None, b: list[str] | None) -> list[str]:
+    """Reducer that accumulates unique strings across turns.
+
+    Used for ``domains_discussed`` to track which specialist domains
+    (dining, entertainment, hotel, etc.) have been covered in this session.
+    Deduplicates: if "dining" is already in the list, adding it again is a no-op.
+
+    R72 B4: Enables cross-domain suggestion — when guest asks "what else?",
+    the agent suggests categories NOT yet discussed.
+    """
+    existing = list(a) if a else []
+    if not b:
+        return existing
+    seen = set(existing)
+    for item in b:
+        if item and item not in seen:
+            seen.add(item)
+            existing.append(item)
+    return existing
+
+
 def _keep_max(a: int | None, b: int | None) -> int:
     """Reducer that preserves the maximum value across state updates.
 
@@ -212,6 +233,12 @@ class PropertyQAState(TypedDict):
     # _initial_state() passes False; ``False or existing_True`` = True (preserved).
     # R23 fix C-003: enforces max-1-suggestion-per-conversation.
     suggestion_offered: Annotated[bool, _keep_truthy]
+    # v5 fields (R72: Behavioral Excellence)
+    # _append_unique reducer: accumulates specialist domain names across turns.
+    # When _initial_state() passes [], existing domains persist across turns.
+    # Used for cross-domain suggestion: when guest asks "what else?", suggest
+    # categories NOT yet discussed.
+    domains_discussed: Annotated[list[str], _append_unique]
 
 
 class RouterOutput(BaseModel):

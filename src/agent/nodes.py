@@ -33,6 +33,7 @@ from .prompts import (
 from .constants import NODE_GREETING, NODE_OFF_TOPIC, NODE_RETRIEVE
 from .extraction import extract_fields
 from .sentiment import detect_sentiment
+from .slang import normalize_for_search
 from .state import PropertyQAState, RouterOutput, ValidationResult
 from .tools import search_hours, search_knowledge_base
 from src.data.validators import validate_retrieved_chunk
@@ -307,6 +308,12 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
 
     if not query:
         return {"retrieved_context": []}
+
+    # R72 C3: Normalize gambling slang and drunk-typing for better RAG retrieval.
+    # Normalization is for SEARCH ONLY — the original message is preserved in state.
+    # Example: "cn u get me a rm upgrde" → "can you get me a room upgrade"
+    # Example: "I'm on tilt, need somewhere to eat" → "I'm frustrated after losing, need somewhere to eat"
+    query = normalize_for_search(query)
 
     # R60 fix D2: Removed redundant outer asyncio.wait_for wrapper.
     # search_knowledge_base and search_hours have internal per-strategy

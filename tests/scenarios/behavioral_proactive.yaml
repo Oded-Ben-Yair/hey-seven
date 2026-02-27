@@ -1,0 +1,154 @@
+scenarios:
+  - id: "proactive-01"
+    name: "Introvert giving one-word answers is satisfied, not disengaged"
+    category: "behavioral_proactive"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Recognizes that short answers can signal satisfaction, not just disengagement. When the guest keeps asking new questions (progressing the conversation), treat the brevity as a communication style rather than dissatisfaction. Do NOT try to 'engage' them more."
+    turns:
+      - role: "human"
+        content: "Steakhouse hours"
+        expected_keywords: ["5", "PM"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Pool?"
+        expected_keywords: ["Pool"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Good. Spa hours?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect thanks"
+        expected_keywords: ["enjoy", "help"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Matches the terse style throughout. Does not try to expand answers or engage the guest in longer conversation. The 'Good' and 'Perfect thanks' confirm satisfaction — respect the style"
+    safety_relevant: false
+
+  - id: "proactive-02"
+    name: "Evening plan synthesis across pieces"
+    category: "behavioral_proactive"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest builds an evening plan one piece at a time (dinner, show, nightcap), proactively synthesizes the full plan when enough pieces are gathered. Does not just answer each question in isolation — connects them into a coherent timeline."
+    turns:
+      - role: "human"
+        content: "What's a good dinner option around 7?"
+        expected_keywords: ["Steakhouse", "7"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And what shows are on after dinner?"
+        expected_keywords: ["Arena", "Wolf Den"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And then maybe a bar or lounge?"
+        expected_keywords: ["bar", "lounge"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Put the whole evening together for me"
+        expected_keywords: ["Steakhouse", "show", "bar"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Recognizes the sequential plan building. When asked to synthesize, provides a complete timeline: dinner at 7 → show at 9 → drinks after. Each piece flows logically into the next"
+    safety_relevant: false
+
+  - id: "proactive-03"
+    name: "Guest mentions checkout — agent proactively suggests late checkout"
+    category: "behavioral_proactive"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest mentions tomorrow's checkout, proactively asks about late checkout or suggests activities that fit the departure timeline. Does not wait for the guest to bring up time constraints."
+    turns:
+      - role: "human"
+        content: "We check out tomorrow at noon. What can we do in the morning?"
+        expected_keywords: ["Buffet", "breakfast", "Pool"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Is there a spa appointment available in the morning?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Good idea. And breakfast before that?"
+        expected_keywords: ["Buffet", "morning"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Reads the checkout constraint and provides morning-only recommendations. Suggests activities that fit within the time window. Proactively mentions late checkout availability through the front desk"
+    safety_relevant: false
+
+  - id: "proactive-04"
+    name: "Guest mentions 'we' — agent probes party size for reservation"
+    category: "behavioral_proactive"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest uses 'we', proactively gathers party size information as part of the recommendation. This is breadcrumbing — getting useful info while being helpful, not interrogating."
+    turns:
+      - role: "human"
+        content: "We want to go to the steakhouse tonight"
+        expected_keywords: ["Steakhouse", "party", "group"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "There's 6 of us"
+        expected_keywords: ["6", "reservation"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Around 8 PM"
+        expected_keywords: ["Steakhouse", "8", "PM"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "When the guest says 'we', naturally asks about party size as part of providing a useful recommendation (not as a data collection question). Uses the party size for practical advice about reservations"
+    safety_relevant: false
+
+  - id: "proactive-05"
+    name: "Guest just had a big win — celebrate and suggest"
+    category: "behavioral_proactive"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "Matches the winning energy authentically. Celebrates with the guest and proactively suggests something fun or celebratory to do — a nice dinner, a show, champagne. Does not dampnen the mood with generic responses."
+    turns:
+      - role: "human"
+        content: "I just hit a huge jackpot! $5000! What should we do to celebrate?"
+        expected_keywords: ["congratulat", "Steakhouse", "celebrate"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "The steakhouse sounds perfect. Get the best table!"
+        expected_keywords: ["Steakhouse", "reservation", "contact"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And after dinner, something fun"
+        expected_keywords: ["Arena", "show", "bar"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Matches the excitement authentically. Suggests a celebratory dinner and evening. Maintains high energy throughout without being performative. Treats the win as a special occasion"
+    safety_relevant: false
+
+  - id: "proactive-06"
+    name: "Return guest agent should recognize from conversation history"
+    category: "behavioral_proactive"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "When a guest references a prior conversation or visit, acknowledges the returning status even without explicit CRM data. Uses 'welcome back' naturally. Treats returning guests with familiarity rather than first-visit formality."
+    turns:
+      - role: "human"
+        content: "Hey, I was here last month. Remember I asked about the steakhouse?"
+        expected_keywords: ["welcome", "back", "Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Yeah, we loved it. What else is new?"
+        expected_keywords: ["Arena", "Spa", "new"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We'll try the spa this time"
+        expected_keywords: ["Elemis Spa", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Acknowledges returning guest status warmly. When they reference past experience, builds on it rather than starting fresh. Suggests new options they haven't tried"
+    safety_relevant: false

@@ -26,7 +26,7 @@ from src.agent.prompts import (
     get_persona_style,
     get_responsible_gaming_helplines,
 )
-from src.agent.sentiment import detect_sentiment
+from src.agent.sentiment import detect_sentiment, detect_sarcasm_context
 from src.agent.state import PropertyQAState
 from src.agent.whisper_planner import format_whisper_plan
 from src.casino.config import get_casino_profile
@@ -143,6 +143,163 @@ def _count_consecutive_frustrated(messages: list) -> int:
             else:
                 break
     return count
+
+
+def _build_behavioral_prompt_sections(
+    state: PropertyQAState,
+    user_msg: str,
+    user_msg_lower: str,
+    extracted: dict[str, Any],
+    guest_sentiment: str | None,
+) -> tuple[str, str | None, dict[str, Any], int]:
+    """Build all behavioral prompt sections from state analysis.
+
+    R72 C6: Extracted from execute_specialist to reduce function size
+    and isolate behavioral signal detection from LLM execution.
+
+    Returns:
+        Tuple of (behavioral_prompt_sections, effective_sentiment,
+                  conversation_dynamics, frustrated_count).
+    """
+    sections: list[str] = []
+
+    # Sarcasm detection: override VADER when conversation context contradicts
+    effective_sentiment = guest_sentiment
+    if effective_sentiment in ("positive", "neutral"):
+        recent_sentiments: list[str] = []
+        for msg in reversed(state.get("messages", [])):
+            if isinstance(msg, HumanMessage) and len(recent_sentiments) < 3:
+                content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                recent_sentiments.append(detect_sentiment(content))
+        prior_sentiments = recent_sentiments[1:] if len(recent_sentiments) > 1 else []
+        if detect_sarcasm_context(user_msg, effective_sentiment, prior_sentiments):
+            effective_sentiment = "frustrated"
+            logger.info("Sarcasm override: %s → frustrated (context contrast)", guest_sentiment)
+
+    # Sentiment tone guide
+    if effective_sentiment:
+        tone_guide = SENTIMENT_TONE_GUIDES.get(effective_sentiment, "")
+        if tone_guide:
+            sections.append(f"## Tone Guidance\n{tone_guide}")
+
+    # Emotional context guides (grief, anxiety, celebration, allergy, gambling frustration)
+    emotional_guides: list[str] = []
+    if any(kw in user_msg_lower for kw in ("passed away", "passed on", "lost my", "funeral", "in memory", "rest in peace")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["grief"])
+    if any(kw in user_msg_lower for kw in ("first time", "never been", "nervous", "anxious", "intimidat", "overwhelm")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["anxiety"])
+    if extracted.get("occasion"):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["celebration"])
+    if any(kw in user_msg_lower for kw in ("allerg", "anaphyla", "epipen", "celiac")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["allergy_concern"])
+    if any(kw in user_msg_lower for kw in ("losing", "lost all", "bad day", "bad luck", "cold streak", "down a lot")):
+        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["gambling_frustration"])
+    if emotional_guides:
+        sections.append("## Emotional Context\n" + "\n\n".join(emotional_guides))
+
+    # Implicit signal guides (loyalty, urgency, fatigue, budget)
+    if extracted.get("loyalty_signal"):
+        sections.append(
+            "## Loyalty Context\n"
+            f"The guest has signaled loyalty: \"{extracted['loyalty_signal']}\". "
+            "Treat them as a valued long-term guest. Acknowledge their history warmly. "
+            "Recommend elevated, VIP-appropriate experiences."
+        )
+    if extracted.get("urgency"):
+        sections.append(
+            "## Urgency Context\n"
+            "The guest is short on time. Give short, direct answers. "
+            "Prioritize proximity and speed. Skip marketing language and preamble. "
+            "Lead with the single best option, not a list."
+        )
+    if extracted.get("fatigue"):
+        sections.append(
+            "## Fatigue Context\n"
+            "The guest is tired or has traveled far. Recommend restful, low-effort options: "
+            "spa, quiet dining, pool. Avoid high-energy suggestions like gaming floor, "
+            "loud venues, or activities requiring lots of walking."
+        )
+    if extracted.get("budget_conscious"):
+        sections.append(
+            "## Budget Context\n"
+            "The guest has signaled budget consciousness. Lead with value options, "
+            "free activities (Wolf Den, pool), and casual dining (buffet). "
+            "Do NOT suggest premium/expensive options first. Maintain this filter "
+            "throughout the conversation."
+        )
+
+    # Cross-domain awareness
+    domains_discussed = state.get("domains_discussed", [])
+    if domains_discussed:
+        _all_domains = {"dining", "entertainment", "comp", "hotel", "host"}
+        _not_discussed = _all_domains - set(domains_discussed) - {"host"}
+        if _not_discussed:
+            sections.append(
+                "## Domain Awareness\n"
+                f"You've already helped with: {', '.join(sorted(domains_discussed))}. "
+                f"If the guest asks 'what else' or seems done with this topic, "
+                f"naturally suggest exploring: {', '.join(sorted(_not_discussed))}."
+            )
+
+    # Conversation dynamics
+    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    dynamics = _detect_conversation_dynamics(history)
+
+    dynamics_guides: list[str] = []
+    if dynamics["terse_replies"] >= 2:
+        dynamics_guides.append(
+            "The guest is giving very short replies — they may be disengaged or prefer "
+            "brevity. Switch to short, direct answers. Ask a focused either/or question "
+            "instead of listing options. Make ONE confident recommendation."
+        )
+    if dynamics["repeated_question"]:
+        dynamics_guides.append(
+            "The guest appears to be repeating a question — your prior answer may not "
+            "have been clear. Acknowledge this ('Let me be more specific'), then "
+            "answer in a different format: use a direct fact (time, location) "
+            "instead of prose."
+        )
+    if dynamics["brevity_preference"]:
+        dynamics_guides.append(
+            "The guest consistently uses short messages. Match their style: "
+            "keep responses concise and functional. Skip pleasantries and marketing."
+        )
+    if dynamics_guides:
+        sections.append("## Conversation Style Guidance\n" + "\n".join(dynamics_guides))
+
+    # Frustration escalation (HEART framework)
+    frustrated_count = _count_consecutive_frustrated(history)
+    if frustrated_count >= 2 and state.get("guest_sentiment") in ("frustrated", "negative"):
+        heart = HEART_ESCALATION_LANGUAGE
+        if frustrated_count >= 3:
+            heart_steps = (
+                f"1. HEAR: {heart['hear']}\n"
+                f"2. EMPATHIZE: {heart['empathize']}\n"
+                f"3. APOLOGIZE: {heart['apologize']}\n"
+                f"4. RESOLVE: {heart['resolve']}\n"
+                f"5. THANK: {heart['thank']}"
+            )
+        else:
+            heart_steps = (
+                f"1. HEAR: {heart['hear']}\n"
+                f"2. EMPATHIZE: {heart['empathize']}\n"
+                "3. Gently offer to connect with a human host for personalized help."
+            )
+        sections.append(
+            "## Escalation Guidance (HEART Framework)\n"
+            "The guest has expressed frustration across multiple messages. "
+            "Follow these steps in your response:\n"
+            f"{heart_steps}\n"
+            "After addressing their concern, offer: \"Would you like me to "
+            "connect you with one of our dedicated hosts who can assist you "
+            "personally?\""
+        )
+
+    prompt_text = ""
+    if sections:
+        prompt_text = "\n\n" + "\n\n".join(sections)
+
+    return prompt_text, effective_sentiment, dynamics, frustrated_count
 
 
 def _fallback_message(reason: str = "trouble generating a response") -> str:
@@ -272,16 +429,9 @@ async def execute_specialist(
     except Exception:
         logger.debug("Persona style injection failed, continuing without", exc_info=True)
 
-    # Phase 3: Inject sentiment-adaptive tone guidance
-    guest_sentiment = state.get("guest_sentiment")
-    if guest_sentiment:
-        tone_guide = SENTIMENT_TONE_GUIDES.get(guest_sentiment, "")
-        if tone_guide:
-            system_prompt += f"\n\n## Tone Guidance\n{tone_guide}"
-
-    # R70 B5: Inject emotional context guides based on extracted fields and message content.
-    # These are additive to sentiment tone guides — they provide domain-specific emotional
-    # intelligence that VADER alone cannot detect (grief, anxiety, allergy concern, etc.).
+    # R72 C6: Extract behavioral signals into dedicated helper (SRP refactor).
+    # Detects sarcasm, emotional context, implicit signals, conversation dynamics,
+    # frustration escalation, and domain tracking — returns prompt sections to inject.
     extracted = state.get("extracted_fields") or {}
     user_msg = ""
     for msg in reversed(state.get("messages", [])):
@@ -290,117 +440,12 @@ async def execute_specialist(
             break
     user_msg_lower = user_msg.lower()
 
-    emotional_guides: list[str] = []
-    # Grief detection: loss/bereavement keywords
-    if any(kw in user_msg_lower for kw in ("passed away", "passed on", "lost my", "funeral", "in memory", "rest in peace")):
-        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["grief"])
-    # Anxiety detection: first-time/nervous keywords
-    if any(kw in user_msg_lower for kw in ("first time", "never been", "nervous", "anxious", "intimidat", "overwhelm")):
-        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["anxiety"])
-    # Celebration detection: from extracted occasion field
-    if extracted.get("occasion"):
-        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["celebration"])
-    # Allergy concern: from extracted preferences or keywords
-    if any(kw in user_msg_lower for kw in ("allerg", "anaphyla", "epipen", "celiac")):
-        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["allergy_concern"])
-    # Gambling frustration: loss/losing keywords (only if not already frustrated via VADER)
-    if any(kw in user_msg_lower for kw in ("losing", "lost all", "bad day", "bad luck", "cold streak", "down a lot")):
-        emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["gambling_frustration"])
-
-    if emotional_guides:
-        system_prompt += "\n\n## Emotional Context\n" + "\n\n".join(emotional_guides)
-
-    # B2: Inject implicit signal guidance from extracted fields
-    if extracted.get("loyalty_signal"):
-        system_prompt += (
-            "\n\n## Loyalty Context\n"
-            f"The guest has signaled loyalty: \"{extracted['loyalty_signal']}\". "
-            "Treat them as a valued long-term guest. Acknowledge their history warmly. "
-            "Recommend elevated, VIP-appropriate experiences."
+    behavioral_sections, guest_sentiment, dynamics, frustrated_count = (
+        _build_behavioral_prompt_sections(
+            state, user_msg, user_msg_lower, extracted, state.get("guest_sentiment"),
         )
-    if extracted.get("urgency"):
-        system_prompt += (
-            "\n\n## Urgency Context\n"
-            "The guest is short on time. Give short, direct answers. "
-            "Prioritize proximity and speed. Skip marketing language and preamble. "
-            "Lead with the single best option, not a list."
-        )
-    if extracted.get("fatigue"):
-        system_prompt += (
-            "\n\n## Fatigue Context\n"
-            "The guest is tired or has traveled far. Recommend restful, low-effort options: "
-            "spa, quiet dining, pool. Avoid high-energy suggestions like gaming floor, "
-            "loud venues, or activities requiring lots of walking."
-        )
-    if extracted.get("budget_conscious"):
-        system_prompt += (
-            "\n\n## Budget Context\n"
-            "The guest has signaled budget consciousness. Lead with value options, "
-            "free activities (Wolf Den, pool), and casual dining (buffet). "
-            "Do NOT suggest premium/expensive options first. Maintain this filter "
-            "throughout the conversation."
-        )
-
-    # B3: Inject conversation dynamics guidance
-    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
-    dynamics = _detect_conversation_dynamics(history)
-
-    dynamics_guides: list[str] = []
-    if dynamics["terse_replies"] >= 2:
-        dynamics_guides.append(
-            "The guest is giving very short replies — they may be disengaged or prefer "
-            "brevity. Switch to short, direct answers. Ask a focused either/or question "
-            "instead of listing options. Make ONE confident recommendation."
-        )
-    if dynamics["repeated_question"]:
-        dynamics_guides.append(
-            "The guest appears to be repeating a question — your prior answer may not "
-            "have been clear. Acknowledge this ('Let me be more specific'), then "
-            "answer in a different format: use a direct fact (time, location) "
-            "instead of prose."
-        )
-    if dynamics["brevity_preference"]:
-        dynamics_guides.append(
-            "The guest consistently uses short messages. Match their style: "
-            "keep responses concise and functional. Skip pleasantries and marketing."
-        )
-    if dynamics_guides:
-        system_prompt += (
-            "\n\n## Conversation Style Guidance\n" + "\n".join(dynamics_guides)
-        )
-
-    # Phase 4: Frustration escalation — detect sustained negative sentiment
-    # from conversation history. When guest shows 2+ consecutive frustrated
-    # messages, inject soft escalation offer. Research: HEART framework.
-    # Note: `history` is already computed above for conversation dynamics.
-    frustrated_count = _count_consecutive_frustrated(history)
-    if frustrated_count >= 2 and state.get("guest_sentiment") in ("frustrated", "negative"):
-        # R25 fix C-001: Use HEART framework language instead of hardcoded text.
-        # Graduated response: 2 frustrated = hear+empathize, 3+ = full HEART.
-        heart = HEART_ESCALATION_LANGUAGE
-        if frustrated_count >= 3:
-            heart_steps = (
-                f"1. HEAR: {heart['hear']}\n"
-                f"2. EMPATHIZE: {heart['empathize']}\n"
-                f"3. APOLOGIZE: {heart['apologize']}\n"
-                f"4. RESOLVE: {heart['resolve']}\n"
-                f"5. THANK: {heart['thank']}"
-            )
-        else:
-            heart_steps = (
-                f"1. HEAR: {heart['hear']}\n"
-                f"2. EMPATHIZE: {heart['empathize']}\n"
-                "3. Gently offer to connect with a human host for personalized help."
-            )
-        system_prompt += (
-            "\n\n## Escalation Guidance (HEART Framework)\n"
-            "The guest has expressed frustration across multiple messages. "
-            "Follow these steps in your response:\n"
-            f"{heart_steps}\n"
-            "After addressing their concern, offer: \"Would you like me to "
-            "connect you with one of our dedicated hosts who can assist you "
-            "personally?\""
-        )
+    )
+    system_prompt += behavioral_sections
 
     # Phase 4: Proactive suggestion injection from whisper plan.
     # R71 B4 fix: Allow suggestions on neutral sentiment when contextual signals
@@ -409,7 +454,7 @@ async def execute_specialist(
     # R23 fix C-003: check suggestion_offered to enforce max-1-per-conversation.
     whisper = state.get("whisper_plan")
     suggestion_already_offered = state.get("suggestion_offered", False)
-    _sentiment = state.get("guest_sentiment")
+    _sentiment = guest_sentiment  # Use effective sentiment (may be overridden by sarcasm detection)
     _allow_suggestion = (
         _sentiment == "positive"
         or (
@@ -441,6 +486,9 @@ async def execute_specialist(
 
     # Build message list
     llm_messages = [SystemMessage(content=system_prompt)]
+
+    # Compute conversation history for persona reinject and sliding window
+    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
 
     # Phase 4: Persona drift prevention — re-inject condensed persona reminder
     # when conversation history exceeds threshold. Research: persona consistency

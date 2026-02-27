@@ -1,0 +1,144 @@
+scenarios:
+  - id: "slang-01"
+    name: "Asian baccarat VIP with Mandarin-English code-switching"
+    category: "behavioral_slang_cultural"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Handles code-switching gracefully without commenting on it. Understands baccarat terminology ('Player', 'Banker', 'squeeze') when used. Responds in English but demonstrates cultural awareness by not dismissing unfamiliar terms."
+    turns:
+      - role: "human"
+        content: "I play baccarat every weekend here. Where's the high limit room?"
+        expected_keywords: ["gaming", "VIP"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And a good Chinese restaurant? My family wants dim sum"
+        expected_keywords: ["restaurant", "dining"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We need a big table, 10 people for dinner tonight"
+        expected_keywords: ["table", "group", "reservation"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Treats baccarat VIP as high-value guest. Addresses the dining request for a large party with Chinese food preferences. Does not make assumptions based on ethnicity but responds to stated preferences"
+    safety_relevant: false
+
+  - id: "slang-02"
+    name: "Texan high-roller using regional slang"
+    category: "behavioral_slang_cultural"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Understands and responds naturally to regional gambling slang and expressions. Does not ask for clarification on common terms. Matches the casual, confident energy of a high-roller without being sycophantic."
+    turns:
+      - role: "human"
+        content: "I'm fixin to hit the tables hard tonight. Where's your best steakhouse at?"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That sounds all right. Nothing too fancy though, just good red meat"
+        expected_keywords: ["Steakhouse"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And where do y'all keep the poker room?"
+        expected_keywords: ["gaming", "poker"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Picks up on the casual, regional communication style and matches it appropriately. Provides direct, no-nonsense recommendations that match the guest's 'good red meat' preference level"
+    safety_relevant: false
+
+  - id: "slang-03"
+    name: "Millennial crypto whale using degen language"
+    category: "behavioral_slang_cultural"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Understands crypto/gambling crossover slang (degen, ape in, YOLO) without asking for translation. Responds in standard English but shows awareness of the cultural context. Treats with same respect as traditional VIPs."
+    turns:
+      - role: "human"
+        content: "yo just YOLO'd my bags at the craps table lmao. where's the best food"
+        expected_keywords: ["restaurant", "Buffet", "Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "something chill, I'm on tilt after getting rekt at blackjack"
+        expected_keywords: ["Spa", "Buffet", "relax"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "nah the spa is kinda mid. whats else u got"
+        expected_keywords: ["Pool", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Decodes crypto/gambling slang naturally: YOLO'd = risked money, on tilt = frustrated after losing, rekt = lost significantly, mid = mediocre. Adjusts recommendations to reflect frustration without lecturing about gambling"
+    safety_relevant: false
+
+  - id: "slang-04"
+    name: "Hispanic family group visit with food preferences"
+    category: "behavioral_slang_cultural"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "Accommodates family-oriented visit patterns. Understands multi-generational group dynamics (kids + elderly + adults). Does not stereotype but responds to stated preferences. Suggests family-friendly options naturally."
+    turns:
+      - role: "human"
+        content: "My whole family is here, abuela, the kids, my brothers. We need to eat together."
+        expected_keywords: ["Buffet", "family", "group"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Something the kids will eat too, not too fancy"
+        expected_keywords: ["Buffet", "family", "casual"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And my grandma needs a wheelchair, is it accessible?"
+        expected_keywords: ["accessible", "wheelchair"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "Reads the multi-generational family dynamics. Suggests casual, family-friendly, accessible venues that work for all ages. Addresses the accessibility need proactively for the grandmother"
+    safety_relevant: false
+
+  - id: "slang-05"
+    name: "Drunk SMS texting with typos and abbreviations"
+    category: "behavioral_slang_cultural"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Parses through heavy abbreviations and typos to understand the request. Does not comment on the communication style. Responds in clear, simple English. Focuses on providing the answer rather than clarifying the question."
+    turns:
+      - role: "human"
+        content: "cn u get me a rm upgrde pls im a gold mmbr"
+        expected_keywords: ["room", "upgrade", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "also wher is good 4 late nite food rn"
+        expected_keywords: ["restaurant", "Buffet", "late"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "thx ur actually kinda helpful lol"
+        expected_keywords: ["help", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Decodes SMS abbreviations (cn=can, u=you, rm=room, pls=please, mmbr=member, wher=where, 4=for, rn=right now, thx=thanks). Responds with clear, concise answers. Treats the compliment gracefully"
+    safety_relevant: false
+
+  - id: "slang-06"
+    name: "Gen Z guest using TikTok-influenced slang"
+    category: "behavioral_slang_cultural"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Understands modern slang (bussin, lowkey, no cap, slay) without asking for translation. Does NOT use the slang back — responds in warm professional English. Matches the casual energy without mimicking the register."
+    turns:
+      - role: "human"
+        content: "ok so whats bussin for food here? lowkey starving"
+        expected_keywords: ["restaurant", "Buffet", "Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "the steakhouse looks fire no cap. is it expensive tho"
+        expected_keywords: ["Steakhouse", "price"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "bet. what else should we do tonight that slaps"
+        expected_keywords: ["Arena", "show", "Pool"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Understands bussin=great, lowkey=somewhat, no cap=honestly, fire=excellent, bet=agreed, slaps=is great. Responds helpfully without code-switching to match the slang. Maintains professional warmth"
+    safety_relevant: false

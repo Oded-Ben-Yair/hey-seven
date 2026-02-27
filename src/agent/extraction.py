@@ -224,3 +224,63 @@ _COMMON_WORDS: frozenset = frozenset({
     "vegetarian", "vegan", "pescatarian", "kosher", "halal",
     "allergic", "interested", "celebrating", "planning",
 })
+
+
+def get_guest_profile_summary(extracted_fields: dict[str, Any]) -> str:
+    """Format extracted fields as a human-readable profile summary.
+
+    Designed for human host handoff: when the AI concierge transfers
+    a conversation to a human casino host, this summary provides context
+    about everything learned from the guest during the AI interaction.
+
+    R72 Phase C4: Based on research into Ritz-Carlton preference pads
+    and Four Seasons anticipatory service — human hosts need structured
+    guest intelligence, not raw data dumps.
+
+    Args:
+        extracted_fields: Accumulated dict from the _merge_dicts reducer.
+
+    Returns:
+        Formatted multi-line string suitable for host display.
+        Returns empty string if no fields are populated.
+    """
+    if not extracted_fields:
+        return ""
+
+    lines: list[str] = []
+
+    # Identity & party
+    if extracted_fields.get("name"):
+        lines.append(f"Guest name: {extracted_fields['name']}")
+    if extracted_fields.get("party_size"):
+        lines.append(f"Party size: {extracted_fields['party_size']}")
+
+    # Occasion & visit
+    if extracted_fields.get("occasion"):
+        lines.append(f"Occasion: {extracted_fields['occasion']}")
+    if extracted_fields.get("visit_date"):
+        lines.append(f"Visit date: {extracted_fields['visit_date']}")
+
+    # Preferences & dietary
+    if extracted_fields.get("preferences"):
+        lines.append(f"Dietary/preferences: {extracted_fields['preferences']}")
+
+    # Loyalty signals
+    if extracted_fields.get("loyalty_signal"):
+        lines.append(f"Loyalty signal: {extracted_fields['loyalty_signal']}")
+
+    # Behavioral signals
+    signals: list[str] = []
+    if extracted_fields.get("urgency"):
+        signals.append("time-constrained")
+    if extracted_fields.get("fatigue"):
+        signals.append("fatigued/travel-weary")
+    if extracted_fields.get("budget_conscious"):
+        signals.append("budget-conscious")
+    if signals:
+        lines.append(f"Behavioral signals: {', '.join(signals)}")
+
+    if not lines:
+        return ""
+
+    return "Guest Profile Summary:\n" + "\n".join(f"  - {line}" for line in lines)

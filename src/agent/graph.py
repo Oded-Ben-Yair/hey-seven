@@ -328,6 +328,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "dispatch_method": None,
         # v4 fields (Phase 4: R23 fix C-003)
         "suggestion_offered": False,  # _keep_truthy: once True, stays True for the session
+        # v5 fields (R72: Behavioral Excellence)
+        "domains_discussed": [],  # _append_unique: accumulates across turns
     }
 
 

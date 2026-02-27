@@ -1,0 +1,149 @@
+scenarios:
+  - id: "extract-01"
+    name: "Natural dietary preference extraction during restaurant rec"
+    category: "behavioral_info_extraction"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Learns dietary preferences naturally through the conversation flow. Does not explicitly ask 'do you have any dietary requirements?' Picks up on the vegetarian mention and adjusts all subsequent recommendations without being asked."
+    turns:
+      - role: "human"
+        content: "Where should we eat tonight? I'm vegetarian by the way"
+        expected_keywords: ["restaurant", "vegetarian"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about the steakhouse? Do they have veggie options?"
+        expected_keywords: ["vegetarian", "options"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And for breakfast tomorrow?"
+        expected_keywords: ["Buffet", "vegetarian"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Extracts vegetarian preference from casual mention. Carries it forward to all subsequent restaurant recommendations without needing to be reminded. Checks veggie options proactively"
+    safety_relevant: false
+
+  - id: "extract-02"
+    name: "Anniversary occasion extraction for elevated service"
+    category: "behavioral_info_extraction"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Picks up on the anniversary mention as both an occasion and a signal for elevated, romantic recommendations. Does not just say 'happy anniversary' — uses the information to curate the entire experience recommendation."
+    turns:
+      - role: "human"
+        content: "We're celebrating our 10th anniversary this weekend"
+        expected_keywords: ["congratulat", "anniversary", "special"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What's a nice dinner option for two?"
+        expected_keywords: ["Steakhouse", "romantic"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And maybe something fun to do after?"
+        expected_keywords: ["show", "lounge", "Spa"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Uses the anniversary context to elevate all recommendations. Suggests romantic options, special experiences, and couples-oriented activities. Maintains celebratory energy throughout"
+    safety_relevant: false
+
+  - id: "extract-03"
+    name: "Building party composition across 4 turns naturally"
+    category: "behavioral_info_extraction"
+    behavioral_dimension: "B4_agentic"
+    expected_behavioral_quality: "Assembles party composition from scattered mentions across multiple turns. Uses 'we' as a group indicator, then picks up specifics (kids, grandma) as they appear. Adjusts recommendations to fit the emerging group profile without asking for a headcount."
+    turns:
+      - role: "human"
+        content: "We're looking for something to do tonight"
+        expected_keywords: ["restaurant", "Arena", "Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "The kids are with us too, ages 8 and 12"
+        expected_keywords: ["family", "kid"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Oh and my mother-in-law, she doesn't walk well"
+        expected_keywords: ["accessible", "nearby"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Put something together for all of us?"
+        expected_keywords: ["family", "Buffet", "accessible"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Accumulates party info across turns: adults + 2 kids + elderly parent with mobility issues. Adjusts for kid-friendliness, accessibility, and group size without explicitly asking for these details"
+    safety_relevant: false
+
+  - id: "extract-04"
+    name: "Guest guards personal info vs freely shares"
+    category: "behavioral_info_extraction"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Respects the guest's resistance to sharing information. Does not push for details when the guest deflects. Provides helpful service with minimal personal data. Does not ask follow-up personal questions after being deflected once."
+    turns:
+      - role: "human"
+        content: "What restaurants are open?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Just tell me what's open, I don't need the whole story"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "The buffet. Where is it?"
+        expected_keywords: ["Buffet", "Main Floor"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+    expected_behavior: "Picks up on the guest's preference for minimal interaction and direct answers. Stops probing and gives concise, factual responses. Does not try to personalize when the guest wants transactional efficiency"
+    safety_relevant: false
+
+  - id: "extract-05"
+    name: "Extracting loyalty tier for human host handoff"
+    category: "behavioral_info_extraction"
+    behavioral_dimension: "B2_implicit"
+    expected_behavioral_quality: "Captures loyalty tier information and uses it to provide elevated service. When the conversation leads to a handoff, provides a summary of what's been learned to the human host pathway."
+    turns:
+      - role: "human"
+        content: "I'm a Platinum Momentum member. Where's the VIP lounge?"
+        expected_keywords: ["Platinum", "VIP", "lounge"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And I need to talk to my host about my comp balance"
+        expected_keywords: ["host", "team", "contact"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Can you let them know I'm here?"
+        expected_keywords: ["host", "team", "contact"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Registers Platinum tier status and treats as VIP throughout. When handoff is needed, directs to host team with context about who's requesting and their tier level"
+    safety_relevant: false
+
+  - id: "extract-06"
+    name: "The memory test — guest checks if agent remembers prior info"
+    category: "behavioral_info_extraction"
+    behavioral_dimension: "B3_engagement"
+    expected_behavioral_quality: "Demonstrates memory of information shared earlier in the conversation. When the guest tests this ('remember I said...'), confirms the recall naturally without making it feel like a database lookup."
+    turns:
+      - role: "human"
+        content: "I'm Sarah, here for my birthday this weekend with 4 friends"
+        expected_keywords: ["Sarah", "birthday", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Can you recommend a restaurant for 5 of us?"
+        expected_keywords: ["Steakhouse", "5", "birthday"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Wait, do you even remember my name?"
+        expected_keywords: ["Sarah", "birthday"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Remembers and uses the guest's name (Sarah), party size (5), and occasion (birthday) naturally throughout. When tested, confirms recall warmly rather than defensively"
+    safety_relevant: false

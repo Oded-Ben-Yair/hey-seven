@@ -413,6 +413,10 @@ async def _execute_specialist(
     # R52 fix D1: Persist dispatch method for observability and debugging.
     result["dispatch_method"] = dispatch_method
 
+    # R72 B4: Track which specialist domains have been discussed.
+    # _append_unique reducer deduplicates across turns.
+    result["domains_discussed"] = [agent_name]
+
     # Merge guest context updates into the result so they persist in state
     if guest_context_update:
         result.update(guest_context_update)
