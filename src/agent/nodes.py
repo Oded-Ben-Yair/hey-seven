@@ -356,18 +356,18 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _degraded_pass_result(retry_count: int) -> dict[str, Any]:
-    """Return degraded-pass or fail-closed result based on attempt number.
+def _degraded_pass_result(retry_count: int, has_grounding: bool = True) -> dict[str, Any]:
+    """Return degraded-pass or fail-closed result based on attempt number and grounding.
 
     R38 fix M-001: Extracted from duplicate try/except blocks in validate_node.
-    Strategy: first attempt + validator failure = PASS (availability over safety,
-    deterministic guardrails already ran). Retry attempt + validator failure =
-    FAIL (safety over availability, prior issue + failure = suspect content).
+    R74 fix: Added grounding check. Degrade-pass on first attempt is only safe
+    when retrieval context exists. Without grounding, an unvalidated response
+    is likely hallucinated — route to fallback instead.
     """
-    if retry_count == 0:
+    if retry_count == 0 and has_grounding:
         logger.warning(
             "Degraded-pass: serving unvalidated response (first attempt, "
-            "validator unavailable)"
+            "validator unavailable, grounding present)"
         )
         return {"validation_result": "PASS"}
     return {
@@ -401,6 +401,7 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
 
     # Format retrieved context (shared helper with generate_node for consistency)
     retrieved = state.get("retrieved_context", [])
+    has_grounding = bool(retrieved)
     context_text = _format_context_block(retrieved, separator="\n")
 
     prompt_text = VALIDATION_PROMPT.safe_substitute(
@@ -433,10 +434,10 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
 
     except (ValueError, TypeError) as exc:
         logger.warning("Validation structured output parsing failed: %s", exc)
-        return _degraded_pass_result(retry_count)
+        return _degraded_pass_result(retry_count, has_grounding=has_grounding)
     except Exception:
         logger.exception("Validation LLM call failed")
-        return _degraded_pass_result(retry_count)
+        return _degraded_pass_result(retry_count, has_grounding=has_grounding)
 
 
 # ---------------------------------------------------------------------------

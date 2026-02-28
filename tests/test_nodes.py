@@ -1055,6 +1055,65 @@ class TestValidationDegradedPass:
         assert "Validation unavailable" in result["retry_feedback"]
 
 
+class TestDegradedPassGroundingCheck:
+    """R74: Degrade-pass must require retrieval grounding.
+
+    Without grounding, an unvalidated response is likely hallucinated.
+    The helper should FAIL instead of PASS when has_grounding=False.
+    """
+
+    def test_degraded_pass_requires_grounding(self):
+        """Degrade-pass without grounding should FAIL."""
+        from src.agent.nodes import _degraded_pass_result
+
+        result = _degraded_pass_result(retry_count=0, has_grounding=False)
+        assert result["validation_result"] == "FAIL"
+        assert "Validation unavailable" in result["retry_feedback"]
+
+    def test_degraded_pass_with_grounding(self):
+        """Degrade-pass with grounding on first attempt should PASS."""
+        from src.agent.nodes import _degraded_pass_result
+
+        result = _degraded_pass_result(retry_count=0, has_grounding=True)
+        assert result["validation_result"] == "PASS"
+
+    def test_degraded_pass_retry_always_fails(self):
+        """Degrade-pass on retry should FAIL regardless of grounding."""
+        from src.agent.nodes import _degraded_pass_result
+
+        result = _degraded_pass_result(retry_count=1, has_grounding=True)
+        assert result["validation_result"] == "FAIL"
+
+    def test_degraded_pass_default_grounding_is_true(self):
+        """Default has_grounding=True preserves backward compatibility."""
+        from src.agent.nodes import _degraded_pass_result
+
+        result = _degraded_pass_result(retry_count=0)
+        assert result["validation_result"] == "PASS"
+
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
+    async def test_validate_node_no_grounding_fails_closed(self, mock_get_validator_llm):
+        """validate_node with empty retrieved_context should FAIL on LLM error."""
+        from src.agent.nodes import validate_node
+
+        mock_llm = MagicMock()
+        mock_validator = MagicMock()
+        mock_validator.ainvoke = AsyncMock(side_effect=Exception("LLM timeout"))
+        mock_llm.with_structured_output.return_value = mock_validator
+        mock_get_validator_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[
+                HumanMessage(content="What restaurants?"),
+                AIMessage(content="We have great dining options."),
+            ],
+            retrieved_context=[],  # No grounding
+            retry_count=0,
+        )
+        result = await validate_node(state)
+        assert result["validation_result"] == "FAIL"  # No grounding = fail-closed
+
+
 class TestCircuitBreakerTransitions:
     """Tests for circuit breaker state transitions: closed → open → half_open → closed/open."""
 
