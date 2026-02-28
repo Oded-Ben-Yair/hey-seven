@@ -32,6 +32,7 @@ class TestEval:
             for w in [
                 "don't have", "not sure", "don't know", "no specific",
                 "contact", "concierge", "best equipped", "not related",
+                "outside", "help you find", "happy to assist",
             ]
         )
 

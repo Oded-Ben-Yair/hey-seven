@@ -330,6 +330,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "suggestion_offered": False,  # _keep_truthy: once True, stays True for the session
         # v5 fields (R72: Behavioral Excellence)
         "domains_discussed": [],  # _append_unique: accumulates across turns
+        # R73: Crisis context persistence
+        "crisis_active": False,  # _keep_truthy: once True, stays True for session
     }
 
 

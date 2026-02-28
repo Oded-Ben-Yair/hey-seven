@@ -41,7 +41,7 @@ FIXTURES = {
         "router": RouterOutput(query_type="off_topic", confidence=0.92),
         "generate": None,  # off_topic node, no generate
         "validate": None,
-        "assert_contains_any": ["concierge", "best equipped", "restaurants"],
+        "assert_contains_any": ["concierge", "best equipped", "restaurants", "outside", "help you find", "happy to assist"],
     },
     "gambling_refusal": {
         "message": "What's the best blackjack strategy?",

@@ -718,12 +718,13 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
             f"at {settings.PROPERTY_PHONE}."
         )
     else:
-        # General off-topic
+        # General off-topic — genuinely unrelated to the property.
+        # Kept brief and non-robotic. Does NOT fire for emotional or
+        # conversational messages (those now route through ambiguous → retrieve).
         content = (
-            f"I'm your concierge for {settings.PROPERTY_NAME}, so I'm best equipped "
-            "to answer questions about the resort — restaurants, entertainment, "
-            "hotel rooms, gaming, amenities, and promotions.\n\n"
-            "What would you like to know about the property?"
+            "That's outside what I can help with, but I'm happy to assist with "
+            f"anything about {settings.PROPERTY_NAME} — dining, entertainment, "
+            "hotel, spa, or gaming. What can I help you find?"
         )
 
     return {

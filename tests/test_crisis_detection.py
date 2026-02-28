@@ -148,3 +148,59 @@ class TestSeverityOrdering:
         # Contains both urgent and concern patterns
         msg = "I can't face my wife. I need one more win to fix this."
         assert detect_crisis_level(msg) == "urgent"
+
+
+class TestCrisisPersistence:
+    """R73: Tests for crisis_active state field persistence in compliance_gate."""
+
+    @pytest.fixture
+    def _base_state(self):
+        """Minimal state for compliance_gate_node tests."""
+        from langchain_core.messages import HumanMessage
+        return {
+            "messages": [HumanMessage(content="test")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "responsible_gaming_count": 0,
+            "crisis_active": False,
+        }
+
+    @pytest.mark.asyncio
+    async def test_crisis_sets_crisis_active(self, _base_state):
+        """When crisis is detected, crisis_active should be True in return."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["messages"] = [HumanMessage(content="I don't want to live anymore")]
+        result = await compliance_gate_node(_base_state)
+        assert result.get("query_type") == "self_harm"
+        assert result.get("crisis_active") is True
+
+    @pytest.mark.asyncio
+    async def test_crisis_persistence_maintains_context(self, _base_state):
+        """When crisis_active is True, follow-up non-property messages stay in crisis."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["crisis_active"] = True
+        _base_state["messages"] = [HumanMessage(content="Nobody can help me")]
+        result = await compliance_gate_node(_base_state)
+        assert result.get("query_type") == "self_harm"
+
+    @pytest.mark.asyncio
+    async def test_crisis_persistence_allows_property_transition(self, _base_state):
+        """When crisis_active is True but guest asks property Q, allow transition."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["crisis_active"] = True
+        _base_state["messages"] = [HumanMessage(content="Where is the restaurant?")]
+        result = await compliance_gate_node(_base_state)
+        # Should pass through to router (query_type=None), not crisis
+        assert result.get("query_type") is None
+
+    @pytest.mark.asyncio
+    async def test_crisis_active_in_state_schema(self):
+        """Verify crisis_active field exists in PropertyQAState."""
+        from src.agent.state import PropertyQAState
+        assert "crisis_active" in PropertyQAState.__annotations__

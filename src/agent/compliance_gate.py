@@ -214,6 +214,37 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
         )
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
 
+    # 7.4 Crisis context persistence — R73 fix.
+    # When a previous turn activated crisis mode (crisis_active=True via
+    # _keep_truthy reducer), maintain crisis response for follow-up turns
+    # even if the specific message doesn't re-trigger crisis patterns.
+    # "Nobody can help me" after "I don't want to live anymore" should
+    # continue the crisis response, not fall back to generic concierge.
+    if state.get("crisis_active", False):
+        # Check if current message is clearly moving on (property Q&A)
+        # If not, maintain crisis context
+        _is_property_question = any(
+            kw in user_message.lower()
+            for kw in ("restaurant", "steakhouse", "buffet", "spa", "pool",
+                        "show", "arena", "room", "hotel", "check", "hours",
+                        "parking", "directions", "shuttle", "wifi")
+        )
+        if not _is_property_question:
+            logger.info("Crisis context active — maintaining crisis response for follow-up")
+            logger.info(
+                json.dumps({
+                    "audit_event": "guardrail_triggered",
+                    "category": "crisis_persistence",
+                    "query_type": "self_harm",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                })
+            )
+            return {"query_type": "self_harm", "router_confidence": 1.0}
+        else:
+            logger.info("Crisis context active but guest asked property question — allowing transition")
+
     # 7.5 Crisis detection — graduated escalation protocol (R72 Phase C5).
     # Runs BEFORE the binary self_harm detector to provide nuanced response
     # levels: concern → gentle resource mention, urgent/immediate → full crisis.
@@ -232,7 +263,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 "severity": "CRITICAL",
             })
         )
-        return {"query_type": "self_harm", "router_confidence": 1.0}
+        return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
     if crisis_level == "urgent":
         logger.warning("CRISIS URGENT detected — routing to crisis response")
         logger.info(
@@ -245,7 +276,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 "severity": "WARNING",
             })
         )
-        return {"query_type": "self_harm", "router_confidence": 1.0}
+        return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
     if crisis_level == "concern":
         # Concern level: route to gambling_advice path which includes
         # responsible gaming helplines. Gentler than full crisis response.
@@ -281,7 +312,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 "severity": "INFO",
             })
         )
-        return {"query_type": "self_harm", "router_confidence": 1.0}
+        return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
 
     # 8. Semantic injection — LLM second layer (configurable, fail-closed).
     # Runs AFTER all deterministic guardrails to ensure safety-critical

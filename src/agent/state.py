@@ -239,6 +239,12 @@ class PropertyQAState(TypedDict):
     # Used for cross-domain suggestion: when guest asks "what else?", suggest
     # categories NOT yet discussed.
     domains_discussed: Annotated[list[str], _append_unique]
+    # R73: Crisis context persistence. Once crisis is detected (self_harm or
+    # crisis_immediate/urgent), this flag stays True for the session.
+    # _keep_truthy reducer: once True, stays True — ensures follow-up turns
+    # maintain crisis awareness even if the specific message doesn't re-trigger
+    # crisis regex patterns. Reset only on new session (new thread_id).
+    crisis_active: Annotated[bool, _keep_truthy]
 
 
 class RouterOutput(BaseModel):

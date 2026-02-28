@@ -62,8 +62,8 @@ class TestStateFieldCount:
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 20, (
-            f"PropertyQAState has {actual} fields, expected 20. "
+        assert actual == 21, (
+            f"PropertyQAState has {actual} fields, expected 21. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 
