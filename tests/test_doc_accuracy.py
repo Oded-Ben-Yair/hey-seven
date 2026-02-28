@@ -8,6 +8,8 @@ documentation rot identified in R6.
 import re
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -790,3 +792,54 @@ class TestBehavioralScenarioParity:
             f"missing={expected - paths}, "
             f"extra={paths - expected}"
         )
+
+
+class TestRE2Enforcement:
+    """Verify RE2 is enforced in non-development environments."""
+
+    def test_re2_enforcement_raises_in_production(self, monkeypatch):
+        """If ENVIRONMENT != 'development' and RE2 is missing, startup must fail."""
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("API_KEY", "test-key")
+        monkeypatch.setenv("CMS_WEBHOOK_SECRET", "test-secret")
+        import src.agent.regex_engine as mod
+        from src.config import get_settings
+        get_settings.cache_clear()
+        original = mod.RE2_AVAILABLE
+        try:
+            mod.RE2_AVAILABLE = False
+            with pytest.raises(RuntimeError, match="google-re2"):
+                mod.enforce_re2_in_production()
+        finally:
+            mod.RE2_AVAILABLE = original
+            get_settings.cache_clear()
+
+    def test_re2_enforcement_passes_in_development(self, monkeypatch):
+        """In development, missing RE2 should not raise."""
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        import src.agent.regex_engine as mod
+        from src.config import get_settings
+        get_settings.cache_clear()
+        original = mod.RE2_AVAILABLE
+        try:
+            mod.RE2_AVAILABLE = False
+            mod.enforce_re2_in_production()  # Should not raise
+        finally:
+            mod.RE2_AVAILABLE = original
+            get_settings.cache_clear()
+
+    def test_re2_enforcement_passes_when_available(self, monkeypatch):
+        """When RE2 is available, enforcement always passes."""
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("API_KEY", "test-key")
+        monkeypatch.setenv("CMS_WEBHOOK_SECRET", "test-secret")
+        import src.agent.regex_engine as mod
+        from src.config import get_settings
+        get_settings.cache_clear()
+        original = mod.RE2_AVAILABLE
+        try:
+            mod.RE2_AVAILABLE = True
+            mod.enforce_re2_in_production()  # Should not raise
+        finally:
+            mod.RE2_AVAILABLE = original
+            get_settings.cache_clear()

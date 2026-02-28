@@ -50,6 +50,26 @@ def is_re2_active() -> bool:
     return RE2_AVAILABLE
 
 
+def enforce_re2_in_production() -> None:
+    """Fail fast if RE2 is unavailable in non-development environments.
+
+    Call at application startup (FastAPI lifespan) to prevent deploying
+    with 204 guardrail patterns vulnerable to ReDoS attacks.
+
+    Raises:
+        RuntimeError: If ENVIRONMENT != 'development' and google-re2 is not installed.
+    """
+    from src.config import get_settings
+
+    settings = get_settings()
+    if settings.ENVIRONMENT != "development" and not RE2_AVAILABLE:
+        raise RuntimeError(
+            "google-re2 is required in production (ENVIRONMENT="
+            f"'{settings.ENVIRONMENT}'). Install with: pip install google-re2. "
+            "Without re2, all 204 guardrail patterns are vulnerable to ReDoS."
+        )
+
+
 # Track stdlib fallback count for observability
 _stdlib_fallback_count = 0
 

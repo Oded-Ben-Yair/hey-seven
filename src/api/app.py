@@ -77,6 +77,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
     logger.info("Initializing Property Q&A agent...")
+    # R73 fix: Fail fast if RE2 is unavailable in production.
+    # All 204 guardrail patterns are vulnerable to ReDoS without google-re2.
+    from src.agent.regex_engine import enforce_re2_in_production
+
+    enforce_re2_in_production()
+
     try:
         from src.agent.graph import build_graph
         from src.agent.memory import get_checkpointer
