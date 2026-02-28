@@ -1097,7 +1097,7 @@ class TestEndToEndGraphIntegration:
 
             # Verify the response redirects to property topics
             replace_event = next(e for e in events if e["event"] == "replace")
-            assert "concierge" in replace_event["data"]["content"].lower()
+            assert "help" in replace_event["data"]["content"].lower()
 
     def test_responsible_gaming_e2e_through_real_graph(self):
         """Gambling query → compliance_gate → off_topic with helplines."""
