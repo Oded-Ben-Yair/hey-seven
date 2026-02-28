@@ -218,6 +218,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": "greeting",
             "router_confidence": 1.0,
+            "detected_language": None,
         }
 
     # R36 fix A1: Hoist settings once to eliminate TOCTOU race. Same pattern
@@ -262,6 +263,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": result.query_type,
             "router_confidence": result.confidence,
+            "detected_language": result.detected_language,
             **sentiment_update,
             **extraction_update,
         }
@@ -271,6 +273,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": "property_qa",
             "router_confidence": 0.5,
+            "detected_language": "en",
             **sentiment_update,
             **extraction_update,
         }
@@ -285,6 +288,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
         return {
             "query_type": "off_topic",
             "router_confidence": 0.0,
+            "detected_language": "en",
             **sentiment_update,
             **extraction_update,
         }
@@ -586,6 +590,19 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     categories = _build_greeting_categories(casino_id=settings.CASINO_ID)
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
 
+    # Phase 1: Spanish greeting when language detected and feature enabled
+    detected_lang = state.get("detected_language")
+    if detected_lang == "es" and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+        from src.agent.prompts import GREETING_TEMPLATE_ES
+        return {
+            "messages": [AIMessage(content=GREETING_TEMPLATE_ES.safe_substitute(
+                property_name=settings.PROPERTY_NAME,
+                categories=bullets,
+            ))],
+            "sources_used": [],
+            "retrieved_context": [],
+        }
+
     # Feature flag: AI disclosure for regulatory transparency (async API for multi-tenant)
     # R17 fix: Gemini M-002 — reuse already-fetched settings variable.
     ai_disclosure = await is_feature_enabled(settings.CASINO_ID, "ai_disclosure_enabled")
@@ -705,28 +722,38 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         # compliance_gate detects crisis language and routes here. The response
         # prioritizes safety resources over property information. Never dismissive,
         # never minimizing, always empathetic with concrete action steps.
-        content = (
-            "I can hear that you're going through a really difficult time, and I want "
-            "you to know that help is available right now.\n\n"
-            "**Please reach out to these confidential resources:**\n\n"
-            "- **988 Suicide & Crisis Lifeline**: Call or text **988** (24/7, free, confidential)\n"
-            "- **Crisis Text Line**: Text **HOME** to **741741**\n"
-            "- **Emergency**: Call **911** if you or someone is in immediate danger\n\n"
-            "You don't have to face this alone. Trained counselors are available "
-            "right now who understand what you're going through and can help.\n\n"
-            f"If you'd like to speak with someone at {settings.PROPERTY_NAME} in person, "
-            f"any team member can connect you with support services. You can also call us "
-            f"at {settings.PROPERTY_PHONE}."
-        )
+        detected_lang = state.get("detected_language")
+        if detected_lang == "es" and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+            from src.agent.crisis import get_crisis_response_es
+            content = get_crisis_response_es(settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
+        else:
+            content = (
+                "I can hear that you're going through a really difficult time, and I want "
+                "you to know that help is available right now.\n\n"
+                "**Please reach out to these confidential resources:**\n\n"
+                "- **988 Suicide & Crisis Lifeline**: Call or text **988** (24/7, free, confidential)\n"
+                "- **Crisis Text Line**: Text **HOME** to **741741**\n"
+                "- **Emergency**: Call **911** if you or someone is in immediate danger\n\n"
+                "You don't have to face this alone. Trained counselors are available "
+                "right now who understand what you're going through and can help.\n\n"
+                f"If you'd like to speak with someone at {settings.PROPERTY_NAME} in person, "
+                f"any team member can connect you with support services. You can also call us "
+                f"at {settings.PROPERTY_PHONE}."
+            )
     else:
         # General off-topic — genuinely unrelated to the property.
         # Kept brief and non-robotic. Does NOT fire for emotional or
         # conversational messages (those now route through ambiguous → retrieve).
-        content = (
-            "That's outside what I can help with, but I'm happy to assist with "
-            f"anything about {settings.PROPERTY_NAME} — dining, entertainment, "
-            "hotel, spa, or gaming. What can I help you find?"
-        )
+        detected_lang = state.get("detected_language")
+        if detected_lang == "es" and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+            from src.agent.prompts import OFF_TOPIC_RESPONSE_ES
+            content = OFF_TOPIC_RESPONSE_ES.safe_substitute(property_name=settings.PROPERTY_NAME)
+        else:
+            content = (
+                "That's outside what I can help with, but I'm happy to assist with "
+                f"anything about {settings.PROPERTY_NAME} — dining, entertainment, "
+                "hotel, spa, or gaming. What can I help you find?"
+            )
 
     return {
         "messages": [AIMessage(content=content)],

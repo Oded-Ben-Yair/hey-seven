@@ -28,7 +28,7 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_crisis_level", "CrisisLevel"]
+__all__ = ["detect_crisis_level", "CrisisLevel", "get_crisis_response_es"]
 
 CrisisLevel = Literal["none", "concern", "urgent", "immediate"]
 
@@ -120,3 +120,44 @@ def detect_crisis_level(text: str) -> CrisisLevel:
     except Exception:
         logger.debug("Crisis detection failed, returning none", exc_info=True)
         return "none"
+
+
+# ---------------------------------------------------------------------------
+# Spanish-localized crisis resources (Phase 1: Multilingual)
+# ---------------------------------------------------------------------------
+# 988 Lifeline: Spanish service available — press 2 for Spanish or say "español"
+# Crisis Text Line: Spanish-speaking counselors available — text HOLA to 741741
+# These are verified US national resources with confirmed Spanish support.
+
+
+def get_crisis_response_es(property_name: str, property_phone: str) -> str:
+    """Build Spanish-localized crisis response with verified resources.
+
+    Provides 988 Suicide & Crisis Lifeline (Spanish option) and Crisis Text
+    Line (Spanish counselors via HOLA keyword). Both are verified US national
+    resources with confirmed Spanish language support.
+
+    Args:
+        property_name: Display name of the casino property.
+        property_phone: Contact phone for the property.
+
+    Returns:
+        Spanish crisis response with 988 Lifeline and Crisis Text Line info.
+    """
+    return (
+        "Puedo escuchar que estás pasando por un momento muy difícil, y quiero "
+        "que sepas que hay ayuda disponible ahora mismo.\n\n"
+        "**Por favor comunícate con estos recursos confidenciales:**\n\n"
+        "- **988 Línea de Prevención del Suicidio y Crisis**: Llama al **988** "
+        "(presiona 2 para español) o llama directamente al **1-888-628-9454** "
+        "(línea en español, 24/7, gratis, confidencial)\n"
+        "- **988 por Texto**: Envía **AYUDA** al **988**\n"
+        "- **Línea de Crisis por Texto**: Envía **HOLA** al **741741** "
+        "(consejeros en español disponibles)\n"
+        "- **Emergencia**: Llama al **911** si tú o alguien está en peligro inmediato\n\n"
+        "No tienes que enfrentar esto solo/a. Hay consejeros capacitados disponibles "
+        "ahora mismo que entienden lo que estás pasando y pueden ayudar.\n\n"
+        f"Si deseas hablar con alguien de {property_name} en persona, "
+        f"cualquier miembro del equipo puede conectarte con servicios de apoyo. "
+        f"También puedes llamarnos al {property_phone}."
+    )

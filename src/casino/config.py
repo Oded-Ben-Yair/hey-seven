@@ -158,6 +158,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         # fallback for unknown casino_ids.
         "self_exclusion_authority": "Contact your state gaming commission",
         "responsible_gaming_escalation_threshold": 3,
+        # Phase 1: Multilingual — note about Spanish availability on helplines
+        "spanish_helpline_note": "Servicio en español disponible — presione 2 o diga 'español'",
     },
     "operational": {
         "timezone": "America/New_York",
@@ -237,6 +239,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # to request longer duration through the tribal gaming commission.
             "self_exclusion_options": "1-year minimum (longer durations available upon request)",
             "responsible_gaming_escalation_threshold": 3,
+            "spanish_helpline_note": "Servicio en español disponible — presione 2 o diga 'español'",
             "enforcement_context": {
                 "strict_liability": False,
                 "recent_enforcement": "N/A (tribal jurisdiction — internal commission enforcement)",
@@ -327,6 +330,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # R39 fix D10-M001: CT self-exclusion options for tribal casino.
             "self_exclusion_options": "1-year minimum (longer durations available upon request)",
             "responsible_gaming_escalation_threshold": 3,
+            "spanish_helpline_note": "Servicio en español disponible — presione 2 o diga 'español'",
             "enforcement_context": {
                 "strict_liability": False,
                 "recent_enforcement": "N/A (tribal jurisdiction — internal commission enforcement)",
@@ -414,6 +418,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # live support, reducing regulatory exposure in strict-liability
             # jurisdictions.
             "responsible_gaming_escalation_threshold": 2,
+            "spanish_helpline_note": "Servicio en español disponible — presione 2 o diga 'español'",
             "enforcement_context": {
                 "strict_liability": True,
                 "recent_enforcement": "Valley Forge Casino $30K BSA/AML fine (2022)",
@@ -498,6 +503,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # exclusions (cheating). Voluntary self-exclusion is under NGC Regulation 5.170.
             "self_exclusion_options": "1-year minimum (removal requires written petition to NGCB per NGC Reg. 5.170), or lifetime (irrevocable)",
             "responsible_gaming_escalation_threshold": 3,
+            "spanish_helpline_note": "Servicio en español disponible — presione 2 o diga 'español'",
             "enforcement_context": {
                 "strict_liability": True,
                 "recent_enforcement": "Wynn Resorts $5.5M patron dispute settlement (2023)",
@@ -581,6 +587,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             # lower threshold provides earlier escalation to live support,
             # reducing regulatory exposure (cf. BetMGM $260K fine, 2023).
             "responsible_gaming_escalation_threshold": 2,
+            "spanish_helpline_note": "Servicio en español disponible — presione 2 o diga 'español'",
             "enforcement_context": {
                 "strict_liability": True,
                 "recent_enforcement": "BetMGM NJ $260K self-exclusion violation (2023)",

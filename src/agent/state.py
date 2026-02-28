@@ -245,6 +245,11 @@ class PropertyQAState(TypedDict):
     # maintain crisis awareness even if the specific message doesn't re-trigger
     # crisis regex patterns. Reset only on new session (new thread_id).
     crisis_active: Annotated[bool, _keep_truthy]
+    # Phase 1: Language detection for multilingual support.
+    # Set by router_node from RouterOutput.detected_language.
+    # Used by greeting_node, off_topic_node, and execute_specialist to select
+    # language-appropriate responses. Feature-gated by spanish_support_enabled.
+    detected_language: str | None
 
 
 class RouterOutput(BaseModel):
@@ -258,6 +263,10 @@ class RouterOutput(BaseModel):
     confidence: float = Field(
         ge=0.0, le=1.0,
         description="Confidence in the classification (0.0 to 1.0)"
+    )
+    detected_language: Literal["en", "es", "other"] = Field(
+        default="en",
+        description="Detected language of the user message (en=English, es=Spanish, other=unsupported)"
     )
 
 

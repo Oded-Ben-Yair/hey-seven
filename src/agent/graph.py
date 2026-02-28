@@ -332,6 +332,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "domains_discussed": [],  # _append_unique: accumulates across turns
         # R73: Crisis context persistence
         "crisis_active": False,  # _keep_truthy: once True, stays True for session
+        # Phase 1: Language detection for multilingual support
+        "detected_language": None,
     }
 
 

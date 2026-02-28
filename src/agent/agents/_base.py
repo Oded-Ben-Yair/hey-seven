@@ -482,6 +482,29 @@ async def execute_specialist(
         property_description=_property_description,
     )
 
+    # Phase 1: Language-aware prompt selection for Spanish support.
+    # When guest is speaking Spanish and spanish_support_enabled flag is on,
+    # replace the English system prompt with the Spanish equivalent.
+    # Feature flag allows instant rollback per-casino.
+    detected_lang = state.get("detected_language")
+    if detected_lang == "es":
+        from src.casino.feature_flags import is_feature_enabled as _is_feature_enabled
+
+        if await _is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+            from src.agent.prompts import (
+                CONCIERGE_SYSTEM_PROMPT_ES,
+                get_responsible_gaming_helplines_es,
+            )
+
+            system_prompt = CONCIERGE_SYSTEM_PROMPT_ES.safe_substitute(
+                property_name=settings.PROPERTY_NAME,
+                current_time=current_time,
+                responsible_gaming_helplines=get_responsible_gaming_helplines_es(
+                    casino_id=settings.CASINO_ID,
+                ),
+                property_description=_property_description,
+            )
+
     # Format and append retrieved context
     if retrieved:
         context_block = _format_context_block(retrieved)
