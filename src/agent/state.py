@@ -99,6 +99,17 @@ def _append_unique(a: list[str] | None, b: list[str] | None) -> list[str]:
     return existing
 
 
+def _keep_latest_str(a: str | None, b: str | None) -> str | None:
+    """Reducer that keeps the latest non-None string value.
+
+    Used for guest_name: when extraction updates the name, the new value
+    should win. When _initial_state() passes None, the existing name persists.
+    """
+    if b is not None and b != "":
+        return b
+    return a
+
+
 def _keep_max(a: int | None, b: int | None) -> int:
     """Reducer that preserves the maximum value across state updates.
 
@@ -214,7 +225,7 @@ class PropertyQAState(TypedDict):
     # Denormalized from extracted_fields["name"] for O(1) access in
     # persona_envelope_node (which runs on every response turn).
     # Updated by _dispatch_to_specialist when guest_profile_enabled.
-    guest_name: str | None  # extracted guest name for personalization
+    guest_name: Annotated[str | None, _keep_latest_str]  # extracted guest name for personalization
     # _keep_max reducer: preserves the maximum value across state updates.
     # When _initial_state() resets this to 0, max(existing, 0) preserves
     # the accumulated count. When compliance_gate increments, the new value

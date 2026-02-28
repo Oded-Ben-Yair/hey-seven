@@ -2,8 +2,8 @@
 
 Tries google-re2 first (linear-time guarantee), falls back to stdlib re
 for patterns using features unsupported by re2 (e.g., lookaheads).
-Only 1 of 204 guardrail patterns uses (?!...) lookahead (line 54 of
-guardrails.py), so 203/204 patterns get re2 protection.
+All 204 guardrail patterns are re2-compatible. The normalization helper
+(_normalize_for_matching) also uses re2-compatible capture groups (R75 fix).
 
 google-re2 uses its own Options object instead of stdlib re flags.
 This adapter translates re.IGNORECASE and re.DOTALL into the

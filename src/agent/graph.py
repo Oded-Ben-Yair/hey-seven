@@ -578,7 +578,7 @@ async def chat_stream(
                     (time.monotonic() - node_start_times.pop(langgraph_node)) * 1000
                 )
                 output = event.get("data", {}).get("output", {})
-                meta = _extract_node_metadata(langgraph_node, output)
+                meta = _extract_node_metadata(langgraph_node, output, duration_ms=duration_ms)
                 yield {
                     "event": "graph_node",
                     "data": json.dumps({

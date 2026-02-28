@@ -45,28 +45,50 @@ _DISPATCH_OWNED_KEYS = frozenset({"guest_context", "guest_name"})
 _VALID_STATE_KEYS = frozenset(PropertyQAState.__annotations__)
 
 
-def _extract_node_metadata(node: str, output: Any) -> dict:
-    """Extract per-node metadata for graph trace SSE events."""
+def _extract_node_metadata(
+    node: str,
+    output: Any,
+    duration_ms: int | None = None,
+) -> dict:
+    """Extract per-node metadata for graph trace SSE events.
+
+    Args:
+        node: The LangGraph node name.
+        output: The node's output dict.
+        duration_ms: Optional per-node execution time in milliseconds
+            (provided by the streaming layer's monotonic timing).
+
+    Returns:
+        Metadata dict with node-specific fields and optional ``node_latency_ms``.
+    """
     if not isinstance(output, dict):
-        return {}
-    if node in (NODE_COMPLIANCE_GATE, NODE_ROUTER):
-        return {
+        meta: dict[str, Any] = {}
+    elif node in (NODE_COMPLIANCE_GATE, NODE_ROUTER):
+        meta = {
             "query_type": output.get("query_type"),
             "confidence": output.get("router_confidence"),
         }
-    if node == NODE_RETRIEVE:
+    elif node == NODE_RETRIEVE:
         ctx = output.get("retrieved_context", [])
-        return {"doc_count": len(ctx)}
-    if node == NODE_GENERATE:
+        meta = {"doc_count": len(ctx)}
+    elif node == NODE_GENERATE:
         # R41 fix D1-M002: Surface specialist name in SSE metadata for observability.
-        return {"specialist": output.get("specialist_name")}
-    if node == NODE_VALIDATE:
-        return {"result": output.get("validation_result")}
-    if node == NODE_RESPOND:
-        return {"sources": output.get("sources_used", [])}
-    if node == NODE_WHISPER:
-        return {"has_plan": bool(output.get("whisper_plan"))}
-    return {}
+        meta = {"specialist": output.get("specialist_name")}
+    elif node == NODE_VALIDATE:
+        meta = {"result": output.get("validation_result")}
+    elif node == NODE_RESPOND:
+        meta = {"sources": output.get("sources_used", [])}
+    elif node == NODE_WHISPER:
+        meta = {"has_plan": bool(output.get("whisper_plan"))}
+    else:
+        meta = {}
+
+    # R75: Include per-node latency for observability dashboards and
+    # performance alerting. Populated by the chat_stream timing layer.
+    if duration_ms is not None:
+        meta["node_latency_ms"] = duration_ms
+
+    return meta
 
 
 # ---------------------------------------------------------------------------

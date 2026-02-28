@@ -599,7 +599,17 @@ def _normalize_input(text: str) -> str:
     # R64 fix D7: Replace with space instead of removing. Removing merged
     # tokens: "gambling.problem" -> "gamblingproblem" which defeated
     # \bgambling\s+problem\b phrase patterns. Space preserves word boundaries.
-    text = re.sub(r"(?<=\w)(?:[^\w\s]|_)(?=\w)", " ", text)
+    # R75 fix D7: Replaced lookahead/lookbehind with capture groups for RE2
+    # compatibility. Previous patterns used (?<=\w) and (?=\w) which force
+    # stdlib re fallback. Capture groups + backreference in replacement
+    # achieve identical behavior and work with RE2.
+    # Iterative: capture groups consume both surrounding chars, so
+    # "i.g.n.o.r.e" needs multiple passes (first pass: "i g.n o.r e",
+    # second pass: "i g n o r e").
+    prev = None
+    while prev != text:
+        prev = text
+        text = re.sub(r"(\w)(?:[^\w\s]|_)(\w)", r"\1 \2", text)
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
     # R64 fix D7: Re-join single-character tokens separated by spaces.
@@ -608,7 +618,16 @@ def _normalize_input(text: str) -> str:
     # character-level smuggling. Multi-char words like "gambling problem"
     # are unaffected (both tokens are > 1 char). Pattern: space between
     # two single word-characters.
-    text = re.sub(r"(?<=\b\w) (?=\w\b)", "", text)
+    # R75 fix D7: Replaced lookbehind/lookahead with programmatic approach.
+    # Previous pattern r"(?<=\b\w) (?=\w\b)" used lookarounds not
+    # supported by RE2. This function-based replacement achieves the same
+    # result: merge sequences of space-separated single characters
+    # (e.g., "i g n o r e" → "ignore") while preserving multi-char words
+    # (e.g., "gambling problem" → unchanged).
+    def _merge_single_chars(m: re.Match) -> str:
+        return m.group(0).replace(" ", "")
+
+    text = re.sub(r"\b(?:\w )+\w\b", _merge_single_chars, text)
     return text
 
 
