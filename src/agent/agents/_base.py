@@ -145,6 +145,48 @@ def _count_consecutive_frustrated(messages: list) -> int:
     return count
 
 
+# R74 B3: Full domain set for cross-domain engagement variation.
+# Broader than the original specialist agent set (dining, entertainment, comp, hotel,
+# host) — includes spa, gaming, shopping, and promotions to cover the full casino
+# experience.  "host" is excluded from suggestions since it's meta (not a domain
+# the guest "explores").
+_ALL_GUEST_DOMAINS = frozenset(
+    {"dining", "entertainment", "hotel", "spa", "gaming", "shopping", "promotions", "comp"}
+)
+
+
+def _build_cross_domain_hint(domains_discussed: list[str]) -> str:
+    """Build a cross-domain engagement hint for the system prompt.
+
+    R74 B3: When a guest has explored some domains, generates a prompt section
+    suggesting unexplored domains the agent can naturally mention.  Max 3
+    suggestions to avoid overwhelming the prompt.
+
+    Args:
+        domains_discussed: List of specialist domain names already discussed
+            in this session (e.g. ``["dining", "entertainment"]``).
+
+    Returns:
+        A prompt section string (without leading ``\\n\\n``) if there are
+        both explored and unexplored domains, or ``""`` if no hint is needed.
+    """
+    if not domains_discussed:
+        return ""
+
+    unexplored = sorted(_ALL_GUEST_DOMAINS - set(domains_discussed))
+    if not unexplored:
+        return ""
+
+    explored_str = ", ".join(sorted(domains_discussed))
+    suggest_str = ", ".join(unexplored[:3])  # Max 3 suggestions
+    return (
+        "## Cross-Domain Awareness (internal context)\n"
+        f"Guest has already explored: {explored_str}.\n"
+        f"If it fits naturally, you could mention: {suggest_str}.\n"
+        "Do NOT force these — only mention if genuinely relevant to the conversation."
+    )
+
+
 def _build_behavioral_prompt_sections(
     state: PropertyQAState,
     user_msg: str,
@@ -228,18 +270,11 @@ def _build_behavioral_prompt_sections(
             "throughout the conversation."
         )
 
-    # Cross-domain awareness
+    # R74 B3: Cross-domain engagement variation via extracted helper.
     domains_discussed = state.get("domains_discussed", [])
-    if domains_discussed:
-        _all_domains = {"dining", "entertainment", "comp", "hotel", "host"}
-        _not_discussed = _all_domains - set(domains_discussed) - {"host"}
-        if _not_discussed:
-            sections.append(
-                "## Domain Awareness\n"
-                f"You've already helped with: {', '.join(sorted(domains_discussed))}. "
-                f"If the guest asks 'what else' or seems done with this topic, "
-                f"naturally suggest exploring: {', '.join(sorted(_not_discussed))}."
-            )
+    cross_domain_hint = _build_cross_domain_hint(domains_discussed)
+    if cross_domain_hint:
+        sections.append(cross_domain_hint)
 
     # Conversation dynamics
     history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
@@ -300,6 +335,71 @@ def _build_behavioral_prompt_sections(
         prompt_text = "\n\n" + "\n\n".join(sections)
 
     return prompt_text, effective_sentiment, dynamics, frustrated_count
+
+
+def _should_inject_suggestion(
+    state: PropertyQAState,
+    effective_sentiment: str | None,
+    dynamics: dict[str, Any],
+) -> tuple[str, bool]:
+    """Determine whether to inject a proactive suggestion into the system prompt.
+
+    R74 B4: Extracted from execute_specialist for testability.
+
+    Gating conditions (ALL must be true):
+      1. Whisper plan has a non-empty ``proactive_suggestion``
+      2. ``suggestion_confidence`` >= 0.8
+      3. ``effective_sentiment`` is not negative, frustrated, or None
+      4. ``suggestion_offered`` is False (max 1 per session)
+      5. ``retrieved_context`` is non-empty (grounding exists)
+
+    For neutral sentiment, an additional contextual signal is required:
+    an occasion is detected OR the conversation has 3+ human turns.
+
+    Returns:
+        Tuple of (proactive_prompt_section, should_mark_offered).
+        If conditions are not met, returns ("", False).
+    """
+    whisper = state.get("whisper_plan")
+    if not whisper:
+        return "", False
+
+    suggestion = whisper.get("proactive_suggestion")
+    if not suggestion:
+        return "", False
+
+    conf = whisper.get("suggestion_confidence", 0.0)
+    if conf < 0.8:
+        return "", False
+
+    if state.get("suggestion_offered", False):
+        return "", False
+
+    if not state.get("retrieved_context"):
+        return "", False
+
+    # Sentiment gate: block on negative, frustrated, or unknown.
+    # Allow on positive unconditionally.  Allow on neutral only when
+    # strong contextual signals make a proactive suggestion welcome.
+    extracted = state.get("extracted_fields") or {}
+    if effective_sentiment == "positive":
+        pass  # allowed
+    elif effective_sentiment == "neutral":
+        # Require at least one contextual signal for neutral sentiment.
+        has_occasion = bool(extracted.get("occasion"))
+        has_engagement = dynamics.get("turn_count", 0) >= 3
+        if not (has_occasion or has_engagement):
+            return "", False
+    else:
+        # negative, frustrated, None — block
+        return "", False
+
+    section = (
+        "\n\n## Proactive Suggestion (weave naturally into your response — don't force it)\n"
+        f"{suggestion}\n"
+        "Only mention this if it flows naturally from the conversation."
+    )
+    return section, True
 
 
 def _fallback_message(reason: str = "trouble generating a response") -> str:
@@ -447,42 +547,14 @@ async def execute_specialist(
     )
     system_prompt += behavioral_sections
 
-    # Phase 4: Proactive suggestion injection from whisper plan.
-    # R71 B4 fix: Allow suggestions on neutral sentiment when contextual signals
-    # are strong (occasion detected, building multi-turn plan, positive dynamics).
-    # Still block on frustrated/negative and None (detection failed).
-    # R23 fix C-003: check suggestion_offered to enforce max-1-per-conversation.
-    whisper = state.get("whisper_plan")
-    suggestion_already_offered = state.get("suggestion_offered", False)
-    _sentiment = guest_sentiment  # Use effective sentiment (may be overridden by sarcasm detection)
-    _allow_suggestion = (
-        _sentiment == "positive"
-        or (
-            _sentiment == "neutral"
-            and (
-                # Strong contextual signals that make proactive suggestion welcome:
-                extracted.get("occasion")  # Guest celebrating something
-                or dynamics["turn_count"] >= 3  # Multi-turn engaged conversation
-            )
-        )
+    # R74 B4: Proactive suggestion injection via extracted helper.
+    # Gated by: confidence >= 0.8, sentiment not negative/frustrated,
+    # max 1 per session (suggestion_offered), grounding exists (retrieved_context).
+    proactive_section, suggestion_already_offered = _should_inject_suggestion(
+        state, guest_sentiment, dynamics,
     )
-    if (
-        whisper
-        and not suggestion_already_offered
-        and _allow_suggestion
-    ):
-        suggestion = whisper.get("proactive_suggestion")
-        conf = whisper.get("suggestion_confidence", 0.0)
-        if suggestion and conf >= 0.8:
-            system_prompt += (
-                "\n\n## Proactive Suggestion (weave naturally, don't force)\n"
-                f"{suggestion}\n"
-                "Only mention this if it fits naturally in your response. "
-                "Never push; if the guest doesn't bite, drop it."
-            )
-            # R23 fix C-003: Mark suggestion as offered to enforce max-1.
-            # _keep_max reducer: max(True, False) = True, persists across turns.
-            suggestion_already_offered = True  # Used in return dict below
+    if proactive_section:
+        system_prompt += proactive_section
 
     # Build message list
     llm_messages = [SystemMessage(content=system_prompt)]
