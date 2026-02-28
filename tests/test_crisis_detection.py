@@ -188,16 +188,61 @@ class TestCrisisPersistence:
         assert result.get("query_type") == "self_harm"
 
     @pytest.mark.asyncio
-    async def test_crisis_persistence_allows_property_transition(self, _base_state):
-        """When crisis_active is True but guest asks property Q, allow transition."""
+    async def test_crisis_persists_on_property_question_without_safe_confirmation(self, _base_state):
+        """R74: Crisis persists on property questions if no safe confirmation.
+
+        A property question alone could be deflection — guest may still be in
+        distress but trying to change the subject. Both safe confirmation AND
+        property question are required to exit crisis mode.
+        """
         from langchain_core.messages import HumanMessage
         from src.agent.compliance_gate import compliance_gate_node
 
         _base_state["crisis_active"] = True
-        _base_state["messages"] = [HumanMessage(content="Where is the restaurant?")]
+        _base_state["messages"] = [HumanMessage(content="What restaurants do you have?")]
+        result = await compliance_gate_node(_base_state)
+        assert result.get("query_type") == "self_harm"
+
+    @pytest.mark.asyncio
+    async def test_crisis_exits_on_safe_confirmation_plus_property_question(self, _base_state):
+        """R74: Crisis exits when guest confirms safe AND asks property question."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["crisis_active"] = True
+        _base_state["messages"] = [
+            HumanMessage(content="I'm feeling better now, what restaurants are open?")
+        ]
         result = await compliance_gate_node(_base_state)
         # Should pass through to router (query_type=None), not crisis
         assert result.get("query_type") is None
+
+    @pytest.mark.asyncio
+    async def test_crisis_persists_on_safe_confirmation_alone(self, _base_state):
+        """R74: Crisis persists on safe confirmation without property question.
+
+        A guest saying 'I'm feeling better' may still need support — do not
+        exit crisis mode until they also demonstrate intent to move on by
+        asking about a property amenity.
+        """
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["crisis_active"] = True
+        _base_state["messages"] = [HumanMessage(content="I'm feeling better")]
+        result = await compliance_gate_node(_base_state)
+        assert result.get("query_type") == "self_harm"
+
+    @pytest.mark.asyncio
+    async def test_crisis_persists_on_ambiguous_message(self, _base_state):
+        """R74: Crisis persists on ambiguous messages like 'whatever'."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["crisis_active"] = True
+        _base_state["messages"] = [HumanMessage(content="whatever")]
+        result = await compliance_gate_node(_base_state)
+        assert result.get("query_type") == "self_harm"
 
     @pytest.mark.asyncio
     async def test_crisis_active_in_state_schema(self):

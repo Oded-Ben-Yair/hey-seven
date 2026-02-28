@@ -214,22 +214,33 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
         )
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
 
-    # 7.4 Crisis context persistence — R73 fix.
-    # When a previous turn activated crisis mode (crisis_active=True via
-    # _keep_truthy reducer), maintain crisis response for follow-up turns
-    # even if the specific message doesn't re-trigger crisis patterns.
-    # "Nobody can help me" after "I don't want to live anymore" should
-    # continue the crisis response, not fall back to generic concierge.
+    # 7.4 Crisis context persistence — R73 fix, R74 hardened.
+    # When crisis_active=True, maintain crisis response UNLESS guest explicitly
+    # confirms safety AND asks a property question. Both conditions required —
+    # safety confirmation alone keeps crisis mode (they may still need support),
+    # property question alone keeps crisis mode (could be deflection).
     if state.get("crisis_active", False):
-        # Check if current message is clearly moving on (property Q&A)
-        # If not, maintain crisis context
+        _SAFE_CONFIRMATIONS = (
+            "i'm ok", "i'm okay", "im ok", "im okay",
+            "i'm fine", "im fine", "i'm better", "im better",
+            "i'm feeling better", "im feeling better",
+            "i'm alright", "im alright", "i'm good", "im good",
+            "thanks for checking", "i appreciate it",
+            "i'll be okay", "ill be okay",
+        )
+        msg_lower = user_message.lower()
+        _has_safe_confirmation = any(phrase in msg_lower for phrase in _SAFE_CONFIRMATIONS)
         _is_property_question = any(
-            kw in user_message.lower()
+            kw in msg_lower
             for kw in ("restaurant", "steakhouse", "buffet", "spa", "pool",
                         "show", "arena", "room", "hotel", "check", "hours",
                         "parking", "directions", "shuttle", "wifi")
         )
-        if not _is_property_question:
+        if _has_safe_confirmation and _is_property_question:
+            logger.info(
+                "Crisis context: guest confirmed safe AND asked property question — allowing transition"
+            )
+        else:
             logger.info("Crisis context active — maintaining crisis response for follow-up")
             logger.info(
                 json.dumps({
@@ -242,8 +253,6 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 })
             )
             return {"query_type": "self_harm", "router_confidence": 1.0}
-        else:
-            logger.info("Crisis context active but guest asked property question — allowing transition")
 
     # 7.5 Crisis detection — graduated escalation protocol (R72 Phase C5).
     # Runs BEFORE the binary self_harm detector to provide nuanced response
