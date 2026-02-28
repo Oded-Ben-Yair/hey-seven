@@ -61,3 +61,12 @@ heyseven-full-page.png
 # Claude Code config (dev only)
 .claude/
 CLAUDE.md
+reviews/
+
+# Evaluation artifacts (keep scripts and reports, not raw data)
+tests/evaluation/*-raw.txt
+tests/evaluation/*-baseline.json
+tests/evaluation/eval-log.txt
+tests/evaluation/r73-eval-log.txt
+tests/evaluation/batch-judge-prompt.txt
+tests/evaluation/judge-prompts.json
