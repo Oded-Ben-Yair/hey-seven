@@ -867,3 +867,48 @@ class TestVersionParity:
         from src.config import Settings
         version = Settings.model_fields["VERSION"].default
         assert f"VERSION={version}" in content
+
+
+class TestGraphTopology:
+    """Verify graph topology matches documentation.
+
+    Complements TestGraphNodeCount (count-based assertions) with
+    explicit node-name identity checks against constants.py.
+    """
+
+    def test_node_count_matches_docs(self):
+        """Graph must have exactly 11 nodes (documented in ARCHITECTURE.md and README)."""
+        from src.agent.graph import build_graph
+
+        graph = build_graph()
+        graph_data = graph.get_graph()
+        # Exclude __start__ and __end__ virtual nodes added by LangGraph
+        if isinstance(graph_data.nodes, dict):
+            real_nodes = [n for n in graph_data.nodes if not n.startswith("__")]
+        else:
+            real_nodes = [
+                (n.id if hasattr(n, "id") else str(n))
+                for n in graph_data.nodes
+                if not (n.id if hasattr(n, "id") else str(n)).startswith("__")
+            ]
+        assert len(real_nodes) == 11, f"Expected 11 nodes, got {len(real_nodes)}: {real_nodes}"
+
+    def test_node_names_use_constants(self):
+        """All node names must come from constants.py."""
+        from src.agent.constants import _KNOWN_NODES
+        from src.agent.graph import build_graph
+
+        graph = build_graph()
+        graph_data = graph.get_graph()
+        if isinstance(graph_data.nodes, dict):
+            real_nodes = {n for n in graph_data.nodes if not n.startswith("__")}
+        else:
+            real_nodes = {
+                (n.id if hasattr(n, "id") else str(n))
+                for n in graph_data.nodes
+                if not (n.id if hasattr(n, "id") else str(n)).startswith("__")
+            }
+        assert real_nodes == _KNOWN_NODES, (
+            f"Mismatch: in graph but not constants: {real_nodes - _KNOWN_NODES}, "
+            f"in constants but not graph: {_KNOWN_NODES - real_nodes}"
+        )
