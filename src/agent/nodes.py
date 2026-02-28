@@ -642,88 +642,169 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     query_type = state.get("query_type", "off_topic")
     settings = get_settings()
 
+    # Phase 1: Detect language once for all off-topic branches
+    detected_lang = state.get("detected_language")
+    _is_spanish = (
+        detected_lang == "es"
+        and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled")
+    )
+
     if query_type == "bsa_aml":
-        content = (
-            "Thank you for your question. Matters related to financial compliance "
-            "and reporting requirements are handled by our dedicated compliance team. "
-            "For assistance, please speak with a casino host or contact our compliance "
-            "department directly. Is there anything else about our resort amenities "
-            "I can help you with?"
-        )
+        if _is_spanish:
+            content = (
+                "Gracias por tu pregunta. Los asuntos relacionados con el cumplimiento "
+                "financiero y los requisitos de informes son manejados por nuestro equipo "
+                "dedicado de cumplimiento. Para asistencia, por favor habla con un anfitrión "
+                "del casino o contacta a nuestro departamento de cumplimiento directamente. "
+                "¿Hay algo más sobre las amenidades del resort en lo que pueda ayudarte?"
+            )
+        else:
+            content = (
+                "Thank you for your question. Matters related to financial compliance "
+                "and reporting requirements are handled by our dedicated compliance team. "
+                "For assistance, please speak with a casino host or contact our compliance "
+                "department directly. Is there anything else about our resort amenities "
+                "I can help you with?"
+            )
     elif query_type == "patron_privacy":
-        content = (
-            "I'm not able to share information about other guests, including whether "
-            "someone is a member, their presence at the property, or any personal details. "
-            "Guest privacy is a top priority.\n\n"
-            f"If you need to reach someone, I'd suggest contacting them directly or calling "
-            f"{settings.PROPERTY_NAME} at {settings.PROPERTY_PHONE}.\n\n"
-            "Is there anything else about the resort I can help with?"
-        )
+        if _is_spanish:
+            content = (
+                "No puedo compartir información sobre otros huéspedes, incluyendo si "
+                "alguien es miembro, su presencia en la propiedad, o cualquier detalle personal. "
+                "La privacidad de los huéspedes es una prioridad.\n\n"
+                f"Si necesitas contactar a alguien, te sugiero comunicarte directamente o llamar "
+                f"a {settings.PROPERTY_NAME} al {settings.PROPERTY_PHONE}.\n\n"
+                "¿Hay algo más sobre el resort en lo que pueda ayudarte?"
+            )
+        else:
+            content = (
+                "I'm not able to share information about other guests, including whether "
+                "someone is a member, their presence at the property, or any personal details. "
+                "Guest privacy is a top priority.\n\n"
+                f"If you need to reach someone, I'd suggest contacting them directly or calling "
+                f"{settings.PROPERTY_NAME} at {settings.PROPERTY_PHONE}.\n\n"
+                "Is there anything else about the resort I can help with?"
+            )
     elif query_type == "gambling_advice":
         # Feature flag: ai_disclosure_enabled adds transparency to gambling-advice responses
         # R17 fix: Gemini M-002 — reuse already-fetched settings variable.
         ai_disclosure = await is_feature_enabled(settings.CASINO_ID, "ai_disclosure_enabled")
-        disclosure_suffix = (
-            "\n\n*As an AI assistant, I'm required to direct you to these "
-            "professional resources rather than provide gambling guidance.*"
-            if ai_disclosure else ""
-        )
         # Escalation: after 3+ responsible gaming triggers in a session,
         # add a stronger message encouraging live support contact.
         rg_count = state.get("responsible_gaming_count", 0)
-        escalation_msg = ""
-        if rg_count >= 3:
-            escalation_msg = (
-                f"\n\n**I've noticed you've raised this topic several times.** "
-                f"I strongly encourage you to speak with a live team member who "
-                f"can provide confidential, personalized support. You can reach "
-                f"{settings.PROPERTY_NAME}'s Responsible Gaming team directly "
-                f"at {settings.PROPERTY_PHONE}, or visit the Responsible Gaming "
-                f"desk on-property."
+        if _is_spanish:
+            from src.agent.prompts import get_responsible_gaming_helplines_es
+            disclosure_suffix_es = (
+                "\n\n*Como asistente de IA, estoy obligado a dirigirte a estos "
+                "recursos profesionales en lugar de proporcionar orientación sobre el juego.*"
+                if ai_disclosure else ""
             )
-        content = (
-            "I appreciate your interest, but I'm not able to provide gambling advice, "
-            "betting strategies, or information about odds. I can share general information "
-            f"about the gaming areas at {settings.PROPERTY_NAME}.\n\n"
-            "If you or someone you know needs help with problem gambling, "
-            "please reach out to these resources:\n"
-            f"{get_responsible_gaming_helplines(casino_id=settings.CASINO_ID)}"
-            f"{escalation_msg}\n\n"
-            f"Is there anything else about the resort I can help with?{disclosure_suffix}"
-        )
+            escalation_msg = ""
+            if rg_count >= 3:
+                escalation_msg = (
+                    f"\n\n**He notado que has mencionado este tema varias veces.** "
+                    f"Te recomiendo fuertemente hablar con un miembro del equipo en vivo "
+                    f"que pueda brindarte apoyo confidencial y personalizado. Puedes contactar "
+                    f"al equipo de Juego Responsable de {settings.PROPERTY_NAME} directamente "
+                    f"al {settings.PROPERTY_PHONE}."
+                )
+            content = (
+                "Agradezco tu interés, pero no puedo proporcionar consejos de juego, "
+                "estrategias de apuestas, o información sobre probabilidades. Puedo compartir "
+                f"información general sobre las áreas de juego de {settings.PROPERTY_NAME}.\n\n"
+                "Si tú o alguien que conoces necesita ayuda con problemas de juego, "
+                "por favor comunícate con estos recursos:\n"
+                f"{get_responsible_gaming_helplines_es(casino_id=settings.CASINO_ID)}"
+                f"{escalation_msg}\n\n"
+                f"¿Hay algo más sobre el resort en lo que pueda ayudarte?{disclosure_suffix_es}"
+            )
+        else:
+            disclosure_suffix = (
+                "\n\n*As an AI assistant, I'm required to direct you to these "
+                "professional resources rather than provide gambling guidance.*"
+                if ai_disclosure else ""
+            )
+            escalation_msg = ""
+            if rg_count >= 3:
+                escalation_msg = (
+                    f"\n\n**I've noticed you've raised this topic several times.** "
+                    f"I strongly encourage you to speak with a live team member who "
+                    f"can provide confidential, personalized support. You can reach "
+                    f"{settings.PROPERTY_NAME}'s Responsible Gaming team directly "
+                    f"at {settings.PROPERTY_PHONE}, or visit the Responsible Gaming "
+                    f"desk on-property."
+                )
+            content = (
+                "I appreciate your interest, but I'm not able to provide gambling advice, "
+                "betting strategies, or information about odds. I can share general information "
+                f"about the gaming areas at {settings.PROPERTY_NAME}.\n\n"
+                "If you or someone you know needs help with problem gambling, "
+                "please reach out to these resources:\n"
+                f"{get_responsible_gaming_helplines(casino_id=settings.CASINO_ID)}"
+                f"{escalation_msg}\n\n"
+                f"Is there anything else about the resort I can help with?{disclosure_suffix}"
+            )
     elif query_type == "age_verification":
-        content = (
-            f"Great question! At {settings.PROPERTY_NAME}, guests must be **21 years of age or older** "
-            "to access the gaming floor, purchase or consume alcohol, and enter most entertainment venues.\n\n"
-            "**What minors CAN do:**\n"
-            "- Walk through designated non-gaming areas\n"
-            "- Dine at select restaurants (with an adult)\n"
-            f"- Visit the shops at {settings.PROPERTY_NAME}\n\n"
-            "**What requires 21+:**\n"
-            "- Casino gaming floor\n"
-            "- Table games, slots, and poker\n"
-            "- Bars and lounges\n"
-            "- Most entertainment venues\n\n"
-            f"Valid government-issued photo ID is required. {settings.PROPERTY_STATE} state law strictly "
-            "enforces the 21+ age requirement for gaming.\n\n"
-            "Is there anything else I can help you with?"
-        )
+        if _is_spanish:
+            content = (
+                f"En {settings.PROPERTY_NAME}, los huéspedes deben tener **21 años o más** "
+                "para acceder al piso de juegos, comprar o consumir alcohol, y entrar a la mayoría "
+                "de los lugares de entretenimiento.\n\n"
+                "**Lo que los menores PUEDEN hacer:**\n"
+                "- Caminar por las áreas designadas sin juegos\n"
+                "- Cenar en restaurantes selectos (con un adulto)\n"
+                f"- Visitar las tiendas de {settings.PROPERTY_NAME}\n\n"
+                "**Lo que requiere 21+:**\n"
+                "- Piso de juegos del casino\n"
+                "- Juegos de mesa, tragamonedas y póker\n"
+                "- Bares y lounges\n"
+                "- La mayoría de los lugares de entretenimiento\n\n"
+                "Se requiere identificación gubernamental con foto válida. "
+                "La ley estatal exige estrictamente el requisito de 21+ para el juego.\n\n"
+                "¿Hay algo más en lo que pueda ayudarte?"
+            )
+        else:
+            content = (
+                f"Great question! At {settings.PROPERTY_NAME}, guests must be **21 years of age or older** "
+                "to access the gaming floor, purchase or consume alcohol, and enter most entertainment venues.\n\n"
+                "**What minors CAN do:**\n"
+                "- Walk through designated non-gaming areas\n"
+                "- Dine at select restaurants (with an adult)\n"
+                f"- Visit the shops at {settings.PROPERTY_NAME}\n\n"
+                "**What requires 21+:**\n"
+                "- Casino gaming floor\n"
+                "- Table games, slots, and poker\n"
+                "- Bars and lounges\n"
+                "- Most entertainment venues\n\n"
+                f"Valid government-issued photo ID is required. {settings.PROPERTY_STATE} state law strictly "
+                "enforces the 21+ age requirement for gaming.\n\n"
+                "Is there anything else I can help you with?"
+            )
     elif query_type == "action_request":
-        content = (
-            "I appreciate you asking! While I can't make reservations, bookings, "
-            "or take any actions on your behalf, I can provide all the information "
-            "you need to do so yourself.\n\n"
-            f"For reservations and bookings, please contact {settings.PROPERTY_NAME} "
-            f"directly at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
-            "Is there any information I can help you with?"
-        )
+        if _is_spanish:
+            content = (
+                "Agradezco que preguntes. Aunque no puedo hacer reservaciones, reservas, "
+                "o tomar acciones en tu nombre, puedo darte toda la información "
+                "que necesitas para hacerlo tú mismo.\n\n"
+                f"Para reservaciones, por favor contacta a {settings.PROPERTY_NAME} "
+                f"directamente al {settings.PROPERTY_PHONE} o visita {settings.PROPERTY_WEBSITE}.\n\n"
+                "¿Hay alguna información en la que pueda ayudarte?"
+            )
+        else:
+            content = (
+                "I appreciate you asking! While I can't make reservations, bookings, "
+                "or take any actions on your behalf, I can provide all the information "
+                "you need to do so yourself.\n\n"
+                f"For reservations and bookings, please contact {settings.PROPERTY_NAME} "
+                f"directly at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
+                "Is there any information I can help you with?"
+            )
     elif query_type == "self_harm":
         # R50 fix (Grok CRITICAL-D1-001): Self-harm crisis response with 988 Lifeline.
         # compliance_gate detects crisis language and routes here. The response
         # prioritizes safety resources over property information. Never dismissive,
         # never minimizing, always empathetic with concrete action steps.
-        detected_lang = state.get("detected_language")
-        if detected_lang == "es" and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+        if _is_spanish:
             from src.agent.crisis import get_crisis_response_es
             content = get_crisis_response_es(settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
         else:
@@ -744,8 +825,7 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         # General off-topic — genuinely unrelated to the property.
         # Kept brief and non-robotic. Does NOT fire for emotional or
         # conversational messages (those now route through ambiguous → retrieve).
-        detected_lang = state.get("detected_language")
-        if detected_lang == "es" and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+        if _is_spanish:
             from src.agent.prompts import OFF_TOPIC_RESPONSE_ES
             content = OFF_TOPIC_RESPONSE_ES.safe_substitute(property_name=settings.PROPERTY_NAME)
         else:
