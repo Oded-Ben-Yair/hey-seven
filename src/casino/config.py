@@ -128,6 +128,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "sentiment_detection_enabled": True,
         "guest_profile_enabled": True,
         "field_extraction_enabled": True,
+        "sentiment_llm_augmented": False,
+        "extraction_llm_augmented": False,
     },
     "prompts": {
         "system_prompt_override": None,
@@ -207,6 +209,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "sentiment_detection_enabled": True,
             "guest_profile_enabled": True,
             "field_extraction_enabled": True,
+            "sentiment_llm_augmented": False,
+            "extraction_llm_augmented": False,
         },
         "branding": {
             "persona_name": "Seven",
@@ -299,6 +303,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "sentiment_detection_enabled": True,
             "guest_profile_enabled": True,
             "field_extraction_enabled": True,
+            "sentiment_llm_augmented": False,
+            "extraction_llm_augmented": False,
         },
         "branding": {
             "persona_name": "Foxy",
@@ -390,6 +396,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "sentiment_detection_enabled": True,
             "guest_profile_enabled": True,
             "field_extraction_enabled": True,
+            "sentiment_llm_augmented": False,
+            "extraction_llm_augmented": False,
         },
         "branding": {
             "persona_name": "Lucky",
@@ -476,6 +484,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "sentiment_detection_enabled": True,
             "guest_profile_enabled": True,
             "field_extraction_enabled": True,
+            "sentiment_llm_augmented": False,
+            "extraction_llm_augmented": False,
         },
         "branding": {
             "persona_name": "Wynn Host",
@@ -561,6 +571,8 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "sentiment_detection_enabled": True,
             "guest_profile_enabled": True,
             "field_extraction_enabled": True,
+            "sentiment_llm_augmented": False,
+            "extraction_llm_augmented": False,
         },
         "branding": {
             "persona_name": "Ace",

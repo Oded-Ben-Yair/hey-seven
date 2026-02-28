@@ -11,7 +11,10 @@ Feature flag: ``field_extraction_enabled`` (default: True).
 
 import logging
 import re
+from collections.abc import Callable
 from typing import Any
+
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -284,3 +287,76 @@ def get_guest_profile_summary(extracted_fields: dict[str, Any]) -> str:
         return ""
 
     return "Guest Profile Summary:\n" + "\n".join(f"  - {line}" for line in lines)
+
+
+# ---------------------------------------------------------------------------
+# R75 B2: LLM-augmented field extraction for conversational messages
+# ---------------------------------------------------------------------------
+# Regex extraction misses conversational paraphrases like "birthday next
+# Saturday for four people". LLM fallback fires only when regex returns
+# empty AND text has 15+ words (cost control).
+#
+# Feature flag: ``extraction_llm_augmented`` (default False — opt-in).
+# Merge: LLM results fill gaps only — regex wins on conflicts (deterministic
+# is more reliable than probabilistic).
+
+
+class ExtractionOutput(BaseModel):
+    """Structured output for LLM field extraction."""
+
+    name: str | None = Field(default=None, description="Guest name if mentioned")
+    party_size: int | None = Field(default=None, description="Number of guests")
+    visit_date: str | None = Field(default=None, description="When they're visiting")
+    occasion: str | None = Field(default=None, description="Special occasion")
+    preferences: str | None = Field(default=None, description="Dietary or venue preferences")
+
+
+async def extract_fields_augmented(
+    text: str,
+    regex_result: dict[str, Any],
+    get_llm_fn: Callable,
+) -> dict[str, Any]:
+    """LLM fallback extraction for conversational messages regex misses.
+
+    Only fires when regex returns empty AND text has 15+ words.
+    Merges LLM results with regex (regex wins on conflicts).
+
+    Args:
+        text: The guest's message text.
+        regex_result: Pre-computed regex extraction result from extract_fields().
+        get_llm_fn: Async callable that returns an LLM instance.
+
+    Returns:
+        Dict of extracted field name -> value. May be augmented with LLM fields.
+    """
+    # If regex already found fields, no need for LLM
+    if regex_result:
+        return regex_result
+
+    # Short messages unlikely to have extractable info
+    if len(text.split()) < 15:
+        return regex_result
+
+    try:
+        llm = await get_llm_fn()
+        extraction_llm = llm.with_structured_output(ExtractionOutput)
+        prompt = (
+            "Extract any guest information from this casino concierge message. "
+            "Only extract information that is explicitly stated, never infer.\n\n"
+            f"Message: {text}"
+        )
+        result: ExtractionOutput = await extraction_llm.ainvoke(prompt)
+
+        # Merge: only add non-None LLM fields that regex didn't find
+        merged = dict(regex_result)
+        for field_name in ("name", "party_size", "visit_date", "occasion", "preferences"):
+            value = getattr(result, field_name, None)
+            if value is not None and field_name not in merged:
+                merged[field_name] = value
+
+        if merged != regex_result:
+            logger.info("LLM extraction augmented: %s new fields", len(merged) - len(regex_result))
+        return merged
+    except Exception:
+        logger.debug("LLM extraction augmentation failed, using regex result", exc_info=True)
+        return regex_result

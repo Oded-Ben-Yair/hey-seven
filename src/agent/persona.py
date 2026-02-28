@@ -139,6 +139,75 @@ def _inject_guest_name(content: str, guest_name: str | None) -> str:
     return f"{guest_name}, {content}"
 
 
+# Performative openers that make responses sound artificial
+_PERFORMATIVE_OPENER_PATTERNS: list[re.Pattern] = [
+    # "Absolutely! " / "Absolutely, "
+    re.compile(r'^Absolutely[!,]\s*', re.IGNORECASE),
+    # "Oh, " / "Oh! " at start of response
+    re.compile(r'^Oh[,!]\s*', re.IGNORECASE),
+    # "I'd be absolutely delighted" / "I'd be happy to" / "I'd be glad to"
+    re.compile(r"^I'?d be (?:absolutely )?(?:delighted|happy|glad) to[!.]?\s*", re.IGNORECASE),
+    # "What a wonderful question!" / "What a great question!"
+    re.compile(r'^What a (?:wonderful|great|fantastic|excellent) question[!.]?\s*', re.IGNORECASE),
+    # "Great question!" at start
+    re.compile(r'^(?:Great|Excellent|Wonderful|Fantastic) question[!.]?\s*', re.IGNORECASE),
+    # "Of course!" at start
+    re.compile(r'^Of course[!,]\s*', re.IGNORECASE),
+    # "Sure thing!" at start
+    re.compile(r'^Sure thing[!,]\s*', re.IGNORECASE),
+]
+
+
+def _strip_performative_openers(content: str) -> str:
+    """Remove performative/artificial openers from LLM responses.
+
+    Strips patterns like "Absolutely!", "Oh,", "I'd be delighted to",
+    "Great question!" from the beginning of responses. These make AI
+    responses sound artificial and performative.
+
+    Also reduces exclamation clustering in the first paragraph (3+ → max 1).
+
+    Args:
+        content: The response text after PII redaction.
+
+    Returns:
+        Content with performative openers stripped.
+    """
+    if not content:
+        return content
+
+    # Strip performative openers (iterate: patterns can chain, e.g., "Oh, absolutely!")
+    for _ in range(3):  # Max 3 passes (handles "Oh, absolutely! Great question!")
+        original = content
+        for pattern in _PERFORMATIVE_OPENER_PATTERNS:
+            content = pattern.sub('', content, count=1)
+        if content == original:
+            break
+
+    # Capitalize first letter after stripping (if it was lowered)
+    if content and content[0].islower():
+        content = content[0].upper() + content[1:]
+
+    # Reduce exclamation clustering in first paragraph
+    first_para_end = content.find('\n\n')
+    if first_para_end == -1:
+        first_para_end = len(content)
+    first_para = content[:first_para_end]
+    excl_count = first_para.count('!')
+    if excl_count >= 3:
+        # Keep only the first exclamation mark, replace rest with periods
+        found = 0
+        chars = list(first_para)
+        for i, ch in enumerate(chars):
+            if ch == '!':
+                found += 1
+                if found > 1:
+                    chars[i] = '.'
+        content = ''.join(chars) + content[first_para_end:]
+
+    return content
+
+
 async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     """Apply output guardrails and persona formatting to the final response.
 
@@ -181,6 +250,9 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     except Exception:
         branding = get_casino_profile("").get("branding", {})
     content = _enforce_branding(content, branding)
+
+    # Step 2b: Strip performative openers (R75 B6: tone calibration)
+    content = _strip_performative_openers(content)
 
     # Step 3: Guest name injection
     # Fall back to extracted_fields["name"] when guest_name is None.

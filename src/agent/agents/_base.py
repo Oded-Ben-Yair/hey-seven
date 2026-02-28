@@ -12,6 +12,7 @@ continue to work because the agent passes its own module-level reference.
 
 import asyncio
 import logging
+import re
 from collections.abc import Callable
 from string import Template
 from typing import Any
@@ -75,6 +76,8 @@ def _detect_conversation_dynamics(messages: list) -> dict[str, Any]:
         "repeated_question": False,
         "brevity_preference": False,
         "turn_count": 0,
+        "list_format": False,
+        "conversation_phase": "opening",
     }
 
     human_messages: list[str] = []
@@ -85,8 +88,23 @@ def _detect_conversation_dynamics(messages: list) -> dict[str, Any]:
 
     dynamics["turn_count"] = len(human_messages)
 
+    # Conversation phase based on turn count
+    turn_count = dynamics["turn_count"]
+    if turn_count <= 2:
+        dynamics["conversation_phase"] = "opening"
+    elif turn_count <= 6:
+        dynamics["conversation_phase"] = "exploring"
+    else:
+        dynamics["conversation_phase"] = "deciding"
+
     if not human_messages:
         return dynamics
+
+    # Detect list format in last human message (numbered or bullet lists)
+    last_msg = human_messages[-1]
+    has_numbers = bool(re.search(r'(?:^|\n)\s*\d+[.\)]\s', last_msg))
+    has_bullets = bool(re.search(r'(?:^|\n)\s*[-*\u2022]\s', last_msg))
+    dynamics["list_format"] = has_numbers or has_bullets
 
     # Detect terse replies (< 5 words in recent messages)
     recent = human_messages[-3:] if len(human_messages) >= 3 else human_messages
@@ -283,9 +301,8 @@ def _build_behavioral_prompt_sections(
     dynamics_guides: list[str] = []
     if dynamics["terse_replies"] >= 2:
         dynamics_guides.append(
-            "The guest is giving very short replies — they may be disengaged or prefer "
-            "brevity. Switch to short, direct answers. Ask a focused either/or question "
-            "instead of listing options. Make ONE confident recommendation."
+            "The guest is giving very short replies. CAP your response at 2 sentences maximum. "
+            "No lists, no bullet points, no preamble. One direct answer or one focused question."
         )
     if dynamics["repeated_question"]:
         dynamics_guides.append(
@@ -301,6 +318,29 @@ def _build_behavioral_prompt_sections(
         )
     if dynamics_guides:
         sections.append("## Conversation Style Guidance\n" + "\n".join(dynamics_guides))
+
+    # Conversation phase guidance
+    phase = dynamics.get("conversation_phase", "exploring")
+    if phase == "opening":
+        sections.append(
+            "## Conversation Phase: Opening\n"
+            "The guest is just starting. Be welcoming and orient them to what's available. "
+            "Ask what brings them in today if they haven't said."
+        )
+    elif phase == "deciding":
+        sections.append(
+            "## Conversation Phase: Deciding\n"
+            "The guest has been exploring for several turns. They're likely narrowing down. "
+            "Make ONE confident recommendation instead of listing options. Be decisive."
+        )
+
+    # Format adaptation (match guest's format)
+    if dynamics.get("list_format"):
+        sections.append(
+            "## Format Matching\n"
+            "The guest used a list/numbered format. Match their style — respond with "
+            "a structured list or numbered items."
+        )
 
     # Frustration escalation (HEART framework)
     frustrated_count = _count_consecutive_frustrated(history)

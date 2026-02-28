@@ -8,10 +8,14 @@ Feature flag: ``sentiment_detection_enabled`` (default True).
 
 import logging
 import re
+from collections.abc import Callable
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_sentiment", "detect_sarcasm_context"]
+__all__ = ["detect_sentiment", "detect_sarcasm_context", "detect_sentiment_augmented", "SentimentOutput"]
 
 # Casino-domain positive phrases that VADER may misclassify
 _CASINO_POSITIVE_OVERRIDES: set[str] = {
@@ -229,3 +233,82 @@ def detect_sarcasm_context(
     except Exception:
         logger.debug("Sarcasm context detection failed", exc_info=True)
         return False
+
+
+# ---------------------------------------------------------------------------
+# R75 B1: LLM-augmented sentiment for VADER's ambiguous band
+# ---------------------------------------------------------------------------
+# When VADER returns "neutral" for a 10+ word message, the compound score
+# is in the ambiguous range (-0.3 to 0.3). An LLM call provides refined
+# classification for these borderline cases only.
+#
+# Feature flag: ``sentiment_llm_augmented`` (default False — opt-in).
+# Fast path: Clear VADER results (positive/negative/frustrated) skip LLM.
+# Fallback: If LLM fails, VADER result is returned (never worse than current).
+
+
+class SentimentOutput(BaseModel):
+    """Structured output for LLM sentiment classification."""
+
+    sentiment: Literal["positive", "negative", "neutral", "frustrated"] = Field(
+        description="The detected sentiment of the guest message"
+    )
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence in classification")
+
+
+async def detect_sentiment_augmented(
+    text: str,
+    get_llm_fn: Callable,
+    vader_result: str | None = None,
+) -> str:
+    """LLM-augmented sentiment for VADER's ambiguous band.
+
+    Fast path: If VADER result is clear (positive/negative/frustrated),
+    return immediately without invoking the LLM.
+
+    Slow path: If VADER is neutral AND text has 10+ words, invoke LLM
+    for refined classification using structured output.
+
+    Fallback: If LLM fails, return VADER result (never degrades quality).
+
+    Args:
+        text: The guest's message text.
+        get_llm_fn: Async callable that returns an LLM instance.
+        vader_result: Pre-computed VADER result, or None to compute it.
+
+    Returns:
+        One of: "positive", "negative", "neutral", "frustrated".
+    """
+    # Fast path: use existing VADER detection
+    if vader_result is None:
+        vader_result = detect_sentiment(text)
+
+    # Only augment ambiguous cases
+    if vader_result != "neutral":
+        return vader_result
+
+    # Short messages don't benefit from LLM analysis
+    if len(text.split()) < 10:
+        return vader_result
+
+    try:
+        llm = await get_llm_fn()
+        sentiment_llm = llm.with_structured_output(SentimentOutput)
+        prompt = (
+            "Classify the sentiment of this casino guest message. "
+            "Consider context: the guest is interacting with an AI concierge at a casino resort.\n\n"
+            f"Message: {text}\n\n"
+            "Classify as: positive (happy, excited, satisfied), negative (unhappy, disappointed), "
+            "neutral (informational, no emotion), frustrated (annoyed, impatient, complaining)."
+        )
+        result: SentimentOutput = await sentiment_llm.ainvoke(prompt)
+        logger.info(
+            "LLM sentiment augmentation: %s -> %s (conf=%.2f)",
+            vader_result,
+            result.sentiment,
+            result.confidence,
+        )
+        return result.sentiment
+    except Exception:
+        logger.debug("LLM sentiment augmentation failed, using VADER result", exc_info=True)
+        return vader_result
