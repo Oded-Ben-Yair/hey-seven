@@ -507,6 +507,48 @@ def _empty_profile(phone: str) -> dict:
     }
 
 
+def namespace_preferences(extracted_fields: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """Organize extracted fields into namespaced preference categories.
+
+    Converts flat extracted_fields dict into structured namespaces:
+    - personal: name, party_size, visit_date, occasion
+    - dining: preferences, dietary info
+    - behavioral: loyalty_signal, urgency, fatigue, budget_conscious
+
+    Args:
+        extracted_fields: Flat dict from _merge_dicts reducer.
+
+    Returns:
+        Nested dict with namespace keys mapped to field dicts.
+        Empty namespaces are removed.
+    """
+    if not extracted_fields:
+        return {}
+
+    namespaced: dict[str, dict[str, Any]] = {
+        "personal": {},
+        "dining": {},
+        "behavioral": {},
+    }
+
+    # Personal namespace
+    for key in ("name", "party_size", "visit_date", "occasion"):
+        if key in extracted_fields and extracted_fields[key]:
+            namespaced["personal"][key] = extracted_fields[key]
+
+    # Dining namespace
+    if extracted_fields.get("preferences"):
+        namespaced["dining"]["preferences"] = extracted_fields["preferences"]
+
+    # Behavioral namespace
+    for key in ("loyalty_signal", "urgency", "fatigue", "budget_conscious"):
+        if key in extracted_fields and extracted_fields[key]:
+            namespaced["behavioral"][key] = extracted_fields[key]
+
+    # Remove empty namespaces
+    return {k: v for k, v in namespaced.items() if v}
+
+
 def clear_memory_store() -> None:
     """Clear the in-memory fallback store (for testing)."""
     _memory_store.clear()
