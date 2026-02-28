@@ -843,3 +843,27 @@ class TestRE2Enforcement:
         finally:
             mod.RE2_AVAILABLE = original
             get_settings.cache_clear()
+
+
+class TestVersionParity:
+    """Ensure version is consistent across all sources."""
+
+    def test_pyproject_matches_config(self):
+        """pyproject.toml version must match src/config.py VERSION."""
+        import tomllib
+        from pathlib import Path
+        with open(Path(__file__).parent.parent / "pyproject.toml", "rb") as f:
+            pyproject = tomllib.load(f)
+        from src.config import Settings
+        assert pyproject["project"]["version"] == Settings.model_fields["VERSION"].default
+
+    def test_env_example_matches_config(self):
+        """VERSION in .env.example must match src/config.py."""
+        from pathlib import Path
+        env_path = Path(__file__).parent.parent / ".env.example"
+        if not env_path.exists():
+            pytest.skip(".env.example not found")
+        content = env_path.read_text()
+        from src.config import Settings
+        version = Settings.model_fields["VERSION"].default
+        assert f"VERSION={version}" in content
