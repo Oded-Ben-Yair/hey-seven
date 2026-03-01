@@ -64,7 +64,11 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     4. Responsible gaming → gambling_advice
     5. Age verification → age_verification
     6. BSA/AML → bsa_aml
-    7. Patron privacy → patron_privacy
+    7. Crisis context persistence → self_harm (R75: moved before patron privacy)
+    7.5. Patron privacy → patron_privacy
+    7.6. Grief detection → sets guest_sentiment, passes through to router
+    7.7. Crisis detection (graduated) → self_harm / gambling_advice
+    7.8. Self-harm (legacy binary) → self_harm
     8. Semantic injection (LLM, fail-closed) → off_topic
     9. All pass → query_type=None (router does LLM classification)
 
@@ -200,25 +204,12 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
         )
         return {"query_type": "bsa_aml", "router_confidence": 1.0}
 
-    # 7. Patron privacy
-    if detect_patron_privacy(user_message):
-        logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "patron_privacy",
-                "query_type": "patron_privacy",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
-        )
-        return {"query_type": "patron_privacy", "router_confidence": 1.0}
-
-    # 7.4 Crisis context persistence — R73 fix, R74 hardened.
-    # When crisis_active=True, maintain crisis response UNLESS guest explicitly
-    # confirms safety AND asks a property question. Both conditions required —
-    # safety confirmation alone keeps crisis mode (they may still need support),
-    # property question alone keeps crisis mode (could be deflection).
+    # 7. Crisis context persistence — R73 fix, R74 hardened, R75 reordered.
+    # MUST run BEFORE patron privacy (7.5) because crisis follow-ups like
+    # "Is there someone I can talk to here?" match patron privacy patterns
+    # (the "is ... here" regex). When crisis_active=True, the guest is in
+    # distress and asking for human help — NOT asking about another patron.
+    # R75 fix P0: Moved from position 7.4 to position 7 (before patron privacy).
     if state.get("crisis_active", False):
         _SAFE_CONFIRMATIONS = (
             "i'm ok", "i'm okay", "im ok", "im okay",
@@ -254,7 +245,60 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
             )
             return {"query_type": "self_harm", "router_confidence": 1.0}
 
-    # 7.5 Crisis detection — graduated escalation protocol (R72 Phase C5).
+    # 7.5 Patron privacy — runs AFTER crisis_active check (R75 fix P0).
+    if detect_patron_privacy(user_message):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "patron_privacy",
+                "query_type": "patron_privacy",
+                "timestamp": time.time(),
+                "action": "blocked",
+                "severity": "INFO",
+            })
+        )
+        return {"query_type": "patron_privacy", "router_confidence": 1.0}
+
+    # 7.6 Grief detection — R75 fix P0.
+    # Grief phrases ("my dad passed", "she passed away") are NOT safety-critical
+    # and should NOT block the message. Instead, set guest_sentiment to signal
+    # downstream nodes (specialist agent) to use empathetic tone guidance.
+    # Without this, grief routes through property_qa → specialist dispatch where
+    # the agent ignores the emotional context entirely ("explore our rewards!").
+    _GRIEF_KEYWORDS = (
+        "passed away", "passed on", "passed two", "passed last",
+        "died", "funeral", "in memory of", "in memory",
+        "rest in peace", "rip", "memorial",
+        "lost my mother", "lost my father", "lost my mom", "lost my dad",
+        "lost my wife", "lost my husband", "lost my brother", "lost my sister",
+        "lost my son", "lost my daughter", "lost my friend",
+        "my mom passed", "my dad passed", "my mother passed", "my father passed",
+        "my wife passed", "my husband passed",
+        "she passed", "he passed",
+        "who passed", "who died",
+        "her favorite", "his favorite",  # "This was her favorite casino"
+    )
+    msg_lower = user_message.lower()
+    if any(kw in msg_lower for kw in _GRIEF_KEYWORDS):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "grief_detection",
+                "query_type": None,
+                "timestamp": time.time(),
+                "action": "annotate",
+                "severity": "INFO",
+            })
+        )
+        # Don't block — let the message through to the router, but set
+        # guest_sentiment so the specialist agent injects grief tone guidance.
+        return {
+            "query_type": None,
+            "router_confidence": 0.0,
+            "guest_sentiment": "grief",
+        }
+
+    # 7.7 Crisis detection — graduated escalation protocol (R72 Phase C5).
     # Runs BEFORE the binary self_harm detector to provide nuanced response
     # levels: concern → gentle resource mention, urgent/immediate → full crisis.
     # The graduated system catches problem gambling indicators (chasing losses,
@@ -307,7 +351,7 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
             "responsible_gaming_count": rg_count,
         }
 
-    # 7.6 Self-harm / crisis detection — legacy binary detector (R49).
+    # 7.8 Self-harm / crisis detection — legacy binary detector (R49).
     # Kept as fallback: catches patterns that the graduated system may miss.
     if detect_self_harm(user_message):
         logger.warning("Self-harm/crisis language detected — routing to crisis response")

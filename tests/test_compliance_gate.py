@@ -668,3 +668,154 @@ class TestSemanticInjectionIntegration:
         # Fail-closed: confidence=1.0 > 0.8 threshold, blocks message
         assert result["query_type"] == "off_topic"
         assert result["router_confidence"] == 1.0
+
+
+# ---------------------------------------------------------------------------
+# R75 P0 regression tests
+# ---------------------------------------------------------------------------
+
+
+class TestR75CrisisPatronPrivacyFix:
+    """R75 fix P0 #1: Crisis follow-up must NOT trigger patron privacy.
+
+    When crisis_active=True, phrases like 'Is there someone I can talk to here?'
+    must route to crisis (self_harm), NOT patron privacy. The patron privacy
+    pattern is overly broad and matches 'is ... here' sentences.
+    """
+
+    @pytest.fixture
+    def _make_crisis_state(self):
+        """Factory for crisis-active state."""
+        def factory(message: str):
+            return {
+                "messages": [HumanMessage(content=message)],
+                "query_type": None,
+                "router_confidence": 0.0,
+                "retrieved_context": [],
+                "validation_result": None,
+                "retry_count": 0,
+                "skip_validation": False,
+                "retry_feedback": None,
+                "current_time": "Monday, March 01, 2026",
+                "sources_used": [],
+                "extracted_fields": {},
+                "whisper_plan": None,
+                "crisis_active": True,  # Already in crisis
+            }
+        return factory
+
+    @pytest.mark.asyncio
+    async def test_crisis_followup_someone_to_talk_to(self, _make_crisis_state):
+        """'Is there someone I can talk to here?' during crisis → self_harm, not patron_privacy."""
+        from src.agent.compliance_gate import compliance_gate_node
+
+        result = await compliance_gate_node(
+            _make_crisis_state("Is there someone I can talk to here?")
+        )
+        assert result["query_type"] == "self_harm", (
+            f"Expected self_harm, got {result['query_type']} — "
+            "crisis follow-up incorrectly matched patron privacy pattern"
+        )
+
+    @pytest.mark.asyncio
+    async def test_crisis_followup_anyone_here(self, _make_crisis_state):
+        """'Is there anyone here who can help?' during crisis → self_harm."""
+        from src.agent.compliance_gate import compliance_gate_node
+
+        result = await compliance_gate_node(
+            _make_crisis_state("Is there anyone here who can help?")
+        )
+        assert result["query_type"] == "self_harm"
+
+    @pytest.mark.asyncio
+    async def test_crisis_followup_need_help(self, _make_crisis_state):
+        """'I need to talk to someone' during crisis → self_harm."""
+        from src.agent.compliance_gate import compliance_gate_node
+
+        result = await compliance_gate_node(
+            _make_crisis_state("I need to talk to someone")
+        )
+        assert result["query_type"] == "self_harm"
+
+    @pytest.mark.asyncio
+    async def test_patron_privacy_still_works_outside_crisis(self):
+        """Patron privacy still triggers when NOT in crisis."""
+        from src.agent.compliance_gate import compliance_gate_node
+
+        state = {
+            "messages": [HumanMessage(content="Is John Smith a member here?")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "crisis_active": False,
+        }
+        result = await compliance_gate_node(state)
+        assert result["query_type"] == "patron_privacy"
+
+
+class TestR75GriefDetection:
+    """R75 fix P0 #2: Grief detection sets guest_sentiment without blocking.
+
+    Grief phrases must be detected in compliance_gate and set
+    guest_sentiment='grief' so downstream specialist agents use
+    empathetic tone guidance instead of generic rewards responses.
+    """
+
+    @pytest.fixture
+    def _make_state(self):
+        def factory(message: str):
+            return {
+                "messages": [HumanMessage(content=message)],
+                "query_type": None,
+                "router_confidence": 0.0,
+            }
+        return factory
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("message", [
+        "This was my dad's favorite casino. He passed two weeks ago.",
+        "My mom passed away last month. She loved this place.",
+        "We're here in memory of our grandmother.",
+        "My husband passed on recently and I wanted to visit his favorite spot.",
+        "She died last year and I come here to remember her.",
+    ])
+    async def test_grief_detected_sets_sentiment(self, _make_state, message):
+        """Grief phrases set guest_sentiment='grief' and pass through (query_type=None)."""
+        from src.agent.compliance_gate import compliance_gate_node
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = False
+
+        with patch("src.agent.compliance_gate.get_settings", return_value=mock_settings):
+            result = await compliance_gate_node(_make_state(message))
+
+        assert result["query_type"] is None, (
+            f"Expected None (pass-through), got {result['query_type']} — "
+            "grief should not block the message"
+        )
+        assert result.get("guest_sentiment") == "grief", (
+            f"Expected guest_sentiment='grief', got {result.get('guest_sentiment')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_non_grief_no_sentiment(self, _make_state):
+        """Non-grief messages don't set guest_sentiment."""
+        from src.agent.compliance_gate import compliance_gate_node
+
+        mock_settings = MagicMock()
+        mock_settings.MAX_MESSAGE_LIMIT = 40
+        mock_settings.SEMANTIC_INJECTION_ENABLED = False
+
+        with patch("src.agent.compliance_gate.get_settings", return_value=mock_settings):
+            result = await compliance_gate_node(_make_state("What restaurants are open?"))
+
+        assert result["query_type"] is None
+        assert "guest_sentiment" not in result
+
+    @pytest.mark.asyncio
+    async def test_grief_tone_guide_exists(self):
+        """SENTIMENT_TONE_GUIDES contains a 'grief' entry."""
+        from src.agent.prompts import SENTIMENT_TONE_GUIDES
+
+        assert "grief" in SENTIMENT_TONE_GUIDES
+        assert "compassion" in SENTIMENT_TONE_GUIDES["grief"].lower()

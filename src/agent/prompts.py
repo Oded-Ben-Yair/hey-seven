@@ -621,6 +621,16 @@ SENTIMENT_TONE_GUIDES: dict[str, str] = {
         "but don't over-perform. Let your helpfulness carry the warmth."
     ),
     "neutral": "",  # No additional guidance needed
+    # R75 fix P0: Grief sentiment set by compliance_gate grief detection.
+    # Drives overall tone calibration so the specialist never responds with
+    # "I'd love to help you explore our rewards!" to a grieving guest.
+    "grief": (
+        "The guest is grieving a loved one. Respond with genuine compassion and restraint. "
+        "Acknowledge the loss warmly but briefly — do NOT over-elaborate or probe. "
+        "Do NOT pivot to promotions, rewards, or enthusiasm. Let the guest lead. "
+        "If they ask about the property, answer helpfully but maintain a gentle, respectful tone. "
+        "Avoid exclamation marks and words like 'amazing', 'fantastic', 'incredible'."
+    ),
 }
 
 # R70 B5: Extended emotional context guides injected alongside sentiment tone.

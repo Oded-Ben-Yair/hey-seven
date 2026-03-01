@@ -1,26 +1,15 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R75 Sprint COMPLETE. Phase 5 wiring (5 features). Technical: 9.63/10 (4-model, +0.29). Behavioral LIVE: 5.8/10 (3-model judge, 84 scenarios). 2 behavioral CRITICALs identified (crisis patron privacy, grief routing). Live trajectory: R72(4.1)→R73(5.0)→R75(5.8).",
-    "lastModified": "2026-03-01T08:00:00Z",
+    "summary": "R75 Sprint COMPLETE + 2 P0 CRITICALs FIXED. Crisis patron privacy reordered (crisis_active before patron privacy). Grief detection added to compliance_gate with sentiment='grief' tone guidance. 3042 tests, 0 failures.",
+    "lastModified": "2026-03-01T09:00:00Z",
     "branch": "main",
-    "commitHash": "e22422a",
+    "commitHash": "pending",
     "tag": "v1.3.0",
-    "phase": "r75-live-eval-complete"
+    "phase": "r75-p0-fixes-complete"
   },
-  "blockers": [
-    {
-      "severity": "P0",
-      "description": "Crisis follow-up triggers patron privacy deflection — guest asking for human help during crisis gets rebuffed"
-    },
-    {
-      "severity": "P0",
-      "description": "Grief routing failure — 'my dad passed' → 'explore rewards and promotions' for 2 turns"
-    }
-  ],
+  "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "Fix P0: crisis_active bypass for patron privacy guardrails" },
-    { "priority": 0, "description": "Fix P0: Grief/loss detection in router or compliance gate" },
     { "priority": 1, "description": "Contextual fallback — replace generic 'reach out directly' with conversational response" },
     { "priority": 1, "description": "LLM crisis response variation — not verbatim repetition across turns" },
     { "priority": 2, "description": "Gambling loss sentiment override in router" },
@@ -68,7 +57,7 @@
     "loc": "27K+",
     "modules": 61,
     "testFiles": 78,
-    "tests": 3032,
+    "tests": 3042,
     "testFailures": 0,
     "skipped": 1,
     "coverage": "90%+",
