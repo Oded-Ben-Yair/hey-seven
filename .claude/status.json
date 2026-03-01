@@ -1,15 +1,16 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R75 Sprint COMPLETE + 2 P0 CRITICALs FIXED. Crisis patron privacy reordered (crisis_active before patron privacy). Grief detection added to compliance_gate with sentiment='grief' tone guidance. 3042 tests, 0 failures.",
-    "lastModified": "2026-03-01T09:00:00Z",
+    "summary": "Guest Profiling Intelligence System implemented. 12-node StateGraph v2.3 with profiling_enrichment node, incentive engine, 56 profiling scenarios. 3236 tests, 0 failures.",
+    "lastModified": "2026-03-01T12:00:00Z",
     "branch": "main",
     "commitHash": "pending",
-    "tag": "v1.3.0",
-    "phase": "r75-p0-fixes-complete"
+    "tag": "v1.4.0",
+    "phase": "profiling-system-complete"
   },
   "blockers": [],
   "nextSteps": [
+    { "priority": 1, "description": "Run live profiling evaluation — 56 scenarios through Gemini Flash agent + 4-model judge panel" },
     { "priority": 1, "description": "Contextual fallback — replace generic 'reach out directly' with conversational response" },
     { "priority": 1, "description": "LLM crisis response variation — not verbatim repetition across turns" },
     { "priority": 2, "description": "Gambling loss sentiment override in router" },
@@ -46,6 +47,17 @@
         "B6": 6.0, "B7": 9.0, "B8": 7.0, "B9": 3.0, "B10": 6.0
       }
     },
+    "profilingSystem": {
+      "date": "2026-03-01",
+      "description": "Guest Profiling Intelligence System — 12-node graph, profiling enrichment node, incentive engine",
+      "newFiles": 14,
+      "modifiedFiles": 18,
+      "newTests": 138,
+      "totalTests": 3236,
+      "profilingScenarios": 56,
+      "totalScenarios": 195,
+      "adrs": 28
+    },
     "trajectory": {
       "R52": 67.7, "R53": 84.3, "R68_consensus": 92.9,
       "R72_behavioral_live": 4.1, "R73_behavioral_live": 5.0,
@@ -54,21 +66,21 @@
     }
   },
   "codebaseMetrics": {
-    "loc": "27K+",
-    "modules": 61,
-    "testFiles": 78,
-    "tests": 3042,
+    "loc": "20K+",
+    "modules": 66,
+    "testFiles": 95,
+    "tests": 3236,
     "testFailures": 0,
     "skipped": 1,
     "coverage": "90%+",
-    "adrs": 27,
+    "adrs": 28,
     "guardrailPatterns": 210,
-    "behavioralScenarios": 84,
-    "liveEvalTurns": 236,
-    "liveEvalErrors": 0
+    "behavioralScenarios": 195,
+    "profilingScenarios": 56,
+    "graphNodes": 12
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-01",
-    "lastSessionId": "hey-seven-session-20260301-r75"
+    "lastSessionId": "hey-seven-session-20260301-profiling"
   }
 }

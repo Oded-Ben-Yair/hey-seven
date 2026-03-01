@@ -265,6 +265,16 @@ class PropertyQAState(TypedDict):
     # Set by off_topic_node (self_harm) and execute_specialist (frustration >= 3).
     # dict | None because HandoffRequest is serialized via .model_dump().
     handoff_request: dict[str, Any] | None
+    # Profiling Intelligence System fields.
+    # profiling_phase: Golden path stage (foundation → preference → relationship → behavioral).
+    # Set by profiling_enrichment_node. Reset per-turn via _initial_state().
+    profiling_phase: Annotated[str | None, _keep_latest_str]
+    # profile_completeness_score: Weighted 0.0-1.0 completeness of guest profile.
+    # Computed by profiling_enrichment_node each turn.
+    profile_completeness_score: float
+    # profiling_question_injected: Ephemeral per-turn flag indicating a profiling
+    # question was appended to the AI response in this turn.
+    profiling_question_injected: bool
 
 
 class RouterOutput(BaseModel):

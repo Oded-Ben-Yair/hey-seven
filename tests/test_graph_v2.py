@@ -84,22 +84,22 @@ def _high_completeness_fields():
 
 
 class TestGraphV2Compilation:
-    """v2.1 graph compiles with 11 nodes."""
+    """v2.3 graph compiles with 12 nodes."""
 
     def test_compiles_without_error(self):
         """build_graph() returns a compiled graph without errors."""
         graph = build_graph()
         assert graph is not None
 
-    def test_has_11_nodes(self):
-        """The compiled graph contains exactly 11 user-defined nodes."""
+    def test_has_12_nodes(self):
+        """The compiled graph contains exactly 12 user-defined nodes."""
         graph = build_graph()
         all_nodes = set(graph.get_graph().nodes)
         user_nodes = all_nodes - {"__start__", "__end__"}
         expected = {
             "compliance_gate", "router", "retrieve", "whisper_planner",
             "generate", "validate", "persona_envelope", "respond",
-            "fallback", "greeting", "off_topic",
+            "fallback", "greeting", "off_topic", "profiling_enrichment",
         }
         assert user_nodes == expected
 
@@ -351,11 +351,11 @@ class TestNodeConstantsV2:
         """NODE_GENERATE is preserved for backward compat."""
         assert NODE_GENERATE == "generate"
 
-    def test_known_nodes_has_11(self):
-        """_KNOWN_NODES includes all 11 v2.1 nodes."""
+    def test_known_nodes_has_12(self):
+        """_KNOWN_NODES includes all 12 v2.3 nodes."""
         from src.agent.graph import _KNOWN_NODES
 
-        assert len(_KNOWN_NODES) == 11
+        assert len(_KNOWN_NODES) == 12
         assert NODE_COMPLIANCE_GATE in _KNOWN_NODES
         assert NODE_PERSONA in _KNOWN_NODES
         assert NODE_GENERATE in _KNOWN_NODES

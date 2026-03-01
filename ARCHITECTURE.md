@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 11-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
+Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 12-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
 
 The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB. v2 adds a compliance gate (pre-router deterministic guardrails), a Whisper Track Planner (silent background LLM for agent guidance), a persona envelope (SMS truncation layer), 5 specialist agents (host, dining, entertainment, comp, hotel), SMS/CMS webhooks, and LangFuse observability.
 
@@ -17,7 +17,7 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     |
     | lifespan: build_graph() + ingest data
     v
-Custom 11-node StateGraph (src/agent/graph.py)
+Custom 12-node StateGraph (src/agent/graph.py)
     |
     |-- compliance_gate (204 regex patterns, 11 languages) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
@@ -38,7 +38,7 @@ Gemini 2.5 Flash               Knowledge Base              LangFuse
 
 ## Custom StateGraph
 
-The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 11 nodes with three conditional routing points.
+The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 12 nodes with three conditional routing points.
 
 ```mermaid
 graph LR
@@ -51,7 +51,8 @@ graph LR
     router -->|property_qa / hours / ambiguous| retrieve
     retrieve --> whisper_planner
     whisper_planner --> generate
-    generate --> validate
+    generate --> profiling_enrichment
+    profiling_enrichment --> validate
     validate -->|PASS| persona_envelope
     persona_envelope --> respond --> END3((END))
     validate -->|RETRY max 1| generate
@@ -69,7 +70,7 @@ START --> compliance_gate --+--> greeting --------------------------------------
                                           |
                                           +--> off_topic ----------------------> END
                                           |
-                                          +--> retrieve --> whisper_planner --> generate --> validate --+--> persona_envelope --> respond --> END
+                                          +--> retrieve --> whisper_planner --> generate --> profiling --> validate --+--> persona_envelope --> respond --> END
                                                                                    ^                   |
                                                                                    |                   +--> generate  (retry, max 1)
                                                                                    +-------------------+

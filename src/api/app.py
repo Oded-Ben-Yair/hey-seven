@@ -630,7 +630,7 @@ def create_app() -> FastAPI:
     _STATIC_GRAPH_STRUCTURE = {
         "nodes": [
             "compliance_gate", "router", "retrieve", "whisper_planner",
-            "generate", "validate", "persona_envelope",
+            "generate", "profiling_enrichment", "validate", "persona_envelope",
             "respond", "fallback", "greeting", "off_topic",
         ],
         "edges": [
@@ -643,7 +643,8 @@ def create_app() -> FastAPI:
             {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request"},
             {"from": "retrieve", "to": "whisper_planner"},
             {"from": "whisper_planner", "to": "generate"},
-            {"from": "generate", "to": "validate"},
+            {"from": "generate", "to": "profiling_enrichment"},
+            {"from": "profiling_enrichment", "to": "validate"},
             {"from": "validate", "to": "persona_envelope", "condition": "PASS"},
             {"from": "validate", "to": "generate", "condition": "RETRY (max 1)"},
             {"from": "validate", "to": "fallback", "condition": "FAIL"},

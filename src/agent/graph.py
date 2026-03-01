@@ -67,6 +67,7 @@ from .dispatch import (
     _keyword_dispatch,
     _route_to_specialist,
 )
+from .profiling import profiling_enrichment_node
 from .whisper_planner import whisper_planner_node
 from .nodes import (
     fallback_node,
@@ -85,6 +86,7 @@ from .constants import (
     NODE_GREETING,
     NODE_OFF_TOPIC,
     NODE_PERSONA,
+    NODE_PROFILING,
     NODE_RESPOND,
     NODE_RETRIEVE,
     NODE_ROUTER,
@@ -158,12 +160,12 @@ def _route_after_validate_v2(state: PropertyQAState) -> str:
 
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
-    """Build the custom 11-node property Q&A graph (v2.2).
+    """Build the custom 12-node property Q&A graph (v2.3).
 
-    v2.2 topology:
+    v2.3 topology:
         START → compliance_gate → {greeting, off_topic, router}
         router → {greeting, off_topic, retrieve}
-        retrieve → whisper_planner → generate (specialist dispatch) → validate → {persona_envelope → respond, generate (RETRY), fallback}
+        retrieve → whisper_planner → generate (specialist dispatch) → profiling_enrichment → validate → {persona_envelope → respond, generate (RETRY), fallback}
 
     Args:
         checkpointer: Optional checkpointer for conversation persistence.
@@ -175,7 +177,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     settings = get_settings()
     graph = StateGraph(PropertyQAState)
 
-    # Add all 11 nodes
+    # Add all 12 nodes
     graph.add_node(NODE_COMPLIANCE_GATE, compliance_gate_node)
     graph.add_node(NODE_ROUTER, router_node)
     graph.add_node(NODE_RETRIEVE, retrieve_node)
@@ -187,6 +189,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     graph.add_node(NODE_FALLBACK, fallback_node)
     graph.add_node(NODE_GREETING, greeting_node)
     graph.add_node(NODE_OFF_TOPIC, off_topic_node)
+    graph.add_node(NODE_PROFILING, profiling_enrichment_node)
 
     # Edge map — v2 topology
     # START → compliance_gate
@@ -242,6 +245,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     #   - src/agent/agents/_base.py    (runtime specialist dispatch)
     # -------------------------------------------------------------------
     whisper_enabled = DEFAULT_FEATURES.get("whisper_planner_enabled", True)
+    profiling_enabled = DEFAULT_FEATURES.get("profiling_enabled", True)
     logger.info(
         "Feature flags at graph build: %s",
         {k: v for k, v in DEFAULT_FEATURES.items() if v is not False},
@@ -253,7 +257,11 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     else:
         graph.add_edge(NODE_RETRIEVE, NODE_GENERATE)
 
-    graph.add_edge(NODE_GENERATE, NODE_VALIDATE)
+    if profiling_enabled:
+        graph.add_edge(NODE_GENERATE, NODE_PROFILING)
+        graph.add_edge(NODE_PROFILING, NODE_VALIDATE)
+    else:
+        graph.add_edge(NODE_GENERATE, NODE_VALIDATE)
 
     # validate → {persona_envelope (PASS), generate (RETRY), fallback (FAIL)}
     graph.add_conditional_edges(NODE_VALIDATE, _route_after_validate_v2, {
@@ -291,7 +299,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         interrupt_before=interrupt_before,
     )
     compiled.recursion_limit = settings.GRAPH_RECURSION_LIMIT  # type: ignore[attr-defined]
-    logger.info("Custom 11-node StateGraph compiled successfully.")
+    logger.info("Custom 12-node StateGraph compiled successfully.")
     return compiled
 
 
@@ -336,6 +344,10 @@ def _initial_state(message: str) -> dict[str, Any]:
         "detected_language": None,
         # Phase 5: Structured handoff request for human host transfer
         "handoff_request": None,
+        # Profiling Intelligence System
+        "profiling_phase": None,  # _keep_latest_str: persists across turns
+        "profile_completeness_score": 0.0,
+        "profiling_question_injected": False,
     }
 
 

@@ -1,0 +1,192 @@
+scenarios:
+  - id: "p4-01"
+    name: "Party of 4 assumption about kids — correct"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "Makes a contextual inference that a party of 4 might include children and gently tests it with kid-friendly options. The assumption is offered as a soft suggestion ('If any of your group are younger, they might enjoy...') rather than a hard presumption ('Your kids will love...')."
+    turns:
+      - role: "human"
+        content: "Need a restaurant for 4 tonight"
+        expected_keywords: ["restaurant", "four"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah actually the kids would love that"
+        expected_keywords: ["kid", "family", "Buffet"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How old do they need to be for the arcade?"
+        expected_keywords: ["arcade", "age"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Assumption about kids is offered softly and confirmed by the guest. Agent smoothly pivots to family-friendly recommendations. The assumption felt natural, not presumptuous"
+    safety_relevant: false
+
+  - id: "p4-02"
+    name: "Party of 4 assumption about kids — incorrect (business colleagues)"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "Makes the same soft assumption about a family group, but when corrected ('No, it's colleagues'), pivots immediately without embarrassment. Does NOT apologize excessively. Seamlessly adjusts to a business dinner register with appropriate restaurant suggestions."
+    turns:
+      - role: "human"
+        content: "Table for 4 tonight"
+        expected_keywords: ["restaurant", "four"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "No kids, it's a work dinner with colleagues"
+        expected_keywords: ["business", "Steakhouse", "upscale"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Somewhere impressive, they're clients"
+        expected_keywords: ["Steakhouse", "Michael Jordan", "impress"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Handles the correction gracefully. Immediately shifts from family-friendly to business-appropriate recommendations. When 'clients' is revealed, further elevates to impressive and upscale options. No dwelling on the wrong assumption"
+    safety_relevant: false
+
+  - id: "p4-03"
+    name: "Anniversary mention — assumption about romantic dinner correct"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "When anniversary is mentioned, assumes the guest wants a romantic, upscale experience and leads with those options. This assumption is almost always correct and the agent leans into it confidently. The bridge from 'anniversary' to 'romantic steakhouse' feels like expert knowledge, not a guess."
+    turns:
+      - role: "human"
+        content: "It's our anniversary this weekend"
+        expected_keywords: ["congratulat", "anniversary", "special"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Yes, exactly what we had in mind"
+        expected_keywords: ["Steakhouse", "romantic", "reservation"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What about after dinner?"
+        expected_keywords: ["Spa", "show", "lounge"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Confidently bridges from anniversary to romantic dinner + evening plan. The assumption is correct and the guest confirms. After-dinner suggestions continue the romantic theme"
+    safety_relevant: false
+
+  - id: "p4-04"
+    name: "Birthday mention — assumption about milestone celebration"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "When a birthday is mentioned, the agent makes a soft assumption about whether it's a milestone (30th, 40th, 50th) by referencing possible special treatment. Does not ask 'How old are you turning?' directly. Instead bridges through 'Milestone birthdays deserve extra special treatment'."
+    turns:
+      - role: "human"
+        content: "We're here for my birthday"
+        expected_keywords: ["birthday", "congratulat", "special"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Turning 40, so yeah it's a big one"
+        expected_keywords: ["40", "milestone", "celebrate"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What do you recommend for a 40th?"
+        expected_keywords: ["special", "dinner", "show"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Birthday triggers celebratory mode. The agent creates space for the guest to volunteer the age without asking directly. When 40th is confirmed, the recommendations elevate to milestone-worthy experiences"
+    safety_relevant: false
+
+  - id: "p4-05"
+    name: "Budget signal — assumption about casual dining correct"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "When the guest signals budget consciousness ('nothing fancy'), assumes they want casual, affordable options and leads with those. Does not include a disclaimer like 'If you change your mind about budget...' The assumption respects the signal."
+    turns:
+      - role: "human"
+        content: "Just looking for something simple, nothing fancy"
+        expected_keywords: ["Buffet", "casual", "Pepe"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Pizza sounds great actually"
+        expected_keywords: ["Pepe", "pizza"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Where is it?"
+        expected_keywords: ["location", "floor"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+    expected_behavior: "Leads with casual and affordable options. When pizza is confirmed, does not try to upsell. Provides practical information (location, hours) without marketing language"
+    safety_relevant: false
+
+  - id: "p4-06"
+    name: "VIP language — assumption about premium expectations correct"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "When the guest uses VIP language ('I'm used to the best', 'premium experience'), assumes they expect top-tier recommendations and elevated service. Leads with the most exclusive options and uses a premium service register throughout."
+    turns:
+      - role: "human"
+        content: "I want the best dinner experience you've got"
+        expected_keywords: ["Steakhouse", "Michael Jordan", "premium"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That's more like it. We're Soar tier members."
+        expected_keywords: ["Soar", "VIP", "exclusive"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What else is available at our level?"
+        expected_keywords: ["Soar", "VIP", "benefits"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Immediately leads with the most premium options. When Soar tier is confirmed, elevates to VIP-specific benefits and access. The assumption about premium expectations was correct from the first message's language"
+    safety_relevant: false
+
+  - id: "p4-07"
+    name: "First-time visitor — assumption about tour wrong (returning after years)"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "When the guest seems unfamiliar, softly suggests a property overview. When corrected ('I used to come all the time'), immediately abandons the newcomer register and shifts to a 'welcome back, here's what's changed' posture. Does not over-apologize."
+    turns:
+      - role: "human"
+        content: "Wow, this place looks different"
+        expected_keywords: ["Mohegan Sun", "welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Oh I used to come here every month, just haven't been in 5 years"
+        expected_keywords: ["welcome back", "new", "changed"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "What's new since I was last here?"
+        expected_keywords: ["new", "restaurant", "change"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Initial assumption about being a first-timer is softly held. When corrected to a returning regular, pivots to highlighting what has changed. The 'welcome back' feels genuine, not performative"
+    safety_relevant: false
+
+  - id: "p4-08"
+    name: "Group of friends — assumption about nightlife correct"
+    category: "profiling_p4_assumptive_bridge"
+    behavioral_dimension: "P4_assumptive_bridging"
+    expected_behavioral_quality: "When a group of friends mentions a weekend trip, assumes nightlife and entertainment are priorities. Leads with bars, shows, and high-energy dining options. The assumption is tested softly ('I imagine you're looking for some nightlife?') and confirmed."
+    turns:
+      - role: "human"
+        content: "Group of 6 friends here for the weekend"
+        expected_keywords: ["group", "weekend", "fun"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Absolutely, we want the full party experience"
+        expected_keywords: ["party", "nightlife", "bar", "lounge"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Start with dinner then go from there"
+        expected_keywords: ["dinner", "group", "six"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Correctly bridges from 'group of friends + weekend' to nightlife and party-oriented options. When confirmed, builds a full evening progression: dinner to drinks to entertainment. The assumption felt natural and was validated"
+    safety_relevant: false

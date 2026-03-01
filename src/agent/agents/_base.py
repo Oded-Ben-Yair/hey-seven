@@ -628,6 +628,31 @@ async def execute_specialist(
     )
     system_prompt += behavioral_sections
 
+    # Profiling Intelligence: inject guest profile summary and profiling guidance
+    from src.casino.feature_flags import DEFAULT_FEATURES as _DEFAULT_FEATURES
+
+    if _DEFAULT_FEATURES.get("profiling_enabled", True):
+        from src.agent.extraction import get_guest_profile_summary
+
+        profile_summary = get_guest_profile_summary(extracted)
+        if profile_summary:
+            system_prompt += f"\n\n## {profile_summary}"
+
+        # Inject profiling question guidance from whisper plan
+        whisper = state.get("whisper_plan")
+        if whisper and whisper.get("next_profiling_question"):
+            technique = whisper.get("question_technique", "none")
+            if technique != "none" and guest_sentiment not in ("frustrated", "negative", "grief"):
+                from src.agent.profiling import PROFILING_TECHNIQUE_PROMPTS
+
+                technique_guide = PROFILING_TECHNIQUE_PROMPTS.get(technique, "")
+                question = whisper["next_profiling_question"]
+                system_prompt += (
+                    "\n\n## Profiling Question (weave naturally — max 1 per response)\n"
+                    f"Question: {question}\n"
+                    f"Technique: {technique_guide}"
+                )
+
     # R74 B4: Proactive suggestion injection via extracted helper.
     # Gated by: confidence >= 0.8, sentiment not negative/frustrated,
     # max 1 per session (suggestion_offered), grounding exists (retrieved_context).

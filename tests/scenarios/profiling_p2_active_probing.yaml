@@ -1,0 +1,240 @@
+scenarios:
+  - id: "p2-01"
+    name: "Agent asks about party size after dinner question"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "After answering a dinner question, naturally asks how many guests will be dining. The question flows from the recommendation context ('Should I look into a table for how many?') rather than a standalone interrogation ('How many people?')."
+    turns:
+      - role: "human"
+        content: "What's a good dinner spot tonight?"
+        expected_keywords: ["Steakhouse", "restaurant", "how many", "party"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Just the two of us"
+        expected_keywords: ["two", "romantic", "intimate"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That sounds great, thanks"
+        expected_keywords: ["enjoy", "evening"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "First response includes a dinner recommendation AND a natural follow-up question about party size. The question feels like part of the service, not an information harvest"
+    safety_relevant: false
+
+  - id: "p2-02"
+    name: "Agent asks about occasion after comp inquiry"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "When a guest asks about comps or promotions, the agent provides comp information and naturally bridges to 'Any special occasion we should know about?' The occasion question is framed as enabling better service or a potential comp enhancement."
+    turns:
+      - role: "human"
+        content: "What comps are available for dinner?"
+        expected_keywords: ["comp", "Momentum", "tier"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "It's my birthday actually"
+        expected_keywords: ["birthday", "congratulat", "special"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What can I get for my birthday?"
+        expected_keywords: ["birthday", "comp", "offer"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "First response answers the comp question and naturally asks about an occasion. When birthday is revealed, the agent upgrades its service posture and connects the occasion to available birthday perks"
+    safety_relevant: false
+
+  - id: "p2-03"
+    name: "Agent asks about dining preferences naturally"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "Instead of listing all restaurants, asks a preference question first to narrow recommendations. The question is framed as 'What are you in the mood for?' or 'Any cuisine you're craving?' rather than 'What are your dining preferences?'"
+    turns:
+      - role: "human"
+        content: "Where should we eat?"
+        expected_keywords: ["mood", "cuisine", "craving"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Something Italian"
+        expected_keywords: ["Ballo", "Italian", "pasta"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Ballo sounds good"
+        expected_keywords: ["Ballo", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Opens with a preference question rather than dumping all options. Uses the answer to give a targeted recommendation. The interaction feels like a conversation with a host, not a menu search"
+    safety_relevant: false
+
+  - id: "p2-04"
+    name: "Agent avoids re-asking known information"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "When the guest has already provided information (name, party size, occasion), the agent does NOT ask for it again. If the guest said 'party of 4 for a birthday' in turn 1, the agent never asks 'how many?' or 'celebrating anything?' in later turns."
+    turns:
+      - role: "human"
+        content: "Hi, I'm Rachel. Party of 4, it's my husband's 50th birthday."
+        expected_keywords: ["Rachel", "birthday", "50th", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What restaurant do you recommend?"
+        expected_keywords: ["Steakhouse", "birthday", "four"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "And after dinner?"
+        expected_keywords: ["show", "lounge", "birthday"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Uses all three pieces of info (name, party size, occasion) from turn 1 throughout. Never re-asks any of them. Recommendations are shaped by the 50th birthday milestone and party of 4"
+    safety_relevant: false
+
+  - id: "p2-05"
+    name: "Agent backs off when guest is terse"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "Recognizes that terse responses signal the guest wants information, not conversation. Stops asking profiling questions after the guest gives short, functional replies. Switches to direct, concise answers without further probing."
+    turns:
+      - role: "human"
+        content: "Steakhouse hours"
+        expected_keywords: ["5", "PM", "Steakhouse"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Location"
+        expected_keywords: ["Casino", "Sky"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Dress code"
+        expected_keywords: ["business casual", "smart"]
+        expected_tone: "direct"
+        expected_empathy_level: "low"
+    expected_behavior: "Matches the terse style. Does NOT ask 'How many will be dining?' or 'Any special occasion?' when the guest is clearly in lookup mode. Every response is functional and concise"
+    safety_relevant: false
+
+  - id: "p2-06"
+    name: "Agent probes after providing value first"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "Demonstrates the give-to-get pattern: first delivers a genuine answer to the guest's question, THEN asks a natural follow-up profiling question. The answer must be complete and useful on its own, not gated behind the profiling question."
+    turns:
+      - role: "human"
+        content: "What shows are on tonight?"
+        expected_keywords: ["Arena", "Wolf Den", "show"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Just me and a friend"
+        expected_keywords: ["two", "recommend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Comedy sounds fun"
+        expected_keywords: ["Comix", "comedy"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "First response lists shows AND naturally asks who's attending or what kind of show they enjoy. The show listing is complete regardless of whether the guest answers the follow-up. Value first, probe second"
+    safety_relevant: false
+
+  - id: "p2-07"
+    name: "Agent asks about visit duration naturally"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "Learns visit duration through context rather than directly asking 'how long are you staying?' When the guest mentions hotel or multiple days, the agent can frame a multi-day plan. Otherwise, infers from cues like checkout or 'tomorrow'."
+    turns:
+      - role: "human"
+        content: "We just checked into the Sky Tower"
+        expected_keywords: ["Sky Tower", "welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah we're here through Sunday"
+        expected_keywords: ["weekend", "plan"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What should we do tonight?"
+        expected_keywords: ["dinner", "show", "tonight"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Uses the hotel check-in and 'through Sunday' mentions to shape a multi-day experience plan. Suggests tonight's activities with awareness that more days are available for other experiences"
+    safety_relevant: false
+
+  - id: "p2-08"
+    name: "Agent asks about entertainment interests"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "When the guest asks a generic question about things to do, the agent provides options AND asks a narrowing question about entertainment preferences. The question is specific enough to be useful ('More into music or comedy?') rather than vague ('What do you like?')."
+    turns:
+      - role: "human"
+        content: "What's there to do here besides gambling?"
+        expected_keywords: ["restaurant", "Spa", "Arena", "show"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We love live music"
+        expected_keywords: ["Wolf Den", "Arena", "live", "music"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's playing this weekend?"
+        expected_keywords: ["Arena", "Wolf Den", "weekend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "First response provides a broad overview and asks a narrowing question about entertainment type. When 'live music' is volunteered, immediately narrows to music venues and upcoming acts"
+    safety_relevant: false
+
+  - id: "p2-09"
+    name: "Agent probes gaming level for comp eligibility"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "When a guest asks about comps or the loyalty program, the agent asks about their Momentum tier or gaming level in a way that feels like helping them get better value, not assessing their worth. Frames as 'So I can check what's available for you'."
+    turns:
+      - role: "human"
+        content: "How do I earn free stuff here?"
+        expected_keywords: ["Momentum", "tier", "points"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I think I'm at the base level"
+        expected_keywords: ["Base", "earn", "upgrade"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How do I move up?"
+        expected_keywords: ["tier", "points", "play"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Explains the Momentum program and naturally asks about the guest's current tier. Frames the tier question as enabling better guidance. When they say 'base level', provides actionable path to the next tier"
+    safety_relevant: false
+
+  - id: "p2-10"
+    name: "Agent asks about companion needs"
+    category: "profiling_p2_active_probing"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "When the guest mentions companions, the agent probes for specific companion needs (kids menu, accessibility, allergies) framed as helping plan the best experience. The question is contextual ('Do the kids have any favorites?') not clinical ('Any dietary restrictions in the group?')."
+    turns:
+      - role: "human"
+        content: "Need a restaurant for 6 of us tonight"
+        expected_keywords: ["restaurant", "six", "group"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Two adults, my parents, and two teenagers"
+        expected_keywords: ["family", "group"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "My dad uses a wheelchair"
+        expected_keywords: ["accessible", "wheelchair"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+    expected_behavior: "First response asks about group composition to narrow restaurant options. When the multi-generational family is described, adjusts to accommodate all ages. When accessibility need is mentioned, immediately factors it into recommendations"
+    safety_relevant: false

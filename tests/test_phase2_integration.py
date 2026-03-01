@@ -45,13 +45,13 @@ class TestWhisperGraphWiring:
     """Verify whisper_planner is correctly wired in the graph topology."""
 
     def test_whisper_node_in_graph(self):
-        """whisper_planner is one of the 11 nodes."""
+        """whisper_planner is one of the 12 nodes."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
         all_nodes = set(graph.get_graph().nodes) - {"__start__", "__end__"}
         assert "whisper_planner" in all_nodes
-        assert len(all_nodes) == 11
+        assert len(all_nodes) == 12
 
     def test_retrieve_to_whisper_edge(self):
         """retrieve has an edge to whisper_planner."""
@@ -585,12 +585,12 @@ class TestGraphEndpointV2:
         app.state.ready = True
         return TestClient(app)
 
-    def test_graph_returns_11_nodes(self, client):
-        """GET /graph returns exactly 11 nodes."""
+    def test_graph_returns_12_nodes(self, client):
+        """GET /graph returns exactly 12 nodes."""
         response = client.get("/graph")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["nodes"]) == 11
+        assert len(data["nodes"]) == 12
 
     def test_graph_includes_whisper_planner(self, client):
         """whisper_planner is in the node list."""

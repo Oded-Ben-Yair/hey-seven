@@ -1,0 +1,145 @@
+scenarios:
+  - id: "p5-01"
+    name: "5-turn golden path — foundation to relationship"
+    category: "profiling_p5_progressive_sequence"
+    behavioral_dimension: "P5_progressive_sequencing"
+    expected_behavioral_quality: "Over 5 turns, the agent naturally progresses through profiling phases: (1) Foundation — name, party size, occasion; (2) Preference — dining, entertainment, gaming; (3) Relationship — visit frequency, loyalty tier, host relationship. Each phase builds on the previous. No phase-skipping."
+    turns:
+      - role: "human"
+        content: "Hi, I'm Dave. Looking for dinner recommendations."
+        expected_keywords: ["Dave", "restaurant", "dinner"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "It's just me and my girlfriend, nothing too formal"
+        expected_keywords: ["two", "casual", "relaxed"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We love Italian food"
+        expected_keywords: ["Ballo", "Italian", "pasta"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We come here a few times a year"
+        expected_keywords: ["regular", "welcome", "Momentum"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah I have a Momentum card, Ignite level I think"
+        expected_keywords: ["Ignite", "benefits", "earn"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Profiling progresses naturally: Turn 1 captures name. Turn 2 captures party composition. Turn 3 captures dining preference. Turn 4 captures visit frequency. Turn 5 captures loyalty tier. Each profiling question follows logically from the conversation, never feels like a form."
+    safety_relevant: false
+
+  - id: "p5-02"
+    name: "Agent avoids Phase 3 questions in first interaction"
+    category: "profiling_p5_progressive_sequence"
+    behavioral_dimension: "P5_progressive_sequencing"
+    expected_behavioral_quality: "In a first interaction, the agent NEVER asks Phase 3 questions (relationship-level: gaming budget, comp history, host relationship, personal financial signals). These feel invasive before trust is established. The agent stays in Phase 1 (foundation) and Phase 2 (preferences) only."
+    turns:
+      - role: "human"
+        content: "First time here, what do you recommend?"
+        expected_keywords: ["welcome", "Mohegan Sun"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's fun to do?"
+        expected_keywords: ["restaurant", "show", "Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We like trying new restaurants"
+        expected_keywords: ["restaurant", "recommend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent asks about party size, occasion, preferences — all Phase 1 and 2 topics. Does NOT ask about gaming budget, comp expectations, loyalty status, or how much they typically spend. Those questions are too early for a first-time guest"
+    safety_relevant: false
+
+  - id: "p5-03"
+    name: "Agent advances to Phase 2 after Phase 1 complete"
+    category: "profiling_p5_progressive_sequence"
+    behavioral_dimension: "P5_progressive_sequencing"
+    expected_behavioral_quality: "After capturing foundation info (name, party size, occasion), the agent naturally shifts to preference questions (cuisine type, entertainment interests, gaming style). The transition feels like deepening the service, not advancing through a checklist."
+    turns:
+      - role: "human"
+        content: "Hi, I'm Karen. Here with my husband for our anniversary, party of 2."
+        expected_keywords: ["Karen", "anniversary", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We're open to anything really"
+        expected_keywords: ["recommend", "suggestion"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We've never tried Asian food at a casino before"
+        expected_keywords: ["TAO", "Asian"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That sounds amazing. And maybe something after?"
+        expected_keywords: ["show", "lounge", "anniversary"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Phase 1 is complete by turn 1 (name, occasion, party size). Agent moves to Phase 2 in turns 2-4: cuisine preference, entertainment interest, activity planning. The progression feels natural because the foundation was established first"
+    safety_relevant: false
+
+  - id: "p5-04"
+    name: "Agent handles mid-conversation topic change gracefully"
+    category: "profiling_p5_progressive_sequence"
+    behavioral_dimension: "P5_progressive_sequencing"
+    expected_behavioral_quality: "When the guest abruptly changes topic mid-profiling sequence, the agent follows the guest's lead without forcing the conversation back to the profiling path. Captures what was volunteered and resumes profiling only when the conversation naturally allows it."
+    turns:
+      - role: "human"
+        content: "I'm Tom, here for a poker tournament"
+        expected_keywords: ["Tom", "poker", "tournament"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Wait, where's the nearest bathroom?"
+        expected_keywords: ["restroom", "bathroom", "floor"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Thanks. OK so about the tournament..."
+        expected_keywords: ["poker", "tournament", "schedule"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Cool. I play here every quarter or so."
+        expected_keywords: ["regular", "welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Bathroom question is handled cleanly without forcing poker back into the response. When Tom returns to the poker topic, agent resumes where they left off. The profiling sequence adapts to the guest's flow, not the other way around"
+    safety_relevant: false
+
+  - id: "p5-05"
+    name: "Agent recovers from tangent back to profiling"
+    category: "profiling_p5_progressive_sequence"
+    behavioral_dimension: "P5_progressive_sequencing"
+    expected_behavioral_quality: "After a tangent (complaint, off-topic question, general chat), the agent naturally returns to the profiling sequence by connecting the tangent resolution to a profiling-relevant question. The bridge feels organic ('Now that that's sorted, were you looking for...') not forced."
+    turns:
+      - role: "human"
+        content: "The Wi-Fi in my room isn't working"
+        expected_keywords: ["Wi-Fi", "help", "front desk"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "OK I'll call them. Anyway, what's for dinner?"
+        expected_keywords: ["restaurant", "dinner"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Something for the family, 5 of us"
+        expected_keywords: ["family", "five", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "The kids are picky eaters"
+        expected_keywords: ["kid", "Buffet", "variety"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Wi-Fi complaint is handled empathetically in turn 1. When the guest pivots to dinner, the agent smoothly enters profiling mode: party size in turn 3, dietary needs in turn 4. The transition from complaint to concierge feels seamless"
+    safety_relevant: false

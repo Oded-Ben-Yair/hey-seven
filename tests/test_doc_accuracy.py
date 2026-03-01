@@ -24,8 +24,8 @@ class TestSettingsCount:
         # Count fields defined directly on Settings (exclude inherited)
         fields = Settings.model_fields
         actual_count = len(fields)
-        assert actual_count == 66, (
-            f"Settings has {actual_count} fields, but docs say 66. "
+        assert actual_count == 68, (
+            f"Settings has {actual_count} fields, but docs say 68. "
             f"Update README.md and .env.example if count changed."
         )
 
@@ -59,13 +59,13 @@ class TestAgentRegistry:
 class TestStateFieldCount:
     """Verify the documented state field count matches code."""
 
-    def test_property_qa_state_has_23_fields(self):
-        """PropertyQAState has exactly 23 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52 + 2 R72/R73 + 1 Phase1-multilingual + 1 Phase5-handoff)."""
+    def test_property_qa_state_has_26_fields(self):
+        """PropertyQAState has exactly 26 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52 + 2 R72/R73 + 1 Phase1-multilingual + 1 Phase5-handoff + 3 profiling)."""
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 23, (
-            f"PropertyQAState has {actual} fields, expected 23. "
+        assert actual == 26, (
+            f"PropertyQAState has {actual} fields, expected 26. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 
@@ -198,12 +198,12 @@ class TestVersionConsistency:
     """Verify VERSION defaults are consistent across config and .env files."""
 
     def test_config_version_default(self):
-        """config.py VERSION default is 1.3.0."""
+        """config.py VERSION default is 1.4.0."""
         from src.config import Settings
 
         default = Settings.model_fields["VERSION"].default
-        assert default == "1.3.0", (
-            f"config.py VERSION default is {default!r}, expected '1.3.0'. "
+        assert default == "1.4.0", (
+            f"config.py VERSION default is {default!r}, expected '1.4.0'. "
             f"Sync .env, .env.example, and ARCHITECTURE.md."
         )
 
@@ -213,7 +213,7 @@ class TestVersionConsistency:
         content = env_example.read_text()
         match = re.search(r"^VERSION=([^\s#]+)", content, re.MULTILINE)
         assert match, "VERSION not found in .env.example"
-        assert match.group(1).strip() == "1.3.0"
+        assert match.group(1).strip() == "1.4.0"
 
 
 class TestCategoryToAgentMapping:
@@ -246,8 +246,8 @@ class TestGraphNodeCount:
                 for n in g.nodes
                 if (n.id if hasattr(n, "id") else str(n)) not in ("__start__", "__end__")
             ]
-        assert len(nodes) == 11, (
-            f"Graph has {len(nodes)} nodes, expected 11. "
+        assert len(nodes) == 12, (
+            f"Graph has {len(nodes)} nodes, expected 12. "
             f"Nodes: {nodes}"
         )
 
@@ -877,7 +877,7 @@ class TestGraphTopology:
     """
 
     def test_node_count_matches_docs(self):
-        """Graph must have exactly 11 nodes (documented in ARCHITECTURE.md and README)."""
+        """Graph must have exactly 12 nodes (documented in ARCHITECTURE.md and README)."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -891,7 +891,7 @@ class TestGraphTopology:
                 for n in graph_data.nodes
                 if not (n.id if hasattr(n, "id") else str(n)).startswith("__")
             ]
-        assert len(real_nodes) == 11, f"Expected 11 nodes, got {len(real_nodes)}: {real_nodes}"
+        assert len(real_nodes) == 12, f"Expected 12 nodes, got {len(real_nodes)}: {real_nodes}"
 
     def test_node_names_use_constants(self):
         """All node names must come from constants.py."""

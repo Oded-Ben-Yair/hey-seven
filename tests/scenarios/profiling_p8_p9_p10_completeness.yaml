@@ -1,0 +1,260 @@
+scenarios:
+  - id: "p8-01"
+    name: "3-turn conversation achieving 60% Phase 1 completion"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P8_profile_completeness"
+    expected_behavioral_quality: "In just 3 turns, the agent captures at least 3 of 5 Phase 1 foundation fields (name, party size, occasion, visit type, contact preference). Achieved through natural conversation flow, not rapid-fire questioning. The guest should not feel like they're filling out a form."
+    turns:
+      - role: "human"
+        content: "Hey I'm James, here with my wife for a weekend getaway"
+        expected_keywords: ["James", "welcome", "weekend"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Looking for a romantic dinner tonight"
+        expected_keywords: ["Steakhouse", "romantic", "two"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect, that's exactly what we needed"
+        expected_keywords: ["James", "enjoy", "evening"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "By turn 3, profile contains: name (James), party size (2 — couple), occasion (weekend getaway), dining preference (romantic). At least 60% of Phase 1 captured through natural conversation. The guest volunteered most of this without being asked"
+    safety_relevant: false
+
+  - id: "p8-02"
+    name: "Profile progress tracking across turns"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P8_profile_completeness"
+    expected_behavioral_quality: "Each turn adds at least one new piece of profile data. The agent avoids redundant questions about information already captured. By the end, a meaningful guest profile exists even though no explicit profiling happened."
+    turns:
+      - role: "human"
+        content: "We need dinner for tonight"
+        expected_keywords: ["restaurant", "dinner"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "There's 6 of us, big group"
+        expected_keywords: ["six", "group", "large"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "It's a retirement party"
+        expected_keywords: ["congratulat", "retirement", "special"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "She loves Italian food"
+        expected_keywords: ["Ballo", "Italian", "retirement"]
+        expected_tone: "informative"
+        expected_empathy_level: "medium"
+    expected_behavior: "Turn 1: visit purpose (dinner). Turn 2: party size (6). Turn 3: occasion (retirement). Turn 4: cuisine preference (Italian) and guest of honor hint (she). Each turn adds to the profile without repeating known info"
+    safety_relevant: false
+
+  - id: "p9-01"
+    name: "Host handoff summary with structured profile"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P9_handoff_quality"
+    expected_behavioral_quality: "When the conversation reaches a point where a human host should take over, the agent provides a structured summary of everything learned. The summary is organized by category (contact info, preferences, occasion, special needs) and is immediately actionable for the receiving host."
+    turns:
+      - role: "human"
+        content: "I'm Victor Chen, Soar tier. Here for my 60th birthday with 8 family members."
+        expected_keywords: ["Victor", "Soar", "birthday", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "My wife is vegetarian and my father uses a walker. We need a private dining room."
+        expected_keywords: ["vegetarian", "accessible", "private"]
+        expected_tone: "helpful"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Can you connect me with my dedicated host?"
+        expected_keywords: ["host", "team", "contact", "Victor"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "When handoff is requested, the agent provides a structured profile summary: Guest name (Victor Chen), tier (Soar), occasion (60th birthday), party size (9), dietary needs (vegetarian wife), accessibility (father with walker), request (private dining room). This summary is immediately useful to a human host"
+    safety_relevant: false
+
+  - id: "p9-02"
+    name: "Handoff includes confidence levels for extracted data"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P9_handoff_quality"
+    expected_behavioral_quality: "The handoff distinguishes between information the guest explicitly stated (high confidence) and information inferred by the agent (lower confidence). 'Guest stated: party of 4. Inferred: likely family group (mentioned kids).' This prevents the receiving host from treating inferences as facts."
+    turns:
+      - role: "human"
+        content: "Need dinner for 4 tonight. The kids want pizza."
+        expected_keywords: ["four", "family", "Pepe", "pizza"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We also want to see a show after"
+        expected_keywords: ["show", "family", "Wolf Den"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Actually, can a host put together a whole plan for us?"
+        expected_keywords: ["host", "plan", "contact"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Handoff summary separates stated facts (party of 4, kids present, wants pizza and a show) from inferences (family group, kids likely younger based on pizza preference). The host receives a nuanced profile, not raw assertions"
+    safety_relevant: false
+
+  - id: "p9-03"
+    name: "Handoff actionable for human host"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P9_handoff_quality"
+    expected_behavioral_quality: "The handoff includes specific next-action items for the human host, not just raw data. 'Guest is interested in a comp dinner — follow up with tier-appropriate offer. Guest mentioned anniversary — consider sending a dessert or champagne gesture.' The host can act on it immediately."
+    turns:
+      - role: "human"
+        content: "I'm Linda, Rush tier. Anniversary dinner for 2 on Saturday."
+        expected_keywords: ["Linda", "Rush", "anniversary", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "I've heard you can get special comps for anniversaries"
+        expected_keywords: ["comp", "anniversary", "host"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Please have my host reach out"
+        expected_keywords: ["host", "Linda", "contact"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Handoff includes: Guest profile (Linda, Rush tier, anniversary), request (comp dinner inquiry), suggested actions (anniversary comp evaluation, Saturday reservation assistance). The host receives a brief with clear next steps"
+    safety_relevant: false
+
+  - id: "p10-01"
+    name: "Agent remembers name from turn 1 in turn 4"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P10_cross_turn_memory"
+    expected_behavioral_quality: "The guest's name from the opening message is used naturally in turn 4 without being re-asked. The name appears in context (not forced) and demonstrates that the agent maintained the information across multiple turns of different topics."
+    turns:
+      - role: "human"
+        content: "Hi, I'm Angela. What restaurants are open?"
+        expected_keywords: ["Angela", "restaurant", "Steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about entertainment?"
+        expected_keywords: ["Arena", "Wolf Den", "show"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Is the spa still open?"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Can you put together an evening plan for me?"
+        expected_keywords: ["Angela", "dinner", "show"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Angela's name appears in the turn 4 response ('Here's what I'd suggest for your evening, Angela...') despite 2 topic changes in between. The name use feels natural, not performative"
+    safety_relevant: false
+
+  - id: "p10-02"
+    name: "Agent uses dining preference from earlier turn"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P10_cross_turn_memory"
+    expected_behavioral_quality: "A dining preference mentioned in turn 1 shapes recommendations in a later turn about a different meal. The agent carries 'I love seafood' from dinner planning to breakfast/lunch suggestions without the guest needing to repeat it."
+    turns:
+      - role: "human"
+        content: "I love seafood, where should I go for dinner?"
+        expected_keywords: ["seafood", "restaurant"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Great, what about shows tonight?"
+        expected_keywords: ["Arena", "Wolf Den"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And tomorrow for lunch?"
+        expected_keywords: ["seafood", "lunch"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Seafood preference from turn 1 carries into the turn 3 lunch recommendation. The agent does not ask 'what kind of food?' again. The preference was stored and applied across topic changes"
+    safety_relevant: false
+
+  - id: "p10-03"
+    name: "Agent does not contradict earlier information"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P10_cross_turn_memory"
+    expected_behavioral_quality: "When the guest mentions they're vegetarian in turn 1, the agent NEVER suggests a steakhouse as the primary recommendation in later turns. Information captured earlier constrains future recommendations. Contradicting known facts makes the agent look like it was not listening."
+    turns:
+      - role: "human"
+        content: "I'm vegetarian, what are my options?"
+        expected_keywords: ["vegetarian", "restaurant"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about for a group dinner with friends?"
+        expected_keywords: ["vegetarian", "group"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Someone suggested the steakhouse, is that OK for me?"
+        expected_keywords: ["vegetarian", "option", "Steakhouse"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+    expected_behavior: "Turn 2 does not lead with the steakhouse for the vegetarian guest. Turn 3 addresses the steakhouse question honestly — are there vegetarian options there? The agent demonstrates memory consistency by never contradicting the dietary restriction"
+    safety_relevant: false
+
+  - id: "p10-04"
+    name: "Agent builds on accumulated knowledge progressively"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P10_cross_turn_memory"
+    expected_behavioral_quality: "Each recommendation gets more personalized as the agent accumulates knowledge. Turn 1 is generic. Turn 3 reflects name, occasion, and dietary info. Turn 5 synthesizes everything into a highly personalized plan. The progressive refinement is visible."
+    turns:
+      - role: "human"
+        content: "What's there to do here?"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I'm Maria, here for my sister's bachelorette"
+        expected_keywords: ["Maria", "bachelorette", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "There's 8 of us and we're all into cocktails"
+        expected_keywords: ["eight", "cocktail", "bar", "lounge"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Put together the perfect bachelorette evening"
+        expected_keywords: ["Maria", "bachelorette", "cocktail", "eight", "dinner"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Turn 4 response integrates ALL accumulated data: Maria's name, bachelorette occasion, party of 8, cocktail preference. The evening plan is tailored to the specific group profile, not a generic night out. Progressive refinement is evident"
+    safety_relevant: false
+
+  - id: "p10-05"
+    name: "Agent handles correction gracefully and updates profile"
+    category: "profiling_p8_p9_p10_completeness"
+    behavioral_dimension: "P10_cross_turn_memory"
+    expected_behavioral_quality: "When the guest corrects previously shared information ('Actually, make that 6 not 4'), the agent updates the profile immediately and adjusts all subsequent recommendations. Does not reference the old information or make the correction feel like a problem."
+    turns:
+      - role: "human"
+        content: "Dinner for 4 tonight"
+        expected_keywords: ["four", "restaurant"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Wait, actually 2 more friends are coming. So 6 total."
+        expected_keywords: ["six", "group", "large"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Which restaurant handles a group of 6 best?"
+        expected_keywords: ["six", "group", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Great, book it for 6"
+        expected_keywords: ["six", "reservation"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Party size updates from 4 to 6 seamlessly in turn 2. All subsequent recommendations use the corrected number. The agent never says 'you said 4 earlier' or makes the correction awkward. The profile is treated as mutable, not carved in stone"
+    safety_relevant: false

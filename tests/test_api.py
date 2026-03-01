@@ -557,7 +557,7 @@ class TestGraphEndpoint:
             assert "validate" in data["nodes"]
             assert "persona_envelope" in data["nodes"]
             assert "respond" in data["nodes"]
-            assert len(data["nodes"]) == 11
+            assert len(data["nodes"]) == 12
             assert len(data["edges"]) > 0
             # Verify start edge exists and goes to compliance_gate
             start_edges = [e for e in data["edges"] if e["from"] == "__start__"]

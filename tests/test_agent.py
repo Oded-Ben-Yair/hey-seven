@@ -16,8 +16,8 @@ class TestBuildGraph:
         assert graph is not None
         assert hasattr(graph, "invoke") or hasattr(graph, "ainvoke")
 
-    def test_graph_has_11_nodes(self):
-        """The compiled graph contains exactly 11 user-defined nodes (v2.1)."""
+    def test_graph_has_12_nodes(self):
+        """The compiled graph contains exactly 12 user-defined nodes (v2.3)."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -27,7 +27,7 @@ class TestBuildGraph:
         expected = {
             "compliance_gate", "router", "retrieve", "whisper_planner",
             "generate", "validate", "persona_envelope", "respond",
-            "fallback", "greeting", "off_topic",
+            "fallback", "greeting", "off_topic", "profiling_enrichment",
         }
         assert user_nodes == expected
 
@@ -342,7 +342,7 @@ class TestNodeConstants:
     """Node name constants prevent silent breakage from string typos."""
 
     def test_constants_exported(self):
-        """All 11 node constants are importable from graph module."""
+        """All 12 node constants are importable from graph module."""
         from src.agent.graph import (
             NODE_COMPLIANCE_GATE,
             NODE_FALLBACK,
@@ -350,6 +350,7 @@ class TestNodeConstants:
             NODE_GREETING,
             NODE_OFF_TOPIC,
             NODE_PERSONA,
+            NODE_PROFILING,
             NODE_RESPOND,
             NODE_RETRIEVE,
             NODE_ROUTER,
@@ -368,6 +369,7 @@ class TestNodeConstants:
         assert NODE_GREETING == "greeting"
         assert NODE_OFF_TOPIC == "off_topic"
         assert NODE_WHISPER == "whisper_planner"
+        assert NODE_PROFILING == "profiling_enrichment"
 
     def test_graph_nodes_match_constants(self):
         """Graph node names match the defined constants."""
@@ -378,6 +380,7 @@ class TestNodeConstants:
             NODE_GREETING,
             NODE_OFF_TOPIC,
             NODE_PERSONA,
+            NODE_PROFILING,
             NODE_RESPOND,
             NODE_RETRIEVE,
             NODE_ROUTER,
@@ -391,7 +394,7 @@ class TestNodeConstants:
         expected = {
             NODE_COMPLIANCE_GATE, NODE_ROUTER, NODE_RETRIEVE, NODE_WHISPER,
             NODE_GENERATE, NODE_VALIDATE, NODE_PERSONA, NODE_RESPOND,
-            NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC,
+            NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC, NODE_PROFILING,
         }
         assert all_nodes == expected
 

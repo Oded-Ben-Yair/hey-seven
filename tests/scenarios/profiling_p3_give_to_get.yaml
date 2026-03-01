@@ -1,0 +1,120 @@
+scenarios:
+  - id: "p3-01"
+    name: "Restaurant recommendation plus party composition question"
+    category: "profiling_p3_give_to_get"
+    behavioral_dimension: "P3_give_to_get"
+    expected_behavioral_quality: "Delivers a complete, useful restaurant recommendation FIRST, then naturally asks about party size or composition. The recommendation stands on its own — the guest gets value even if they ignore the follow-up question. The question feels like a service refinement, not data collection."
+    turns:
+      - role: "human"
+        content: "What's a good dinner spot?"
+        expected_keywords: ["Steakhouse", "restaurant"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Four of us, two couples"
+        expected_keywords: ["four", "couples", "table"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect, we'll try the steakhouse"
+        expected_keywords: ["enjoy", "evening"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Turn 1 provides a genuine recommendation AND asks about party composition. The recommendation is not held hostage to the answer — it's useful immediately. Turn 2 refines the recommendation with the new information"
+    safety_relevant: false
+
+  - id: "p3-02"
+    name: "Show suggestion plus occasion inquiry"
+    category: "profiling_p3_give_to_get"
+    behavioral_dimension: "P3_give_to_get"
+    expected_behavioral_quality: "Lists upcoming entertainment options with genuine enthusiasm, then asks if there's a special occasion. The show information is complete and actionable before the occasion question. The question is framed as 'so I can make it extra special' not 'for our records'."
+    turns:
+      - role: "human"
+        content: "What shows are happening this weekend?"
+        expected_keywords: ["Arena", "Wolf Den", "Comix"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah, it's actually a bachelorette party"
+        expected_keywords: ["bachelorette", "congratulat", "group"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "What would you recommend for the group?"
+        expected_keywords: ["group", "party", "fun"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Show listing is useful and complete before asking about the occasion. When the bachelorette context is revealed, the agent reshapes recommendations around group energy, nightlife, and celebration activities"
+    safety_relevant: false
+
+  - id: "p3-03"
+    name: "Spa information plus companion question"
+    category: "profiling_p3_give_to_get"
+    behavioral_dimension: "P3_give_to_get"
+    expected_behavioral_quality: "Provides spa details (services, hours, pricing context) first, then asks who they'll be visiting with. The spa info is actionable on its own. The companion question is framed as helping recommend couples treatments, group packages, or solo relaxation."
+    turns:
+      - role: "human"
+        content: "Tell me about the spa"
+        expected_keywords: ["Elemis Spa", "massage", "treatment"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "It would be for me and my sister"
+        expected_keywords: ["two", "sister", "pair", "together"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "A couples massage would be fun"
+        expected_keywords: ["massage", "book", "appointment"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Full spa overview provided before asking who's attending. When 'sister' is mentioned, pivots to duo-friendly services without making assumptions about the relationship dynamic"
+    safety_relevant: false
+
+  - id: "p3-04"
+    name: "Gaming information plus visit frequency question"
+    category: "profiling_p3_give_to_get"
+    behavioral_dimension: "P3_give_to_get"
+    expected_behavioral_quality: "Explains gaming floor layout and table game options first, then naturally asks if they've visited before. The gaming overview is useful for both first-timers and regulars. The visit frequency question is framed as 'so I can skip the basics if you already know the floor'."
+    turns:
+      - role: "human"
+        content: "Where are the poker tables?"
+        expected_keywords: ["poker", "gaming floor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah I play here every month"
+        expected_keywords: ["regular", "welcome back"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Any tournaments coming up?"
+        expected_keywords: ["tournament", "poker"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Poker info is delivered first. Visit frequency question is a natural extension. When the guest reveals monthly visits, the agent adjusts to regular-guest register and skips introductory details"
+    safety_relevant: false
+
+  - id: "p3-05"
+    name: "Hotel room info plus visit purpose question"
+    category: "profiling_p3_give_to_get"
+    behavioral_dimension: "P3_give_to_get"
+    expected_behavioral_quality: "Describes room options and hotel amenities first, then asks about the visit purpose to refine the recommendation. The hotel information is useful regardless of purpose. The purpose question is framed as customizing their stay experience."
+    turns:
+      - role: "human"
+        content: "What's the difference between Sky Tower and Earth Tower?"
+        expected_keywords: ["Sky Tower", "Earth Tower", "room"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "It's a work trip but we'll have one free evening"
+        expected_keywords: ["business", "evening", "recommend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What would you suggest for that evening?"
+        expected_keywords: ["dinner", "show", "evening"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Hotel comparison is complete and useful before the purpose question. When 'work trip with one free evening' is revealed, recommendations focus on efficient enjoyment — one great dinner and one nearby activity rather than an all-day itinerary"
+    safety_relevant: false

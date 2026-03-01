@@ -13,18 +13,19 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 
-## Current State (Updated 2026-02-28)
+## Current State (Updated 2026-03-01)
 
-- **Codebase**: 27K+ LOC, 61 source modules across 10 packages
-- **Tests**: 2822 tests, 0 failures, 90.01% coverage
-- **Agent**: 11-node LangGraph StateGraph v2.2 with 6 specialist agents
-- **Review Score**: R68 infra consensus 92.9/100, R71 behavioral 7.3/10
-- **Review Trajectory**: R52(67.7) → R68(92.9) infra, R70(3.8) → R71(7.3) behavioral
-- **Version**: v1.3.0
-- **Latest commit**: R72 deep domain research + behavioral excellence
-- **ADRs**: 25 architectural decision records with status lifecycle
+- **Codebase**: 20K+ LOC, 66 source modules across 10 packages
+- **Tests**: 3236 tests, 0 failures, 90%+ coverage
+- **Agent**: 12-node LangGraph StateGraph v2.3 with 6 specialist agents + profiling enrichment node
+- **Review Score**: R75 tech 9.63/10, R75 behavioral live 5.8/10
+- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R75(5.8) behavioral
+- **Version**: v1.4.0
+- **Latest commit**: feat: Guest Profiling Intelligence System (ADR-028)
+- **ADRs**: 28 architectural decision records with status lifecycle
 - **Research**: 8 deep domain research docs (R72)
-- **Behavioral scenarios**: 74 across 9 YAML files
+- **Behavioral scenarios**: 195 across 27 YAML files (74 behavioral + 56 profiling + 65 other)
+- **Profiling**: 10-dimension evaluation framework (P1-P10), incentive engine with tiered autonomy
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
@@ -59,7 +60,7 @@ src/                         - Production source code
       _base.py               - Shared specialist execution logic (DRY extraction)
       registry.py            - Agent dispatch registry
     constants.py             - Node name constants (single source of truth)
-    graph.py                 - 11-node StateGraph assembly
+    graph.py                 - 12-node StateGraph assembly (v2.3)
     state.py                 - CasinoHostState TypedDict
     nodes.py                 - LLM nodes, router, formatter
     tools.py                 - Casino domain tools
@@ -74,6 +75,8 @@ src/                         - Production source code
     slang.py                 - Gambling slang normalization for RAG search
     crisis.py                - Graduated 4-level crisis escalation (ADR-025)
     extraction.py            - Info extraction + guest profile summary
+    profiling.py             - Guest profiling enrichment node (LLM extraction + confidence gating)
+    incentives.py            - Incentive engine with per-casino rules + tiered autonomy
     dispatch.py              - Specialist dispatch helpers (SRP extraction)
     streaming_pii.py         - Streaming PII redactor for SSE tokens
     regex_engine.py          - RE2/stdlib regex engine fallback
@@ -107,7 +110,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 76 test files, 2822 tests, 90.01% coverage
+tests/                       - 95 test files, 3236 tests, 90%+ coverage
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests
@@ -124,8 +127,11 @@ tests/                       - 76 test files, 2822 tests, 90.01% coverage
   test_crisis_detection.py     - R72: Crisis escalation levels (39 tests)
   test_semantic_sarcasm.py     - R72: Context-contrast sarcasm (24 tests)
   test_info_extraction_enhanced.py - R72: Profile summary + extraction (22 tests)
+  test_profiling.py           - Profiling engine unit tests (90 tests)
+  test_phase5_profiling.py     - Profiling integration tests (12 tests)
+  test_incentives.py           - Incentive engine tests (36 tests)
   ...                        - (20+ more test files)
-  scenarios/                   - 74 behavioral scenarios across 9 YAML files
+  scenarios/                   - 195 behavioral scenarios across 27 YAML files
   evaluation/                  - Live agent evaluation scripts + judge panel
 knowledge-base/              - Structured data for RAG ingestion
   casino-operations/         - Comp system, host workflow
@@ -140,12 +146,12 @@ static/                      - Static assets
 
 ## Architecture Overview
 
-The agent uses a custom 11-node LangGraph StateGraph with validation loops:
+The agent uses a custom 12-node LangGraph StateGraph with validation loops:
 
 ```
-router -> [specialist dispatch] -> generate -> validate -> respond
-                                       ^          |
-                                       +-- retry --+  (max 1 retry)
+router -> [specialist dispatch] -> generate -> profiling_enrichment -> validate -> respond
+                                       ^                                  |
+                                       +-------------- retry -------------+  (max 1 retry)
 ```
 
 Key architectural patterns:
@@ -165,6 +171,8 @@ Key architectural patterns:
 - **Cache-Control + ETag** on cacheable API endpoints (`/property`, `/graph`, `/health`)
 - **pip-audit** in CI/CD pipeline for dependency vulnerability scanning
 - **re2-compatible guardrail patterns** across all 5 guardrail categories
+- **Guest profiling enrichment node** between generate and validate with LLM-powered extraction, confidence gating, and golden path sequencing (ADR-028)
+- **Incentive engine** with per-casino rules, tiered autonomy ($50 auto-approve threshold), and natural language framing templates
 
 ## Known Limitations
 

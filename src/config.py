@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     SEMANTIC_INJECTION_ENABLED: bool = True  # enable/disable semantic injection classifier (LLM second layer)
     SEMANTIC_INJECTION_THRESHOLD: float = 0.8  # confidence threshold for semantic injection classifier
     SEMANTIC_INJECTION_MODEL: str = ""  # override model for semantic classifier (empty = use default)
+    PROFILING_LLM_TEMPERATURE: float = 0.1  # Low temperature for deterministic profiling extraction
+    PROFILING_MIN_CONFIDENCE: float = 0.7  # Minimum confidence threshold for profiling field acceptance
 
     # --- State Backend ---
     STATE_BACKEND: str = "memory"  # "memory" | "redis"
@@ -103,7 +105,7 @@ class Settings(BaseSettings):
     # --- Observability ---
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
-    VERSION: str = "1.3.0"  # R69 bump. Production deploy overrides with COMMIT_SHA.
+    VERSION: str = "1.4.0"  # Profiling Intelligence System. Production deploy overrides with COMMIT_SHA.
     LANGFUSE_PUBLIC_KEY: str = ""
     LANGFUSE_SECRET_KEY: SecretStr = SecretStr("")
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"

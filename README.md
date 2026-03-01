@@ -1,6 +1,6 @@
 # Hey Seven Property Q&A Agent
 
-An AI concierge for Mohegan Sun casino resort, built with a custom 11-node LangGraph StateGraph.
+An AI concierge for Mohegan Sun casino resort, built with a custom 12-node LangGraph StateGraph.
 
 **[Live Demo](https://hey-seven-180574405300.us-central1.run.app)** · [GitHub](https://github.com/Oded-Ben-Yair/hey-seven)
 
@@ -20,7 +20,7 @@ docker compose up --build
 
 Casino guests need quick, reliable answers about dining, entertainment, rooms, and amenities. This agent retrieves answers from a curated knowledge base using RAG and streams responses token-by-token via Server-Sent Events.
 
-The system uses a **custom 11-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2 graph adds a dedicated **compliance gate** (204 regex patterns across 11 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → validate → retry/fallback) provides control that a generic ReAct loop cannot.
+The system uses a **custom 12-node StateGraph** rather than `create_react_agent` because the casino domain requires deterministic guardrails (responsible gaming, prompt injection, BSA/AML compliance) that must fire before the LLM — not as afterthoughts. The v2.3 graph adds a dedicated **compliance gate** (204 regex patterns across 11 languages) as the first node after START, a **whisper planner** that silently guides the speaking agent with structured plans, a **profiling enrichment** node that extracts guest intelligence with confidence gating, and a **persona envelope** for SMS/web formatting. The graph-native validation loop (generate → profiling → validate → retry/fallback) provides control that a generic ReAct loop cannot.
 
 The generate node delegates to **specialist agents** (host, dining, entertainment, comp, hotel) via a registry, and the **whisper planner** injects background guidance so each specialist has situational context without the guest seeing internal planning.
 
@@ -29,35 +29,36 @@ The frontend includes a **real-time graph trace panel** that visualizes LangGrap
 ## Architecture
 
 ```
-START ──> compliance_gate ──┬──> greeting ──────────────────────────────────────────────> END
-                            ├──> off_topic ─────────────────────────────────────────────> END
-                            └──> router ──┬──> greeting ────────────────────────────────> END
-                                          ├──> off_topic ───────────────────────────────> END
-                                          └──> retrieve ──> whisper_planner ──> generate ──> validate ─┬──> persona_envelope ──> respond ──> END
-                                                                                   ^                   ├──> generate (retry, max 1)
-                                                                                   └───────────────────┘
-                                                                                                       └──> fallback ──> END
+START ──> compliance_gate ──┬──> greeting ────────────────────────────────────────────────────────> END
+                            ├──> off_topic ───────────────────────────────────────────────────────> END
+                            └──> router ──┬──> greeting ──────────────────────────────────────────> END
+                                          ├──> off_topic ─────────────────────────────────────────> END
+                                          └──> retrieve ──> whisper ──> generate ──> profiling ──> validate ─┬──> persona ──> respond ──> END
+                                                                            ^                                ├──> generate (retry, max 1)
+                                                                            └────────────────────────────────┘
+                                                                                                             └──> fallback ──> END
 ```
 
-**11 nodes, 3 conditional routing points:**
+**12 nodes, 3 conditional routing points:**
 
 1. **Compliance Gate** — Deterministic pre-router guardrails (84 regex patterns, 4 languages). Blocks prompt injection, responsible gaming, age verification, BSA/AML, and patron privacy queries before any LLM call. Routes clean messages to the router.
 2. **Router** — Classifies user intent (7 categories) using `.with_structured_output(RouterOutput)`. Defense-in-depth: second classification layer after compliance gate.
 3. **Retrieve** — Searches ChromaDB with multi-strategy RRF reranking (semantic + augmented queries).
 4. **Whisper Planner** — Silent background LLM that produces a structured `WhisperPlan` (next topic, extraction targets, offer readiness, conversation note) to guide the speaking agent. Fail-silent: returns `None` on any error so the agent proceeds without guidance.
 5. **Generate** — Delegates to a specialist agent (host, dining, entertainment, comp) via the agent registry. Produces a grounded response using the concierge system prompt plus whisper plan context.
-6. **Validate** — Adversarial LLM review against 6 criteria (grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming).
-7. **Persona Envelope** — SMS/web formatting layer. For web (`PERSONA_MAX_CHARS=0`): pass-through. For SMS (`PERSONA_MAX_CHARS=160`): truncates to 160-char segment limit.
-8. **Respond** — Extracts sources, packages final response.
-9. **Greeting** — Returns "Seven" persona welcome with property categories.
-10. **Off-Topic** — Deterministic guardrail responses (no LLM call).
-11. **Fallback** — Safe contact-info response when validation exhausts retries.
+6. **Profiling Enrichment** — LLM-powered guest intelligence extraction with confidence gating. Sits between generate and validate. Extracts profile fields (name, party, preferences, occasion, budget signals) and injects natural profiling questions via the "give-to-get" technique. Fail-silent: never blocks the pipeline.
+7. **Validate** — Adversarial LLM review against 6 criteria (grounded, on-topic, no gambling advice, read-only, accurate, responsible gaming).
+8. **Persona Envelope** — SMS/web formatting layer. For web (`PERSONA_MAX_CHARS=0`): pass-through. For SMS (`PERSONA_MAX_CHARS=160`): truncates to 160-char segment limit.
+9. **Respond** — Extracts sources, packages final response.
+10. **Greeting** — Returns "Seven" persona welcome with property categories.
+11. **Off-Topic** — Deterministic guardrail responses (no LLM call).
+12. **Fallback** — Safe contact-info response when validation exhausts retries.
 
 ## LangGraph Patterns Used
 
 | Pattern | Where | Why |
 |---------|-------|-----|
-| Custom 11-node StateGraph | `graph.py` | Full control vs `create_react_agent` — validation loops, deterministic guardrails, specialist dispatch |
+| Custom 12-node StateGraph | `graph.py` | Full control vs `create_react_agent` — validation loops, deterministic guardrails, specialist dispatch, profiling enrichment |
 | Structured output routing | `router_node` | `.with_structured_output(RouterOutput)` — no string parsing |
 | Conditional edges with functions | `route_from_compliance`, `route_from_router`, `_route_after_validate_v2` | Explicit, testable routing logic at 3 branch points |
 | Graph-native retry loop | validate → generate | Not Python retry — graph-level state loop with counter |
@@ -70,6 +71,7 @@ START ──> compliance_gate ──┬──> greeting ────────
 | Whisper planner (silent LLM) | `whisper_planner.py` | Background planning with `WhisperPlan` structured output — fail-silent, per-turn, never guest-facing |
 | Persona envelope | `persona.py` | Channel-aware formatting (web pass-through vs SMS 160-char truncation) |
 | Compliance gate (deterministic) | `compliance_gate.py` | Pre-router node with 204 regex patterns across 11 languages — zero LLM cost, zero latency |
+| Guest profiling enrichment | `profiling.py` | LLM extraction with confidence gating, golden path sequencing, give-to-get technique, incentive engine integration |
 | Per-turn state reset | `_initial_state()` | Non-message fields reset every turn; only `messages` persists via checkpointer |
 
 ## Real-Time Graph Trace
@@ -86,7 +88,7 @@ This is visible via the "Graph Trace" button in the bottom-right corner.
 
 | Decision | Choice | Why |
 |----------|--------|-----|
-| Agent framework | LangGraph custom `StateGraph` (11 nodes) | Validation loop, structured routing, domain guardrails, specialist dispatch |
+| Agent framework | LangGraph custom `StateGraph` (12 nodes) | Validation loop, structured routing, domain guardrails, specialist dispatch, profiling enrichment |
 | LLM | Gemini 2.5 Flash | GCP-aligned, cost-effective (~$0.0014/request) |
 | Vector DB | ChromaDB (embedded) | Zero infrastructure for demo; Vertex AI Vector Search or Firestore for production |
 | Streaming | Real token SSE via `astream_events` v2 | True progressive rendering with timeout + disconnect detection |

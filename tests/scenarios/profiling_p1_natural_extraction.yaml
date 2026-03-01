@@ -1,0 +1,240 @@
+scenarios:
+  - id: "p1-01"
+    name: "Guest volunteers name casually"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Extracts the guest's name from a casual mention and uses it naturally in subsequent responses. Does NOT re-ask for the name. Does NOT echo it back awkwardly ('Nice to meet you, Mike!'). Weaves it into recommendations or sign-offs organically."
+    turns:
+      - role: "human"
+        content: "Hey, I'm Mike. What's good for dinner tonight?"
+        expected_keywords: ["restaurant", "Steakhouse", "dinner"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about something more casual?"
+        expected_keywords: ["Buffet", "casual"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect, we'll do the buffet"
+        expected_keywords: ["Mike", "enjoy", "Buffet"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Captures 'Mike' from the opening and uses it naturally by the final turn without re-asking. The name appears in the farewell or confirmation, not as a forced acknowledgment"
+    safety_relevant: false
+
+  - id: "p1-02"
+    name: "Guest introduces self formally with title"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Extracts the formal name and mirrors the formality level. A guest who says 'Dr. Patel' expects to be addressed as Dr. Patel, not as 'Patel' or 'Doctor'. The agent registers the title and uses it consistently."
+    turns:
+      - role: "human"
+        content: "Good evening, this is Dr. Patel. I'd like to know about your steakhouse."
+        expected_keywords: ["Steakhouse", "Michael Jordan"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Do they take reservations?"
+        expected_keywords: ["reservation", "recommend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Excellent. Book it for 8 PM."
+        expected_keywords: ["Dr. Patel", "8"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Uses 'Dr. Patel' consistently, matching the formal register. Never drops to first name or plain surname. The title signals status expectations that should carry through the interaction"
+    safety_relevant: false
+
+  - id: "p1-03"
+    name: "Guest corrects their name mid-conversation"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "When the guest corrects their name, the agent immediately adopts the corrected version. Does not apologize excessively or make a production of the correction. Just uses the right name going forward."
+    turns:
+      - role: "human"
+        content: "I'm Liz, looking for a spa appointment"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Actually it's Elizabeth, not Liz. What services do they offer?"
+        expected_keywords: ["Elizabeth", "Elemis Spa", "massage"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Book me a massage"
+        expected_keywords: ["Elizabeth", "massage"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Immediately switches from 'Liz' to 'Elizabeth' without over-apologizing. The correction is treated as a simple update, not a mistake to dwell on"
+    safety_relevant: false
+
+  - id: "p1-04"
+    name: "Guest mentions party size implicitly"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Infers party size from conversational cues like pronouns and companion mentions. 'Me and the wife' means party of 2. 'The four of us' means party of 4. Does not ask for a headcount when it has been stated implicitly."
+    turns:
+      - role: "human"
+        content: "Me and the wife are looking for a nice dinner spot"
+        expected_keywords: ["Steakhouse", "romantic", "two"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Something with a view or good atmosphere"
+        expected_keywords: ["ambiance", "atmosphere"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That sounds perfect for the two of us"
+        expected_keywords: ["reservation", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Registers 'me and the wife' as party of 2 and tilts toward romantic or couples-appropriate recommendations. Does not ask 'how many in your party?' when it was already stated"
+    safety_relevant: false
+
+  - id: "p1-05"
+    name: "Guest reveals occasion implicitly"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Detects the celebration context from 'celebrating tonight' and uses it to shape all recommendations. Does not ask 'what's the occasion?' when the guest has already said they're celebrating. Instead, leans into celebratory options."
+    turns:
+      - role: "human"
+        content: "We're celebrating tonight, what's the best restaurant here?"
+        expected_keywords: ["special", "celebrat", "Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Yeah it's our anniversary"
+        expected_keywords: ["anniversary", "congratulat"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Any other ideas to make it special?"
+        expected_keywords: ["Spa", "show", "special"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+    expected_behavior: "Immediately pivots to upscale and celebratory options after 'celebrating tonight'. When the anniversary is confirmed, elevates further. Threads the celebration context through every recommendation"
+    safety_relevant: false
+
+  - id: "p1-06"
+    name: "Guest mentions gaming preference casually"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Registers the gaming preference from a casual mention. 'Love blackjack' is a profiling signal for gaming preferences, comp eligibility, and table game recommendations. Stores and references it without making the guest feel tracked."
+    turns:
+      - role: "human"
+        content: "I love blackjack. Where are the table games?"
+        expected_keywords: ["table game", "blackjack", "gaming floor"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about the minimum bets?"
+        expected_keywords: ["minimum", "table"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Cool. Anything else fun for a blackjack fan?"
+        expected_keywords: ["tournament", "poker", "table"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Captures 'love blackjack' as a gaming preference and uses it to shape gaming recommendations. When the guest asks for more, connects to related table game experiences rather than random amenities"
+    safety_relevant: false
+
+  - id: "p1-07"
+    name: "Guest reveals dietary need in passing"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Picks up a dietary restriction from a casual mention and carries it forward to all dining recommendations. Does not flag it as a 'restriction' or make the guest feel limited. Instead, highlights options that naturally fit."
+    turns:
+      - role: "human"
+        content: "I'm gluten-free, what are my dinner options?"
+        expected_keywords: ["gluten", "restaurant"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about lunch tomorrow?"
+        expected_keywords: ["gluten", "lunch"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And breakfast?"
+        expected_keywords: ["Buffet", "gluten"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Carries the gluten-free preference across all three meal recommendations without the guest needing to repeat it. Each recommendation proactively addresses the dietary need"
+    safety_relevant: false
+
+  - id: "p1-08"
+    name: "Guest signals budget range indirectly"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Interprets 'nothing too pricey' as a budget signal without asking for a dollar amount. Adjusts recommendations away from premium options toward mid-range and casual dining. Does not condescend or suggest the guest cannot afford better."
+    turns:
+      - role: "human"
+        content: "Where can we eat? Nothing too pricey though"
+        expected_keywords: ["Buffet", "casual", "affordable"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about that Italian place?"
+        expected_keywords: ["Ballo"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah that works. Thanks"
+        expected_keywords: ["enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Leads with affordable and mid-range options, not the steakhouse. When asked about Ballo, provides honest pricing context. Does not upsell or push premium alternatives"
+    safety_relevant: false
+
+  - id: "p1-09"
+    name: "Guest mentions visit frequency"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Registers 'we come every year' as a repeat visitor signal. Adjusts recommendations toward what's new or different rather than the standard first-timer overview. Does not explain basic property information to a returning guest."
+    turns:
+      - role: "human"
+        content: "We come every year for our anniversary. What's new this time?"
+        expected_keywords: ["new", "anniversary"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "We already know the steakhouse and the spa"
+        expected_keywords: ["new", "different"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Now that sounds interesting"
+        expected_keywords: ["enjoy", "anniversary"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Treats the guest as a repeat visitor. Skips the standard property overview and highlights what has changed or what they may not have tried. Uses the anniversary context to personalize"
+    safety_relevant: false
+
+  - id: "p1-10"
+    name: "Guest reveals companion ages naturally"
+    category: "profiling_p1_natural_extraction"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Extracts companion ages from a casual mention ('kids are 8 and 12') and uses them to shape family-appropriate recommendations. Distinguishes between young children and pre-teens when suggesting activities. Does not ask ages after they've been volunteered."
+    turns:
+      - role: "human"
+        content: "Looking for stuff to do with the family. Kids are 8 and 12."
+        expected_keywords: ["family", "kid"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Anything they can do while we hit the casino?"
+        expected_keywords: ["kids", "arcade", "pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And somewhere we can all eat together after?"
+        expected_keywords: ["family", "Buffet", "kid"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Uses the 8 and 12 age data to recommend age-appropriate activities. An 8-year-old and 12-year-old have different interest profiles. Dining recommendation accounts for family-friendly seating and menu. Never re-asks for ages"
+    safety_relevant: false

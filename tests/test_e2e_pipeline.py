@@ -299,7 +299,7 @@ class TestE2EPipelineResponsibleGaming:
 
 
 class TestE2EPipelinePropertyQA:
-    """Verify full property QA path through all 11 nodes.
+    """Verify full property QA path through all 12 nodes.
 
     compliance_gate -> router -> retrieve -> whisper_planner -> generate
     -> validate -> persona_envelope -> respond -> END

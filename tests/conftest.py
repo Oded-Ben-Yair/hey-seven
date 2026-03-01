@@ -208,6 +208,18 @@ def _do_clear_singletons():
     except (ImportError, AttributeError):
         pass
 
+    # Phase 5: Profiling module reuses whisper_planner's _whisper_cache (no
+    # separate cache), but clear any profiling-specific caches if added later.
+    try:
+        import src.agent.profiling as _profiling_mod
+
+        # Currently profiling has no separate cache (reuses whisper LLM),
+        # but guard against future additions.
+        if hasattr(_profiling_mod, "_profiling_cache"):
+            _profiling_mod._profiling_cache.clear()
+    except (ImportError, AttributeError):
+        pass
+
     # R59 fix D2: Recreate _RETRIEVAL_POOL if shut down by app lifespan tests.
     # test_api.py exercises the FastAPI lifespan which calls
     # _RETRIEVAL_POOL.shutdown(wait=False). Without recreation, subsequent tests

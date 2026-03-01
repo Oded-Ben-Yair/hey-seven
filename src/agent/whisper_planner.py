@@ -152,6 +152,36 @@ class WhisperPlan(BaseModel):
         le=1.0,
         description="Confidence that the proactive suggestion is relevant and welcome (0.0=none, 1.0=perfect match). Must exceed 0.8 to surface.",
     )
+    # Profiling Intelligence System fields (Phase 2: Active Probing).
+    profiling_phase: Literal[
+        "foundation", "preference", "relationship", "behavioral",
+    ] = Field(
+        default="foundation",
+        description="Current profiling phase in the golden path",
+    )
+    profile_completeness: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Current guest profile completeness (0.0-1.0)",
+    )
+    next_profiling_question: str | None = Field(
+        default=None,
+        description="Natural language profiling question to inject into the AI response. Must feel conversational, not interrogative. Leave null if no question is appropriate this turn.",
+    )
+    question_technique: Literal[
+        "give_to_get", "assumptive_bridge", "contextual_inference",
+        "need_payoff", "incentive_frame", "reflective_confirm", "none",
+    ] = Field(
+        default="none",
+        description="Profiling technique to use for the question",
+    )
+    extraction_confidence_required: float = Field(
+        default=0.7,
+        ge=0.6,
+        le=0.9,
+        description="Minimum confidence required for extracted fields this turn (0.6 for casual, 0.9 for sensitive)",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +304,18 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
     # in _base.py with proper sentiment gating and max-1 enforcement.
     # Do NOT duplicate here — the dedicated section has better framing and
     # guards. This function only formats the planning data.
+
+    # Profiling Intelligence guidance section
+    profiling_phase = plan.get("profiling_phase", "foundation")
+    profile_completeness = plan.get("profile_completeness", 0.0)
+    next_question = plan.get("next_profiling_question")
+    technique = plan.get("question_technique", "none")
+
+    lines.append(f"Profiling phase: {profiling_phase}")
+    lines.append(f"Profile completeness: {profile_completeness:.0%}")
+
+    if next_question and technique != "none":
+        lines.append(f"Profiling question ({technique}): {next_question}")
 
     return "\n".join(lines)
 
