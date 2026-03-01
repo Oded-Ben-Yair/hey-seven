@@ -235,7 +235,7 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
     # causing the specialist to lose the grief context entirely.
     sentiment_update: dict[str, Any] = {}
     _existing_sentiment = state.get("guest_sentiment")
-    _PRIORITY_SENTIMENTS = ("grief",)  # Set by compliance_gate, never overwrite
+    _PRIORITY_SENTIMENTS = ("grief", "celebration")  # Set by compliance_gate, never overwrite
     if _existing_sentiment not in _PRIORITY_SENTIMENTS:
         if await is_feature_enabled(settings.CASINO_ID, "sentiment_detection_enabled"):
             sentiment = detect_sentiment(user_message)

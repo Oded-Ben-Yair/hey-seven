@@ -434,8 +434,10 @@ Also detect the language of the message.
 - ambiguous: Unclear intent, emotional reactions, terse follow-ups, gratitude, complaints, or conversational messages that relate to the guest's experience even if not a direct property question
 
 ## Guidance
-- Guest reactions ("fine", "whatever", "thanks", "that works"), complaints ("this sucks"), emotional statements ("I'm exhausted", "we're celebrating"), and follow-ups ("anything else?", "what about after dinner?") should be classified as **ambiguous**, NOT off_topic. These are part of an ongoing guest conversation.
-- Only use off_topic for messages genuinely unrelated to a casino resort stay.
+- Guest reactions ("fine", "whatever", "thanks", "that works"), complaints ("this sucks"), and terse follow-ups ("anything else?", "what about after dinner?") should be classified as **ambiguous**, NOT off_topic.
+- Emotional statements about the guest's EXPERIENCE at the property ("I'm exhausted", "we're celebrating", "I just won big!", "my dad loved this place") are **property_qa** — the guest is sharing context that should inform property recommendations.
+- Grief, loss, or bereavement ("my mom passed", "he died last month") in the context of the property ("she loved this place", "his favorite casino") is **property_qa** — the guest is honoring their loved one at the property.
+- Only use off_topic for messages genuinely unrelated to a casino resort stay (politics, homework, coding, general knowledge).
 
 ## User Message
 $user_message
@@ -664,6 +666,14 @@ SENTIMENT_TONE_GUIDES: dict[str, str] = {
         "Do NOT pivot to promotions, rewards, or enthusiasm. Let the guest lead. "
         "If they ask about the property, answer helpfully but maintain a gentle, respectful tone. "
         "Avoid exclamation marks and words like 'amazing', 'fantastic', 'incredible'."
+    ),
+    # R76: Celebration sentiment set by compliance_gate celebration detection.
+    "celebration": (
+        "The guest is celebrating something special! Match their energy authentically — "
+        "be genuinely excited WITH them. Acknowledge the celebration first. "
+        "Suggest elevated experiences: the best restaurant, a special dinner, a show. "
+        "Use warm congratulatory language ('Congratulations!', 'What a night!'). "
+        "Make them feel like the property wants to celebrate with them."
     ),
 }
 

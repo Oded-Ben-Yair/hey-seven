@@ -298,6 +298,36 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
             "guest_sentiment": "grief",
         }
 
+    # 7.65 Celebration detection — R76 fix.
+    # "I just won $5K!" or "we're celebrating our anniversary!" should be
+    # recognized so the specialist agent matches the guest's energy.
+    # Without this, VADER classifies celebration as "positive" but the agent
+    # still gives a generic response. The explicit sentiment annotation
+    # triggers the celebration tone guide in execute_specialist.
+    _CELEBRATION_KEYWORDS = (
+        "jackpot", "won big", "hit big", "big win", "huge win",
+        "just won", "just hit", "celebrating", "celebration",
+        "anniversary", "birthday", "honeymoon", "engaged", "engagement",
+        "promotion", "graduated", "retire", "retirement",
+        "bachelor", "bachelorette",
+    )
+    if any(kw in msg_lower for kw in _CELEBRATION_KEYWORDS):
+        logger.info(
+            json.dumps({
+                "audit_event": "guardrail_triggered",
+                "category": "celebration_detection",
+                "query_type": None,
+                "timestamp": time.time(),
+                "action": "annotate",
+                "severity": "INFO",
+            })
+        )
+        return {
+            "query_type": None,
+            "router_confidence": 0.0,
+            "guest_sentiment": "celebration",
+        }
+
     # 7.7 Crisis detection — graduated escalation protocol (R72 Phase C5).
     # Runs BEFORE the binary self_harm detector to provide nuanced response
     # levels: concern → gentle resource mention, urgent/immediate → full crisis.

@@ -45,3 +45,37 @@
 - `tests/test_phase5_profiling.py` — Updated 12 tests for flat schema
 
 ### Test Count: 3236 passed, 1 skipped, 0 failures (maintained)
+
+## Round 2: WhisperPlan + Validator Leniency
+
+### Fixes Applied
+1. **WhisperPlan schema simplified** — 10 fields with 3 Literal types + 4 bounded floats → 6 flat str fields. Was 100% dead (systematic failure after 10 consecutive errors). Now should work.
+2. **Validation prompt made lenient for cross-domain suggestions** — "After dinner, check out the show" no longer triggers FAIL for grounding violation. This was causing excessive fallback responses.
+3. **suggestion_confidence type conversion** — float→str with try/except fallback in _should_inject_suggestion()
+
+### Pattern: Gemini Flash rejects ALL schemas with >5 bounded/Literal fields
+- ProfileExtractionOutput: 19 nested ConfidenceField → 100% failure
+- WhisperPlan: 10 fields with 3 Literal + 4 bounded float → 100% failure
+- DispatchOutput: 3 fields (1 Literal, 1 bounded float) → works fine
+- RouterOutput: 3 fields (1 Literal, 1 bounded float) → works fine
+
+**Rule**: Keep Gemini Flash structured output schemas under 5 constrained fields.
+
+## Round 3: Celebration Detection + Router Guidance
+
+### Fixes Applied
+1. **Celebration detection** in compliance_gate (position 7.65) — "I just won $5K!" now sets guest_sentiment="celebration" instead of relying on VADER "positive". Added to _PRIORITY_SENTIMENTS so router can't overwrite.
+2. **Celebration tone guide** added to SENTIMENT_TONE_GUIDES — "Match their energy authentically, suggest elevated experiences."
+3. **Router prompt enhanced** — emotional statements about property experience now classify as property_qa (not ambiguous). Grief + property context also property_qa. This means emotional inputs get RAG retrieval + specialist dispatch (better context for LLM).
+
+### Key Insight: Sentiment Detection Hierarchy
+```
+compliance_gate (position 7.6-7.65) → sets priority sentiment (grief, celebration)
+       ↓ query_type=None → goes to router
+router_node → VADER sentiment detection (skipped for priority sentiments)
+       ↓ routes to retrieve → specialist
+execute_specialist → reads guest_sentiment → injects tone guide
+```
+Without the priority guard, VADER overwrites grief→neutral and celebration→positive, losing the specific context.
+
+### Test Count: 3236 passed, 1 skipped, 0 failures (maintained)
