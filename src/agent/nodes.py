@@ -228,21 +228,29 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
 
     # Phase 3: Detect guest sentiment before LLM routing (sub-1ms VADER).
     # Feature flag: sentiment_detection_enabled (default True).
+    # R76 fix: Do NOT overwrite guest_sentiment if compliance_gate already
+    # set it to a high-priority value like "grief". Compliance gate grief
+    # detection (position 7.6) runs before the router and sets guest_sentiment
+    # to "grief" — VADER would overwrite this with "neutral" or "negative",
+    # causing the specialist to lose the grief context entirely.
     sentiment_update: dict[str, Any] = {}
-    if await is_feature_enabled(settings.CASINO_ID, "sentiment_detection_enabled"):
-        sentiment = detect_sentiment(user_message)
-        sentiment_update["guest_sentiment"] = sentiment
-        # Phase 5: LLM augmentation for ambiguous VADER band (neutral, 10+ words).
-        # Feature flag: sentiment_llm_augmented (default True).
-        if sentiment == "neutral" and await is_feature_enabled(
-            settings.CASINO_ID, "sentiment_llm_augmented"
-        ):
-            from src.agent.sentiment import detect_sentiment_augmented
+    _existing_sentiment = state.get("guest_sentiment")
+    _PRIORITY_SENTIMENTS = ("grief",)  # Set by compliance_gate, never overwrite
+    if _existing_sentiment not in _PRIORITY_SENTIMENTS:
+        if await is_feature_enabled(settings.CASINO_ID, "sentiment_detection_enabled"):
+            sentiment = detect_sentiment(user_message)
+            sentiment_update["guest_sentiment"] = sentiment
+            # Phase 5: LLM augmentation for ambiguous VADER band (neutral, 10+ words).
+            # Feature flag: sentiment_llm_augmented (default True).
+            if sentiment == "neutral" and await is_feature_enabled(
+                settings.CASINO_ID, "sentiment_llm_augmented"
+            ):
+                from src.agent.sentiment import detect_sentiment_augmented
 
-            augmented = await detect_sentiment_augmented(
-                user_message, _get_llm, vader_result=sentiment
-            )
-            sentiment_update["guest_sentiment"] = augmented
+                augmented = await detect_sentiment_augmented(
+                    user_message, _get_llm, vader_result=sentiment
+                )
+                sentiment_update["guest_sentiment"] = augmented
 
     # Phase 4: Deterministic field extraction (sub-1ms regex, no LLM).
     # Populates extracted_fields for whisper planner + guest profile.

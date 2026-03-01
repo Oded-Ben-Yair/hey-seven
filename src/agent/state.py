@@ -311,7 +311,7 @@ class DispatchOutput(BaseModel):
         description="Confidence in the routing decision (0.0 to 1.0)"
     )
     reasoning: str = Field(
-        max_length=200,
+        max_length=500,
         description="Brief explanation of why this specialist was chosen"
     )
 
@@ -322,6 +322,7 @@ class ValidationResult(BaseModel):
         description="PASS if the response meets all 6 criteria, RETRY for minor issues worth correcting, FAIL for serious violations"
     )
     reason: str = Field(
+        default="",
         description="Why the response passed or failed validation",
         max_length=500,
     )

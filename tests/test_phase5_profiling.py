@@ -18,7 +18,6 @@ from src.agent.constants import (
 )
 from src.agent.graph import build_graph, chat
 from src.agent.profiling import (
-    ConfidenceField,
     ProfileExtractionOutput,
 )
 from src.agent.state import (
@@ -128,8 +127,8 @@ def _make_smart_mock_llm():
             ))
         elif schema == ProfileExtractionOutput:
             inner_mock.ainvoke = AsyncMock(return_value=ProfileExtractionOutput(
-                guest_name=ConfidenceField(value="Mike", confidence=0.95, source="explicit"),
-                party_size=ConfidenceField(value=4, confidence=0.9, source="explicit"),
+                guest_name="Mike",
+                party_size="4",
             ))
         else:
             # Default: return a mock that works
@@ -152,12 +151,12 @@ class TestProfilingPipelineIntegration:
     @pytest.mark.asyncio
     async def test_profiling_state_populated_after_node_call(self):
         """Direct call to profiling_enrichment_node populates state fields."""
-        from src.agent.profiling import profiling_enrichment_node, ProfileExtractionOutput, ConfidenceField
+        from src.agent.profiling import profiling_enrichment_node, ProfileExtractionOutput
 
         mock_llm = MagicMock()
         mock_extraction = ProfileExtractionOutput(
-            guest_name=ConfidenceField(value="Mike", confidence=0.95, source="explicit"),
-            party_size=ConfidenceField(value=4, confidence=0.9, source="explicit"),
+            guest_name="Mike",
+            party_size="4",
         )
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
             return_value=mock_extraction,

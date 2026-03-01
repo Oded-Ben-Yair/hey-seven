@@ -37,7 +37,12 @@ __all__ = [
 
 
 class ConfidenceField(BaseModel):
-    """A profile field with confidence and source tracking."""
+    """A profile field with confidence and source tracking.
+
+    NOTE: This model is used for internal processing and tests.
+    For LLM structured output, use ProfileExtractionOutput (flat schema)
+    to avoid Gemini "too many schema states" errors.
+    """
 
     value: Any = Field(description="The extracted value")
     confidence: float = Field(
@@ -51,27 +56,33 @@ class ConfidenceField(BaseModel):
 
 
 class ProfileExtractionOutput(BaseModel):
-    """Structured output from LLM profile extraction."""
+    """Flat structured output from LLM profile extraction.
 
-    guest_name: ConfidenceField | None = Field(default=None, description="Guest name")
-    party_size: ConfidenceField | None = Field(default=None, description="Number in party")
-    party_composition: ConfidenceField | None = Field(default=None, description="Adults, kids, ages")
-    visit_purpose: ConfidenceField | None = Field(default=None, description="Business, leisure, celebration")
-    visit_duration: ConfidenceField | None = Field(default=None, description="Number of nights/days")
-    dining_preferences: ConfidenceField | None = Field(default=None, description="Cuisine type, dietary")
-    dietary_restrictions: ConfidenceField | None = Field(default=None, description="Allergies, restrictions")
-    gaming_preferences: ConfidenceField | None = Field(default=None, description="Game type, stakes")
-    entertainment_interests: ConfidenceField | None = Field(default=None, description="Shows, music, events")
-    spa_interests: ConfidenceField | None = Field(default=None, description="Treatments, services")
-    occasion: ConfidenceField | None = Field(default=None, description="Birthday, anniversary, etc.")
-    occasion_details: ConfidenceField | None = Field(default=None, description="Occasion specifics")
-    companion_names: ConfidenceField | None = Field(default=None, description="Names of companions")
-    companion_ages: ConfidenceField | None = Field(default=None, description="Ages of companions")
-    home_market: ConfidenceField | None = Field(default=None, description="Where guest is from")
-    budget_signal: ConfidenceField | None = Field(default=None, description="Budget level signals")
-    loyalty_tier: ConfidenceField | None = Field(default=None, description="Loyalty program tier")
-    visit_frequency: ConfidenceField | None = Field(default=None, description="How often they visit")
-    communication_preference: ConfidenceField | None = Field(default=None, description="Text, call, email")
+    R76 fix: Simplified from 19 nested ConfidenceField objects to flat
+    string fields. Gemini Flash rejects schemas with too many nested
+    states (19 x {value:Any, confidence:float[0,1], source:Literal} =
+    schema constraint overflow → 400 INVALID_ARGUMENT).
+
+    Confidence gating is handled in the extraction prompt: the LLM is
+    instructed to only return explicitly stated or strongly implied facts.
+    """
+
+    guest_name: str | None = Field(default=None, description="Guest name if stated")
+    party_size: str | None = Field(default=None, description="Number in party if stated")
+    party_composition: str | None = Field(default=None, description="Adults, kids, ages if mentioned")
+    visit_purpose: str | None = Field(default=None, description="Business, leisure, celebration if stated")
+    visit_duration: str | None = Field(default=None, description="Number of nights/days if stated")
+    dining_preferences: str | None = Field(default=None, description="Cuisine type, dietary if stated")
+    dietary_restrictions: str | None = Field(default=None, description="Allergies, restrictions if stated")
+    gaming_preferences: str | None = Field(default=None, description="Game type, stakes if stated")
+    entertainment_interests: str | None = Field(default=None, description="Shows, music, events if stated")
+    spa_interests: str | None = Field(default=None, description="Treatments, services if stated")
+    occasion: str | None = Field(default=None, description="Birthday, anniversary if stated")
+    occasion_details: str | None = Field(default=None, description="Occasion specifics if stated")
+    home_market: str | None = Field(default=None, description="Where guest is from if stated")
+    budget_signal: str | None = Field(default=None, description="Budget level signals if stated")
+    loyalty_tier: str | None = Field(default=None, description="Loyalty program tier if stated")
+    visit_frequency: str | None = Field(default=None, description="How often they visit if stated")
 
 
 # ---------------------------------------------------------------------------
@@ -121,10 +132,10 @@ PROFILING_TECHNIQUE_PROMPTS: dict[str, str] = {
 # not the ProfileExtractionOutput field names.
 _PROFILE_WEIGHTS: dict[str, float] = {
     "name": 0.15,              # mapped from guest_name
-    "party_size": 0.10,
-    "visit_purpose": 0.08,
-    "preferences": 0.08,       # mapped from dining_preferences
-    "occasion": 0.08,
+    "party_size": 0.12,
+    "visit_purpose": 0.10,
+    "preferences": 0.10,       # mapped from dining_preferences
+    "occasion": 0.10,
     "visit_duration": 0.06,
     "party_composition": 0.06,
     "dietary": 0.06,           # mapped from dietary_restrictions
@@ -132,13 +143,13 @@ _PROFILE_WEIGHTS: dict[str, float] = {
     "entertainment": 0.05,     # mapped from entertainment_interests
     "spa": 0.04,               # mapped from spa_interests
     "occasion_details": 0.03,
-    "companion_names": 0.03,
-    "companion_ages": 0.02,
     "home_market": 0.03,
-    "budget_signal": 0.03,
-    "loyalty_tier": 0.02,
+    "budget_signal": 0.02,
+    "loyalty_tier": 0.01,
     "visit_frequency": 0.02,
-    "communication_preference": 0.01,
+    # R76: companion_names, companion_ages, communication_preference removed
+    # to reduce schema complexity for Gemini Flash structured output.
+    # Weights redistributed to higher-impact fields.
 }
 
 
@@ -233,12 +244,12 @@ strongly implied.
 
 ## Instructions
 - Only extract information that is explicitly stated or very strongly implied.
-- Set confidence to 0.9+ for explicitly stated facts ("My name is Sarah").
-- Set confidence to 0.6-0.8 for strongly implied facts ("dinner for our anniversary" implies occasion=anniversary).
-- Set confidence below 0.5 for weak inferences (do NOT extract these).
-- Use source="corrected" when the guest corrects a prior value.
+- For explicitly stated facts ("My name is Sarah", "party of 4"), return the value.
+- For strongly implied facts ("dinner for our anniversary" implies occasion=anniversary), return the value.
+- Do NOT extract weak inferences — if you're less than 60% confident, return null.
 - Return null for any field where no new information is available.
 - Do NOT re-extract information already in the current profile unless the guest corrected it.
+- When the guest corrects a prior value, return the corrected value.
 """
 
 
@@ -266,7 +277,6 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
     """
     try:
         settings = get_settings()
-        min_confidence = settings.PROFILING_MIN_CONFIDENCE
         extracted_fields = dict(state.get("extracted_fields") or {})
 
         # Get the last user message and last AI response
@@ -309,15 +319,18 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
         extraction_llm = llm.with_structured_output(ProfileExtractionOutput)
         extraction_result: ProfileExtractionOutput = await extraction_llm.ainvoke(prompt_text)
 
-        # Merge high-confidence fields into extracted_fields
+        # Merge non-None fields into extracted_fields.
+        # R76 fix: ProfileExtractionOutput is now flat (str | None fields)
+        # instead of nested ConfidenceField objects. Confidence gating is
+        # handled in the extraction prompt — the LLM only returns facts that
+        # are explicitly stated or strongly implied.
         new_fields: dict[str, Any] = {}
         for field_name in ProfileExtractionOutput.model_fields:
             field_value = getattr(extraction_result, field_name, None)
-            if field_value is not None and isinstance(field_value, ConfidenceField):
-                if field_value.confidence >= min_confidence and field_value.value is not None:
-                    # Map profiling field names to extracted_fields keys
-                    key = _FIELD_NAME_MAP.get(field_name, field_name)
-                    new_fields[key] = field_value.value
+            if field_value is not None and field_value != "":
+                # Map profiling field names to extracted_fields keys
+                key = _FIELD_NAME_MAP.get(field_name, field_name)
+                new_fields[key] = field_value
 
         if new_fields:
             logger.info(
@@ -393,13 +406,10 @@ _FIELD_NAME_MAP: dict[str, str] = {
     "visit_duration": "visit_duration",
     "party_composition": "party_composition",
     "occasion_details": "occasion_details",
-    "companion_names": "companion_names",
-    "companion_ages": "companion_ages",
     "home_market": "home_market",
     "budget_signal": "budget_signal",
     "loyalty_tier": "loyalty_tier",
     "visit_frequency": "visit_frequency",
-    "communication_preference": "communication_preference",
     # These map to same name:
     "party_size": "party_size",
     "occasion": "occasion",

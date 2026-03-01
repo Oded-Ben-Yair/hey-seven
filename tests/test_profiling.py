@@ -102,26 +102,23 @@ class TestProfileExtractionOutput:
             assert getattr(output, field_name) is None
 
     def test_single_field_populated(self):
-        output = ProfileExtractionOutput(
-            guest_name=ConfidenceField(value="Sarah", confidence=0.95),
-        )
-        assert output.guest_name is not None
-        assert output.guest_name.value == "Sarah"
+        output = ProfileExtractionOutput(guest_name="Sarah")
+        assert output.guest_name == "Sarah"
         assert output.party_size is None
 
     def test_multiple_fields_populated(self):
         output = ProfileExtractionOutput(
-            guest_name=ConfidenceField(value="Mike", confidence=0.9),
-            party_size=ConfidenceField(value=4, confidence=0.95),
-            occasion=ConfidenceField(value="birthday", confidence=0.85),
+            guest_name="Mike",
+            party_size="4",
+            occasion="birthday",
         )
-        assert output.guest_name.value == "Mike"
-        assert output.party_size.value == 4
-        assert output.occasion.value == "birthday"
+        assert output.guest_name == "Mike"
+        assert output.party_size == "4"
+        assert output.occasion == "birthday"
 
-    def test_all_19_fields_exist(self):
-        """ProfileExtractionOutput has exactly 19 fields matching _FIELD_NAME_MAP."""
-        assert len(ProfileExtractionOutput.model_fields) == 19
+    def test_all_16_fields_exist(self):
+        """ProfileExtractionOutput has exactly 16 fields matching _FIELD_NAME_MAP."""
+        assert len(ProfileExtractionOutput.model_fields) == 16
         for field_name in ProfileExtractionOutput.model_fields:
             assert field_name in _FIELD_NAME_MAP, f"{field_name} missing from _FIELD_NAME_MAP"
 
@@ -151,10 +148,10 @@ class TestProfileCompletenessWeighted:
         assert result == pytest.approx(0.15, abs=0.01)
 
     def test_phase1_foundation_fields(self):
-        # name(0.15) + party_size(0.10) + visit_purpose(0.08) = 0.33
-        fields = {"name": "Mike", "party_size": 4, "visit_purpose": "leisure"}
+        # name(0.15) + party_size(0.12) + visit_purpose(0.10) = 0.37
+        fields = {"name": "Mike", "party_size": "4", "visit_purpose": "leisure"}
         result = _calculate_profile_completeness_weighted(fields)
-        assert result == pytest.approx(0.33, abs=0.01)
+        assert result == pytest.approx(0.37, abs=0.01)
 
     def test_all_fields_filled_returns_one(self):
         all_fields = {name: "some_value" for name in _PROFILE_WEIGHTS}
@@ -171,8 +168,8 @@ class TestProfileCompletenessWeighted:
         assert result == 0.0
 
     def test_low_weight_fields_contribute_less(self):
-        # communication_preference has weight 0.01
-        low = _calculate_profile_completeness_weighted({"communication_preference": "text"})
+        # loyalty_tier has weight 0.01
+        low = _calculate_profile_completeness_weighted({"loyalty_tier": "gold"})
         # name has weight 0.15
         high = _calculate_profile_completeness_weighted({"name": "Sarah"})
         assert high > low
@@ -185,10 +182,10 @@ class TestProfileCompletenessWeighted:
         assert result <= 1.0
 
     def test_partial_completeness(self):
-        # name(0.15) + preferences(0.08) = 0.23
+        # name(0.15) + preferences(0.10) = 0.25
         fields = {"name": "Sarah", "preferences": "steak"}
         result = _calculate_profile_completeness_weighted(fields)
-        assert result == pytest.approx(0.23, abs=0.01)
+        assert result == pytest.approx(0.25, abs=0.01)
 
 
 # ---------------------------------------------------------------------------
@@ -321,17 +318,14 @@ def _build_state(
     }
 
 
-def _make_mock_extraction(fields: dict[str, tuple]) -> ProfileExtractionOutput:
-    """Build a ProfileExtractionOutput from a dict of (value, confidence, source) tuples.
+def _make_mock_extraction(fields: dict[str, str | None]) -> ProfileExtractionOutput:
+    """Build a ProfileExtractionOutput from a dict of field_name -> string value.
 
-    Example: {"guest_name": ("Mike", 0.95, "explicit")}
+    Example: {"guest_name": "Mike", "party_size": "4"}
+
+    With the flat schema (R76), values are plain strings (no ConfidenceField).
     """
-    kwargs = {}
-    for field_name, (value, confidence, source) in fields.items():
-        kwargs[field_name] = ConfidenceField(
-            value=value, confidence=confidence, source=source,
-        )
-    return ProfileExtractionOutput(**kwargs)
+    return ProfileExtractionOutput(**fields)
 
 
 class TestProfilingEnrichmentNode:
@@ -340,9 +334,7 @@ class TestProfilingEnrichmentNode:
     @pytest.mark.asyncio
     async def test_extracts_guest_name(self):
         state = _build_state(user_msg="I'm Mike")
-        extraction = _make_mock_extraction({
-            "guest_name": ("Mike", 0.95, "explicit"),
-        })
+        extraction = _make_mock_extraction({"guest_name": "Mike"})
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
@@ -358,9 +350,7 @@ class TestProfilingEnrichmentNode:
     @pytest.mark.asyncio
     async def test_extracts_party_size(self):
         state = _build_state(user_msg="Party of 4 for tonight")
-        extraction = _make_mock_extraction({
-            "party_size": (4, 0.95, "explicit"),
-        })
+        extraction = _make_mock_extraction({"party_size": "4"})
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
@@ -370,15 +360,18 @@ class TestProfilingEnrichmentNode:
         with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await profiling_enrichment_node(state)
 
-        assert result["extracted_fields"]["party_size"] == 4
+        assert result["extracted_fields"]["party_size"] == "4"
 
     @pytest.mark.asyncio
-    async def test_inferred_low_confidence_rejected(self):
-        """Fields with confidence below PROFILING_MIN_CONFIDENCE (0.7) are rejected."""
+    async def test_none_field_not_extracted(self):
+        """Fields returned as None by the LLM are not added to extracted_fields.
+
+        With the flat schema (R76), confidence gating is handled in the LLM
+        extraction prompt -- the LLM returns None for low-confidence fields.
+        """
         state = _build_state(user_msg="me and the wife")
-        extraction = _make_mock_extraction({
-            "party_composition": ("couple", 0.5, "inferred"),
-        })
+        # LLM returns None for party_composition (low confidence in prompt)
+        extraction = _make_mock_extraction({"party_composition": None})
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
@@ -388,16 +381,14 @@ class TestProfilingEnrichmentNode:
         with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await profiling_enrichment_node(state)
 
-        # 0.5 < 0.7 threshold, so field should NOT be extracted
+        # None values are not added to extracted_fields
         assert "party_composition" not in result.get("extracted_fields", {})
 
     @pytest.mark.asyncio
-    async def test_inferred_high_confidence_accepted(self):
-        """Fields with confidence >= PROFILING_MIN_CONFIDENCE are accepted."""
+    async def test_non_empty_field_extracted(self):
+        """Non-None, non-empty fields returned by the LLM are extracted."""
         state = _build_state(user_msg="dinner for our anniversary")
-        extraction = _make_mock_extraction({
-            "occasion": ("anniversary", 0.85, "inferred"),
-        })
+        extraction = _make_mock_extraction({"occasion": "anniversary"})
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
@@ -459,9 +450,7 @@ class TestProfilingEnrichmentNode:
             user_msg="We'd love Italian",
             extracted_fields={"name": "Sarah", "party_size": 4},
         )
-        extraction = _make_mock_extraction({
-            "dining_preferences": ("Italian", 0.9, "explicit"),
-        })
+        extraction = _make_mock_extraction({"dining_preferences": "Italian"})
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
@@ -471,16 +460,16 @@ class TestProfilingEnrichmentNode:
         with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
             result = await profiling_enrichment_node(state)
 
-        # name(0.15) + party_size(0.10) + dining(0.08) = 0.33
-        assert result["profile_completeness_score"] == pytest.approx(0.33, abs=0.01)
+        # name(0.15) + party_size(0.12) + preferences(0.10) = 0.37
+        assert result["profile_completeness_score"] == pytest.approx(0.37, abs=0.01)
 
     @pytest.mark.asyncio
     async def test_multiple_fields_extracted_at_once(self):
         state = _build_state(user_msg="I'm Mike, party of 4 for our anniversary")
         extraction = _make_mock_extraction({
-            "guest_name": ("Mike", 0.95, "explicit"),
-            "party_size": (4, 0.9, "explicit"),
-            "occasion": ("anniversary", 0.85, "inferred"),
+            "guest_name": "Mike",
+            "party_size": "4",
+            "occasion": "anniversary",
         })
 
         mock_llm = MagicMock()
@@ -492,7 +481,7 @@ class TestProfilingEnrichmentNode:
             result = await profiling_enrichment_node(state)
 
         assert result["extracted_fields"]["name"] == "Mike"
-        assert result["extracted_fields"]["party_size"] == 4
+        assert result["extracted_fields"]["party_size"] == "4"
         assert result["extracted_fields"]["occasion"] == "anniversary"
 
     @pytest.mark.asyncio
@@ -500,8 +489,8 @@ class TestProfilingEnrichmentNode:
         """guest_name -> name, dining_preferences -> preferences in extracted_fields."""
         state = _build_state(user_msg="I'm Sarah and I love sushi")
         extraction = _make_mock_extraction({
-            "guest_name": ("Sarah", 0.95, "explicit"),
-            "dining_preferences": ("sushi", 0.9, "explicit"),
+            "guest_name": "Sarah",
+            "dining_preferences": "sushi",
         })
 
         mock_llm = MagicMock()
@@ -519,12 +508,10 @@ class TestProfilingEnrichmentNode:
         assert "dining_preferences" not in result["extracted_fields"]
 
     @pytest.mark.asyncio
-    async def test_none_value_field_not_extracted(self):
-        """ConfidenceField with value=None should not be added to extracted_fields."""
+    async def test_none_value_field_not_extracted_via_direct_none(self):
+        """Field with value=None should not be added to extracted_fields."""
         state = _build_state(user_msg="Hello")
-        extraction = _make_mock_extraction({
-            "guest_name": (None, 0.9, "explicit"),
-        })
+        extraction = _make_mock_extraction({"guest_name": None})
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
