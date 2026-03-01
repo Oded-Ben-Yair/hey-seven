@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""R72 Live Agent Evaluation — Run 74 behavioral scenarios through real Gemini Flash.
+"""Live Agent Evaluation — Run scenarios through real Gemini Flash.
 
 This script:
-1. Loads all behavioral YAML scenarios from tests/scenarios/
+1. Loads YAML scenarios from tests/scenarios/ (configurable glob pattern)
 2. Runs each scenario through the full LangGraph pipeline (build_graph + chat)
-3. Records all agent responses to tests/evaluation/r72-responses.json
+3. Records all agent responses to tests/evaluation/{round}-responses.json
 4. Outputs a summary of results
 
 Usage:
-    GOOGLE_API_KEY=<key> python tests/evaluation/run_live_eval.py
+    # All 195 scenarios (behavioral + profiling)
+    GOOGLE_API_KEY=<key> python tests/evaluation/run_live_eval.py --round r76-baseline
+
+    # Behavioral only (74 scenarios)
+    GOOGLE_API_KEY=<key> python tests/evaluation/run_live_eval.py --pattern "behavioral_*.yaml" --round r76-behavioral
+
+    # Profiling only (56 scenarios)
+    GOOGLE_API_KEY=<key> python tests/evaluation/run_live_eval.py --pattern "profiling_*.yaml" --round r76-profiling
 
 Requirements:
     - Real GOOGLE_API_KEY (Gemini Flash)
@@ -36,12 +43,22 @@ logging.basicConfig(
 logger = logging.getLogger("live_eval")
 
 
-def load_scenarios() -> list[dict]:
-    """Load all behavioral scenarios from YAML files."""
+def load_scenarios(pattern: str = "*.yaml") -> list[dict]:
+    """Load scenarios from YAML files matching the given glob pattern.
+
+    Args:
+        pattern: Glob pattern for scenario files. Examples:
+            "*.yaml" — all scenarios (behavioral + profiling)
+            "behavioral_*.yaml" — behavioral only
+            "profiling_*.yaml" — profiling only
+
+    Returns:
+        List of scenario dicts with _source_file metadata.
+    """
     scenarios_dir = PROJECT_ROOT / "tests" / "scenarios"
     all_scenarios = []
 
-    for yaml_file in sorted(scenarios_dir.glob("behavioral_*.yaml")):
+    for yaml_file in sorted(scenarios_dir.glob(pattern)):
         with open(yaml_file) as f:
             data = yaml.safe_load(f)
         for scenario in data.get("scenarios", []):
@@ -130,8 +147,15 @@ async def main():
         logger.error("GOOGLE_API_KEY not set. Cannot run live evaluation.")
         sys.exit(1)
 
-    logger.info("Loading scenarios...")
-    scenarios = load_scenarios()
+    # Accept optional args: --pattern <glob> --round <name>
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pattern", default="*.yaml", help="Scenario file glob pattern (default: *.yaml = all)")
+    parser.add_argument("--round", default="latest", help="Round name for output file (e.g., r76, baseline)")
+    args = parser.parse_args()
+
+    logger.info("Loading scenarios (pattern=%s)...", args.pattern)
+    scenarios = load_scenarios(pattern=args.pattern)
     logger.info("Loaded %d scenarios from %d files", len(scenarios), len(set(s["_source_file"] for s in scenarios)))
 
     logger.info("Building graph with real Gemini Flash...")
@@ -169,7 +193,7 @@ async def main():
             await asyncio.sleep(0.5)
 
     # Write results
-    output_path = PROJECT_ROOT / "tests" / "evaluation" / "r75-responses.json"
+    output_path = PROJECT_ROOT / "tests" / "evaluation" / f"{args.round}-responses.json"
     output_data = {
         "metadata": {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
