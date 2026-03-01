@@ -535,13 +535,16 @@ async def fallback_node(state: PropertyQAState) -> dict[str, Any]:
     retry_feedback = state.get("retry_feedback", "Unknown validation failure")
     logger.warning("Fallback triggered. Reason: %s", retry_feedback)
 
+    # R76 fix: Improved fallback to be less corporate and more helpful.
+    # The old "I want to make sure I give you the most accurate information"
+    # was the single most common UX failure — guests got this redirect for
+    # follow-up questions, emotional inputs, and anything the validator rejected.
     return {
         "messages": [AIMessage(content=(
-            "I want to make sure I give you the most accurate information. "
-            f"For this question, I'd recommend reaching out directly to {settings.PROPERTY_NAME}:\n\n"
-            f"- Phone: {settings.PROPERTY_PHONE}\n"
-            f"- Website: {settings.PROPERTY_WEBSITE}\n\n"
-            "They'll be able to help you with the most up-to-date details!"
+            f"I don't have enough specific details to answer that fully, but "
+            f"the team at {settings.PROPERTY_NAME} can help — "
+            f"call {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
+            "Is there anything else about the property I can help with?"
         ))],
         "sources_used": [],
         "retry_feedback": None,
