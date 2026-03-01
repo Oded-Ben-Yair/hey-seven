@@ -74,8 +74,8 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "sentiment_detection_enabled": True,  # Phase 3: VADER sentiment in router
     "guest_profile_enabled": True,  # Phase 3: guest profile injection (enabled after R19 review)
     "field_extraction_enabled": True,  # Phase 3: deterministic field extraction
-    "sentiment_llm_augmented": False,  # Phase 2: LLM augmentation for ambiguous VADER
-    "extraction_llm_augmented": False,  # Phase 2: LLM fallback for regex misses
+    "sentiment_llm_augmented": True,  # Phase 2: LLM augmentation for ambiguous VADER
+    "extraction_llm_augmented": True,  # Phase 2: LLM fallback for regex misses
 })
 
 # Parity check: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.

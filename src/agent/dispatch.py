@@ -320,6 +320,12 @@ def _inject_guest_context(
         agent_ctx = get_agent_context(extracted)
         if not agent_ctx:
             return {}
+        # Phase 5: Namespace extracted preferences for structured access.
+        from src.data.guest_profile import namespace_preferences
+
+        namespaced = namespace_preferences(extracted)
+        if namespaced:
+            agent_ctx["namespaced_preferences"] = namespaced
         update: dict[str, Any] = {"guest_context": agent_ctx}
         if agent_ctx.get("name"):
             update["guest_name"] = agent_ctx["name"]

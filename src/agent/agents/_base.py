@@ -551,6 +551,24 @@ async def execute_specialist(
         system_prompt += Template(
             "\n\n## $header\n$context"
         ).safe_substitute(header=context_header, context=context_block)
+
+        # Phase 5: Annotate retrieved context with real-time open/closed status.
+        from src.agent.hours import is_open_now as _is_open_now
+
+        _casino_tz = _casino_profile.get("operational", {}).get("timezone", "America/New_York")
+        hours_annotations: list[str] = []
+        for chunk in retrieved:
+            meta = chunk.get("metadata", {})
+            hours_str = meta.get("hours", "")
+            item_name = meta.get("item_name", meta.get("name", ""))
+            if hours_str and item_name:
+                open_status = _is_open_now(hours_str, timezone=_casino_tz)
+                if open_status is True:
+                    hours_annotations.append(f"- {item_name}: OPEN ({hours_str})")
+                elif open_status is False:
+                    hours_annotations.append(f"- {item_name}: CLOSED ({hours_str})")
+        if hours_annotations:
+            system_prompt += "\n\n## Current Availability\n" + "\n".join(hours_annotations)
     else:
         # No context found -- return domain-specific fallback
         return {
@@ -738,4 +756,16 @@ async def execute_specialist(
     # R23 fix C-003: persist suggestion_offered flag across turns
     if suggestion_already_offered:
         result["suggestion_offered"] = True  # _keep_truthy: once True, stays True
+
+    # Phase 5: Wire handoff for persistent frustration.
+    if frustrated_count >= 3:
+        from src.agent.handoff import build_handoff_request
+
+        result["handoff_request"] = build_handoff_request(
+            department="vip_services",
+            reason="Guest frustrated across 3+ consecutive messages",
+            extracted_fields=state.get("extracted_fields"),
+            urgency="high",
+        ).model_dump()
+
     return result

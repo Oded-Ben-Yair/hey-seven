@@ -261,6 +261,10 @@ class PropertyQAState(TypedDict):
     # Used by greeting_node, off_topic_node, and execute_specialist to select
     # language-appropriate responses. Feature-gated by spanish_support_enabled.
     detected_language: str | None
+    # Phase 5: Structured handoff request for human host transfer.
+    # Set by off_topic_node (self_harm) and execute_specialist (frustration >= 3).
+    # dict | None because HandoffRequest is serialized via .model_dump().
+    handoff_request: dict[str, Any] | None
 
 
 class RouterOutput(BaseModel):

@@ -232,6 +232,17 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
     if await is_feature_enabled(settings.CASINO_ID, "sentiment_detection_enabled"):
         sentiment = detect_sentiment(user_message)
         sentiment_update["guest_sentiment"] = sentiment
+        # Phase 5: LLM augmentation for ambiguous VADER band (neutral, 10+ words).
+        # Feature flag: sentiment_llm_augmented (default True).
+        if sentiment == "neutral" and await is_feature_enabled(
+            settings.CASINO_ID, "sentiment_llm_augmented"
+        ):
+            from src.agent.sentiment import detect_sentiment_augmented
+
+            augmented = await detect_sentiment_augmented(
+                user_message, _get_llm, vader_result=sentiment
+            )
+            sentiment_update["guest_sentiment"] = augmented
 
     # Phase 4: Deterministic field extraction (sub-1ms regex, no LLM).
     # Populates extracted_fields for whisper planner + guest profile.
@@ -247,6 +258,25 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
             # Also set guest_name if extracted
             if extracted.get("name"):
                 extraction_update["guest_name"] = extracted["name"]
+
+    # Phase 5: LLM fallback for regex extraction misses (15+ word messages).
+    # Feature flag: extraction_llm_augmented (default True).
+    if (
+        not extraction_update.get("extracted_fields")
+        and len(user_message.split()) >= 15
+        and await is_feature_enabled(settings.CASINO_ID, "extraction_llm_augmented")
+    ):
+        from src.agent.extraction import extract_fields_augmented
+
+        augmented = await extract_fields_augmented(
+            user_message, state.get("extracted_fields", {}), _get_llm
+        )
+        if augmented:
+            existing = dict(state.get("extracted_fields", {}) or {})
+            existing.update(augmented)
+            extraction_update["extracted_fields"] = existing
+            if augmented.get("name"):
+                extraction_update["guest_name"] = augmented["name"]
 
     # Note: All 5 deterministic guardrail checks (prompt injection, responsible
     # gaming, age verification, BSA/AML, patron privacy) are handled by the
@@ -804,6 +834,8 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         # compliance_gate detects crisis language and routes here. The response
         # prioritizes safety resources over property information. Never dismissive,
         # never minimizing, always empathetic with concrete action steps.
+        from src.agent.handoff import build_handoff_request
+
         if _is_spanish:
             from src.agent.crisis import get_crisis_response_es
             content = get_crisis_response_es(settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
@@ -821,6 +853,18 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 f"any team member can connect you with support services. You can also call us "
                 f"at {settings.PROPERTY_PHONE}."
             )
+        # Phase 5: Early return with structured handoff for crisis situations.
+        return {
+            "messages": [AIMessage(content=content)],
+            "sources_used": [],
+            "retrieved_context": [],
+            "handoff_request": build_handoff_request(
+                department="responsible_gaming",
+                reason="Guest expressing self-harm or crisis indicators",
+                extracted_fields=state.get("extracted_fields"),
+                urgency="critical",
+            ).model_dump(),
+        }
     else:
         # General off-topic — genuinely unrelated to the property.
         # Kept brief and non-robotic. Does NOT fire for emotional or
