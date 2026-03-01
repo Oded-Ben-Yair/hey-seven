@@ -1,0 +1,73 @@
+[2026-02-12] DECISION: LangGraph as primary agent framework — CTO preference, production-grade state machine model
+[2026-02-12] DECISION: GCP Cloud Run for deployment — stack alignment with Hey Seven's infrastructure
+[2026-02-12] DECISION: Gemini 2.5 Flash as primary LLM — GCP alignment, cost-effective at $0.30/1M input tokens
+[2026-02-12] DECISION: Firestore + FirestoreSaver for state management — LangGraph native support, GCP-native
+[2026-02-12] DECISION: FastAPI for backend — LangGraph is Python, natural fit
+[2026-02-12] DECISION: Next.js + React for frontend — listed as nice-to-have in job posting, Oded's strength
+[2026-02-12] DECISION: GitHub (not Azure DevOps) for this project — private repo, interview context, isolation from work projects
+[2026-02-12] DECISION: Pre-build infrastructure before assignment arrives — speed of delivery is part of wow factor
+[2026-02-12] DECISION: state_modifier= (not prompt=) for create_react_agent — compatible with pinned langgraph==0.2.60
+[2026-02-12] DECISION: hmac.compare_digest() for API key comparison — prevents timing attacks
+[2026-02-12] DECISION: FirestoreSaver is COMMUNITY package, not official LangGraph — document clearly to avoid misleading
+[2026-02-12] DECISION: Assignment reception protocol — NO CODE before multi-LLM debate + architecture doc + hostile review + user approval
+[2026-02-12] DECISION: PDFs moved from project root to research/personas/ — clean project tree
+[2026-02-12] DECISION: Created research/langgraph-latest.md — comprehensive LangGraph 1.0.8 intel from Grok X search + Perplexity deep research
+[2026-02-12] DECISION: Created research/frontend-latest.md — React 19.2, AI SDK 6, Tailwind 4, shadcn/ui + Prompt Kit ecosystem
+[2026-02-12] DECISION: Vercel AI SDK 6 (useChat hook) is THE standard for streaming chat UIs — 20M+ monthly npm downloads
+[2026-02-12] DECISION: SSE (not WebSocket) for LLM streaming — unidirectional, auto-reconnect, AI SDK handles it
+[2026-02-12] DECISION: Gemini 2.5 cannot combine bind_tools + with_structured_output — use two-node graph or bind Pydantic as tool
+[2026-02-12] DECISION: LangGraph middleware system (before_model, after_model, wrap_tool_call) is the v1.0 way to do dynamic prompts and guardrails
+[2026-02-12] DECISION: MemorySaver/InMemorySaver is DEV ONLY — unbounded RAM growth in production. PostgresSaver or FirestoreSaver for prod
+[2026-02-12] DECISION: Zero casino/gaming LangGraph implementations found publicly — Hey Seven is first mover in this space
+[2026-02-12] DECISION: Cached bind_tools in nodes.py (get_llm_with_tools singleton) — avoid per-invocation overhead
+[2026-02-13] DECISION: 3-LLM-call pattern (router→generator→validator) chosen over simpler 2-call — defense-in-depth for regulated industry. Validator node can be disabled via single conditional edge change.
+[2026-02-13] DECISION: Template.safe_substitute() replaces .format() — prevents DoS via curly braces in user input
+[2026-02-13] DECISION: Pure ASGI middleware only — BaseHTTPMiddleware breaks SSE streaming
+[2026-02-13] DECISION: SecurityHeadersMiddleware added — X-Content-Type-Options: nosniff, X-Frame-Options: DENY, HSTS note for production
+[2026-02-13] DECISION: Router confidence field used for low-confidence rerouting (< 0.7 → safe RAG path)
+[2026-02-13] DECISION: request_id propagated through LangGraph config["configurable"] for end-to-end trace correlation
+[2026-02-13] DECISION: structlog.configure() with JSONRenderer + TimeStamper for Cloud Logging compatibility
+[2026-02-13] DECISION: MAX_ACTIVE_THREADS=1000 with LRU eviction for InMemorySaver OOM protection
+[2026-02-13] DECISION: Docker base images pinned to patch versions (python:3.12.8-slim, nginx:1.27-alpine) for reproducibility
+[2026-02-13] DECISION: Cloud Build pipeline includes pytest test gate before image build
+[2026-02-13] DECISION: Architecture doc review rounds use TEAM SWARM pattern to avoid context overflow — review-lead coordinates, findings go to files, main lead sees only summaries
+[2026-02-17] DECISION: v1.0.0 tagged and pushed — interview assignment submission frozen. All future work is v2.
+[2026-02-17] DECISION: Demo stuck bug = 4 causes (cold start ingestion, no SSE heartbeat, no client timeout, Gemini latency). Fix in v2, not v1.
+[2026-02-17] DECISION: v2 direction will be defined by Oded's interview debrief — no architecture decisions until interview insights are captured.
+[2026-02-22] DECISION: BoundedMemorySaver kept — MemorySaver 0.2.60 has no built-in bounds, hasattr guard sufficient
+[2026-02-22] DECISION: BrandingConfig reads from DEFAULT_CONFIG synchronously — build-time config, not per-request
+[2026-02-22] DECISION: extracted_fields accumulate across turns — mirrors natural conversation profiling
+[2026-02-22] DECISION: Guest name injection conservative — only when name NOT in response AND response > 50 chars
+[2026-02-22] DECISION: persona_envelope_node order: PII redaction (fail-closed) -> branding -> name injection -> SMS truncation
+[2026-02-22] DECISION: Feature flag triple-parity enforced for 12 flags (FeatureFlags TypedDict + DEFAULT_FEATURES + DEFAULT_CONFIG)
+[2026-02-22] DECISION: VADER sentiment with casino-aware overrides — "killing it" = positive in gambling context
+[2026-02-22] DECISION: Phase 5 — $property_description replaces hardcoded Mohegan Sun in CONCIERGE_SYSTEM_PROMPT (multi-property readiness)
+[2026-02-22] DECISION: Phase 5 — LLM judge uses gemini-2.0-flash (not 2.5-flash) because thinking model truncates structured output ~50% of the time
+[2026-02-22] DECISION: Phase 5 — LLM judge uses method="json_schema" for with_structured_output() — more reliable than function calling for nested Pydantic
+[2026-02-22] DECISION: Phase 5 — E2E tests use smart mock LLM that dispatches by Pydantic schema type (RouterOutput, DispatchOutput, ValidationResult, etc.)
+[2026-02-22] DECISION: R31 fix — get_responsible_gaming_helplines() now receives casino_id for per-state regulatory compliance
+[2026-02-22] DECISION: R31 fix — persona.py no longer imports DEFAULT_CONFIG — uses get_casino_profile() consistently
+[2026-02-22] DECISION: Phase 5.5 — 4 new E2E graph tests (retry loop, fail-to-fallback, CB open, whisper failure) for full pipeline coverage
+[2026-02-22] DECISION: Phase 5.5 — LLM judge production hardening: asyncio.Semaphore(5) + TTLCache(100, ttl=300) for concurrent eval rate limiting + caching
+[2026-02-22] DECISION: Phase 5.5 — Entertainment golden conversation added (Arena, Wolf Den, Comix, ticket booking flow)
+[2026-02-22] DECISION: Phase 5.5 — Cloud Build smoke test now asserts version match (was print-only, stale containers would pass)
+[2026-02-24] DECISION: R46 — redis==5.2.1 pinned with SHA-256 hashes in requirements-prod.txt (was unpinned, missing from lockfile)
+[2026-02-24] DECISION: R46 — Sync Redis calls wrapped in asyncio.to_thread() (not async redis) — minimal fix, avoids full redis.asyncio migration
+[2026-02-24] DECISION: R46 — Cosign v2.4.1 binary SHA-256 checksum verified in cloudbuild.yaml before signing
+[2026-02-24] DECISION: R46 — Wall clock (time.time()) for Redis-synced CB timestamps, monotonic for local timing
+[2026-02-24] DECISION: R46 — InMemoryBackend threading.Lock kept intentional (R36 fix B5) — sub-microsecond ops, TOCTOU protection
+[2026-02-24] DECISION: R46 — LLM_SEMAPHORE_TIMEOUT now config-driven (settings.LLM_SEMAPHORE_TIMEOUT) instead of hardcoded 30
+[2026-02-24] DECISION: R46 — Redis socket_connect_timeout=2 and socket_timeout=2 for startup probe safety
+[2026-02-24] DECISION: R47 — 4-model hostile review launched: Gemini 3.1 Pro (deep think), Grok 4, GPT-5.2 Codex, DeepSeek Speciale — full 10-dimension assessment
+[2026-02-27] DECISION: Building 3-tier reproducible evaluation system — deterministic gates + frozen eval prompt + execution-based behavioral scenarios. Replaces ad-hoc LLM review with convergent, measurable methodology. Target: SD < 2, ICC > 0.7.
+[2026-02-28] DECISION: R72 sarcasm approach — context-contrast (VADER + conversation history), NOT LLM classifier. Research A6 confirmed production systems design sarcasm-resilient responses, don't classify. Zero cost, sub-1ms.
+[2026-02-28] DECISION: R72 crisis escalation — graduated 4-level (none/concern/urgent/immediate) instead of binary detect_self_harm. Concern routes to gambling_advice with helplines; urgent/immediate to full crisis response with 988 Lifeline.
+[2026-02-28] DECISION: R72 slang normalization — search-only, NEVER modify original message. normalize_for_search() called before RAG retrieval. 100+ terms covering gambling slang, drunk-typing, SMS abbreviations.
+[2026-02-28] DECISION: R72 domain tracking — _append_unique reducer on list[str], not set (JSON serializable for Firestore). Cross-domain suggestion matrix injected as system prompt section.
+[2026-02-28] DECISION: R72 competitive positioning — PolyAI handles transactional voice only (60% market share). Hey Seven's SMS VIP relationship with emotional intelligence is genuinely uncontested market category.
+[2026-02-28] DECISION: R72 Session 2 — Live evaluation revealed mock-vs-real gap: 7.3 (mock) vs 4.1 (live). Real baseline must come from live agent + real LLM, not mock-based tests.
+[2026-02-28] DECISION: R72 ICC measurement — Overall ICC(2,1) = 0.797 (Excellent) across Gemini Pro + GPT-5.2 + Grok 4. B1 (sarcasm) needs rubric revision (ICC 0.348).
+[2026-02-28] DECISION: R72 dominant failure — generic "I'm your concierge" fallback fires on emotional/crisis/terse messages. Router treats non-property-Q&A as off_topic. Fix requires conversation-history-aware routing.
+[2026-02-28] DECISION: R72 safety finding — crisis first-turn detection correct (988 Lifeline), but follow-up turns degrade to generic concierge. Need crisis_active sticky state field.
+[2026-02-28] DECISION: Phase 1 Session 1 — Added EN/ES multilingual support. detected_language field in PropertyQAState, router language detection via RouterOutput, Spanish system prompt (CONCIERGE_SYSTEM_PROMPT_ES), Spanish crisis response with 988 Spanish line (1-888-628-9454), text AYUDA to 988, HOLA to 741741. Feature-flagged via spanish_support_enabled (default True). 21 new tests, 10 behavioral scenarios. ADR-005 status: Deferred → Accepted (EN/ES).
+[2026-03-01] DECISION: R75 live evaluation confirms mock-vs-live gap is primary quality bottleneck (8.15 mock → 5.8 live). Technical infrastructure is production-ready (9.63/10). Next priority: fix P0 behavioral CRITICALs (crisis patron privacy, grief routing) before deployment.

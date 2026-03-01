@@ -1,0 +1,85 @@
+{
+  "project": "hey-seven",
+  "currentState": {
+    "summary": "R75 Sprint COMPLETE. Phase 5 wiring (5 features). Technical: 9.63/10 (4-model, +0.29). Behavioral LIVE: 5.8/10 (3-model judge, 84 scenarios). 2 behavioral CRITICALs identified (crisis patron privacy, grief routing). Live trajectory: R72(4.1)→R73(5.0)→R75(5.8).",
+    "lastModified": "2026-03-01T08:00:00Z",
+    "branch": "main",
+    "commitHash": "e22422a",
+    "tag": "v1.3.0",
+    "phase": "r75-live-eval-complete"
+  },
+  "blockers": [
+    {
+      "severity": "P0",
+      "description": "Crisis follow-up triggers patron privacy deflection — guest asking for human help during crisis gets rebuffed"
+    },
+    {
+      "severity": "P0",
+      "description": "Grief routing failure — 'my dad passed' → 'explore rewards and promotions' for 2 turns"
+    }
+  ],
+  "nextSteps": [
+    { "priority": 0, "description": "Fix P0: crisis_active bypass for patron privacy guardrails" },
+    { "priority": 0, "description": "Fix P0: Grief/loss detection in router or compliance gate" },
+    { "priority": 1, "description": "Contextual fallback — replace generic 'reach out directly' with conversational response" },
+    { "priority": 1, "description": "LLM crisis response variation — not verbatim repetition across turns" },
+    { "priority": 2, "description": "Gambling loss sentiment override in router" },
+    { "priority": 3, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" }
+  ],
+  "reviewHistory": {
+    "r75Sprint": {
+      "date": "2026-03-01",
+      "phases": ["Phase 5 wiring", "Live eval (84 scenarios)", "4-model technical review", "3-model behavioral judge"],
+      "featuresWired": 5,
+      "testsTotal": 3032,
+      "criticalsTechnical": 0,
+      "criticalsBehavioral": 2,
+      "majorsBehavioral": 4
+    },
+    "r75Technical": {
+      "date": "2026-03-01",
+      "models": ["Gemini 3.1 Pro", "GPT-5.3 Codex", "Grok 4", "DeepSeek-V3.2-Speciale"],
+      "weightedScore": 9.63,
+      "criticals": 0,
+      "consensusMajors": 0,
+      "dimensions": {
+        "D1": 9.5, "D2": 9.5, "D3": 9.5, "D4": 10.0, "D5": 10.0,
+        "D6": 9.5, "D7": 9.5, "D8": 9.5, "D9": 10.0, "D10": 9.5
+      }
+    },
+    "r75Behavioral": {
+      "date": "2026-03-01",
+      "models": ["Gemini 3.1 Pro", "Grok 4", "GPT-5.2"],
+      "evalType": "LIVE (real Gemini Flash agent, 84 scenarios, 236 turns)",
+      "averageScore": 5.8,
+      "dimensions": {
+        "B1": 8.0, "B2": 5.0, "B3": 5.0, "B4": 5.0, "B5": 4.0,
+        "B6": 6.0, "B7": 9.0, "B8": 7.0, "B9": 3.0, "B10": 6.0
+      }
+    },
+    "trajectory": {
+      "R52": 67.7, "R53": 84.3, "R68_consensus": 92.9,
+      "R72_behavioral_live": 4.1, "R73_behavioral_live": 5.0,
+      "R74_technical": 9.34, "R74_behavioral_mock": 8.15, "R74_overall": 8.75,
+      "R75_technical": 9.63, "R75_behavioral_live": 5.8, "R75_combined": 7.72
+    }
+  },
+  "codebaseMetrics": {
+    "loc": "27K+",
+    "modules": 61,
+    "testFiles": 78,
+    "tests": 3032,
+    "testFailures": 0,
+    "skipped": 1,
+    "coverage": "90%+",
+    "adrs": 27,
+    "guardrailPatterns": 210,
+    "behavioralScenarios": 84,
+    "liveEvalTurns": 236,
+    "liveEvalErrors": 0
+  },
+  "sessionNotes": {
+    "lastSessionDate": "2026-03-01",
+    "lastSessionId": "hey-seven-session-20260301-r75"
+  }
+}
