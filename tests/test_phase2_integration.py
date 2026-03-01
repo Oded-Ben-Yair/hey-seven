@@ -121,7 +121,7 @@ class TestWhisperNodeMetadata:
         """whisper_planner with a plan returns has_plan=True."""
         from src.agent.graph import _extract_node_metadata
 
-        output = {"whisper_plan": {"next_topic": "dining", "offer_readiness": 0.5}}
+        output = {"whisper_plan": {"next_topic": "dining", "conversation_note": "test"}}
         meta = _extract_node_metadata("whisper_planner", output)
         assert meta == {"has_plan": True}
 
@@ -165,8 +165,6 @@ class TestHostAgentWhisperInjection:
             ],
             whisper_plan={
                 "next_topic": "dining",
-                "extraction_targets": ["cuisine_preferences"],
-                "offer_readiness": 0.3,
                 "conversation_note": "Guest seems interested in Italian food",
             },
         )
@@ -187,7 +185,7 @@ class TestHostAgentWhisperInjection:
         system_msg = call_args[0]  # First message is SystemMessage
         assert "Whisper Track Guidance" in system_msg.content
         assert "dining" in system_msg.content
-        assert "cuisine_preferences" in system_msg.content
+        assert "Italian" in system_msg.content
 
     @pytest.mark.asyncio
     async def test_no_whisper_plan_no_injection(self):
@@ -228,7 +226,7 @@ class TestHostAgentWhisperInjection:
         state = _base_state(
             messages=[HumanMessage(content="Tell me about something")],
             retrieved_context=[],
-            whisper_plan={"next_topic": "dining", "extraction_targets": [], "offer_readiness": 0.5, "conversation_note": "test"},
+            whisper_plan={"next_topic": "dining", "conversation_note": "test"},
         )
 
         mock_cb = MagicMock()
@@ -658,8 +656,6 @@ class TestWhisperPlannerNodeUnit:
 
         plan = WhisperPlan(
             next_topic="dining",
-            extraction_targets=["dietary_restrictions"],
-            offer_readiness=0.4,
             conversation_note="Guest mentioned anniversary",
         )
 
@@ -677,7 +673,7 @@ class TestWhisperPlannerNodeUnit:
 
         assert result["whisper_plan"] is not None
         assert result["whisper_plan"]["next_topic"] == "dining"
-        assert result["whisper_plan"]["offer_readiness"] == 0.4
+        assert result["whisper_plan"]["conversation_note"] == "Guest mentioned anniversary"
 
     @pytest.mark.asyncio
     async def test_returns_none_on_llm_failure(self):
@@ -738,15 +734,11 @@ class TestFormatWhisperPlan:
 
         plan = {
             "next_topic": "dining",
-            "extraction_targets": ["dietary_restrictions", "cuisine_preferences"],
-            "offer_readiness": 0.65,
             "conversation_note": "Guest seems interested in Italian",
         }
         result = format_whisper_plan(plan)
         assert "Whisper Track Guidance" in result
         assert "dining" in result
-        assert "dietary_restrictions" in result
-        assert "65%" in result
         assert "Italian" in result
 
     def test_empty_targets_shows_none(self):
@@ -755,12 +747,10 @@ class TestFormatWhisperPlan:
 
         plan = {
             "next_topic": "none",
-            "extraction_targets": [],
-            "offer_readiness": 0.0,
             "conversation_note": "",
         }
         result = format_whisper_plan(plan)
-        assert "(none)" in result
+        assert "none" in result
 
     def test_plan_includes_internal_label(self):
         """Plan output includes 'never reveal to guest' warning."""
@@ -768,8 +758,6 @@ class TestFormatWhisperPlan:
 
         plan = {
             "next_topic": "gaming",
-            "extraction_targets": ["level"],
-            "offer_readiness": 0.5,
             "conversation_note": "Ask about games",
         }
         result = format_whisper_plan(plan)

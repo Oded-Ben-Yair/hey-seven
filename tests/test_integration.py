@@ -152,8 +152,6 @@ class TestRetrieveToGenerate:
             from src.agent.whisper_planner import WhisperPlan
             whisper_plan = WhisperPlan(
                 next_topic="dining",
-                extraction_targets=["cuisine_preferences"],
-                offer_readiness=0.3,
                 conversation_note="Ask about dining preferences",
             )
             whisper_structured = AsyncMock()

@@ -91,11 +91,9 @@ def _make_mock_llm(
             # WhisperPlan or other structured output
             chain.ainvoke = AsyncMock(return_value=WhisperPlan(
                 next_topic="dining",
-                extraction_targets=["dietary_restrictions"],
-                offer_readiness=0.3,
                 conversation_note="Guest is asking about dining options",
                 proactive_suggestion=None,
-                suggestion_confidence=0.0,
+                suggestion_confidence="0.0",
             ))
         return chain
 
@@ -355,11 +353,9 @@ class TestFullGraphE2E:
             else:
                 chain.ainvoke = AsyncMock(return_value=WhisperPlan(
                     next_topic="dining",
-                    extraction_targets=["dietary_restrictions"],
-                    offer_readiness=0.3,
                     conversation_note="Guest asking about dining",
                     proactive_suggestion=None,
-                    suggestion_confidence=0.0,
+                    suggestion_confidence="0.0",
                 ))
             return chain
 
@@ -424,11 +420,9 @@ class TestFullGraphE2E:
             else:
                 chain.ainvoke = AsyncMock(return_value=WhisperPlan(
                     next_topic="dining",
-                    extraction_targets=["dietary_restrictions"],
-                    offer_readiness=0.3,
                     conversation_note="Guest asking about dining",
                     proactive_suggestion=None,
-                    suggestion_confidence=0.0,
+                    suggestion_confidence="0.0",
                 ))
             return chain
 

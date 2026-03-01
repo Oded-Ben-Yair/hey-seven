@@ -1262,8 +1262,6 @@ class TestEndToEndGraphIntegration:
         mock_whisper_chain.ainvoke = AsyncMock(
             return_value=WhisperPlan(
                 next_topic="dining",
-                extraction_targets=["cuisine_preference"],
-                offer_readiness=0.3,
                 conversation_note="Guest asking about dining options",
             )
         )

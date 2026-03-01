@@ -105,8 +105,6 @@ def _make_whisper_llm():
     mock_planner_chain.ainvoke = AsyncMock(
         return_value=WhisperPlan(
             next_topic="dining",
-            extraction_targets=["dietary_restrictions"],
-            offer_readiness=0.3,
             conversation_note="Guest interested in dining options",
         )
     )

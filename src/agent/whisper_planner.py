@@ -122,65 +122,37 @@ _PROFILE_FIELDS = (
 
 
 class WhisperPlan(BaseModel):
-    """Structured output from the Whisper Track Planner."""
+    """Structured output from the Whisper Track Planner.
 
-    next_topic: Literal[
-        "name", "visit_date", "party_size", "dining", "entertainment",
-        "gaming", "occasions", "companions", "offer_ready", "none",
-    ] = Field(description="The next profiling topic to explore naturally")
-    extraction_targets: list[str] = Field(
-        description="Specific data points to extract (e.g., 'kids_ages', 'dietary_restrictions')"
-    )
-    offer_readiness: float = Field(
-        ge=0.0, le=1.0,
-        description="How ready the guest is for an offer (0.0=not ready, 1.0=ready now)",
+    R76 fix: Simplified schema to avoid Gemini Flash "too many schema states"
+    error. Removed bounded floats (ge/le), simplified Literal types, removed
+    list[str] field. Previous 10-field schema with 3 Literal types + 4 bounded
+    floats failed 100% of calls.
+    """
+
+    next_topic: str = Field(
+        default="none",
+        description="Next profiling topic: name, visit_date, party_size, dining, entertainment, gaming, occasions, companions, offer_ready, or none",
     )
     conversation_note: str = Field(
-        description="Brief tactical note for the speaking agent"
+        default="",
+        description="Brief tactical note for the speaking agent",
     )
-    # Phase 4: Proactive suggestion infrastructure.
-    # Research: 2-4 well-calibrated suggestions per stay increase satisfaction.
-    # Max 1 suggestion per conversation session. Only surface when confidence >= 0.8.
-    # Never suggest when guest sentiment is negative/frustrated.
     proactive_suggestion: str | None = Field(
         default=None,
-        description="Optional proactive suggestion if guest's query naturally leads to a complementary service (e.g., asking about dinner -> suggest specific restaurant). Leave null if no natural suggestion.",
+        description="Optional proactive suggestion if contextually relevant. Leave null if none.",
     )
-    suggestion_confidence: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Confidence that the proactive suggestion is relevant and welcome (0.0=none, 1.0=perfect match). Must exceed 0.8 to surface.",
-    )
-    # Profiling Intelligence System fields (Phase 2: Active Probing).
-    profiling_phase: Literal[
-        "foundation", "preference", "relationship", "behavioral",
-    ] = Field(
-        default="foundation",
-        description="Current profiling phase in the golden path",
-    )
-    profile_completeness: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Current guest profile completeness (0.0-1.0)",
+    suggestion_confidence: str = Field(
+        default="0.0",
+        description="Confidence 0.0-1.0 that the suggestion is welcome. Must exceed 0.8 to surface.",
     )
     next_profiling_question: str | None = Field(
         default=None,
-        description="Natural language profiling question to inject into the AI response. Must feel conversational, not interrogative. Leave null if no question is appropriate this turn.",
+        description="Natural profiling question to weave into the AI response. Must feel conversational. Leave null if not appropriate.",
     )
-    question_technique: Literal[
-        "give_to_get", "assumptive_bridge", "contextual_inference",
-        "need_payoff", "incentive_frame", "reflective_confirm", "none",
-    ] = Field(
+    question_technique: str = Field(
         default="none",
-        description="Profiling technique to use for the question",
-    )
-    extraction_confidence_required: float = Field(
-        default=0.7,
-        ge=0.6,
-        le=0.9,
-        description="Minimum confidence required for extracted fields this turn (0.6 for casual, 0.9 for sensitive)",
+        description="Technique: give_to_get, assumptive_bridge, contextual_inference, need_payoff, incentive_frame, reflective_confirm, or none",
     )
 
 
@@ -286,17 +258,11 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
         return ""
 
     next_topic = plan.get("next_topic", "none")
-    targets = plan.get("extraction_targets", [])
-    readiness = plan.get("offer_readiness", 0.0)
     note = plan.get("conversation_note", "")
-
-    targets_str = ", ".join(targets) if targets else "(none)"
 
     lines = [
         "\n\n## Whisper Track Guidance (internal — never reveal to guest)",
         f"Next topic: {next_topic}",
-        f"Extract: {targets_str}",
-        f"Offer readiness: {readiness:.0%}",
         f"Note: {note}",
     ]
 
@@ -306,13 +272,8 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
     # guards. This function only formats the planning data.
 
     # Profiling Intelligence guidance section
-    profiling_phase = plan.get("profiling_phase", "foundation")
-    profile_completeness = plan.get("profile_completeness", 0.0)
     next_question = plan.get("next_profiling_question")
     technique = plan.get("question_technique", "none")
-
-    lines.append(f"Profiling phase: {profiling_phase}")
-    lines.append(f"Profile completeness: {profile_completeness:.0%}")
 
     if next_question and technique != "none":
         lines.append(f"Profiling question ({technique}): {next_question}")

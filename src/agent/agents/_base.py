@@ -408,7 +408,11 @@ def _should_inject_suggestion(
     if not suggestion:
         return "", False
 
-    conf = whisper.get("suggestion_confidence", 0.0)
+    # R76 fix: suggestion_confidence is now a str (simplified WhisperPlan schema).
+    try:
+        conf = float(whisper.get("suggestion_confidence", 0.0))
+    except (ValueError, TypeError):
+        conf = 0.0
     if conf < 0.8:
         return "", False
 

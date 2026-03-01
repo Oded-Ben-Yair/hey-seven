@@ -465,8 +465,10 @@ $generated_response
 ## Evaluation Criteria
 Check each criterion:
 
-1. **Grounded**: The response uses ONLY information present in the retrieved context.
-   It does not introduce facts, numbers, or claims not found in the context.
+1. **Grounded**: Specific facts (venue names, hours, prices, locations) in the response
+   must come from the retrieved context. However, brief proactive suggestions of OTHER
+   property categories are acceptable ("After dinner, you might enjoy a show" is fine
+   even if no show data was retrieved — as long as no specific show facts are fabricated).
 2. **On-topic**: The response is about the property and directly addresses the user question.
    It does not drift into unrelated subjects.
 3. **No gambling advice**: The response does not contain odds, betting strategies, tips,
@@ -491,9 +493,12 @@ but omits a key detail that was available. No factual errors.
 Result: RETRY — minor omission worth correcting.
 
 ### FAIL Example
-User asked about restaurant hours. Response includes a restaurant not found
-in the retrieved context, or states hours that differ from the context.
+User asked about restaurant hours. Response states hours that differ from the context,
+or fabricates specific facts (prices, locations) about a venue not in the context.
 Result: FAIL — criterion 1 (Grounded) and 5 (Accurate) violated.
+Note: Mentioning a venue BY NAME from the property without fabricating details about
+it is acceptable — "you might also enjoy the steakhouse" is fine if the steakhouse
+exists at the property, even if not in the current retrieved context.
 
 ## Response Format
 Return valid JSON only, no other text:
@@ -525,10 +530,8 @@ $conversation_history
 
 ## Your Task
 Based on the conversation and profile:
-1. Identify the next profiling topic to explore naturally
-2. List specific data points to extract
-3. Assess how ready the guest is for a personalized offer (0.0-1.0)
-4. Write a brief tactical note for the speaking agent
+1. Identify the next profiling topic to explore naturally (set next_topic)
+2. Write a brief tactical note for the speaking agent (set conversation_note)
 
 ## Proactive Suggestions
 If the guest's query naturally leads to a complementary service, include a proactive_suggestion.
@@ -564,7 +567,6 @@ You are also the profiling strategist. Determine:
 ## Rules
 - NEVER suggest topics the guest has already provided (check profile)
 - Prioritize high-weight fields (name, visit_date, party_size) over low-weight ones
-- Set offer_readiness > 0.8 ONLY when profile completeness > 60%
 - If the guest seems rushed or annoyed, set next_topic to "none" AND question_technique to "none"
 - Maximum 1 proactive_suggestion per conversation session
 - Maximum 1 profiling question per turn — embedded naturally in the response

@@ -47,118 +47,99 @@ def _state(**overrides):
 
 class TestWhisperPlanModel:
     def test_valid_plan_all_fields(self):
-        """WhisperPlan accepts valid Literal topic and bounded offer_readiness."""
+        """WhisperPlan accepts all fields with valid values."""
         plan = WhisperPlan(
             next_topic="dining",
-            extraction_targets=["kids_ages", "dietary_restrictions"],
-            offer_readiness=0.35,
             conversation_note="Guest mentioned anniversary, pivot to dining",
+            proactive_suggestion="Try the steakhouse",
+            suggestion_confidence="0.85",
+            next_profiling_question="How many in your party?",
+            question_technique="give_to_get",
         )
         assert plan.next_topic == "dining"
-        assert plan.offer_readiness == 0.35
-        assert len(plan.extraction_targets) == 2
+        assert plan.suggestion_confidence == "0.85"
+        assert plan.proactive_suggestion == "Try the steakhouse"
+        assert plan.question_technique == "give_to_get"
 
     def test_valid_plan_none_topic(self):
         """next_topic='none' is valid (no profiling this turn)."""
         plan = WhisperPlan(
             next_topic="none",
-            extraction_targets=[],
-            offer_readiness=0.0,
             conversation_note="Guest seems rushed",
         )
         assert plan.next_topic == "none"
 
-    def test_valid_plan_offer_ready(self):
-        """next_topic='offer_ready' with high offer_readiness is valid."""
+    def test_valid_plan_offer_ready_topic(self):
+        """next_topic='offer_ready' is valid as a plain string."""
         plan = WhisperPlan(
             next_topic="offer_ready",
-            extraction_targets=[],
-            offer_readiness=0.95,
             conversation_note="Profile is 80% complete, ready for offer",
         )
-        assert plan.offer_readiness == 0.95
+        assert plan.next_topic == "offer_ready"
 
-    def test_valid_plan_boundary_readiness_zero(self):
-        """offer_readiness=0.0 is valid (minimum boundary)."""
+    def test_suggestion_confidence_is_str(self):
+        """suggestion_confidence is a str field, not a bounded float."""
         plan = WhisperPlan(
             next_topic="name",
-            extraction_targets=["first_name"],
-            offer_readiness=0.0,
+            suggestion_confidence="0.0",
             conversation_note="New guest, start profiling",
         )
-        assert plan.offer_readiness == 0.0
+        assert plan.suggestion_confidence == "0.0"
 
-    def test_valid_plan_boundary_readiness_one(self):
-        """offer_readiness=1.0 is valid (maximum boundary)."""
+    def test_profiling_question_defaults_to_none(self):
+        """next_profiling_question defaults to None."""
+        plan = WhisperPlan(conversation_note="Fully profiled")
+        assert plan.next_profiling_question is None
+
+    def test_any_string_topic_is_valid(self):
+        """next_topic is a plain str -- any value is accepted (no Literal constraint)."""
         plan = WhisperPlan(
-            next_topic="offer_ready",
-            extraction_targets=[],
-            offer_readiness=1.0,
-            conversation_note="Fully profiled",
+            next_topic="custom_topic",
+            conversation_note="Test",
         )
-        assert plan.offer_readiness == 1.0
+        assert plan.next_topic == "custom_topic"
 
-    def test_invalid_topic_raises_validation_error(self):
-        """Invalid next_topic not in Literal set raises ValidationError."""
-        from pydantic import ValidationError
+    def test_question_technique_accepts_any_str(self):
+        """question_technique is a plain str -- any value is accepted."""
+        plan = WhisperPlan(
+            next_topic="dining",
+            question_technique="assumptive_bridge",
+            conversation_note="Test",
+        )
+        assert plan.question_technique == "assumptive_bridge"
 
-        with pytest.raises(ValidationError):
-            WhisperPlan(
-                next_topic="invalid_topic",
-                extraction_targets=[],
-                offer_readiness=0.5,
-                conversation_note="Test",
-            )
-
-    def test_offer_readiness_above_one_raises(self):
-        """offer_readiness > 1.0 raises ValidationError."""
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError):
-            WhisperPlan(
-                next_topic="dining",
-                extraction_targets=[],
-                offer_readiness=1.5,
-                conversation_note="Test",
-            )
-
-    def test_offer_readiness_below_zero_raises(self):
-        """offer_readiness < 0.0 raises ValidationError."""
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError):
-            WhisperPlan(
-                next_topic="dining",
-                extraction_targets=[],
-                offer_readiness=-0.1,
-                conversation_note="Test",
-            )
+    def test_defaults_are_applied(self):
+        """All fields have defaults -- an empty WhisperPlan is valid."""
+        plan = WhisperPlan()
+        assert plan.next_topic == "none"
+        assert plan.conversation_note == ""
+        assert plan.proactive_suggestion is None
+        assert plan.suggestion_confidence == "0.0"
+        assert plan.next_profiling_question is None
+        assert plan.question_technique == "none"
 
     def test_model_dump_round_trip(self):
         """model_dump() produces a dict that can reconstruct the model."""
         plan = WhisperPlan(
             next_topic="visit_date",
-            extraction_targets=["arrival_date", "departure_date"],
-            offer_readiness=0.2,
             conversation_note="Ask about trip dates",
+            suggestion_confidence="0.2",
         )
         dumped = plan.model_dump()
         assert isinstance(dumped, dict)
         reconstructed = WhisperPlan(**dumped)
         assert reconstructed.next_topic == "visit_date"
-        assert reconstructed.offer_readiness == 0.2
+        assert reconstructed.suggestion_confidence == "0.2"
 
-    def test_all_valid_topics(self):
-        """Every Literal topic value is accepted."""
-        valid_topics = [
+    def test_all_expected_topics(self):
+        """All expected topic values are accepted (next_topic is plain str)."""
+        expected_topics = [
             "name", "visit_date", "party_size", "dining", "entertainment",
             "gaming", "occasions", "companions", "offer_ready", "none",
         ]
-        for topic in valid_topics:
+        for topic in expected_topics:
             plan = WhisperPlan(
                 next_topic=topic,
-                extraction_targets=[],
-                offer_readiness=0.5,
                 conversation_note="Test",
             )
             assert plan.next_topic == topic
@@ -175,9 +156,8 @@ class TestWhisperPlannerNode:
         """Node returns whisper_plan dict when LLM returns valid WhisperPlan."""
         mock_plan = WhisperPlan(
             next_topic="dining",
-            extraction_targets=["dietary_restrictions"],
-            offer_readiness=0.35,
             conversation_note="Guest mentioned anniversary",
+            suggestion_confidence="0.35",
         )
         mock_llm = MagicMock()
         mock_structured = MagicMock()
@@ -193,7 +173,7 @@ class TestWhisperPlannerNode:
         assert "whisper_plan" in result
         assert result["whisper_plan"] is not None
         assert result["whisper_plan"]["next_topic"] == "dining"
-        assert result["whisper_plan"]["offer_readiness"] == 0.35
+        assert result["whisper_plan"]["suggestion_confidence"] == "0.35"
 
     @patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock)
     async def test_parse_error_returns_none(self, mock_get_llm):
@@ -248,8 +228,6 @@ class TestWhisperPlannerNode:
         """Node handles empty message list gracefully."""
         mock_plan = WhisperPlan(
             next_topic="name",
-            extraction_targets=["first_name"],
-            offer_readiness=0.0,
             conversation_note="No conversation yet",
         )
         mock_llm = MagicMock()
@@ -269,8 +247,6 @@ class TestWhisperPlannerNode:
         """Node calls with_structured_output(WhisperPlan) on the LLM."""
         mock_plan = WhisperPlan(
             next_topic="dining",
-            extraction_targets=[],
-            offer_readiness=0.5,
             conversation_note="Test",
         )
         mock_llm = MagicMock()
@@ -297,18 +273,18 @@ class TestFormatWhisperPlan:
         """Valid plan dict produces a formatted guidance string."""
         plan = {
             "next_topic": "dining",
-            "extraction_targets": ["kids_ages", "dietary_restrictions"],
-            "offer_readiness": 0.35,
             "conversation_note": "Guest mentioned anniversary, pivot to dining",
+            "suggestion_confidence": "0.35",
+            "next_profiling_question": "How many in your party?",
+            "question_technique": "give_to_get",
         }
         result = format_whisper_plan(plan)
 
         assert "Whisper Track Guidance" in result
         assert "dining" in result
-        assert "kids_ages" in result
-        assert "dietary_restrictions" in result
-        assert "35%" in result
         assert "anniversary" in result
+        assert "give_to_get" in result
+        assert "How many in your party?" in result
 
     def test_none_plan_returns_empty(self):
         """None plan returns empty string."""
@@ -319,26 +295,23 @@ class TestFormatWhisperPlan:
         result = format_whisper_plan({})
         assert "Whisper Track Guidance" in result
         assert "none" in result
-        assert "0%" in result
 
-    def test_empty_extraction_targets(self):
-        """Plan with empty extraction_targets formats correctly."""
+    def test_plan_without_profiling_question(self):
+        """Plan with no profiling question formats correctly (no profiling line)."""
         plan = {
             "next_topic": "name",
-            "extraction_targets": [],
-            "offer_readiness": 0.0,
             "conversation_note": "Start profiling",
+            "question_technique": "none",
         }
         result = format_whisper_plan(plan)
         assert "name" in result
         assert "Start profiling" in result
+        assert "Profiling question" not in result
 
     def test_never_reveal_instruction_present(self):
         """Format includes 'never reveal to guest' instruction."""
         plan = {
             "next_topic": "dining",
-            "extraction_targets": [],
-            "offer_readiness": 0.5,
             "conversation_note": "Test",
         }
         result = format_whisper_plan(plan)
@@ -373,33 +346,34 @@ class TestCalculateCompleteness:
 
 
 class TestFailureCounterThreshold:
-    """Tests for the module-level failure counter alert threshold."""
+    """Tests for the _WhisperTelemetry failure counter alert threshold."""
 
     def _reset_counter(self):
-        """Reset module-level counter state between tests."""
+        """Reset telemetry singleton state between tests."""
         import src.agent.whisper_planner as wp
-        wp._failure_count = 0
-        wp._failure_alerted = False
+        wp._telemetry.count = 0
+        wp._telemetry.alerted = False
 
     def _increment(self):
         """Simulate a failure increment (mirrors whisper_planner_node logic)."""
         import src.agent.whisper_planner as wp
-        wp._failure_count += 1
-        if wp._failure_count >= wp._FAILURE_ALERT_THRESHOLD and not wp._failure_alerted:
-            wp._failure_alerted = True
+        wp._telemetry.count += 1
+        if wp._telemetry.count >= wp._telemetry.ALERT_THRESHOLD and not wp._telemetry.alerted:
+            wp._telemetry.alerted = True
             wp.logger.error(
                 "whisper_planner_systematic_failure: %d consecutive failures "
                 "exceeded threshold (%d). Whisper planner may be misconfigured.",
-                wp._failure_count,
-                wp._FAILURE_ALERT_THRESHOLD,
+                wp._telemetry.count,
+                wp._telemetry.ALERT_THRESHOLD,
             )
 
     def test_threshold_triggers_alert(self, caplog):
-        """After _FAILURE_ALERT_THRESHOLD failures, an ERROR log is emitted."""
+        """After ALERT_THRESHOLD failures, an ERROR log is emitted."""
         import logging
         import src.agent.whisper_planner as wp
         self._reset_counter()
-        wp._FAILURE_ALERT_THRESHOLD = 3
+        original_threshold = wp._telemetry.ALERT_THRESHOLD
+        wp._telemetry.ALERT_THRESHOLD = 3
         with caplog.at_level(logging.ERROR):
             self._increment()
             self._increment()
@@ -407,14 +381,15 @@ class TestFailureCounterThreshold:
             self._increment()  # Threshold reached
             assert "systematic_failure" in caplog.text
         self._reset_counter()
-        wp._FAILURE_ALERT_THRESHOLD = 10
+        wp._telemetry.ALERT_THRESHOLD = original_threshold
 
     def test_alert_fires_once(self, caplog):
         """Alert only fires once, not on every subsequent failure."""
         import logging
         import src.agent.whisper_planner as wp
         self._reset_counter()
-        wp._FAILURE_ALERT_THRESHOLD = 2
+        original_threshold = wp._telemetry.ALERT_THRESHOLD
+        wp._telemetry.ALERT_THRESHOLD = 2
         with caplog.at_level(logging.ERROR):
             self._increment()
             self._increment()  # First alert
@@ -423,7 +398,7 @@ class TestFailureCounterThreshold:
             count_after = caplog.text.count("systematic_failure")
             assert count_before == count_after
         self._reset_counter()
-        wp._FAILURE_ALERT_THRESHOLD = 10
+        wp._telemetry.ALERT_THRESHOLD = original_threshold
 
     def test_reset_clears_count(self):
         """Resetting the counter clears count and alert state."""
@@ -431,9 +406,9 @@ class TestFailureCounterThreshold:
         self._reset_counter()
         self._increment()
         self._increment()
-        assert wp._failure_count == 2
+        assert wp._telemetry.count == 2
         self._reset_counter()
-        assert wp._failure_count == 0
+        assert wp._telemetry.count == 0
 
     def test_threshold_then_reset_then_below_threshold_no_alert(self, caplog):
         """10 failures (alert) -> reset -> 9 failures: no second alert."""
@@ -459,7 +434,8 @@ class TestFailureCounterThreshold:
         import logging
         import src.agent.whisper_planner as wp
         self._reset_counter()
-        wp._FAILURE_ALERT_THRESHOLD = 3
+        original_threshold = wp._telemetry.ALERT_THRESHOLD
+        wp._telemetry.ALERT_THRESHOLD = 3
         with caplog.at_level(logging.ERROR):
             for _ in range(3):
                 self._increment()
@@ -470,4 +446,4 @@ class TestFailureCounterThreshold:
                 self._increment()
             assert caplog.text.count("systematic_failure") == 2
         self._reset_counter()
-        wp._FAILURE_ALERT_THRESHOLD = 10
+        wp._telemetry.ALERT_THRESHOLD = original_threshold

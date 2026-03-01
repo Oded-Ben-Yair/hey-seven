@@ -241,25 +241,21 @@ class TestProactiveSuggestions:
         """WhisperPlan accepts proactive suggestion fields."""
         plan = WhisperPlan(
             next_topic="dining",
-            extraction_targets=["cuisine_preference"],
-            offer_readiness=0.3,
             conversation_note="Guest mentioned dinner",
             proactive_suggestion="Try Todd English's Tuscany for Italian cuisine",
-            suggestion_confidence=0.9,
+            suggestion_confidence="0.9",
         )
         assert plan.proactive_suggestion == "Try Todd English's Tuscany for Italian cuisine"
-        assert plan.suggestion_confidence == 0.9
+        assert plan.suggestion_confidence == "0.9"
 
     def test_whisper_plan_without_suggestion(self):
         """WhisperPlan defaults to no suggestion."""
         plan = WhisperPlan(
             next_topic="none",
-            extraction_targets=[],
-            offer_readiness=0.0,
             conversation_note="No suggestion needed",
         )
         assert plan.proactive_suggestion is None
-        assert plan.suggestion_confidence == 0.0
+        assert plan.suggestion_confidence == "0.0"
 
     def test_format_whisper_plan_excludes_suggestion(self):
         """format_whisper_plan does NOT include suggestion (R23 fix C-001: deduplicated).
@@ -270,11 +266,9 @@ class TestProactiveSuggestions:
         """
         plan_dict = {
             "next_topic": "dining",
-            "extraction_targets": [],
-            "offer_readiness": 0.5,
             "conversation_note": "Guest interested in dinner",
             "proactive_suggestion": "Check out Beauty & Essex for a special evening",
-            "suggestion_confidence": 0.9,
+            "suggestion_confidence": "0.9",
         }
         result = format_whisper_plan(plan_dict)
         # R23 fix C-001: suggestion removed from format_whisper_plan
@@ -287,11 +281,9 @@ class TestProactiveSuggestions:
         """format_whisper_plan excludes suggestion when confidence < 0.8."""
         plan_dict = {
             "next_topic": "dining",
-            "extraction_targets": [],
-            "offer_readiness": 0.5,
             "conversation_note": "Maybe dining",
             "proactive_suggestion": "Try the buffet",
-            "suggestion_confidence": 0.5,
+            "suggestion_confidence": "0.5",
         }
         result = format_whisper_plan(plan_dict)
         assert "Proactive suggestion" not in result
@@ -301,11 +293,9 @@ class TestProactiveSuggestions:
         """format_whisper_plan excludes when suggestion is None."""
         plan_dict = {
             "next_topic": "none",
-            "extraction_targets": [],
-            "offer_readiness": 0.0,
             "conversation_note": "Nothing to suggest",
             "proactive_suggestion": None,
-            "suggestion_confidence": 0.0,
+            "suggestion_confidence": "0.0",
         }
         result = format_whisper_plan(plan_dict)
         assert "Proactive suggestion" not in result
@@ -318,11 +308,9 @@ class TestProactiveSuggestions:
         """Confidence at 0.8 does NOT show in format_whisper_plan (R23: deduplicated)."""
         plan_dict = {
             "next_topic": "none",
-            "extraction_targets": [],
-            "offer_readiness": 0.0,
             "conversation_note": "Boundary test",
             "proactive_suggestion": "Try the spa",
-            "suggestion_confidence": 0.8,
+            "suggestion_confidence": "0.8",
         }
         result = format_whisper_plan(plan_dict)
         # R23 fix C-001: suggestions no longer in format_whisper_plan
@@ -332,11 +320,9 @@ class TestProactiveSuggestions:
         """Confidence at 0.79 should NOT be included."""
         plan_dict = {
             "next_topic": "none",
-            "extraction_targets": [],
-            "offer_readiness": 0.0,
             "conversation_note": "Below threshold",
             "proactive_suggestion": "Try the spa",
-            "suggestion_confidence": 0.79,
+            "suggestion_confidence": "0.79",
         }
         result = format_whisper_plan(plan_dict)
         assert "Proactive suggestion" not in result
@@ -347,11 +333,9 @@ class TestProactiveSuggestions:
         base_state["guest_sentiment"] = None  # Detection disabled or failed
         base_state["whisper_plan"] = {
             "next_topic": "dining",
-            "extraction_targets": [],
-            "offer_readiness": 0.5,
             "conversation_note": "Guest asked about dinner",
             "proactive_suggestion": "Try Todd English's",
-            "suggestion_confidence": 0.95,
+            "suggestion_confidence": "0.95",
         }
 
         mock_llm = AsyncMock()
@@ -390,11 +374,9 @@ class TestProactiveSuggestions:
         base_state["guest_sentiment"] = "frustrated"
         base_state["whisper_plan"] = {
             "next_topic": "dining",
-            "extraction_targets": [],
-            "offer_readiness": 0.5,
             "conversation_note": "Guest asked about dinner",
             "proactive_suggestion": "Try Todd English's",
-            "suggestion_confidence": 0.95,
+            "suggestion_confidence": "0.95",
         }
 
         mock_llm = AsyncMock()
@@ -433,11 +415,9 @@ class TestProactiveSuggestions:
         base_state["guest_sentiment"] = "positive"
         base_state["whisper_plan"] = {
             "next_topic": "dining",
-            "extraction_targets": [],
-            "offer_readiness": 0.5,
             "conversation_note": "Guest asked about dinner",
             "proactive_suggestion": "Try Todd English's Tuscany for a celebratory dinner",
-            "suggestion_confidence": 0.92,
+            "suggestion_confidence": "0.92",
         }
 
         mock_llm = AsyncMock()
@@ -578,52 +558,44 @@ class TestPersonaDriftPrevention:
 class TestWhisperPlanValidation:
     """Tests for WhisperPlan Pydantic validation of new fields."""
 
-    def test_suggestion_confidence_must_be_0_to_1(self):
-        """suggestion_confidence must be between 0.0 and 1.0."""
-        with pytest.raises(Exception):  # ValidationError
-            WhisperPlan(
-                next_topic="none",
-                extraction_targets=[],
-                offer_readiness=0.0,
-                conversation_note="Test",
-                suggestion_confidence=1.5,
-            )
+    def test_suggestion_confidence_accepts_any_string(self):
+        """R76 simplification: suggestion_confidence is plain str, no range validation."""
+        plan = WhisperPlan(
+            next_topic="none",
+            conversation_note="Test",
+            suggestion_confidence="1.5",
+        )
+        assert plan.suggestion_confidence == "1.5"
 
-    def test_suggestion_confidence_negative_fails(self):
-        """Negative suggestion_confidence fails validation."""
-        with pytest.raises(Exception):  # ValidationError
-            WhisperPlan(
-                next_topic="none",
-                extraction_targets=[],
-                offer_readiness=0.0,
-                conversation_note="Test",
-                suggestion_confidence=-0.1,
-            )
+    def test_suggestion_confidence_accepts_negative_string(self):
+        """R76 simplification: suggestion_confidence is plain str, no range validation."""
+        plan = WhisperPlan(
+            next_topic="none",
+            conversation_note="Test",
+            suggestion_confidence="-0.1",
+        )
+        assert plan.suggestion_confidence == "-0.1"
 
     def test_model_dump_includes_new_fields(self):
         """model_dump() includes proactive_suggestion and suggestion_confidence."""
         plan = WhisperPlan(
             next_topic="none",
-            extraction_targets=[],
-            offer_readiness=0.0,
             conversation_note="Test",
             proactive_suggestion="Try the spa",
-            suggestion_confidence=0.85,
+            suggestion_confidence="0.85",
         )
         dumped = plan.model_dump()
         assert "proactive_suggestion" in dumped
         assert "suggestion_confidence" in dumped
         assert dumped["proactive_suggestion"] == "Try the spa"
-        assert dumped["suggestion_confidence"] == 0.85
+        assert dumped["suggestion_confidence"] == "0.85"
 
     def test_model_dump_defaults(self):
         """model_dump() defaults for new fields are None/0.0."""
         plan = WhisperPlan(
             next_topic="none",
-            extraction_targets=[],
-            offer_readiness=0.0,
             conversation_note="Test",
         )
         dumped = plan.model_dump()
         assert dumped["proactive_suggestion"] is None
-        assert dumped["suggestion_confidence"] == 0.0
+        assert dumped["suggestion_confidence"] == "0.0"
