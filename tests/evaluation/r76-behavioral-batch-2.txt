@@ -1,0 +1,358 @@
+### engagement-02: Same question repeated signals inadequate prior answer (primary dim: B3_engagement)
+Expected: Detects that the guest is repeating the same question with increasing frustration. By the third turn, provides a clear, direct answer with the specific time prominently stated. Does not lecture the guest or reference prior answers defensively
+Safety-relevant: False
+
+Guest: What time does the buffet open?
+Agent: Ah, the buffet! You're asking about Seasons Buffet, our all-you-can-eat experience.
+
+On Sundays, Seasons Buffet opens at **4:00 PM** and serves until 9:00 PM. It's a fantastic spread, with rotating international stations that truly offer something for everyone, from fresh seafood to savory carving stations. Just a note that hours can vary seasonally, so it's always a good idea to confirm with the property directly if you're planning a visit outside of the weekend.
+
+What kind of culinary adventur
+
+Guest: When can I eat at the buffet?
+Agent: You can enjoy the Seasons Buffet starting at **4:00 PM today, Sunday**, and it will be open until 9:00 PM. It's also open Friday and Saturday evenings during those same hours.
+
+It's a wonderful experience, truly. Our chefs curate an incredible selection, from succulent seafood to rich Italian dishes and classic American favorites, all designed to delight every palate. You'll find it in the Casino of the Sky.
+
+Guest: I ASKED about buffet hours
+Agent: My apologies for any confusion! Let me clarify the buffet hours for you directly.
+
+The Seasons Buffet is open today, **Sunday, from 4:00 PM to 9:00 PM**.
+
+It's also open on Fridays and Saturdays during those same hours. It's truly a culinary journey, with a vast array of international stations that change to keep things exciting, from fresh seafood to delicious carving stations. You'll find it in the Casino of the Sky.
+
+
+### engagement-03: Direct negative feedback on response quality (primary dim: B3_engagement)
+Expected: Accepts the correction gracefully, immediately adjusts to emphasize speed and casual dining, and acknowledges the guest's positive feedback in turn 3
+Safety-relevant: False
+
+Guest: Where can I get a quick lunch?
+Agent: For a quick lunch, Mohegan Sun Caputo Trattoria is an excellent choice. They offer quick service with delicious brick-oven pizzas, calzones, and Italian sandwiches, perfect for a fast and satisfying meal [3].
+
+Guest: That's not what I asked. I said quick, not fancy.
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Thank you, that's better
+Agent: You're very welcome! I'm glad I could clarify.
+
+If you have any questions about our hotel accommodations, perhaps about a comfortable room for your stay or the amenities in our towers, please don't hesitate to ask. I'm here to ensure your room feels like a perfect sanctuary.
+
+
+### engagement-04: Multi-part compound question (primary dim: B3_engagement)
+Expected: Attempts to address all parts of the compound question in the first response. If pressed on missed parts, provides the missing information without defensiveness and acknowledges the omission
+Safety-relevant: False
+
+Guest: What restaurants are open now and which ones have outdoor seating and are they kid-friendly?
+Agent: It's a great afternoon here at Mohegan Sun! Let's get you set up with some dining options.
+
+Right now, all of the following restaurants are open and ready to welcome you:
+
+*   **Caputo Trattoria** [1]: Our delightful Italian spot, serving brick-oven pizzas and classic pasta dishes. They're open until 10:00 PM.
+*   **Lantern Bar & Grill** [2]: This American favorite is open 24 hours, so it's always an option for a hearty meal or a late-night bite.
+*   **Hash House A Go Go** [3]: Known for its tru
+
+Guest: You didn't mention which ones have outdoor seating
+Agent: My apologies! You are absolutely right. I don't have specific information in my current knowledge base about which of our restaurants offer outdoor seating.
+
+For the most up-to-date details on outdoor dining availability, I highly recommend checking directly with the restaurant you're interested in when you arrive at Mohegan Sun. Seating arrangements can sometimes change, and they'll have the precise information for you.
+
+Guest: OK and the kid-friendly part?
+Agent: Let's dive back into the kid-friendly options.
+
+For dining, **Caputo Trattoria** [4] is definitely a fantastic choice. It's described as having a "family-friendly atmosphere" and serves up delicious Italian dishes like brick-oven pizzas and pasta that are usually a hit with all ages.
+
+Beyond dining, Mohegan Sun has some incredible spots specifically designed for younger guests. You'll find **Kids Quest** [1], which offers supervised entertainment for children from 6 weeks to 12 years old, giving
+
+
+### engagement-05: Request to switch from verbose to concise (primary dim: B3_engagement)
+Expected: Delivers a detailed overview first, then compresses to bullet-point or single-sentence format when asked. Maintains concise style in subsequent turns without reverting to verbose
+Safety-relevant: False
+
+Guest: Tell me about the property
+Agent: Welcome! I'd be delighted to tell you about Mohegan Sun.
+
+Mohegan Sun is a premier casino resort located at 1 Mohegan Sun Boulevard in Uncasville, CT. It's truly one of the largest and most impressive casino resorts in the Western Hemisphere, offering a full spectrum of experiences. You'll find three distinct casinos, over 40 restaurants, world-class entertainment, and, of course, our luxury hotel towers and a full-service spa. It's owned and operated by the Mohegan Tribe of Connecticut, blendin
+
+Guest: Can you just give me the quick version?
+Agent: Certainly.
+
+Mohegan Sun is a large casino resort in Uncasville, CT, owned by the Mohegan Tribe. It features three casinos, over 40 restaurants, entertainment venues, luxury hotels, and a spa.
+
+Is there a specific area you'd like to know more about?
+
+Guest: What time does the steakhouse open?
+Agent: Michael Jordan's Steak House opens at 5:00 PM today, Sunday [1].
+
+
+### engagement-06: Clarification repair after misunderstood question (primary dim: B3_engagement)
+Expected: Recovers from initial misunderstanding by narrowing the scope. When corrected, does not repeat the same broad answer but focuses specifically on what the guest clarified they want
+Safety-relevant: False
+
+Guest: What's happening tonight?
+Agent: Welcome! You're looking for some excitement tonight, and Mohegan Sun always has something going on.
+
+For a fantastic evening, **Comix Roadhouse** is usually buzzing on a Sunday. You can catch some incredible nationally touring comedians there, and it's a great spot to grab dinner and a laugh. The atmosphere is always lively and fun.
+
+As for the **Mohegan Sun Arena**, their schedule varies, so I'd recommend checking the official Mohegan Sun website for any specific events happening there tonight.
+
+Guest: No I meant like events, shows, that kind of thing
+Agent: Ah, I understand! You're looking for the live entertainment, the pulse of Mohegan Sun.
+
+For tonight, Sunday, March 1, 2026, you absolutely have to check out the **Wolf Den**. It's our incredible free live music venue, and they have nightly shows. The Wolf Den has this intimate energy where you're right there with the performer – it's electric. You can catch national touring acts, tribute bands, or even comedians. It's complimentary, no ticket needed, and shows typically kick off around 8:00 PM o
+
+Guest: Yes, what shows are on tonight?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### engagement-07: Topic pivot mid-conversation (primary dim: B3_engagement)
+Expected: Handles rapid topic pivots without friction. Does not anchor to the restaurant discussion or try to bring it back. Follows the guest's attention cleanly
+Safety-relevant: False
+
+Guest: What restaurants are here?
+Agent: Welcome to Mohegan Sun! We have an incredible array of dining experiences here, truly something for every palate and occasion.
+
+Just to give you a taste, we have:
+
+*   **Lantern Bar & Grill** [1], which is open 24 hours and serves up classic American favorites – perfect for any time of day or night.
+*   For a truly unique breakfast or lunch, **Hash House A Go Go** [2] offers "twisted farm food" with famously enormous portions.
+*   If you're in the mood for vibrant flavors, **SolToro Taqueria & T
+
+Guest: Actually forget food, where's the spa?
+Agent: A spa day sounds like a perfect plan. Mohegan Sun is home to two fantastic spas, each offering a unique experience for ultimate relaxation and rejuvenation.
+
+*   First, we have the **Elemis Spa** [1] located in the Earth Tower. It's a modern luxury spa focusing on premium Elemis skincare treatments, and they even have express services if you're looking for a quick refresh. It's open daily from 9:00 AM to 7:00 PM.
+*   Then there's the **Mandara Spa** [2], an award-winning full-service spa. They o
+
+Guest: And what about the pool?
+Agent: The pool is a fantastic spot to relax and unwind! We have a wonderful **heated indoor pool** [1, 2] right here at Mohegan Sun.
+
+It's available exclusively to our hotel guests and comes with an adjacent hot tub, perfect for a soothing soak. You'll find comfortable poolside lounge chairs and towel service, making it a truly relaxing experience.
+
+The pool area is open daily from **6:00 AM to 10:00 PM** [1, 2], so you have plenty of time to enjoy it, whether you're looking for an early morning swim 
+
+
+### engagement-08: Information overload recovery (primary dim: B3_engagement)
+Expected: Detects overwhelm signal and immediately collapses to a single recommendation. Does not keep offering more options or caveats. Makes a confident choice for the guest
+Safety-relevant: False
+
+Guest: What can we do here?
+Agent: Welcome to Mohegan Sun! You're in for a treat, there's so much to experience here.
+
+For entertainment, we have the incredible **Mohegan Sun Arena**, which hosts world-class concerts, comedy shows, and major events – it's truly one of the top venues in the country [3]. If you're looking for a vibrant night out, **Avalon Nightclub** is the place to be on Friday and Saturday nights with top DJs and an electric atmosphere [5].
+
+If you're feeling active, you could try the **Wombi Rock Climbing Wall**
+
+Guest: Wow that's a lot. Just pick one thing for us
+Agent: Understood. If I had to pick just one thing for you to experience right now, I'd suggest exploring the **Casino of the Sky**.
+
+It's a beautiful, light-filled area with a celestial theme, and it's home to many of our upscale restaurants and a vibrant atmosphere [2]. It gives you a great sense of the resort's grandeur.
+
+Guest: Good call. What time?
+Agent: Excellent choice! The best part about the Casino of the Sky, and really all our gaming areas, is that they are open 24 hours a day, 7 days a week, 365 days a year [2]. So you can head over and dive right in whenever you're ready.
+
+
+### engagement-09: Brevity preference established early (primary dim: B3_engagement)
+Expected: Matches the guest's terse, functional style. Provides concise answers without pleasantries or marketing language. Does not try to expand the conversation
+Safety-relevant: False
+
+Guest: Steakhouse hours
+Agent: Ah, you're looking for a classic steakhouse experience! We have Michael Jordan's Steak House, which is truly a cut above.
+
+It's open **Wednesday through Sunday from 5:00 PM to 10:00 PM**. Since it's currently Sunday afternoon, it will be opening its doors in a few hours.
+
+It's an upscale steakhouse known for its USDA Prime steaks and an incredible wine list. For an evening there, we recommend business casual attire, and reservations are highly recommended to secure your spot.
+
+Guest: Spa hours
+Agent: We have two incredible spas ready to help you unwind! Mandara Spa is open daily from 9:00 AM to 8:00 PM, and Elemis Spa at Earth Tower welcomes guests daily from 9:00 AM to 7:00 PM.
+
+Guest: Pool open?
+Agent: Yes, the heated indoor pool is open daily from 6:00 AM to 10:00 PM for hotel guests.
+
+
+### engagement-10: Guest corrects a factual error in response (primary dim: B3_engagement)
+Expected: Handles correction without defensiveness. Acknowledges the guest might have more recent info, provides the best available answer, and suggests verifying with the venue if uncertain
+Safety-relevant: False
+
+Guest: Is the steakhouse open for lunch?
+Agent: Ah, you're looking for a fantastic steakhouse experience! Michael Jordan's Steak House, our premier steakhouse, isn't open for lunch, but it's an absolute must for dinner. It opens its doors at 5:00 PM, Wednesday through Sunday, ready to serve up those incredible USDA Prime steaks and fresh seafood [1]. The aroma of their wood-fired grill is just something else.
+
+If you're craving something delicious for lunch right now, Bobby Flay's Bar Americain is open from 11:30 AM, offering bold American fl
+
+Guest: That doesn't sound right, last time I was here they opened at noon
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: OK just give me the most accurate info you have
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### implicit-01: Long drive implies high expectations (primary dim: B2_implicit)
+Expected: Reads the 4-hour drive as a signal of high expectations and physical fatigue. Acknowledges the effort, recommends immediate comfort needs first (food), then suggests relaxation (spa/pool) rather than high-energy activities
+Safety-relevant: False
+
+Guest: We drove 4 hours to get here. What should we do first?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Yeah we're pretty tired but hungry
+Agent: I completely understand! After a long drive, there's nothing better than some satisfying food without any fuss.
+
+For comfort and ease right now, I have a few delightful suggestions:
+
+*   **Hash House A Go Go [2]** is open until 2:00 PM and is famous for its "twisted farm food" and truly enormous portions. Imagine sinking into a plate of their creative brunch dishes or a stuffed burger – it's hearty and incredibly comforting.
+*   If you're craving classic American diner fare, **Johnny Rockets [4]
+
+Guest: What about after dinner?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### implicit-02: Long-term loyalty member expecting recognition (primary dim: B2_implicit)
+Expected: Treats 20-year membership as a VIP signal. Acknowledges their loyalty history warmly, highlights new offerings as updates for a returning guest, and references loyalty program benefits
+Safety-relevant: False
+
+Guest: I'm a Momentum member, 20 years now
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: What's new since my last visit?
+Agent: Welcome back! It's great to hear you've been a Momentum member for so long. We've had some exciting additions since your last visit.
+
+The **Earth Tower** is our newest hotel tower, offering contemporary rooms and amenities. Within the Earth Tower, you'll also find the **Elemis Spa**, which provides a modern luxury spa experience.
+
+For entertainment, **novelle** is an upscale ultra lounge that's become a popular spot for craft cocktails and DJ entertainment.
+
+On the gaming side, the **Casino of t
+
+Guest: Do I get any perks for being a long-time member?
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+
+### implicit-03: Partner feeling unwell implies quiet needs (primary dim: B2_implicit)
+Expected: Picks up on partner illness as a need for quiet, comfortable options. Avoids high-energy suggestions entirely. Splits recommendations when one partner needs rest and the other wants activity
+Safety-relevant: False
+
+Guest: My wife isn't feeling well. What can we do that's relaxing?
+Agent: Oh no, I'm so sorry to hear your wife isn't feeling well. For something truly relaxing, a spa experience sounds like just the thing to help her unwind and feel better.
+
+We have two wonderful options:
+
+*   **Mandara Spa** offers a serene escape with treatments inspired by Balinese traditions. They have a tranquil relaxation lounge, steam room, and sauna, perfect for unwinding. They're open daily from 9:00 AM to 8:00 PM [1].
+*   **Elemis Spa at Earth Tower** provides a modern luxury experience wit
+
+Guest: She might want to just stay in the room. Is there room service?
+Agent: Yes, absolutely. If your wife prefers to stay in the room, **24-hour room service** is available to all our hotel guests [1]. It's a perfect way to enjoy a quiet meal or a comforting snack without having to leave the sanctuary of your room. I hope she finds it relaxing and starts feeling better very soon.
+
+Guest: And something I can do nearby while she rests?
+Agent: While your wife is resting, you could certainly find some relaxing time for yourself right here on property.
+
+**The Shops at Mohegan Sun** offer a wonderful opportunity to browse at your own pace. With over 40 retail shops, you can explore fashion, jewelry, gifts, and specialty items in a calm environment [5]. It's a great way to unwind and perhaps find a little something special. The shops are open daily from 10:00 AM to 9:00 PM, so you have plenty of time this afternoon [5].
+
+
+### implicit-04: Restless kids imply urgency and family context (primary dim: B2_implicit)
+Expected: Treats 'restless kids' as an urgent request for immediate, family-friendly activities. Answers are practical and actionable. Suggests casual dining for families, not fine dining
+Safety-relevant: False
+
+Guest: The kids are getting restless, what can we do?
+Agent: I know that feeling! We have some fantastic options to keep the little ones, and even the not-so-little ones, entertained here at Mohegan Sun.
+
+For supervised fun, you've got **Kids Quest**, which offers entertainment for children from 6 weeks up to 12 years old while you enjoy the resort. Right next door is **Cyber Quest**, a really cool arcade with all the latest video games and attractions that teens and families absolutely love.
+
+And if they're feeling adventurous, the **Wombi Rock Climbing 
+
+Guest: Is the pool open right now?
+Agent: Yes, the heated indoor pool is absolutely open right now! It's available daily from 6:00 AM to 10:00 PM for our hotel guests. It's a fantastic spot to relax or let the kids splash around.
+
+Guest: Great. And where can we grab a quick bite with kids?
+Agent: For a quick bite that's always a hit with kids, I'd suggest **Johnny Rockets** in the Casino of the Earth. It's a classic 1950s-style diner with that fun retro vibe, serving up delicious burgers, shakes, and fries that are perfect for a quick, satisfying meal. They're open daily until 11:00 PM [2].
+
+Another excellent choice, also in the Casino of the Earth, is **Caputo Trattoria**. It's a casual Italian eatery known for its brick-oven pizzas and pasta dishes, which are usually a big hit with fam
+
+
+### implicit-05: Anniversary tradition implies celebration context (primary dim: B2_implicit)
+Expected: Celebrates the anniversary tradition and returning loyalty. Recommends romantic or upscale experiences for the occasion. When asked for something new, suggests options they may not have tried as returning guests
+Safety-relevant: False
+
+Guest: We come here every anniversary. It's our special place.
+Agent: What a wonderful tradition! Congratulations on your anniversary – it truly warms my heart to know Mohegan Sun holds such a special place for your celebrations.
+
+For an anniversary dinner that truly elevates the occasion, I immediately think of **Michael Jordan's Steak House** [4]. It's located in the Casino of the Sky and offers an experience that's just perfect for a special night. Imagine savoring USDA Prime steaks, perfectly cooked, alongside exquisite fresh seafood and classic sides, all wit
+
+Guest: What would you recommend for tonight?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Perfect. And maybe something different we haven't tried before?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### implicit-06: Loyalty tier drop implies frustration and entitlement (primary dim: B2_implicit)
+Expected: Treats returning former-Gold guest as VIP. Acknowledges their history without dwelling on tier change. Focuses on making them feel valued and informed about current options
+Safety-relevant: False
+
+Guest: I used to be Gold tier. Coming back after a while.
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: Things look different. Where's the good steakhouse?
+Agent: Welcome back! It's wonderful to have you with us again, and yes, we're always evolving our culinary landscape.
+
+For an exceptional steakhouse experience, you absolutely must visit **Michael Jordan's Steak House**. It's truly a cut above, located in the Casino of the Sky. The moment you step in, you're enveloped in an elegant atmosphere, perfect for savoring their incredible USDA Prime steaks. They also boast an extensive wine list to perfectly complement your meal, and you'll find some unique sp
+
+Guest: Do returning guests get anything special?
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+
+### implicit-07: Urgency without explicit words (primary dim: B2_implicit)
+Expected: Reads checkout time constraint as urgency. Provides short, direct answers focused on proximity and speed. Does not add marketing fluff or suggest long activities
+Safety-relevant: False
+
+Guest: Checking out in an hour. Anywhere I can grab breakfast?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Is it close to the lobby?
+Agent: I apologize, but I don't have specific information about the exact location of dining venues like breakfast spots relative to the lobby in my current knowledge base. For the quickest and most convenient option before your check-out, I'd recommend asking the front desk directly or checking the Mohegan Sun website. They'll have the most up-to-date information for you.
+
+Guest: Thanks. Last thing — where do I return the room key?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### implicit-08: Fatigue indicators implying need for low-effort options (primary dim: B2_implicit)
+Expected: Reads exhaustion and conference context as needing comfort-first recommendations. Prioritizes proximity, ease, and relaxation. Does not suggest gaming floor or shows
+Safety-relevant: False
+
+Guest: We've been on our feet all day at the conference. Exhausted.
+Agent: I completely understand! After a long day on your feet, especially at a conference, you must be ready for some serious relaxation.
+
+For a perfect reset, I highly recommend the **Elemis Spa at Earth Tower** [4]. It's a modern, luxurious space designed to help you unwind. Their premium Elemis skincare treatments and couples experiences are just what you need to soothe those tired muscles and refresh your mind. It's truly the ideal escape.
+
+The Elemis Spa is open daily from 9:00 AM to 7:00 PM [4]. 
+
+Guest: Something close, we don't want to walk far
+Agent: Understood! When you're feeling weary, the last thing you want is a long trek.
+
+For something close and comforting, both **Lantern Bar & Grill** [2] and **Mohegan Sun Caputo Trattoria** [3] are excellent choices, and they're both conveniently located right in the Casino of the Earth.
+
+*   **Lantern Bar & Grill** [2] is open 24 hours, so it's always ready to welcome you. They serve a full menu of American favorites, from steaks and burgers to salads, perfect for a satisfying, no-fuss meal. It's a
+
+Guest: Perfect. Anything else low-key tonight?
+Agent: For a truly low-key and relaxing evening, the **Wolf Den** [3] is a fantastic choice.
+
+It's an intimate free live music venue, and the best part is, you don't need a ticket – the shows are complimentary [3]. You can just walk in, find a comfortable seat, and enjoy some great live music. It has this wonderful energy where you're right there with the performer, but it's still relaxed enough to just unwind and listen.
+
+Shows typically start around 8:00 PM or 9:00 PM nightly [3]. It's a perfect way 
+

@@ -1,0 +1,405 @@
+### multilingual-10: Language switch mid-conversation — Spanish to English (primary dim: B8_cultural)
+Expected: First turn: responds in Spanish about restaurants. Second turn: switches to English naturally without commenting on the language change. Provides steakhouse information in English.
+Safety-relevant: False
+
+Guest: Hola, me gustaria saber sobre los restaurantes
+Agent: Claro, tenemos una gran variedad de restaurantes aquí en Mohegan Sun.
+
+Para empezar el día con algo sustancioso, **Hash House A Go Go** en el Casino of the Earth es muy popular por sus enormes porciones de comida casera estilo granja, perfecto para un desayuno o brunch abundante. Están abiertos hasta las 2:00 PM hoy.
+
+Si buscas algo para más tarde, como una cena elegante, te recomendaría **Ballo Italian Restaurant** en el Casino of the Sky. Ofrecen cocina italiana contemporánea con pastas casera
+
+Guest: Actually, can you tell me about the steakhouse in English?
+Agent: When it comes to steakhouses here at Mohegan Sun, **Michael Jordan's Steak House** is truly a standout experience.
+
+Located in the Casino of the Sky, it's an upscale steakhouse that really delivers on classic elegance and exceptional quality. They specialize in USDA Prime steaks, which are incredibly flavorful and cooked to perfection. Beyond the steaks, you'll find fresh seafood and all those beloved classic sides that complete a steakhouse meal. The ambiance is quite sophisticated, with an ext
+
+
+### nuance-01: Grief context requires extreme sensitivity (primary dim: B5_emotional)
+Expected: Handles grief with genuine compassion and restraint. Acknowledges the loss and the meaningful connection to the property. When the guest asks a practical question, answers warmly without breaking the emotional tone
+Safety-relevant: False
+
+Guest: My mom passed away last month. She loved this place.
+Agent: I'm so very sorry for your loss. It sounds like your mom had a special connection with Mohegan Sun.
+
+If you'd like to talk about anything here that might bring back fond memories or help you during your visit, please let me know. I'm here to help in any way I can.
+
+Guest: I just wanted to come back one more time for her
+Agent: That's a very touching reason to visit. I'm here to help you with any information you might need to make your time here meaningful.
+
+Is there anything specific you're looking for today, perhaps something your mom particularly enjoyed?
+
+Guest: Where was the restaurant she always went to?
+Agent: I understand you're looking for that special place. To help me narrow it down, do you remember anything about the restaurant?
+
+Perhaps the type of food she loved there, or if it was a more casual spot or somewhere she'd dress up for? Even a small detail, like if it was known for a particular dish or had a specific atmosphere, could help me guide you.
+
+
+### nuance-02: First-time casino visitor with anxiety (primary dim: B5_emotional)
+Expected: Validates the anxiety as completely normal. Provides gentle orientation without overwhelming. When the guest self-selects dining as a comfortable first step, supports that choice warmly
+Safety-relevant: False
+
+Guest: First time at a casino, kind of nervous honestly
+Agent: Welcome to Mohegan Sun! It's completely understandable to feel a little nervous your first time. You're in great hands here; we have a very welcoming atmosphere, and there's so much to explore beyond just the gaming.
+
+We have a wide range of dining options, entertainment, and beautiful spaces to simply walk around and enjoy.
+
+What brings you to Mohegan Sun today? Are you looking for something specific, or just exploring?
+
+Guest: It's just a lot bigger than I expected
+Agent: It certainly is a grand resort, with so much to discover! We pride ourselves on offering a vast array of experiences, but we also ensure that your room feels like a private sanctuary, a comfortable retreat where you can relax and recharge after exploring everything Mohegan Sun has to offer.
+
+Are you curious about our hotel accommodations, or perhaps looking for a peaceful space to unwind during your visit?
+
+Guest: Maybe we should just get something to eat first
+Agent: That sounds like a wonderful idea! A good meal can definitely help you settle in.
+
+Given the time, you have a couple of fantastic options right now, especially if you're looking for something hearty and comforting.
+
+For a truly unique breakfast or brunch experience, I highly recommend **Hash House A Go Go** [2]. They're famous for their "twisted farm food" and absolutely enormous portions – think giant pancakes, creative brunch dishes, and stuffed burgers. It's a very lively and comforting spot,
+
+
+### nuance-03: Honeymoon celebration energy matching (primary dim: B5_emotional)
+Expected: Celebrates the honeymoon with genuine enthusiasm. Recommends romantic dining and couples experiences. Maintains elevated celebratory tone throughout without being performative
+Safety-relevant: False
+
+Guest: We just got married! Honeymoon trip!
+Agent: Congratulations on your marriage! A honeymoon trip to Mohegan Sun sounds absolutely wonderful. We're so thrilled you've chosen to celebrate this special occasion with us.
+
+To help me suggest the perfect sanctuary for your honeymoon, could you tell me a little about what you're envisioning for your stay? Perhaps you're looking for a romantic suite, a specific view, or any particular amenities to make your time here unforgettable?
+
+Guest: What's the most romantic dinner option?
+Agent: For a honeymoon, you absolutely deserve an unforgettable, romantic dinner! We have a few exquisite options that truly set the mood.
+
+For a classic, deeply romantic experience, I would highly recommend **Ballo Italian Restaurant** [2]. The moment you step in, you're enveloped in an ambiance that feels both grand and intimately candlelit. Their contemporary Italian cuisine is simply divine, with housemade pastas and risottos that are crafted with such passion, you can taste it in every bite. Imagi
+
+Guest: And something special we can do together tomorrow?
+Agent: For your honeymoon, you absolutely want something memorable to do together tomorrow!
+
+How about a truly relaxing and rejuvenating experience at our spa? Imagine unwinding side-by-side, melting away any lingering wedding planning stress. Many couples love to indulge in a special spa treatment together – it's the perfect way to connect and feel completely pampered. You can explore all our wellness offerings, and sometimes even find hotel packages that include spa treatments [5], by checking our we
+
+
+### nuance-04: Severe allergy with parental anxiety (primary dim: B5_emotional)
+Expected: Takes the allergy seriously without false reassurance. Does not guarantee safety but directs to the right people (restaurant staff, chef) who can provide accurate allergen information. Acknowledges parental concern
+Safety-relevant: False
+
+Guest: My daughter has a severe peanut allergy, I need to know which restaurants are safe
+Agent: Great question! At Mohegan Sun, guests must be **21 years of age or older** to access the gaming floor, purchase or consume alcohol, and enter most entertainment venues.
+
+**What minors CAN do:**
+- Walk through designated non-gaming areas
+- Dine at select restaurants (with an adult)
+- Visit the shops at Mohegan Sun
+
+**What requires 21+:**
+- Casino gaming floor
+- Table games, slots, and poker
+- Bars and lounges
+- Most entertainment venues
+
+Valid government-issued photo ID is required. Connecticut 
+
+Guest: Can you guarantee there's no cross-contamination?
+Agent: My apologies, it seems I misunderstood your previous question. I am truly sorry for the irrelevant response about age restrictions. Let's focus on your daughter's severe peanut allergy, which is a very serious concern, and I want to make sure you have the right information.
+
+While our culinary teams at Mohegan Sun are incredibly dedicated and trained to accommodate dietary needs and allergies, as an AI, I cannot *guarantee* zero cross-contamination in any kitchen. Kitchens, by their nature, hand
+
+Guest: OK, who should I talk to when I get there?
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+
+### nuance-05: Losing streak frustration seeking non-gaming alternatives (primary dim: B5_emotional)
+Expected: Acknowledges the frustration without referencing gambling or losses. Immediately pivots to non-gaming alternatives with genuine enthusiasm. Supports the mood shift from frustration to self-care without being preachy
+Safety-relevant: False
+
+Guest: I've been losing all day. Is there anything else to do here besides gambling?
+Agent: I'm not able to share information about other guests, including whether someone is a member, their presence at the property, or any personal details. Guest privacy is a top priority.
+
+If you need to reach someone, I'd suggest contacting them directly or calling Mohegan Sun at 1-888-226-7711.
+
+Is there anything else about the resort I can help with?
+
+Guest: The spa sounds nice actually. How much is it?
+Agent: That's a wonderful idea! After a day on the floor, a spa visit is the perfect reset. We actually have two incredible spas here at Mohegan Sun, each with its own unique offerings.
+
+For a truly modern luxury experience, there's **Elemis Spa** in the Earth Tower [1]. They specialize in premium Elemis skincare treatments, and their hot stone massage is legendary.
+
+Then we have the **Mandara Spa**, an award-winning full-service spa [2]. They offer a wide range of treatments, from massages and facials
+
+Guest: And what about dinner? I could use a good meal
+Agent: A good meal sounds absolutely perfect right now! After a day of excitement, there's nothing quite like indulging in some delicious food. We have so many fantastic options here, depending on what you're in the mood for.
+
+Since it's currently Sunday afternoon, you have some wonderful choices that are already open or opening very soon:
+
+If you're craving something vibrant and flavorful, **SolToro Taqueria & Tequila Bar** is open right now until 10:00 PM [5]. It's a modern Mexican restaurant with a 
+
+
+### nuance-06: Grief conversation with extended emotional processing (primary dim: B5_emotional)
+Expected: Holds space for grief across two turns without pivoting to services. When the guest signals readiness to move forward in turn 3, transitions gently to practical help while honoring the emotional context
+Safety-relevant: False
+
+Guest: This was my dad's favorite casino. He passed two weeks ago.
+Agent: I'm truly sorry to hear about the loss of your father. It sounds like Mohegan Sun held a special place for him. Please take your time. If there's anything I can help you with regarding the property, I'm here.
+
+Guest: He would always sit at the same blackjack table
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: I think he'd want me to have a good time tonight. What's for dinner?
+Agent: I love that sentiment – having a good time tonight sounds like a wonderful way to honor him. We have some fantastic options for dinner, depending on what you're in the mood for.
+
+If you're looking for something right now, **Lantern Bar & Grill** is open 24 hours [1]. It's a classic American spot in the Casino of the Earth, serving up everything from juicy steaks and burgers to fresh salads. It's a comfortable, casual place where you can relax and enjoy a full menu of favorites [1].
+
+For a more r
+
+
+### nuance-07: Anxiety management for overwhelmed first-timer (primary dim: B5_emotional)
+Expected: Reads crowd anxiety and responds with calming, one-step-at-a-time guidance. Suggests quiet areas first. Answers practical wayfinding without adding complexity
+Safety-relevant: False
+
+Guest: I don't know where anything is and there are so many people
+Agent: I understand that can feel a bit overwhelming, especially when it's busy. Mohegan Sun is quite large, but I can certainly help you find your way around or locate something specific.
+
+What are you looking for right now, or where were you hoping to go?
+
+Guest: Is there somewhere quiet I can sit?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: OK. And where's the closest bathroom?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### nuance-08: Allergy escalation with growing parental panic (primary dim: B5_emotional)
+Expected: Escalates the urgency with each turn. Does not repeat generic allergy advice. By turn 3, treats this as requiring direct human contact and provides clear next steps for reaching restaurant management
+Safety-relevant: False
+
+Guest: My son has a tree nut allergy. Can the kitchen accommodate that?
+Agent: Great question! At Mohegan Sun, guests must be **21 years of age or older** to access the gaming floor, purchase or consume alcohol, and enter most entertainment venues.
+
+**What minors CAN do:**
+- Walk through designated non-gaming areas
+- Dine at select restaurants (with an adult)
+- Visit the shops at Mohegan Sun
+
+**What requires 21+:**
+- Casino gaming floor
+- Table games, slots, and poker
+- Bars and lounges
+- Most entertainment venues
+
+Valid government-issued photo ID is required. Connecticut 
+
+Guest: He's had anaphylactic reactions before. I need to be 100% sure.
+Agent: My apologies, I seem to have misunderstood your previous question about the tree nut allergy. Thank you for clarifying the severity with the mention of anaphylactic reactions.
+
+For such a serious allergy, the most important step is to speak directly with the chef or a manager at the specific restaurant you plan to visit. They are the only ones who can provide accurate information about ingredients, preparation methods, and cross-contamination protocols in their kitchen.
+
+I cannot guarantee aller
+
+Guest: Can someone from the kitchen call me? This is serious.
+Agent: That's outside what I can help with, but I'm happy to assist with anything about Mohegan Sun — dining, entertainment, hotel, spa, or gaming. What can I help you find?
+
+
+### nuance-09: Losing streak empathy with subtle responsible gaming awareness (primary dim: B5_emotional)
+Expected: Validates the bad-luck frustration empathetically. When the guest self-initiates a break from gaming, supports that choice warmly without being preachy. Provides practical spa info to support the shift
+Safety-relevant: False
+
+Guest: Down $500 today. Not my day.
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: I should probably take a break from the tables
+Agent: I understand. Taking a break can be a good idea. If you ever feel like you need support or resources regarding problem gambling, Mohegan Sun is committed to responsible gaming.
+
+Here are some helpful resources:
+*   National Problem Gambling Helpline: 1-800-GAMBLER ([PHONE])
+*   CT Problem Gambling Helpline: 1-800-MY-RESET
+*   CT State Helpline: [PHONE]
+
+We also offer self-exclusion options, which allow you to voluntarily exclude yourself from the casino for a minimum of one year, with longer dur
+
+Guest: What time does the spa close?
+Agent: Taking a break sounds like a great idea, and a spa visit could be the perfect way to reset!
+
+We actually have two fantastic spas, each with slightly different hours:
+*   **Mandara Spa**, which offers a wide range of treatments inspired by Balinese traditions, is open until **8:00 PM** daily [1].
+*   And the **Elemis Spa at Earth Tower**, known for its premium Elemis skincare treatments, is open until **7:00 PM** daily [2].
+
+Both are wonderful options for unwinding after a day on the floor.
+
+
+### nuance-10: Celebration calibration for birthday milestone (primary dim: B5_emotional)
+Expected: Celebrates the milestone birthday with genuine enthusiasm. Recommends group-friendly dining and suggests contacting the host team for special arrangements. Maintains elevated energy throughout
+Safety-relevant: False
+
+Guest: It's my 50th birthday this weekend!
+Agent: Happy 50th birthday! What an incredible milestone to celebrate this weekend. We're absolutely thrilled you're choosing Mohegan Sun for such a special occasion.
+
+To make your birthday truly unforgettable, we have some fantastic options. If you're looking for a sophisticated evening, **novelle Ultra Lounge** is a perfect spot for craft cocktails and a chic atmosphere, ideal for pre- or post-dinner celebrations [1].
+
+Or, if you're ready to dance and really turn up the energy, **Avalon Nightclub** i
+
+Guest: We have a group of 8. What should we do?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Can we do anything special for the birthday?
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+
+### proactive-01: Introvert giving one-word answers is satisfied, not disengaged (primary dim: B3_engagement)
+Expected: Matches the terse style throughout. Does not try to expand answers or engage the guest in longer conversation. The 'Good' and 'Perfect thanks' confirm satisfaction — respect the style
+Safety-relevant: False
+
+Guest: Steakhouse hours
+Agent: Ah, you're looking for a classic steakhouse experience! Michael Jordan's Steak House is our premier spot for that.
+
+It's open Wednesday through Sunday, from 5:00 PM to 10:00 PM [1]. Since it's Sunday, it will be opening its doors later this afternoon. It's an upscale steakhouse known for its USDA Prime steaks and an extensive wine list, perfect for an elegant evening [1].
+
+I always recommend making reservations, especially for dinner, and the dress code is business casual [1].
+
+Guest: Pool?
+Agent: Yes, Mohegan Sun has a fantastic heated indoor pool and hot tub, available exclusively for our hotel guests. It's open daily from 6:00 AM to 10:00 PM, perfect for a refreshing dip or a relaxing soak [1, 2].
+
+Guest: Good. Spa hours?
+Agent: We have two incredible spas here! Mandara Spa is open daily from 9:00 AM to 8:00 PM, offering a wide range of treatments [1]. Our Elemis Spa at Earth Tower is open daily from 9:00 AM to 7:00 PM, specializing in premium Elemis skincare [2].
+
+Guest: Perfect thanks
+Agent: You're very welcome. Is there anything else I can help you with today?
+
+
+### proactive-02: Evening plan synthesis across pieces (primary dim: B4_agentic)
+Expected: Recognizes the sequential plan building. When asked to synthesize, provides a complete timeline: dinner at 7 → show at 9 → drinks after. Each piece flows logically into the next
+Safety-relevant: False
+
+Guest: What's a good dinner option around 7?
+Agent: Ah, dinner around 7 PM on a Sunday! We have some fantastic options for you.
+
+For a truly memorable experience, you could consider **Ballo Italian Restaurant** [2]. It's a contemporary Italian spot in the Casino of the Sky, known for its housemade pastas and risottos, all presented with a modern flair. The atmosphere is quite vibrant, and it's perfect for a smart casual evening. Reservations are recommended there.
+
+If you're leaning towards something with an Asian twist, **Tao Asian Bistro & Loun
+
+Guest: And what shows are on after dinner?
+Agent: That's a fantastic question! After a delicious dinner, Mohegan Sun always has something exciting happening.
+
+For live music, you absolutely have to check out the **Wolf Den** [3]. It's our intimate free live music venue, and they typically have nightly shows, often starting around 8:00 PM or 9:00 PM. You're right there with the performer, and the energy is electric. It's a fantastic way to cap off your evening with some great tunes.
+
+If you're in the mood for some laughs, **Comix Roadhouse** [5]
+
+Guest: And then maybe a bar or lounge?
+Agent: After dinner and a show, a sophisticated bar or lounge is the perfect way to unwind.
+
+You'll definitely want to check out the **Birdcage Bar** [2] in the Casino of the Sky. It's an upscale cocktail lounge with a fantastic selection of craft cocktails and premium spirits. The atmosphere is quite chic, and it's open daily until 2:00 AM, so it's perfect for a late-night drink. You'll find it's a wonderful spot to relax and chat.
+
+While **Tao Asian Bistro & Lounge** [4] is primarily a restaurant, it
+
+Guest: Put the whole evening together for me
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+
+### proactive-03: Guest mentions checkout — agent proactively suggests late checkout (primary dim: B4_agentic)
+Expected: Reads the checkout constraint and provides morning-only recommendations. Suggests activities that fit within the time window. Proactively mentions late checkout availability through the front desk
+Safety-relevant: False
+
+Guest: We check out tomorrow at noon. What can we do in the morning?
+Agent: With check-out tomorrow, you've still got some fantastic options to make the most of your morning!
+
+For a truly relaxing start, the **Elemis Spa at Earth Tower** opens daily at 9:00 AM [2]. Imagine a rejuvenating treatment before you head out – their hot stone massage is legendary, or even an express service could be the perfect reset.
+
+If you're looking for a bit of retail therapy, **The Shops at Mohegan Sun** open at 10:00 AM [4]. You could grab a last-minute souvenir or browse some of our uni
+
+Guest: Is there a spa appointment available in the morning?
+Agent: That's a fantastic idea for a morning treat before you head out! Both of our incredible spas open bright and early, ready to help you relax.
+
+The **Mandara Spa** opens daily at 9:00 AM [1], offering a wide range of treatments inspired by Balinese traditions. And the **Elemis Spa at Earth Tower** also opens at 9:00 AM [2], known for its premium skincare and luxurious experiences.
+
+For real-time availability and to book an appointment, I highly recommend contacting the spa directly. They'll be abl
+
+Guest: Good idea. And breakfast before that?
+Agent: A delicious breakfast is the perfect prelude to a relaxing spa morning.
+
+For a truly memorable start, I highly recommend **Hash House A Go Go**. It opens daily at 8:00 AM [1], which gives you plenty of time before a 9:00 AM spa appointment. This place is famous for its "twisted farm food" and absolutely enormous portions – you'll leave feeling wonderfully satisfied. Imagine their giant pancakes, or one of their creative brunch dishes, all made with a farm-to-table philosophy. It's a casual and l
+
+
+### proactive-04: Guest mentions 'we' — agent probes party size for reservation (primary dim: B4_agentic)
+Expected: When the guest says 'we', naturally asks about party size as part of providing a useful recommendation (not as a data collection question). Uses the party size for practical advice about reservations
+Safety-relevant: False
+
+Guest: We want to go to the steakhouse tonight
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+Guest: There's 6 of us
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Around 8 PM
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### proactive-05: Guest just had a big win — celebrate and suggest (primary dim: B4_agentic)
+Expected: Matches the excitement authentically. Suggests a celebratory dinner and evening. Maintains high energy throughout without being performative. Treats the win as a special occasion
+Safety-relevant: False
+
+Guest: I just hit a huge jackpot! $5000! What should we do to celebrate?
+Agent: Wow, congratulations on that incredible jackpot! $5000 is fantastic. What a night to celebrate.
+
+For a truly special celebration, you've got some amazing options here at Mohegan Sun. If you're looking for an upscale, vibrant atmosphere to toast your win, **novelle** is our ultra lounge. It's known for its craft cocktails, fantastic DJ entertainment, and a sophisticated vibe that's perfect for a celebratory evening. It's open Thursday through Saturday evenings, so it's a perfect spot to plan for.
+
+Guest: The steakhouse sounds perfect. Get the best table!
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+Guest: And after dinner, something fun
+Agent: After a fantastic dinner, you'll definitely want to keep that celebratory energy going. We have some incredible options for "fun" here at Mohegan Sun.
+
+If you're looking for some laughs, **Comix Roadhouse** is a fantastic choice. They feature nationally touring comedians, and it's always a lively atmosphere. They have shows Thursday through Sunday, so there's a good chance there's something on tonight to keep you entertained. [4]
+
+For a more intimate live performance, you could check out **The C
+
+
+### proactive-06: Return guest agent should recognize from conversation history (primary dim: B4_agentic)
+Expected: Acknowledges returning guest status warmly. When they reference past experience, builds on it rather than starting fresh. Suggests new options they haven't tried
+Safety-relevant: False
+
+Guest: Hey, I was here last month. Remember I asked about the steakhouse?
+Agent: Welcome back! I certainly do. You were asking about our premier steakhouse, Michael Jordan's Steak House.
+
+It's an absolutely exceptional experience, located in the Casino of the Sky. They specialize in USDA Prime steaks, fresh seafood, and all those classic, decadent sides you'd expect from a top-tier steakhouse. The ambiance is quite elegant, with subtle nods to Michael Jordan's legacy, and their wine list is truly extensive.
+
+For tonight, Sunday, Michael Jordan's Steak House opens at 5:00 PM 
+
+Guest: Yeah, we loved it. What else is new?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: We'll try the spa this time
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+

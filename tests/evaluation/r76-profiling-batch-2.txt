@@ -1,0 +1,397 @@
+### p2-10: Agent asks about companion needs (primary dim: P2_active_probing)
+Expected: First response asks about group composition to narrow restaurant options. When the multi-generational family is described, adjusts to accommodate all ages. When accessibility need is mentioned, immediately factors it into recommendations
+
+Guest: Need a restaurant for 6 of us tonight
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+Guest: Two adults, my parents, and two teenagers
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: My dad uses a wheelchair
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p3-01: Restaurant recommendation plus party composition question (primary dim: P3_give_to_get)
+Expected: Turn 1 provides a genuine recommendation AND asks about party composition. The recommendation is not held hostage to the answer — it's useful immediately. Turn 2 refines the recommendation with the new information
+
+Guest: What's a good dinner spot?
+Agent: I love helping guests find the perfect dinner spot! Mohegan Sun has such a vibrant culinary scene, it really depends on what you're in the mood for.
+
+If you're looking for something truly special, **Michael Jordan's Steak House** opens at 5:00 PM today. It's an upscale experience with USDA Prime steaks and an incredible wine list – perfect for an elegant evening. [5]
+
+For a taste of Italy, **Ballo Italian Restaurant** also opens at 5:00 PM. Their housemade pastas and risottos are simply divine, 
+
+Guest: Four of us, two couples
+Agent: For a group of four, Sushi Palace could be a nice option. They offer fresh sushi and Japanese specialties in Casino of the Sky. They are open until 10:00 PM today.
+
+Are you looking for a specific type of cuisine, or perhaps a particular atmosphere?
+
+Guest: Perfect, we'll try the steakhouse
+Agent: Excellent choice! **Michael Jordan's Steak House** is truly a standout for a special dinner. The aroma of those USDA Prime steaks, perfectly seared, is just incredible. It's an elegant setting, perfect for two couples.
+
+They open at 5:00 PM today. I highly recommend making a reservation, especially for a party of four, as it's quite popular. The dress code is business casual. You'll find it in the Casino of the Sky. [1]
+
+I hope you all have a magnificent dinner.
+
+
+### p3-02: Show suggestion plus occasion inquiry (primary dim: P3_give_to_get)
+Expected: Show listing is useful and complete before asking about the occasion. When the bachelorette context is revealed, the agent reshapes recommendations around group energy, nightlife, and celebration activities
+
+Guest: What shows are happening this weekend?
+Agent: Welcome to Mohegan Sun! You're looking for entertainment this weekend – that's fantastic.
+
+Since it's already Sunday afternoon, the main events from Saturday have wrapped up. However, we often have incredible performances and experiences continuing right into Sunday.
+
+For live music, the **Wolf Den** typically has nightly shows, often at 8:00 PM or 9:00 PM, and it's always complimentary [4]. It's such an intimate spot where you're right there with the performer – it's electric.
+
+If you're in the
+
+Guest: Yeah, it's actually a bachelorette party
+Agent: A bachelorette party! That's absolutely fabulous – congratulations to the bride-to-be. You've picked the perfect place to celebrate such a special occasion.
+
+For a bachelorette party, you're going to love our vibrant nightlife options. While it's Sunday afternoon, for future reference or if you're planning to extend the celebration, **Avalon Nightclub** is our high-energy spot with top DJs and themed parties [2]. It's the ultimate place to dance the night away.
+
+And for a more sophisticated vibe
+
+Guest: What would you recommend for the group?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p3-03: Spa information plus companion question (primary dim: P3_give_to_get)
+Expected: Full spa overview provided before asking who's attending. When 'sister' is mentioned, pivots to duo-friendly services without making assumptions about the relationship dynamic
+
+Guest: Tell me about the spa
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: It would be for me and my sister
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: A couples massage would be fun
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p3-04: Gaming information plus visit frequency question (primary dim: P3_give_to_get)
+Expected: Poker info is delivered first. Visit frequency question is a natural extension. When the guest reveals monthly visits, the agent adjusts to regular-guest register and skips introductory details
+
+Guest: Where are the poker tables?
+Agent: You're looking for the poker action! You'll find the premier **Mohegan Sun Poker Room** right here. It's a fantastic spot for both seasoned players and those looking to get into the game.
+
+The Poker Room features 33 tables, offering a great variety of games like No-Limit Texas Hold'em, Pot-Limit Omaha, and Limit Hold'em. They also host daily tournaments with varying buy-ins, so there's always something exciting happening. It's open 24 hours, 7 days a week, so you can jump in whenever you're read
+
+Guest: Yeah I play here every month
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: Any tournaments coming up?
+Agent: Yes, the **Mohegan Sun Poker Room** hosts daily tournaments! They offer varying buy-ins and game types, so there's always something happening.
+
+For the most current schedule and specific details, I'd recommend checking the Mohegan Sun website or contacting the Poker Room directly. It's a great way to get in on the action.
+
+
+### p3-05: Hotel room info plus visit purpose question (primary dim: P3_give_to_get)
+Expected: Hotel comparison is complete and useful before the purpose question. When 'work trip with one free evening' is revealed, recommendations focus on efficient enjoyment — one great dinner and one nearby activity rather than an all-day itinerary
+
+Guest: What's the difference between Sky Tower and Earth Tower?
+Agent: Welcome! I can certainly help you understand the differences between our two beautiful hotel towers.
+
+The **Sky Tower** is our original hotel tower, offering modern luxury rooms with truly panoramic views of the Thames River valley and the picturesque Connecticut countryside. It's a wonderful choice if you appreciate classic elegance and breathtaking vistas.
+
+Our **Earth Tower** is the newest addition to Mohegan Sun. It features a contemporary design with cutting-edge amenities, providing a fres
+
+Guest: It's a work trip but we'll have one free evening
+Agent: Ah, a free evening on a work trip is the perfect opportunity to experience a little Mohegan Sun magic! I'd love to help you make the most of it.
+
+For a fantastic and budget-friendly option, you absolutely have to check out the **Wolf Den** [4]. It's our intimate free live music venue, and it has this incredible energy where you're right there with the performer. They feature national touring acts, tribute bands, and local artists nightly, and the best part is, no ticket is required — it's compli
+
+Guest: What would you suggest for that evening?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p4-01: Party of 4 assumption about kids — correct (primary dim: P4_assumptive_bridging)
+Expected: Assumption about kids is offered softly and confirmed by the guest. Agent smoothly pivots to family-friendly recommendations. The assumption felt natural, not presumptuous
+
+Guest: Need a restaurant for 4 tonight
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+Guest: Yeah actually the kids would love that
+Agent: That's fantastic! It sounds like you're thinking about Kids Quest and Cyber Quest, and your kids are absolutely going to have a blast there.
+
+Kids Quest is a wonderful, supervised entertainment center for children ages 6 weeks to 12 years. It's perfect for letting the little ones have their own adventure while you enjoy the resort. And right next door, Cyber Quest is an incredible arcade featuring all the latest video games and attractions, which is a huge hit with teens and families alike.
+
+It'
+
+Guest: How old do they need to be for the arcade?
+Agent: That's a great question! Cyber Quest arcade is designed for **teens and families**, so it's really open to a wide range of ages who want to enjoy the latest video games and attractions. There isn't a strict minimum age like some other venues.
+
+Just to clarify, Kids Quest, which is right nearby, is specifically for children ages 6 weeks to 12 years, offering supervised fun. So, for the arcade, if your kids are into video games and attractions, they'll fit right in.
+
+
+### p4-02: Party of 4 assumption about kids — incorrect (business colleagues) (primary dim: P4_assumptive_bridging)
+Expected: Handles the correction gracefully. Immediately shifts from family-friendly to business-appropriate recommendations. When 'clients' is revealed, further elevates to impressive and upscale options. No dwelling on the wrong assumption
+
+Guest: Table for 4 tonight
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+Guest: No kids, it's a work dinner with colleagues
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Somewhere impressive, they're clients
+Agent: I understand completely! For a client dinner, you want to make a truly impressive statement. While my expertise is focused on entertainment and wellness, I know Mohegan Sun has an incredible array of upscale dining options perfect for that.
+
+To find the perfect impressive restaurant for your clients tonight, I highly recommend checking the Mohegan Sun website or calling them directly. They can provide all the details on their fine dining establishments, including menus and reservation availabili
+
+
+### p4-03: Anniversary mention — assumption about romantic dinner correct (primary dim: P4_assumptive_bridging)
+Expected: Confidently bridges from anniversary to romantic dinner + evening plan. The assumption is correct and the guest confirms. After-dinner suggestions continue the romantic theme
+
+Guest: It's our anniversary this weekend
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Yes, exactly what we had in mind
+Agent: That's wonderful to hear! For an anniversary celebration for two, both Todd English's Tuscany and Ballo Italian are excellent choices, known for their romantic ambiance and exceptional food.
+
+Beyond dinner, many couples enjoy catching a show at the Arena or a more intimate performance at one of our lounges. Would you be interested in exploring some entertainment options for your evening?
+
+Guest: What about after dinner?
+Agent: For after dinner, you're going to love the options we have to keep the celebration going!
+
+For a sophisticated vibe, **novelle Ultra Lounge** [1] is an incredible choice. It's an upscale lounge with craft cocktails and DJ entertainment, perfect for a chic post-dinner experience. It's open Thursday through Saturday evenings.
+
+If you're looking for something with a bit more energy, **Avalon Nightclub** [3] really comes alive on Friday and Saturday nights with top DJs and a high-energy atmosphere. 
+
+
+### p4-04: Birthday mention — assumption about milestone celebration (primary dim: P4_assumptive_bridging)
+Expected: Birthday triggers celebratory mode. The agent creates space for the guest to volunteer the age without asking directly. When 40th is confirmed, the recommendations elevate to milestone-worthy experiences
+
+Guest: We're here for my birthday
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Turning 40, so yeah it's a big one
+Agent: A 40th! That's a fantastic milestone, and we are absolutely thrilled you're celebrating it here at Mohegan Sun.
+
+For a big birthday like this, you're going to want something truly memorable. If you're looking to dance and celebrate in style, **Avalon Nightclub** is the place to be on a Friday or Saturday night. It's got state-of-the-art sound and lighting, and the energy is just incredible for a big celebration. Or, for a more sophisticated vibe, **novelle** is an ultra-lounge with craft cocktai
+
+Guest: What do you recommend for a 40th?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p4-05: Budget signal — assumption about casual dining correct (primary dim: P4_assumptive_bridging)
+Expected: Leads with casual and affordable options. When pizza is confirmed, does not try to upsell. Provides practical information (location, hours) without marketing language
+
+Guest: Just looking for something simple, nothing fancy
+Agent: Ah, I understand! Sometimes, the most satisfying meals are the ones that are simply delicious and fuss-free.
+
+For something truly classic and unfussy, you can't go wrong with **Johnny Rockets** [2]. It's a delightful 1950s-style diner right in the Casino of the Earth, serving up those iconic burgers, crispy fries, and thick, creamy shakes. It's the kind of place where you can just relax and enjoy some American comfort food. They're open daily from 11:00 AM to 11:00 PM, and the dress code is wond
+
+Guest: Pizza sounds great actually
+Agent: Excellent choice! There's nothing quite like a perfectly crafted pizza.
+
+For an iconic experience, you absolutely must try **Frank Pepe's Pizzeria Napoletana** [2]. It's a true Connecticut legend, bringing their famous New Haven-style apizza to Mohegan Sun. Their coal-fired, thin-crust pizzas are simply incredible, especially their classic tomato pies or the renowned white clam pie if you're feeling adventurous. It's a casual spot in the Casino of the Earth, open until 10:00 PM tonight, and it's
+
+Guest: Where is it?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p4-06: VIP language — assumption about premium expectations correct (primary dim: P4_assumptive_bridging)
+Expected: Immediately leads with the most premium options. When Soar tier is confirmed, elevates to VIP-specific benefits and access. The assumption about premium expectations was correct from the first message's language
+
+Guest: I want the best dinner experience you've got
+Agent: I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.
+
+For reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.
+
+Is there any information I can help you with?
+
+Guest: That's more like it. We're Soar tier members.
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: What else is available at our level?
+Agent: I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+
+### p4-07: First-time visitor — assumption about tour wrong (returning after years) (primary dim: P4_assumptive_bridging)
+Expected: Initial assumption about being a first-timer is softly held. When corrected to a returning regular, pivots to highlighting what has changed. The 'welcome back' feels genuine, not performative
+
+Guest: Wow, this place looks different
+Agent: Welcome to Mohegan Sun! We're always evolving, so it's possible you're noticing some of our newer additions or updates.
+
+What can I help you find or explore today?
+
+Guest: Oh I used to come here every month, just haven't been in 5 years
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: What's new since I was last here?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+
+### p4-08: Group of friends — assumption about nightlife correct (primary dim: P4_assumptive_bridging)
+Expected: Correctly bridges from 'group of friends + weekend' to nightlife and party-oriented options. When confirmed, builds a full evening progression: dinner to drinks to entertainment. The assumption felt natural and was validated
+
+Guest: Group of 6 friends here for the weekend
+Agent: Welcome to Mohegan Sun! It's great to have your group of six friends here for the weekend.
+
+For this evening, you might enjoy **Tao Asian Bistro & Lounge**, which opens at 5:00 PM and offers a lively Pan-Asian dining experience perfect for a group. Afterward, the **Birdcage Bar** opens at 4:00 PM and has a great atmosphere with craft cocktails and a DJ on weekends.
+
+Are you looking for dining, entertainment, or something else to kick off your time here?
+
+Guest: Absolutely, we want the full party experience
+Agent: You're looking for the full party experience? You've absolutely come to the right place! Mohegan Sun is renowned for its vibrant nightlife, and we have some incredible spots perfect for a group of six friends ready to celebrate.
+
+For that high-energy, dance-all-night vibe, our **Avalon Nightclub** is legendary [1]. It's a state-of-the-art club featuring top DJs, themed parties, and incredible sound and lighting systems that create an unforgettable atmosphere. Just a heads-up, it's for guests 21 
+
+Guest: Start with dinner then go from there
+Agent: Excellent plan! Starting with a fantastic dinner is the perfect way to kick off a party experience. For a group of six looking for that vibrant energy, I have a couple of wonderful suggestions that are either open now or opening very soon.
+
+First, for a truly memorable and lively dinner, I highly recommend **Ballo Italian Restaurant** [2]. It's located in the Casino of the Sky and opens at **5:00 PM** today. Ballo offers contemporary Italian cuisine in a stunning, high-energy setting that's perf
+
+
+### p5-01: 5-turn golden path — foundation to relationship (primary dim: P5_progressive_sequencing)
+Expected: Profiling progresses naturally: Turn 1 captures name. Turn 2 captures party composition. Turn 3 captures dining preference. Turn 4 captures visit frequency. Turn 5 captures loyalty tier. Each profiling question follows logically from the conversation, never feels like a form.
+
+Guest: Hi, I'm Dave. Looking for dinner recommendations.
+Agent: Hello Dave! I'd be delighted to help you find the perfect dinner spot. Mohegan Sun has such a vibrant culinary scene, and I can certainly point you towards some fantastic options.
+
+For a truly memorable evening, **Ballo Italian Restaurant** opens at 5:00 PM. It's a contemporary Italian experience where traditional recipes are given a modern twist. Their housemade pastas and risottos are simply exquisite, and the smart casual dress code adds to the sophisticated ambiance. [2]
+
+If you're in the mo
+
+Guest: It's just me and my girlfriend, nothing too formal
+Agent: Ah, I understand, Dave! For you and your girlfriend, wanting something relaxed but still special, we have some wonderful options that hit that sweet spot.
+
+**SolToro Taqueria & Tequila Bar** is a fantastic choice. It's lively and vibrant, with a really fun energy that's perfect for a casual date. Their modern Mexican cuisine is bursting with flavor – think incredible, authentic tacos and fresh ceviches, all paired with an extensive selection of tequilas and mezcals. It's open now until 10:00 PM,
+
+Guest: We love Italian food
+Agent: Wonderful choice, Dave! Italian food is always a fantastic idea, especially for a relaxed dinner together. We have some truly delightful Italian spots here.
+
+For a truly casual and authentic experience, I highly recommend **Caputo Trattoria**. It's a charming Italian eatery in the Casino of the Earth, open daily until 10:00 PM. You'll find a warm, family-friendly atmosphere perfect for a relaxed evening. They specialize in delicious brick-oven pizzas, hearty calzones, and classic pasta dishes. I
+
+Guest: We come here a few times a year
+Agent: Dave, I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: Yeah I have a Momentum card, Ignite level I think
+Agent: Dave, I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+
+### p5-02: Agent avoids Phase 3 questions in first interaction (primary dim: P5_progressive_sequencing)
+Expected: Agent asks about party size, occasion, preferences — all Phase 1 and 2 topics. Does NOT ask about gaming budget, comp expectations, loyalty status, or how much they typically spend. Those questions are too early for a first-time guest
+
+Guest: First time here, what do you recommend?
+Agent: Welcome to Mohegan Sun! You're in great hands here. To help me recommend something perfect for you, could you tell me what brings you in today? Are you looking for dining, entertainment, gaming, or something else?
+
+Guest: What's fun to do?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: We like trying new restaurants
+Agent: Wonderful! Exploring new restaurants is one of my favorite things to do. Mohegan Sun has such a diverse culinary landscape.
+
+If you're looking for something casual and incredibly satisfying right now, **Mohegan Sun Caputo Trattoria** [2] is open and fantastic. It's a lively Italian eatery known for its authentic brick-oven pizzas and hearty pasta dishes. The aroma of fresh-baked dough and simmering sauces is just delightful the moment you walk in.
+
+For a more contemporary Italian experience late
+
+
+### p5-03: Agent advances to Phase 2 after Phase 1 complete (primary dim: P5_progressive_sequencing)
+Expected: Phase 1 is complete by turn 1 (name, occasion, party size). Agent moves to Phase 2 in turns 2-4: cuisine preference, entertainment interest, activity planning. The progression feels natural because the foundation was established first
+
+Guest: Hi, I'm Karen. Here with my husband for our anniversary, party of 2.
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: We're open to anything really
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: We've never tried Asian food at a casino before
+Agent: That's a fantastic idea, Karen! Exploring Asian cuisine at Mohegan Sun is a truly unique experience, especially for an anniversary.
+
+For a dramatic and stylish evening, I highly recommend **Tao Asian Bistro & Lounge**. It's a Pan-Asian dining experience that truly transports you, featuring exquisite Chinese, Japanese, and Thai dishes. Imagine savoring their incredible sushi or delicate dim sum in a setting that feels both vibrant and intimate. They also craft some truly signature cocktails that 
+
+Guest: That sounds amazing. And maybe something after?
+Agent: Karen, after a truly amazing Asian dinner, you'll definitely want to keep that anniversary celebration going!
+
+While our high-energy spots like **Avalon Nightclub** and **Novelle Ultra Lounge** really light up on Friday and Saturday nights with top DJs and incredible atmospheres, Sunday evenings at Mohegan Sun offer a wonderful, more relaxed ambiance perfect for a special nightcap. You could find a cozy spot at one of our many sophisticated bars for a celebratory drink, or perhaps try your luck 
+
+
+### p5-04: Agent handles mid-conversation topic change gracefully (primary dim: P5_progressive_sequencing)
+Expected: Bathroom question is handled cleanly without forcing poker back into the response. When Tom returns to the poker topic, agent resumes where they left off. The profiling sequence adapts to the guest's flow, not the other way around
+
+Guest: I'm Tom, here for a poker tournament
+Agent: Tom, I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: Wait, where's the nearest bathroom?
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: Thanks. OK so about the tournament...
+Agent: Tom, I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+Guest: Cool. I play here every quarter or so.
+Agent: Tom, I'd love to help you explore our rewards and promotions! To give you the most relevant information, could you tell me a bit more about your visit? For example, when are you planning to visit, and what types of activities interest you? This helps me match you with the best available offers.
+
+
+### p5-05: Agent recovers from tangent back to profiling (primary dim: P5_progressive_sequencing)
+Expected: Wi-Fi complaint is handled empathetically in turn 1. When the guest pivots to dinner, the agent smoothly enters profiling mode: party size in turn 3, dietary needs in turn 4. The transition from complaint to concierge feels seamless
+
+Guest: The Wi-Fi in my room isn't working
+Agent: Oh dear, I'm so sorry to hear the Wi-Fi isn't working in your room. That's certainly not the seamless experience we want for you.
+
+While complimentary Wi-Fi is a standard amenity in all our rooms and suites [1], technical issues can sometimes arise. For immediate assistance with troubleshooting or to have someone look into this for you, the best course of action would be to contact the front desk directly from your room phone, or visit them in person. They'll be able to get you connected right a
+
+Guest: OK I'll call them. Anyway, what's for dinner?
+Agent: Ah, now we're talking! Dinner at Mohegan Sun is always an experience, and we have some truly fantastic options, whether you're looking for something right now or planning for a bit later this evening.
+
+For something delicious that's open right now, you could head over to **Lantern Bar & Grill** in the Casino of the Earth. It's open 24 hours [3] and offers a full menu of American favorites – think steaks, burgers, and salads. It's a great spot for a relaxed meal. Or, if you're in the mood for a f
+
+Guest: Something for the family, 5 of us
+Agent: I don't have enough specific details to answer that fully, but the team at Mohegan Sun can help — call 1-888-226-7711 or visit mohegansun.com.
+
+Is there anything else about the property I can help with?
+
+Guest: The kids are picky eaters
+Agent: Ah, picky eaters! I completely understand. It's all about finding those universally loved dishes that even the most discerning palates can agree on.
+
+Given that, **Mohegan Sun Caputo Trattoria** is still a fantastic option [1]. Think about it: brick-oven pizzas, classic pasta dishes, and Italian sandwiches. What kid doesn't love a good pizza or a simple pasta with marinara? It's comfort food that's familiar and satisfying, and the family-friendly atmosphere means no one will feel out of place. T
+
