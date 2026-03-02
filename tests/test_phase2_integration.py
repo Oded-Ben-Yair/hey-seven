@@ -246,40 +246,61 @@ class TestHostAgentWhisperInjection:
 # ---------------------------------------------------------------------------
 
 
-class TestCompAgentProfileGate:
-    """Verify comp_agent's 60% profile completeness gate."""
+class TestCompAgentNoProfileGate:
+    """R77: Verify comp_agent proceeds to RAG without profile completeness gate.
+
+    The profile completeness gate (COMP_COMPLETENESS_THRESHOLD=0.60) was removed
+    in R77 because it caused 90%+ of comp queries to return a canned "explore
+    rewards" response instead of consulting RAG for real loyalty program data.
+    """
 
     @pytest.mark.asyncio
-    async def test_below_60_returns_deflection(self):
-        """Profile completeness < 60% returns a friendly deflection."""
+    async def test_empty_profile_proceeds_to_llm(self):
+        """R77: Empty profile proceeds to LLM generation (no gate)."""
         from src.agent.agents.comp_agent import comp_agent
+
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(
+            content="The Momentum program has 5 tiers with great benefits."
+        ))
+        mock_cb = MagicMock()
+        mock_cb.is_open = False
+        mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
 
         state = _base_state(
             messages=[HumanMessage(content="What promotions do you have?")],
             retrieved_context=[
                 {"content": "Loyalty program info", "metadata": {"category": "promotions"}, "score": 0.9},
             ],
-            extracted_fields={},  # Empty = 0% completeness
+            extracted_fields={},  # Empty profile -- previously would trigger canned response
         )
 
+        with (
+            patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
+            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+        ):
+            result = await comp_agent(state)
+
+        # Should get LLM response, NOT canned "explore rewards" deflection
+        assert "explore our rewards" not in result["messages"][0].content
+        mock_llm.ainvoke.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_partial_profile_proceeds_to_llm(self):
+        """R77: Partial profile also proceeds to LLM (no threshold)."""
+        from src.agent.agents.comp_agent import comp_agent
+
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(
+            content="Here are the current promotions available."
+        ))
         mock_cb = MagicMock()
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
+        mock_cb.record_success = AsyncMock()
 
-        with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
-            result = await comp_agent(state)
-
-        assert result["skip_validation"] is True
-        content = result["messages"][0].content
-        assert "rewards and promotions" in content
-        assert "tell me a bit more" in content
-
-    @pytest.mark.asyncio
-    async def test_partial_profile_below_60(self):
-        """Partial profile (some fields) still below 60% returns deflection."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        # Only 2/8 flat fields filled = 25% < 60% threshold
+        # Only 2/8 flat fields filled = 25% -- previously below threshold
         state = _base_state(
             messages=[HumanMessage(content="Any deals?")],
             retrieved_context=[
@@ -297,78 +318,24 @@ class TestCompAgentProfileGate:
             },
         )
 
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-
-        with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
-            result = await comp_agent(state)
-
-        assert result["skip_validation"] is True
-        assert "rewards and promotions" in result["messages"][0].content
-
-    @pytest.mark.asyncio
-    async def test_above_60_proceeds_normally(self):
-        """Profile completeness >= 60% proceeds to LLM generation."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        # Fill 5/8 flat fields = 62.5% > 60% threshold
-        extracted_fields = {
-            "name": "John Doe",
-            "visit_date": "2026-03-01",
-            "party_size": 4,
-            "dining": "steakhouse",
-            "entertainment": "comedy show",
-            "gaming": None,
-            "occasions": None,
-            "companions": None,
-        }
-
-        state = _base_state(
-            messages=[HumanMessage(content="What promotions do you have?")],
-            retrieved_context=[
-                {"content": "Loyalty program info", "metadata": {"category": "promotions"}, "score": 0.9},
-            ],
-            extracted_fields=extracted_fields,
-        )
-
-        mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="Here are our promotions!"))
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-        mock_cb.record_success = AsyncMock()
-
         with (
             patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
             patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
         ):
             result = await comp_agent(state)
 
-        # Should NOT be the deflection message
-        assert "rewards and promotions" not in result["messages"][0].content
-        assert "skip_validation" not in result or result.get("skip_validation") is not True
+        # Should get LLM response, NOT canned deflection
+        assert "explore our rewards" not in result["messages"][0].content
+        mock_llm.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_circuit_breaker_takes_priority(self):
-        """Circuit breaker open returns fallback after passing profile gate."""
+    async def test_circuit_breaker_open_returns_fallback(self):
+        """Circuit breaker open returns fallback (no profile gate in the way)."""
         from src.agent.agents.comp_agent import comp_agent
 
-        # R15 fix: use flat _PROFILE_FIELDS keys to pass the completeness gate
-        # (>=60%). 5/8 flat fields filled = 62.5% > 60% threshold.
-        extracted_fields = {
-            "name": "Test User",
-            "visit_date": "2026-03-01",
-            "party_size": 2,
-            "dining": "steakhouse",
-            "entertainment": "comedy show",
-            "gaming": None,
-            "occasions": None,
-            "companions": None,
-        }
         state = _base_state(
             messages=[HumanMessage(content="What promotions?")],
-            extracted_fields=extracted_fields,
+            extracted_fields={},  # Empty profile -- no gate to block
         )
 
         mock_cb = MagicMock()
@@ -382,27 +349,14 @@ class TestCompAgentProfileGate:
         assert "technical difficulties" in result["messages"][0].content
 
     @pytest.mark.asyncio
-    async def test_empty_context_returns_no_info_fallback(self):
-        """Empty retrieved context returns no-info fallback after passing profile gate."""
+    async def test_empty_context_returns_fallback(self):
+        """Empty retrieved context returns contextual fallback (not canned)."""
         from src.agent.agents.comp_agent import comp_agent
-
-        # R15 fix: use flat _PROFILE_FIELDS keys to pass the completeness gate
-        # (>=60%). 5/8 flat fields filled = 62.5% > 60% threshold.
-        extracted_fields = {
-            "name": "John Doe",
-            "visit_date": "2026-03-01",
-            "party_size": 4,
-            "dining": "steakhouse",
-            "entertainment": "comedy show",
-            "gaming": None,
-            "occasions": None,
-            "companions": None,
-        }
 
         state = _base_state(
             messages=[HumanMessage(content="What loyalty rewards?")],
             retrieved_context=[],
-            extracted_fields=extracted_fields,
+            extracted_fields={},
         )
 
         mock_cb = MagicMock()
@@ -413,7 +367,9 @@ class TestCompAgentProfileGate:
             result = await comp_agent(state)
 
         assert result["skip_validation"] is True
-        assert "loyalty programs" in result["messages"][0].content
+        # R77: fallback now mentions contacting player services for tier/rewards details
+        content = result["messages"][0].content.lower()
+        assert "loyalty" in content or "rewards" in content or "promotions" in content
 
 
 # ---------------------------------------------------------------------------

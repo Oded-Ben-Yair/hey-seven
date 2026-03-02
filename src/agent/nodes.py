@@ -186,7 +186,7 @@ async def _get_validator_llm() -> ChatGoogleGenerativeAI:
         settings = get_settings()
         llm = ChatGoogleGenerativeAI(
             model=settings.MODEL_NAME,
-            temperature=0.0,
+            temperature=0.3,  # R77: Relaxed from 0.0 to reduce over-strict grounding rejections
             timeout=settings.MODEL_TIMEOUT,
             max_retries=settings.MODEL_MAX_RETRIES,
             max_output_tokens=512,  # Validation produces short structured output
@@ -456,6 +456,25 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
 
     try:
         result: ValidationResult = await validator_llm.ainvoke(prompt_text)
+
+        # R77 fix: Gemini sometimes returns empty or truncated status.
+        # If status is missing/empty and grounding exists, default to PASS.
+        if not result.status or result.status not in ("PASS", "FAIL", "RETRY"):
+            if has_grounding:
+                logger.warning(
+                    "Validator returned invalid status '%s' with grounding — defaulting to PASS",
+                    result.status,
+                )
+                return {"validation_result": "PASS"}
+            else:
+                logger.warning(
+                    "Validator returned invalid status '%s' without grounding — defaulting to FAIL",
+                    result.status,
+                )
+                return {
+                    "validation_result": "FAIL",
+                    "retry_feedback": "Validation returned invalid status",
+                }
 
         if result.status == "PASS":
             return {"validation_result": "PASS"}

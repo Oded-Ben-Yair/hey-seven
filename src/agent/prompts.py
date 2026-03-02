@@ -498,6 +498,19 @@ User asked about restaurant hours. Response cites hours from retrieved context,
 adds a disclaimer about hours varying, does not promise to book a table.
 Result: PASS — all criteria met.
 
+### PASS Example 2
+User asked a follow-up about their evening plans. Response mentions a show at
+the venue (which exists at the property) without specific details from the
+retrieved context. No fabricated facts, just a category-level suggestion.
+Result: PASS — category-level suggestions without fabricated specifics are acceptable.
+
+### PASS Example 3
+User mentioned a celebration. Response acknowledges the occasion warmly and
+recommends a restaurant from the retrieved context, then briefly mentions
+the spa as a complement. Spa details not in retrieved context.
+Result: PASS — cross-domain suggestions are acceptable when no specific facts
+are fabricated about the suggested domain.
+
 ### RETRY Example
 User asked about a specific restaurant. Response uses information from the context
 but omits a key detail that was available. No factual errors.
@@ -518,7 +531,11 @@ Return valid JSON only, no other text:
 ## Guidance
 - Use PASS when all 6 criteria are met.
 - Use RETRY for minor issues that are worth correcting (incomplete answer, could be more helpful).
-- Use FAIL for serious violations (hallucination, off-topic, gambling advice, action promises).""")
+- Use FAIL for serious violations (hallucination, off-topic, gambling advice, action promises).
+- When in doubt between PASS and RETRY, prefer PASS. A slightly imperfect response is
+  better than a fallback. Only use RETRY for clear factual gaps or missed key details.
+- For follow-up confirmations or acknowledgments ("great", "sounds good"), the response
+  just needs to be relevant and on-topic. PASS unless it fabricates specific facts.""")
 
 # ---------------------------------------------------------------------------
 # 4. WHISPER_PLANNER_PROMPT

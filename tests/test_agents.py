@@ -34,6 +34,9 @@ def _high_completeness_fields():
 
     Uses the flat whisper-planner schema (name, visit_date, party_size, etc.)
     with 5/8 fields filled = 62.5% > 60% threshold.
+
+    R77: No longer needed for comp agent tests (profile gate removed),
+    but retained for test_graph_v2 parity.
     """
     return {
         "name": "John Doe",
@@ -383,24 +386,22 @@ class TestCompAgent:
             retrieved_context=[
                 {"content": "Momentum rewards program: 3 tiers", "metadata": {"category": "promotions"}, "score": 0.9}
             ],
-            extracted_fields=_high_completeness_fields(),
         )
         result = await comp_agent(state)
         assert len(result["messages"]) == 1
         assert isinstance(result["messages"][0], AIMessage)
 
     async def test_empty_context_returns_comp_fallback(self):
-        """Empty context returns comp-specific fallback (after passing profile gate)."""
+        """Empty context returns comp-specific fallback."""
         from src.agent.agents.comp_agent import comp_agent
 
         state = _state(
             messages=[HumanMessage(content="What comps can I get?")],
             retrieved_context=[],
-            extracted_fields=_high_completeness_fields(),
         )
         result = await comp_agent(state)
         assert result["skip_validation"] is True
-        assert "loyalty" in result["messages"][0].content.lower() or "promotions" in result["messages"][0].content.lower()
+        assert "loyalty" in result["messages"][0].content.lower() or "promotions" in result["messages"][0].content.lower() or "rewards" in result["messages"][0].content.lower()
 
     @patch("src.agent.agents.comp_agent._get_circuit_breaker")
     async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
@@ -415,7 +416,6 @@ class TestCompAgent:
         state = _state(
             messages=[HumanMessage(content="What offers?")],
             retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-            extracted_fields=_high_completeness_fields(),
         )
         result = await comp_agent(state)
         assert result["skip_validation"] is True
@@ -435,19 +435,47 @@ class TestCompAgent:
             retrieved_context=[
                 {"content": "data", "metadata": {"category": "promotions"}, "score": 1.0}
             ],
-            extracted_fields=_high_completeness_fields(),
         )
         result = await comp_agent(state)
         assert result["skip_validation"] is True
         assert "trouble generating" in result["messages"][0].content.lower()
 
-    async def test_flat_fields_completeness_below_threshold(self):
-        """Flat extracted_fields with few filled values triggers deflection."""
+    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
+    async def test_no_profile_gate_r77(self, mock_get_llm):
+        """R77: Comp agent proceeds to LLM even with empty profile (no gate)."""
         from src.agent.agents.comp_agent import comp_agent
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(
+            content="The Momentum program has 5 tiers: Core, Ignite, Leap, Ascend, and Soar."
+        ))
+        mock_get_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[HumanMessage(content="What comps can I get?")],
+            retrieved_context=[
+                {"content": "Momentum rewards: 5 tiers", "metadata": {"category": "promotions"}, "score": 0.9}
+            ],
+            extracted_fields={},  # Empty profile -- previously would have triggered canned response
+        )
+        result = await comp_agent(state)
+        # Should get LLM-generated response, NOT the canned "explore rewards" message
+        assert isinstance(result["messages"][0], AIMessage)
+        assert "explore our rewards" not in result["messages"][0].content
+        mock_llm.ainvoke.assert_called_once()
+
+    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
+    async def test_minimal_profile_proceeds_to_llm(self, mock_get_llm):
+        """R77: Comp agent works with minimal profile data (1 field filled)."""
+        from src.agent.agents.comp_agent import comp_agent
+
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="Here are the loyalty tiers!"))
+        mock_get_llm.return_value = mock_llm
 
         state = _state(
             messages=[HumanMessage(content="What comps?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 0.9}],
+            retrieved_context=[{"content": "Loyalty info", "metadata": {"category": "promotions"}, "score": 0.9}],
             extracted_fields={
                 "name": "John",
                 "visit_date": None,
@@ -457,35 +485,9 @@ class TestCompAgent:
                 "gaming": None,
                 "occasions": None,
                 "companions": None,
-            },  # 1/8 = 12.5% < 60%
+            },  # 1/8 = 12.5% -- previously below threshold, now works fine
         )
         result = await comp_agent(state)
-        assert result["skip_validation"] is True
-        assert "rewards and promotions" in result["messages"][0].content
-
-    async def test_flat_fields_completeness_above_threshold(self):
-        """Flat extracted_fields with enough values passes gate."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="Here are your rewards!"))
-
-        state = _state(
-            messages=[HumanMessage(content="What comps?")],
-            retrieved_context=[{"content": "Loyalty info", "metadata": {"category": "promotions"}, "score": 0.9}],
-            extracted_fields={
-                "name": "John",
-                "visit_date": "2026-03-01",
-                "party_size": 4,
-                "dining": "steakhouse",
-                "entertainment": "comedy",
-                "gaming": None,
-                "occasions": None,
-                "companions": None,
-            },  # 5/8 = 62.5% > 60%
-        )
-        with patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm):
-            result = await comp_agent(state)
         assert isinstance(result["messages"][0], AIMessage)
         mock_llm.ainvoke.assert_called_once()
 
@@ -501,6 +503,20 @@ class TestCompAgent:
         assert "may be eligible" in prompt_text.lower()
         assert "never promise" in prompt_text.lower()
         assert "never guarantee" in prompt_text.lower()
+
+    def test_comp_prompt_includes_momentum_tiers(self):
+        """R77: Comp system prompt includes Momentum tier information."""
+        from src.agent.agents.comp_agent import COMP_SYSTEM_PROMPT
+
+        prompt_text = COMP_SYSTEM_PROMPT.safe_substitute(
+            property_name="Mohegan Sun",
+            current_time="Monday 3 PM",
+            responsible_gaming_helplines="1-800-TEST",
+        )
+        assert "momentum" in prompt_text.lower()
+        assert "core" in prompt_text.lower()
+        assert "ignite" in prompt_text.lower()
+        assert "soar" in prompt_text.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -727,17 +743,11 @@ class TestSpecialistContract:
             return_value=MagicMock(content="Test response from agent.")
         )
 
-        # Comp agent needs high profile completeness to pass its gate
-        extra = {}
-        if agent_fn == "comp_agent":
-            extra["extracted_fields"] = _high_completeness_fields()
-
         state = _state(
             messages=[HumanMessage(content="Tell me about the property")],
             retrieved_context=[
                 {"content": "Property info here", "metadata": {"category": "property"}, "score": 0.9}
             ],
-            **extra,
         )
 
         with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
@@ -759,16 +769,9 @@ class TestSpecialistContract:
         mock_cb.is_open = True
         mock_cb.allow_request = AsyncMock(return_value=False)
 
-        # Comp agent profile gate runs BEFORE CB check in execute_specialist,
-        # so we need high completeness to reach the CB path
-        extra = {}
-        if agent_fn == "comp_agent":
-            extra["extracted_fields"] = _high_completeness_fields()
-
         state = _state(
             messages=[HumanMessage(content="What offers?")],
             retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-            **extra,
         )
 
         with patch(f"{agent_module}._get_circuit_breaker", return_value=mock_cb):
@@ -785,14 +788,9 @@ class TestSpecialistContract:
         mod = importlib.import_module(agent_module)
         fn = getattr(mod, agent_fn)
 
-        extra = {}
-        if agent_fn == "comp_agent":
-            extra["extracted_fields"] = _high_completeness_fields()
-
         state = _state(
             messages=[HumanMessage(content="Tell me about the moon")],
             retrieved_context=[],
-            **extra,
         )
         result = await fn(state)
         assert result.get("skip_validation") is True
@@ -810,16 +808,11 @@ class TestSpecialistContract:
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad structured output"))
 
-        extra = {}
-        if agent_fn == "comp_agent":
-            extra["extracted_fields"] = _high_completeness_fields()
-
         state = _state(
             messages=[HumanMessage(content="Question about property")],
             retrieved_context=[
                 {"content": "Some data", "metadata": {"category": "general"}, "score": 0.9}
             ],
-            **extra,
         )
 
         with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
@@ -842,16 +835,11 @@ class TestSpecialistContract:
             side_effect=httpx.ConnectError("Connection refused")
         )
 
-        extra = {}
-        if agent_fn == "comp_agent":
-            extra["extracted_fields"] = _high_completeness_fields()
-
         state = _state(
             messages=[HumanMessage(content="Question about property")],
             retrieved_context=[
                 {"content": "Some data", "metadata": {"category": "general"}, "score": 0.9}
             ],
-            **extra,
         )
 
         with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):
@@ -871,16 +859,11 @@ class TestSpecialistContract:
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(side_effect=asyncio.TimeoutError())
 
-        extra = {}
-        if agent_fn == "comp_agent":
-            extra["extracted_fields"] = _high_completeness_fields()
-
         state = _state(
             messages=[HumanMessage(content="Question about property")],
             retrieved_context=[
                 {"content": "Some data", "metadata": {"category": "general"}, "score": 0.9}
             ],
-            **extra,
         )
 
         with patch(f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm):

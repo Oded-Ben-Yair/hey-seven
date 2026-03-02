@@ -269,6 +269,14 @@ _SELF_HARM_PATTERNS = [
     regex_engine.compile(r"\bquiero\s+(?:morir|matarme|acabar\s+con\s+todo)\b", re.I),
     regex_engine.compile(r"\bsuicid(?:io|arme)\b", re.I),
     regex_engine.compile(r"\bno\s+(?:quiero|vale\s+la\s+pena)\s+vivir\b", re.I),
+    # R77 fix: Additional Spanish crisis patterns
+    regex_engine.compile(r"\bme\s+quiero\s+morir\b", re.I),  # "me quiero morir" (prefix "me" not captured by existing pattern)
+    regex_engine.compile(r"\bacabar\s+con\s+todo\b", re.I),  # standalone "acabar con todo" without "quiero" prefix
+    regex_engine.compile(r"\bno\s+puedo\s+m[aá]s\b", re.I),  # "no puedo más" / "no puedo mas"
+    regex_engine.compile(r"\bya\s+no\s+aguanto\b", re.I),  # "ya no aguanto"
+    regex_engine.compile(r"\bno\s+quiero\s+seguir\b", re.I),  # "no quiero seguir" (don't want to go on)
+    regex_engine.compile(r"\bme\s+quiero\s+(?:matar|hacer\s+daño)\b", re.I),  # "me quiero matar/hacer daño"
+    regex_engine.compile(r"\bno\s+(?:le\s+)?veo\s+sentido\s+(?:a\s+(?:la\s+)?vida|a\s+nada)\b", re.I),  # "no le veo sentido a la vida"
     # Tagalog
     regex_engine.compile(r"\bgusto\s+(?:ko\s+)?(?:na\s+)?(?:mag(?:pakamatay|sakit)|mamatay)\b", re.I),
     # Chinese/Mandarin
@@ -757,7 +765,20 @@ def detect_responsible_gaming(message: str) -> bool:
 
 
 def detect_age_verification(message: str) -> bool:
-    """Check if user message involves underage guests or age verification."""
+    """Check if user message involves underage guests or age verification.
+
+    R77 fix: Excludes messages with allergy/dietary context to prevent false
+    positives. "My kid has a peanut allergy" should route to property_qa
+    (dining specialist), not age_verification.
+    """
+    # R77 fix: Allergy/dietary exclusion — if the message contains allergy
+    # keywords AND the match is "my kid/child/son/daughter", the intent is
+    # dietary safety, not age verification. Check allergy context first.
+    _ALLERGY_KEYWORDS = ("allerg", "celiac", "gluten", "lactose", "epipen", "anaphyla", "dietary", "intoleran")
+    msg_lower = message.lower()
+    if any(kw in msg_lower for kw in _ALLERGY_KEYWORDS):
+        logger.info("Age verification skipped: allergy/dietary context detected")
+        return False
     return _check_patterns(message, _AGE_VERIFICATION_PATTERNS, "Age verification", "info")
 
 

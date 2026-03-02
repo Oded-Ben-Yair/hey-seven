@@ -46,6 +46,11 @@ _IMMEDIATE_PATTERNS: list[re.Pattern] = [
     # Immediate danger
     re.compile(r"(?i)\b(?:I'?m\s+(?:on|at)\s+(?:the|a)\s+(?:bridge|ledge|roof|edge))\b", re.IGNORECASE),
     re.compile(r"(?i)\b(?:saying\s+goodbye|this\s+is\s+goodbye|writing\s+my\s+note)\b", re.IGNORECASE),
+    # R77 fix: Spanish immediate crisis patterns
+    re.compile(r"(?i)\b(?:me\s+)?(?:voy|quiero)\s+a?\s*(?:matar(?:me)?|quitar(?:me)?\s+la\s+vida)", re.IGNORECASE),
+    re.compile(r"(?i)\bno\s+quiero\s+(?:vivir|seguir\s+(?:viviendo|aquí))\b", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:mejor\s+(?:muerto|muerta)|(?:me\s+)?(?:quiero|voy\s+a)\s+morir)\b", re.IGNORECASE),
+    re.compile(r"(?i)\bacabar\s+con\s+todo\b", re.IGNORECASE),
 ]
 
 # URGENT: Strong distress — requires direct resource provision
@@ -62,6 +67,12 @@ _URGENT_PATTERNS: list[re.Pattern] = [
     # Substance abuse crisis
     re.compile(r"(?i)\b(?:too\s+drunk\s+to|can'?t\s+(?:stand|walk|see|think)\s+straight)\b", re.IGNORECASE),
     re.compile(r"(?i)\b(?:blacked?\s+out|passed?\s+out|need\s+(?:medical|an?\s+ambulance))\b", re.IGNORECASE),
+    # R77 fix: Spanish urgent crisis patterns
+    re.compile(r"(?i)\b(?:no\s+puedo\s+m[aá]s|ya\s+no\s+aguanto)\b", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:perd[ií]\s+todo|arruiné\s+(?:mi|nuestra)\s+(?:vida|familia|matrimonio))\b", re.IGNORECASE),
+    re.compile(r"(?i)\bno\s+tengo\s+(?:dinero|plata)\s+(?:para|ni\s+para)\b", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:hacerme|me\s+hago)\s+daño\b", re.IGNORECASE),
+    re.compile(r"(?i)\bno\s+(?:le\s+)?veo\s+sentido\b", re.IGNORECASE),
 ]
 
 # CONCERN: Mild distress — empathy + gentle resource mention
@@ -78,6 +89,11 @@ _CONCERN_PATTERNS: list[re.Pattern] = [
     # Financial stress (non-desperate)
     re.compile(r"(?i)\b(?:spent\s+(?:too\s+much|more\s+than|all\s+my)|over\s+budget|maxed\s+out)\b", re.IGNORECASE),
     re.compile(r"(?i)\b(?:shouldn'?t\s+(?:have\s+)?(?:bet|gambled|played)\s+(?:that\s+much|so\s+much))\b", re.IGNORECASE),
+    # R77 fix: Spanish concern patterns
+    re.compile(r"(?i)\b(?:necesito\s+(?:recuperar|ganar)\s+(?:lo\s+que\s+)?perd[ií]|recuperar\s+mi\s+dinero)\b", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:llevo\s+(?:todo\s+el\s+d[ií]a|toda\s+la\s+noche|horas?)\s+(?:aqu[ií]|jugando))\b", re.IGNORECASE),
+    re.compile(r"(?i)\b(?:gast[eé]\s+(?:demasiado|todo|m[aá]s\s+de\s+lo\s+que))\b", re.IGNORECASE),
+    re.compile(r"(?i)\bno\s+(?:puedo|deber[ií]a)\s+(?:parar|dejar)\s+de\s+jugar\b", re.IGNORECASE),
 ]
 
 

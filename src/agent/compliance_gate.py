@@ -397,6 +397,38 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
         )
         return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
 
+    # 7.9 Confirmation/acknowledgment detection — R77 fix for fallback rate.
+    # Short confirmations ("great", "sounds good", "we'll do that") should NOT
+    # route through RAG retrieval. They contain no question, so RAG returns
+    # irrelevant context -> validator rejects -> fallback. Instead, route to
+    # greeting node which handles with a simple acknowledgment.
+    _CONFIRMATION_PATTERNS = (
+        "great", "perfect", "thanks", "thank you", "sounds good",
+        "sounds great", "awesome", "cool", "ok", "okay", "sure",
+        "will do", "we'll do that", "let's do that", "got it",
+        "good to know", "noted", "appreciate it", "that works",
+        "that's great", "that's perfect", "wonderful", "excellent",
+        "nice", "sweet", "bet", "for sure", "alright",
+    )
+    # Only match if the ENTIRE message is a short confirmation (< 8 words).
+    # Longer messages like "Great, now what about dinner?" have real questions.
+    if len(user_message.split()) < 8:
+        msg_stripped = msg_lower.strip().rstrip("!.?")
+        if msg_stripped in _CONFIRMATION_PATTERNS or any(
+            msg_stripped.startswith(p) for p in ("thanks ", "thank you", "great ", "perfect ", "sounds ")
+        ):
+            logger.info(
+                json.dumps({
+                    "audit_event": "guardrail_triggered",
+                    "category": "confirmation_detection",
+                    "query_type": "greeting",
+                    "timestamp": time.time(),
+                    "action": "shortcut",
+                    "severity": "INFO",
+                })
+            )
+            return {"query_type": "greeting", "router_confidence": 1.0}
+
     # 8. Semantic injection — LLM second layer (configurable, fail-closed).
     # Runs AFTER all deterministic guardrails to ensure safety-critical
     # responses (helplines, age info, BSA/AML refusal) are never blocked

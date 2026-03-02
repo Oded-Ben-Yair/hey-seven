@@ -284,8 +284,9 @@ class TestGuardrailPatternCount:
         # R52: Migrated from re.compile() to regex_engine.compile() for re2 ReDoS protection.
         patterns = re.findall(r"regex_engine\.compile\(", source)
         # R49: 185 -> 204 (added 6 Mandarin injection + 14 self-harm + 5 Mandarin non-Latin injection patterns)
-        assert len(patterns) == 204, (
-            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 204. "
+        # R77: 204 -> 211 (added 7 Spanish self-harm patterns)
+        assert len(patterns) == 211, (
+            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 211. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -515,7 +516,7 @@ class TestDeterministicD7:
         from src.agent import guardrails
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"regex_engine\.compile\(", source)
-        assert len(patterns) == 204
+        assert len(patterns) == 211  # R77: 204 + 7 Spanish self-harm patterns
 
     def test_six_guardrail_categories(self):
         """All 6 guardrail categories exist and are non-empty."""

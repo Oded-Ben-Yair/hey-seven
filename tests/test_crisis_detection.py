@@ -37,6 +37,37 @@ class TestImmediateCrisis:
         assert detect_crisis_level("I don't want to exist anymore") == "immediate"
 
 
+class TestImmediateCrisisSpanish:
+    """R77: Spanish messages that should trigger IMMEDIATE crisis level."""
+
+    def test_me_quiero_morir(self):
+        assert detect_crisis_level("Me quiero morir") == "immediate"
+
+    def test_no_quiero_vivir(self):
+        assert detect_crisis_level("No quiero vivir") == "immediate"
+
+    def test_mejor_muerto(self):
+        assert detect_crisis_level("Estaria mejor muerto") == "immediate"
+
+    def test_voy_a_matarme(self):
+        assert detect_crisis_level("Me voy a matar") == "immediate"
+
+    def test_acabar_con_todo(self):
+        assert detect_crisis_level("Quiero acabar con todo") == "immediate"
+
+    def test_no_quiero_seguir_viviendo(self):
+        assert detect_crisis_level("No quiero seguir viviendo") == "immediate"
+
+    def test_quitarme_la_vida(self):
+        assert detect_crisis_level("Voy a quitarme la vida") == "immediate"
+
+    def test_mejor_muerta(self):
+        assert detect_crisis_level("Estoy mejor muerta") == "immediate"
+
+    def test_voy_a_morir(self):
+        assert detect_crisis_level("Me voy a morir") == "immediate"
+
+
 class TestUrgentCrisis:
     """Messages that should trigger URGENT crisis level."""
 
@@ -71,6 +102,37 @@ class TestUrgentCrisis:
         assert detect_crisis_level("I've ruined my marriage with gambling") == "urgent"
 
 
+class TestUrgentCrisisSpanish:
+    """R77: Spanish messages that should trigger URGENT crisis level."""
+
+    def test_no_puedo_mas(self):
+        assert detect_crisis_level("No puedo mas con esto") == "urgent"
+
+    def test_ya_no_aguanto(self):
+        assert detect_crisis_level("Ya no aguanto esta situacion") == "urgent"
+
+    def test_perdi_todo(self):
+        assert detect_crisis_level("Perdi todo en el casino") == "urgent"
+
+    def test_arruine_mi_vida(self):
+        assert detect_crisis_level("Arruiné mi vida con el juego") == "urgent"
+
+    def test_arruine_mi_matrimonio(self):
+        assert detect_crisis_level("Arruiné mi matrimonio") == "urgent"
+
+    def test_no_tengo_dinero_para(self):
+        assert detect_crisis_level("No tengo dinero para el hotel") == "urgent"
+
+    def test_hacerme_dano(self):
+        assert detect_crisis_level("Tengo ganas de hacerme daño") == "urgent"
+
+    def test_no_veo_sentido(self):
+        assert detect_crisis_level("No le veo sentido a nada") == "urgent"
+
+    def test_no_puedo_mas_accent(self):
+        assert detect_crisis_level("No puedo más") == "urgent"
+
+
 class TestConcernCrisis:
     """Messages that should trigger CONCERN crisis level."""
 
@@ -103,6 +165,34 @@ class TestConcernCrisis:
 
     def test_need_credit(self):
         assert detect_crisis_level("Can I get a credit advance?") == "concern"
+
+
+class TestConcernCrisisSpanish:
+    """R77: Spanish messages that should trigger CONCERN crisis level."""
+
+    def test_necesito_recuperar(self):
+        assert detect_crisis_level("Necesito recuperar lo que perdi") == "concern"
+
+    def test_recuperar_mi_dinero(self):
+        assert detect_crisis_level("Necesito recuperar mi dinero") == "concern"
+
+    def test_llevo_todo_el_dia(self):
+        assert detect_crisis_level("Llevo todo el dia jugando") == "concern"
+
+    def test_llevo_horas_aqui(self):
+        assert detect_crisis_level("Llevo horas aqui en las maquinas") == "concern"
+
+    def test_gaste_demasiado(self):
+        assert detect_crisis_level("Gaste demasiado hoy") == "concern"
+
+    def test_gaste_todo(self):
+        assert detect_crisis_level("Gasté todo lo que traje") == "concern"
+
+    def test_no_puedo_parar_de_jugar(self):
+        assert detect_crisis_level("No puedo parar de jugar") == "concern"
+
+    def test_no_deberia_dejar_de_jugar(self):
+        assert detect_crisis_level("No deberia dejar de jugar pero no puedo") == "concern"
 
 
 class TestNoCrisis:

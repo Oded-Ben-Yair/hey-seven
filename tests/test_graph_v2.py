@@ -664,7 +664,7 @@ class TestSpecialistDispatchIntegration:
 
     @pytest.mark.asyncio
     async def test_gaming_context_dispatches_through_comp_agent(self):
-        """Gaming-category context with high completeness routes through comp_agent."""
+        """Gaming-category context routes through comp_agent (R77: no profile gate)."""
         from unittest.mock import AsyncMock, patch as mock_patch
 
         from src.agent.graph import _dispatch_to_specialist
@@ -684,7 +684,6 @@ class TestSpecialistDispatchIntegration:
                 {"content": "Casino floor features 5000+ slot machines",
                  "metadata": {"category": "gaming"}, "score": 0.88},
             ],
-            extracted_fields=_high_completeness_fields(),
         )
 
         with (
