@@ -351,30 +351,41 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
             "profiling_question_injected": False,
         }
 
-        # Inject profiling question from whisper plan (if available)
+        # R78 fix: Inject profiling question by REPLACING the last AI message
+        # (preserving its id so the add_messages reducer replaces, not appends).
+        # The profiling question injection in _base.py is the primary path --
+        # this is the fallback for when the LLM ignores the system prompt guidance.
         whisper = state.get("whisper_plan")
         if whisper and whisper.get("next_profiling_question"):
             question = whisper["next_profiling_question"]
             technique = whisper.get("question_technique", "none")
 
-            # Only inject if technique is not "none" and we have an AI response to append to
+            # Only inject if technique is not "none" and we have an AI response
             if technique != "none" and ai_response:
-                # Find the last AI message and append the question naturally
-                updated_messages = []
-                for msg in reversed(messages):
-                    if isinstance(msg, AIMessage) and msg.content:
-                        original = msg.content if isinstance(msg.content, str) else str(msg.content)
-                        # Append question with a natural bridge
-                        enriched = f"{original}\n\n{question}"
-                        updated_messages.append(AIMessage(content=enriched))
-                        result["messages"] = updated_messages
-                        result["profiling_question_injected"] = True
-                        logger.info(
-                            "Profiling question injected (technique=%s, phase=%s)",
-                            technique,
-                            phase,
-                        )
-                        break
+                # Check if the question is already in the response (from system prompt injection)
+                if question.lower().rstrip("?") not in ai_response.lower():
+                    # Find the last AI message and replace it with enriched version
+                    for msg in reversed(messages):
+                        if isinstance(msg, AIMessage) and msg.content:
+                            original = msg.content if isinstance(msg.content, str) else str(msg.content)
+                            enriched = f"{original}\n\n{question}"
+                            # Use the same id to trigger replacement in add_messages reducer
+                            replacement = AIMessage(content=enriched, id=msg.id)
+                            result["messages"] = [replacement]
+                            result["profiling_question_injected"] = True
+                            logger.info(
+                                "Profiling question injected via message replacement (technique=%s, phase=%s)",
+                                technique,
+                                phase,
+                            )
+                            break
+                else:
+                    # LLM already included the question from system prompt
+                    result["profiling_question_injected"] = True
+                    logger.info(
+                        "Profiling question already in response from system prompt (technique=%s)",
+                        technique,
+                    )
 
         return result
 

@@ -51,6 +51,10 @@ def build_handoff_request(
 ) -> HandoffRequest:
     """Build a structured handoff request with guest context.
 
+    R78 fix P9: Now uses format_handoff_summary for richer guest context
+    in handoff summaries. Falls back to inline extraction if the formatter
+    returns empty (e.g., no profiling data accumulated yet).
+
     Args:
         department: Target department for the handoff.
         reason: Why the handoff is needed.
@@ -61,18 +65,25 @@ def build_handoff_request(
     Returns:
         HandoffRequest ready for SSE emission.
     """
-    summary_parts = []
+    guest_summary = ""
     if extracted_fields:
-        if extracted_fields.get("name"):
-            summary_parts.append(f"Guest: {extracted_fields['name']}")
-        if extracted_fields.get("party_size"):
-            summary_parts.append(f"Party size: {extracted_fields['party_size']}")
-        if extracted_fields.get("occasion"):
-            summary_parts.append(f"Occasion: {extracted_fields['occasion']}")
-        if extracted_fields.get("loyalty_signal"):
-            summary_parts.append(f"Loyalty: {extracted_fields['loyalty_signal']}")
+        from src.agent.extraction import format_handoff_summary
 
-    guest_summary = " | ".join(summary_parts) if summary_parts else ""
+        guest_summary = format_handoff_summary(extracted_fields)
+
+        # Fallback to inline summary if format_handoff_summary returns empty
+        # (can happen if fields don't match the formatter's expected keys)
+        if not guest_summary:
+            summary_parts: list[str] = []
+            if extracted_fields.get("name"):
+                summary_parts.append(f"Guest: {extracted_fields['name']}")
+            if extracted_fields.get("party_size"):
+                summary_parts.append(f"Party size: {extracted_fields['party_size']}")
+            if extracted_fields.get("occasion"):
+                summary_parts.append(f"Occasion: {extracted_fields['occasion']}")
+            if extracted_fields.get("loyalty_signal"):
+                summary_parts.append(f"Loyalty: {extracted_fields['loyalty_signal']}")
+            guest_summary = " | ".join(summary_parts) if summary_parts else ""
 
     return HandoffRequest(
         department=department,

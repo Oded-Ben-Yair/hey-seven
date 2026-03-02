@@ -678,6 +678,75 @@ class TestProfilingTechniquePrompts:
 
 
 # ---------------------------------------------------------------------------
+# R78: Message replacement tests (id-based replacement instead of append)
+# ---------------------------------------------------------------------------
+
+
+class TestR78MessageReplacement:
+    """R78 fix: profiling question injection uses ID-based message replacement."""
+
+    @pytest.mark.asyncio
+    async def test_replacement_preserves_message_id(self):
+        """The replacement AIMessage must have the same id as the original."""
+        state = _build_state(
+            user_msg="What restaurants do you have?",
+            ai_msg="We have several great restaurants.",
+            whisper_plan={
+                "next_profiling_question": "Are you looking for casual or upscale?",
+                "question_technique": "give_to_get",
+            },
+        )
+        # Get the original AI message id
+        original_ai = [m for m in state["messages"] if isinstance(m, AIMessage)][0]
+        original_id = original_ai.id
+
+        extraction = ProfileExtractionOutput()
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=extraction,
+        )
+
+        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+            result = await profiling_enrichment_node(state)
+
+        assert result["profiling_question_injected"] is True
+        assert "messages" in result
+        # Verify replacement uses the original message's id
+        replacement_msgs = result["messages"]
+        assert len(replacement_msgs) == 1
+        assert replacement_msgs[0].id == original_id
+        # Verify the question was appended to the content
+        assert "casual or upscale" in replacement_msgs[0].content
+        assert "We have several great restaurants." in replacement_msgs[0].content
+
+    @pytest.mark.asyncio
+    async def test_skips_injection_when_question_already_in_response(self):
+        """R78: If the LLM already included the question, don't duplicate it."""
+        question = "Are you looking for casual or upscale?"
+        state = _build_state(
+            user_msg="What restaurants do you have?",
+            ai_msg=f"We have several great restaurants. {question}",
+            whisper_plan={
+                "next_profiling_question": question,
+                "question_technique": "give_to_get",
+            },
+        )
+        extraction = ProfileExtractionOutput()
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=extraction,
+        )
+
+        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+            result = await profiling_enrichment_node(state)
+
+        # Should still mark as injected (the LLM did it via system prompt)
+        assert result["profiling_question_injected"] is True
+        # But should NOT have modified messages (no replacement needed)
+        assert "messages" not in result
+
+
+# ---------------------------------------------------------------------------
 # IncentiveEngine
 # ---------------------------------------------------------------------------
 

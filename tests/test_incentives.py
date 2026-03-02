@@ -184,18 +184,20 @@ class TestPerCasinoIsolation:
 
     def test_mohegan_sun_rules(self):
         engine = IncentiveEngine("mohegan_sun")
-        assert len(engine.rules) == 3
+        assert len(engine.rules) == 4  # R78: added profile_completeness_50
         triggers = {r.trigger_field for r in engine.rules}
         assert "birthday" in triggers
         assert "profile_completeness_75" in triggers
+        assert "profile_completeness_50" in triggers
         assert "anniversary" in triggers
 
     def test_foxwoods_rules(self):
         engine = IncentiveEngine("foxwoods")
-        assert len(engine.rules) == 2
+        assert len(engine.rules) == 3  # R78: added profile_completeness_50
         triggers = {r.trigger_field for r in engine.rules}
         assert "birthday" in triggers
         assert "profile_completeness_75" in triggers
+        assert "profile_completeness_50" in triggers
 
     def test_hard_rock_has_gaming_preference(self):
         engine = IncentiveEngine("hard_rock_ac")
@@ -430,3 +432,63 @@ class TestImmutability:
     def test_all_casinos_present(self):
         expected = {"mohegan_sun", "foxwoods", "parx_casino", "wynn_las_vegas", "hard_rock_ac"}
         assert set(INCENTIVE_RULES.keys()) == expected
+
+
+# ---------------------------------------------------------------------------
+# R78: profile_completeness_50 and occasion-based birthday triggers
+# ---------------------------------------------------------------------------
+
+
+class TestR78LowerThresholdTriggers:
+    """R78 fix: lower threshold and occasion-based incentive triggers."""
+
+    def test_completeness_50_fires_at_half(self):
+        engine = IncentiveEngine("mohegan_sun")
+        applicable = engine.get_applicable_incentives(
+            profile_completeness=0.55,
+            extracted_fields={},
+        )
+        triggers = {r.trigger_field for r in applicable}
+        assert "profile_completeness_50" in triggers
+
+    def test_completeness_50_does_not_fire_below(self):
+        engine = IncentiveEngine("mohegan_sun")
+        applicable = engine.get_applicable_incentives(
+            profile_completeness=0.40,
+            extracted_fields={},
+        )
+        triggers = {r.trigger_field for r in applicable}
+        assert "profile_completeness_50" not in triggers
+
+    def test_birthday_fires_from_occasion_field(self):
+        engine = IncentiveEngine("mohegan_sun")
+        applicable = engine.get_applicable_incentives(
+            profile_completeness=0.0,
+            extracted_fields={"occasion": "birthday"},
+        )
+        triggers = {r.trigger_field for r in applicable}
+        assert "birthday" in triggers
+
+    def test_birthday_fires_from_birthday_field(self):
+        engine = IncentiveEngine("mohegan_sun")
+        applicable = engine.get_applicable_incentives(
+            profile_completeness=0.0,
+            extracted_fields={"birthday": "March 15"},
+        )
+        triggers = {r.trigger_field for r in applicable}
+        assert "birthday" in triggers
+
+    def test_birthday_does_not_fire_without_signal(self):
+        engine = IncentiveEngine("mohegan_sun")
+        applicable = engine.get_applicable_incentives(
+            profile_completeness=0.0,
+            extracted_fields={"name": "Mike"},
+        )
+        triggers = {r.trigger_field for r in applicable}
+        assert "birthday" not in triggers
+
+    def test_all_casinos_have_50_threshold(self):
+        for casino_id in INCENTIVE_RULES:
+            engine = IncentiveEngine(casino_id)
+            triggers = {r.trigger_field for r in engine.rules}
+            assert "profile_completeness_50" in triggers, f"{casino_id} missing profile_completeness_50"

@@ -360,3 +360,83 @@ async def extract_fields_augmented(
     except Exception:
         logger.debug("LLM extraction augmentation failed, using regex result", exc_info=True)
         return regex_result
+
+
+# ---------------------------------------------------------------------------
+# R78 P9: Structured handoff summary for human casino hosts
+# ---------------------------------------------------------------------------
+
+
+def format_handoff_summary(extracted_fields: dict[str, Any]) -> str:
+    """Format guest profile into a structured handoff summary for human hosts.
+
+    R78 fix P9: Produces actionable handoff notes when the AI agent transitions
+    to a human host (crisis escalation, persistent frustration, complex requests).
+
+    Args:
+        extracted_fields: Accumulated profile fields from profiling extraction.
+
+    Returns:
+        Formatted markdown summary, or empty string if no fields available.
+    """
+    if not extracted_fields:
+        return ""
+
+    sections: list[str] = ["**Guest Handoff Summary**"]
+
+    # Identity
+    if extracted_fields.get("name"):
+        sections.append(f"- **Guest**: {extracted_fields['name']}")
+    if extracted_fields.get("party_size"):
+        sections.append(f"- **Party size**: {extracted_fields['party_size']}")
+    if extracted_fields.get("party_composition"):
+        sections.append(f"- **Party**: {extracted_fields['party_composition']}")
+
+    # Visit context
+    if extracted_fields.get("visit_purpose"):
+        sections.append(f"- **Visit purpose**: {extracted_fields['visit_purpose']}")
+    if extracted_fields.get("occasion"):
+        sections.append(f"- **Occasion**: {extracted_fields['occasion']}")
+    if extracted_fields.get("visit_duration"):
+        sections.append(f"- **Duration**: {extracted_fields['visit_duration']}")
+    if extracted_fields.get("visit_date"):
+        sections.append(f"- **Visit date**: {extracted_fields['visit_date']}")
+
+    # Preferences
+    prefs: list[str] = []
+    if extracted_fields.get("preferences"):
+        prefs.append(f"Dining: {extracted_fields['preferences']}")
+    if extracted_fields.get("dietary"):
+        prefs.append(f"Dietary: {extracted_fields['dietary']}")
+    if extracted_fields.get("gaming"):
+        prefs.append(f"Gaming: {extracted_fields['gaming']}")
+    if extracted_fields.get("entertainment"):
+        prefs.append(f"Entertainment: {extracted_fields['entertainment']}")
+    if extracted_fields.get("spa"):
+        prefs.append(f"Spa: {extracted_fields['spa']}")
+    if prefs:
+        sections.append("- **Preferences**: " + "; ".join(prefs))
+
+    # Loyalty
+    if extracted_fields.get("loyalty_tier"):
+        sections.append(f"- **Loyalty tier**: {extracted_fields['loyalty_tier']}")
+    if extracted_fields.get("loyalty_signal"):
+        sections.append(f"- **Loyalty signal**: {extracted_fields['loyalty_signal']}")
+    if extracted_fields.get("visit_frequency"):
+        sections.append(f"- **Visit frequency**: {extracted_fields['visit_frequency']}")
+
+    # Behavioral signals
+    signals: list[str] = []
+    if extracted_fields.get("urgency"):
+        signals.append("time-constrained")
+    if extracted_fields.get("fatigue"):
+        signals.append("fatigued/travel-weary")
+    if extracted_fields.get("budget_conscious"):
+        signals.append("budget-conscious")
+    if signals:
+        sections.append("- **Behavioral signals**: " + ", ".join(signals))
+
+    if len(sections) <= 1:
+        return ""
+
+    return "\n".join(sections)

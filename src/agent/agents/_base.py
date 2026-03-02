@@ -597,6 +597,30 @@ async def execute_specialist(
         if context_parts:
             system_prompt += "\n\n## Guest Context\n" + "\n".join(context_parts)
 
+    # R79: Inject accumulated profiling data (extracted_fields) as additional context.
+    # This data comes from the profiling enrichment node and is more comprehensive
+    # than guest_context (which only has user-submitted form data).
+    if not guest_context:  # Don't double-inject if guest_context already covered it
+        _profile_fields = state.get("extracted_fields") or {}
+        if _profile_fields:
+            profile_parts: list[str] = []
+            if _profile_fields.get("name"):
+                profile_parts.append(f"- Guest name: {_profile_fields['name']}")
+            if _profile_fields.get("party_size"):
+                profile_parts.append(f"- Party size: {_profile_fields['party_size']}")
+            if _profile_fields.get("visit_purpose"):
+                profile_parts.append(f"- Visit purpose: {_profile_fields['visit_purpose']}")
+            if _profile_fields.get("preferences"):
+                profile_parts.append(f"- Dining preferences: {_profile_fields['preferences']}")
+            if _profile_fields.get("occasion"):
+                profile_parts.append(f"- Occasion: {_profile_fields['occasion']}")
+            if _profile_fields.get("dietary"):
+                profile_parts.append(f"- Dietary restrictions: {_profile_fields['dietary']}")
+            if _profile_fields.get("budget_signal"):
+                profile_parts.append(f"- Budget: {_profile_fields['budget_signal']}")
+            if profile_parts:
+                system_prompt += "\n\n## Guest Profile (from conversation)\n" + "\n".join(profile_parts)
+
     # Inject whisper planner guidance
     if include_whisper:
         whisper_guidance = format_whisper_plan(state.get("whisper_plan"))
@@ -642,7 +666,9 @@ async def execute_specialist(
         if profile_summary:
             system_prompt += f"\n\n## {profile_summary}"
 
-        # Inject profiling question guidance from whisper plan
+        # R78 fix: Inject profiling question guidance from whisper plan.
+        # Strengthened from "weave naturally" (ignored by LLM 90%+ of the time)
+        # to explicit mandatory instruction with format guidance.
         whisper = state.get("whisper_plan")
         if whisper and whisper.get("next_profiling_question"):
             technique = whisper.get("question_technique", "none")
@@ -652,9 +678,16 @@ async def execute_specialist(
                 technique_guide = PROFILING_TECHNIQUE_PROMPTS.get(technique, "")
                 question = whisper["next_profiling_question"]
                 system_prompt += (
-                    "\n\n## Profiling Question (weave naturally — max 1 per response)\n"
-                    f"Question: {question}\n"
-                    f"Technique: {technique_guide}"
+                    "\n\n## REQUIRED: Ask This Question\n"
+                    "After answering the guest's question, you MUST include the following "
+                    "question naturally at the end of your response. Do NOT skip it.\n\n"
+                    f"Question to ask: \"{question}\"\n"
+                    f"Technique: {technique_guide}\n\n"
+                    "Format: Answer the guest's question first (2-3 sentences). Then add a "
+                    "natural transition and ask the question. Example format:\n"
+                    "[Your answer here]\n\n"
+                    "[Natural transition + question]\n\n"
+                    "If the guest is upset, rushed, or gave a one-word reply, SKIP the question."
                 )
 
     # R74 B4: Proactive suggestion injection via extracted helper.

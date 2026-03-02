@@ -41,7 +41,8 @@ class IncentiveRule(BaseModel):
     Attributes:
         trigger_field: Which profile field triggers this rule. One of:
             ``"birthday"``, ``"email"``, ``"gaming_preference"``,
-            ``"profile_completeness_75"``.
+            ``"profile_completeness_75"``, ``"profile_completeness_50"``,
+            ``"anniversary"``.
         incentive_type: Category of incentive. One of:
             ``"dining_credit"``, ``"free_play"``, ``"tier_points"``,
             ``"comp_upgrade"``.
@@ -102,6 +103,18 @@ _MOHEGAN_SUN_RULES: tuple[IncentiveRule, ...] = (
             "at $property_name to make it extra special."
         ),
     ),
+    # R78 fix: Lower threshold tier for early engagement
+    IncentiveRule(
+        trigger_field="profile_completeness_50",
+        incentive_type="tier_points",
+        incentive_value=5.0,
+        max_per_guest=1,
+        auto_approve_threshold=50.0,
+        framing_template=(
+            "Thanks for chatting with us! Here are $$$value bonus tier points "
+            "to use at $property_name."
+        ),
+    ),
 )
 
 _FOXWOODS_RULES: tuple[IncentiveRule, ...] = (
@@ -125,6 +138,16 @@ _FOXWOODS_RULES: tuple[IncentiveRule, ...] = (
         framing_template=(
             "Thanks for letting us get to know you! Here are $$$value bonus "
             "tier points for your rewards account at $property_name."
+        ),
+    ),
+    IncentiveRule(
+        trigger_field="profile_completeness_50",
+        incentive_type="tier_points",
+        incentive_value=5.0,
+        max_per_guest=1,
+        auto_approve_threshold=50.0,
+        framing_template=(
+            "Thanks for sharing! Here are $$$value bonus tier points at $property_name."
         ),
     ),
 )
@@ -152,6 +175,16 @@ _PARX_RULES: tuple[IncentiveRule, ...] = (
             "dining credit at $property_name."
         ),
     ),
+    IncentiveRule(
+        trigger_field="profile_completeness_50",
+        incentive_type="tier_points",
+        incentive_value=5.0,
+        max_per_guest=1,
+        auto_approve_threshold=50.0,
+        framing_template=(
+            "Thanks for chatting with us! Here are $$$value bonus tier points at $property_name."
+        ),
+    ),
 )
 
 _WYNN_RULES: tuple[IncentiveRule, ...] = (
@@ -175,6 +208,17 @@ _WYNN_RULES: tuple[IncentiveRule, ...] = (
         framing_template=(
             "Thank you for sharing your preferences. Please enjoy $$$value "
             "in complimentary play at $property_name."
+        ),
+    ),
+    IncentiveRule(
+        trigger_field="profile_completeness_50",
+        incentive_type="tier_points",
+        incentive_value=10.0,
+        max_per_guest=1,
+        auto_approve_threshold=50.0,
+        framing_template=(
+            "Thank you for sharing with us. Please enjoy $$$value bonus tier "
+            "points at $property_name."
         ),
     ),
 )
@@ -211,6 +255,16 @@ _HARD_ROCK_AC_RULES: tuple[IncentiveRule, ...] = (
         framing_template=(
             "Since you mentioned you enjoy $incentive_type, here's a $$$value "
             "free play bonus to try your luck at $property_name."
+        ),
+    ),
+    IncentiveRule(
+        trigger_field="profile_completeness_50",
+        incentive_type="tier_points",
+        incentive_value=5.0,
+        max_per_guest=1,
+        auto_approve_threshold=50.0,
+        framing_template=(
+            "Thanks for chatting! Here are $$$value bonus tier points at $property_name."
         ),
     ),
 )
@@ -280,13 +334,16 @@ class IncentiveEngine:
         """Return incentive rules whose trigger conditions are met.
 
         Trigger conditions:
-        - ``"birthday"``: ``extracted_fields`` contains a truthy ``birthday`` key.
+        - ``"birthday"``: ``extracted_fields`` contains a truthy ``birthday``
+          key OR ``occasion`` field contains "birthday" (R78 fix).
         - ``"email"``: ``extracted_fields`` contains a truthy ``email`` key.
         - ``"gaming_preference"``: ``extracted_fields`` contains a truthy
           ``gaming_preference`` key.
         - ``"anniversary"``: ``extracted_fields`` contains a truthy
           ``anniversary`` or ``occasion`` key with anniversary-related value.
         - ``"profile_completeness_75"``: ``profile_completeness >= 0.75``.
+        - ``"profile_completeness_50"``: ``profile_completeness >= 0.50``
+          (R78 fix: lower threshold for early engagement).
 
         Args:
             profile_completeness: Float 0.0-1.0 representing profile fill rate.
@@ -315,6 +372,12 @@ class IncentiveEngine:
         if trigger == "profile_completeness_75":
             return profile_completeness >= 0.75
 
+        # R78 fix: Lower threshold for early incentive engagement.
+        # Most conversations never reach 75% completeness, so a 50% tier
+        # ensures guests with moderate engagement still receive offers.
+        if trigger == "profile_completeness_50":
+            return profile_completeness >= 0.50
+
         if trigger == "anniversary":
             if extracted_fields.get("anniversary"):
                 return True
@@ -323,7 +386,19 @@ class IncentiveEngine:
                 return True
             return False
 
-        # Generic field presence check (birthday, email, gaming_preference, etc.)
+        # R78 fix: Occasion-based triggers fire when the occasion field
+        # matches, regardless of overall profile completeness. A guest
+        # mentioning "birthday" should trigger the birthday incentive
+        # immediately, not wait for 75% profile fill.
+        if trigger == "birthday":
+            if extracted_fields.get("birthday"):
+                return True
+            occasion = extracted_fields.get("occasion", "")
+            if isinstance(occasion, str) and "birthday" in occasion.lower():
+                return True
+            return False
+
+        # Generic field presence check (email, gaming_preference, etc.)
         return bool(extracted_fields.get(trigger))
 
     def format_incentive_offer(
