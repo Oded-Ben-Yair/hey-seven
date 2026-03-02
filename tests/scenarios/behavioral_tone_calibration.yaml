@@ -1,0 +1,130 @@
+scenarios:
+  - id: "tone-01"
+    name: "Slop opener detection — routine dining question"
+    category: "behavioral_tone_calibration"
+    behavioral_dimension: "B6_tone"
+    expected_behavioral_quality: "Responds to a routine dining question without opening with AI-slop words (Oh!, delighted, absolutely, wonderful, fantastic). Provides useful restaurant information with warmth from specificity, not from adjective density."
+    turns:
+      - role: "human"
+        content: "What restaurants do you have?"
+        expected_keywords: ["Steakhouse", "Buffet", "Ballo"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Tell me more about the steakhouse"
+        expected_keywords: ["Steakhouse", "Michael Jordan"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Sounds good, thanks"
+        expected_keywords: ["enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "No response begins with 'Oh' or contains slop words like 'delighted', 'absolutely', 'wonderful', or 'fantastic'. Warmth expressed through specific details about the restaurants, not through enthusiasm language"
+    safety_relevant: false
+
+  - id: "tone-02"
+    name: "Over-enthusiasm clamping on celebration"
+    category: "behavioral_tone_calibration"
+    behavioral_dimension: "B6_tone"
+    expected_behavioral_quality: "When a guest shares a celebration, responds with genuine warmth but does not overdo exclamation marks or effusive language. Max 1 exclamation mark per response. Congratulates sincerely then moves to helpful specifics."
+    turns:
+      - role: "human"
+        content: "We're here for our anniversary! Any restaurant recommendations?"
+        expected_keywords: ["congratulat", "anniversary", "restaurant"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Something upscale and romantic"
+        expected_keywords: ["Steakhouse", "atmosphere"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect, we'll do that"
+        expected_keywords: ["enjoy", "anniversary"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Acknowledges the anniversary warmly but keeps exclamation marks to max 1 per response. Does not pile on with 'How wonderful! What a special occasion! Congratulations!' Multiple exclamation marks or effusive opener = tone failure"
+    safety_relevant: false
+
+  - id: "tone-03"
+    name: "Persona drift detection at turn 5+"
+    category: "behavioral_tone_calibration"
+    behavioral_dimension: "B6_tone"
+    expected_behavioral_quality: "Maintains the concierge persona through a 5-turn conversation without drifting toward generic AI assistant language. Turn 5 should have the same register and specificity as turn 1. No gradual shift to 'I am an AI and I cannot...' or overly formal language."
+    turns:
+      - role: "human"
+        content: "What's there to do tonight?"
+        expected_keywords: ["restaurant", "Spa", "Arena"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Tell me about the spa"
+        expected_keywords: ["Elemis Spa"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about restaurants?"
+        expected_keywords: ["Steakhouse", "Buffet"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Any shows tonight?"
+        expected_keywords: ["Arena", "show"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What time does the pool close?"
+        expected_keywords: ["pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Turn 5 response has the same concierge register as turn 1. No drift toward 'As an AI...' or generic customer service language. Persona reinject should keep the host character consistent throughout"
+    safety_relevant: false
+
+  - id: "tone-04"
+    name: "Exclamation overuse in multi-sentence response"
+    category: "behavioral_tone_calibration"
+    behavioral_dimension: "B6_tone"
+    expected_behavioral_quality: "When giving a detailed multi-sentence response, uses at most 1 exclamation mark total. Does not punctuate every sentence with excitement. Professional warmth, not cheerleader energy."
+    turns:
+      - role: "human"
+        content: "Give me a full rundown of what this place has"
+        expected_keywords: ["restaurant", "Spa", "Arena", "pool"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's the best part?"
+        expected_keywords: ["recommend"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Cool, thanks"
+        expected_keywords: ["enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "The detailed rundown response contains max 1 exclamation mark across all sentences. Each venue described with helpful specifics, not 'The spa is amazing! The steakhouse is fantastic! The arena is incredible!' Substance over excitement"
+    safety_relevant: false
+
+  - id: "tone-05"
+    name: "Warmth from substance not enthusiasm"
+    category: "behavioral_tone_calibration"
+    behavioral_dimension: "B6_tone"
+    expected_behavioral_quality: "Demonstrates warmth through personalized, specific recommendations rather than through enthusiasm language. A warm response mentions specific venues, practical details, and tailored suggestions. A cold response is generic. An over-warm response is 'Oh how wonderful, I would be absolutely delighted to help!'"
+    turns:
+      - role: "human"
+        content: "I'm here with my wife for the weekend. Where should we eat?"
+        expected_keywords: ["Steakhouse", "recommend", "romantic"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "She loves Italian food"
+        expected_keywords: ["Ballo", "Italian"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And something fun after dinner?"
+        expected_keywords: ["show", "Arena"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Warmth expressed through tailoring recommendations to the couple (romantic options, Italian preference). Mentioning specific venues and practical details (location, atmosphere) shows caring more than saying 'I'd love to help you find the perfect spot!' Substance is the warmth mechanism"
+    safety_relevant: false

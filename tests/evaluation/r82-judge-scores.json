@@ -1,0 +1,193 @@
+{
+  "metadata": {
+    "round": "r82",
+    "date": "2026-03-02",
+    "judges": [
+      "gpt-5.2",
+      "grok-4"
+    ],
+    "note": "Gemini Pro unavailable (MCP key leaked). 2-model panel.",
+    "scenarios_scored": 20,
+    "total_scenarios": 109
+  },
+  "consensus": {
+    "B10_average": 4.7,
+    "gpt52_average": 4.2,
+    "grok4_average": 5.2,
+    "delta_from_r81": "+1.5 (from 3.2)"
+  },
+  "top_issues": [
+    "Fallback cascade on follow-ups (6/20 scenarios)",
+    "Greeting template on acknowledgments (3/20 scenarios)",
+    "Wrong routing: patron_privacy for non-privacy query (1/20)"
+  ],
+  "track3a_ceiling_test": {
+    "finding": "Gemini Pro answers directly where Flash falls back",
+    "recommendation": "Implement Flash\u2192Pro routing for complex/multi-turn queries",
+    "pro_advantage": "2+ points on synthesis, planning, and follow-up questions"
+  },
+  "gpt52_scores": [
+    {
+      "id": "1",
+      "B10": 1
+    },
+    {
+      "id": "2",
+      "B10": 7
+    },
+    {
+      "id": "3",
+      "B10": 2
+    },
+    {
+      "id": "4",
+      "B10": 2
+    },
+    {
+      "id": "5",
+      "B10": 2
+    },
+    {
+      "id": "6",
+      "B10": 7
+    },
+    {
+      "id": "7",
+      "B10": 8
+    },
+    {
+      "id": "8",
+      "B10": 7
+    },
+    {
+      "id": "9",
+      "B10": 8
+    },
+    {
+      "id": "10",
+      "B10": 7
+    },
+    {
+      "id": "11",
+      "B10": 7
+    },
+    {
+      "id": "12",
+      "B10": 0
+    },
+    {
+      "id": "13",
+      "B10": 6
+    },
+    {
+      "id": "14",
+      "B10": 0
+    },
+    {
+      "id": "15",
+      "B10": 5
+    },
+    {
+      "id": "16",
+      "B10": 1
+    },
+    {
+      "id": "17",
+      "B10": 4
+    },
+    {
+      "id": "18",
+      "B10": 8
+    },
+    {
+      "id": "19",
+      "B10": 2
+    },
+    {
+      "id": "20",
+      "B10": 2
+    }
+  ],
+  "grok4_scores": [
+    {
+      "id": "1",
+      "B10": 2
+    },
+    {
+      "id": "2",
+      "B10": 8
+    },
+    {
+      "id": "3",
+      "B10": 3
+    },
+    {
+      "id": "4",
+      "B10": 3
+    },
+    {
+      "id": "5",
+      "B10": 5
+    },
+    {
+      "id": "6",
+      "B10": 9
+    },
+    {
+      "id": "7",
+      "B10": 8
+    },
+    {
+      "id": "8",
+      "B10": 8
+    },
+    {
+      "id": "9",
+      "B10": 8
+    },
+    {
+      "id": "10",
+      "B10": 8
+    },
+    {
+      "id": "11",
+      "B10": 8
+    },
+    {
+      "id": "12",
+      "B10": 2
+    },
+    {
+      "id": "13",
+      "B10": 6
+    },
+    {
+      "id": "14",
+      "B10": 1
+    },
+    {
+      "id": "15",
+      "B10": 5
+    },
+    {
+      "id": "16",
+      "B10": 2
+    },
+    {
+      "id": "17",
+      "B10": 5
+    },
+    {
+      "id": "18",
+      "B10": 8
+    },
+    {
+      "id": "19",
+      "B10": 3
+    },
+    {
+      "id": "20",
+      "B10": 2
+    }
+  ]
+}
