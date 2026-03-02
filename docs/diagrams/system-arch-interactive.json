@@ -1,0 +1,220 @@
+{
+  "nodes": [
+    {
+      "id": "chat-frontend",
+      "type": "interactive",
+      "position": {"x": 50, "y": 50},
+      "data": {
+        "label": "Chat Frontend + SMS + CMS",
+        "category": "trigger",
+        "group": "frontend",
+        "details": "Three input channels feed the FastAPI backend:\n\n**Web Chat** (`static/index.html`): Vanilla HTML/JS chat widget using Server-Sent Events (SSE) for token-by-token streaming. Sends `POST /chat` with message + thread_id.\n\n**Telnyx SMS** (`src/sms/`): Inbound SMS webhook handler with TCPA/DNC compliance checking. Processes guest SMS messages and routes through the agent pipeline. Responses truncated to 160-char SMS segments via the persona envelope node.\n\n**Google Sheets CMS** (`src/cms/`): Webhook for content updates from Google Sheets. Allows property staff to update knowledge base content without code changes. Triggers re-ingestion when content changes.\n\nDesign: \"Build for one property, design for N\" -- all configuration externalized via pydantic-settings.",
+        "codeSnippet": "# static/index.html - SSE streaming chat\n# POST /chat -> EventSourceResponse (token-by-token)\n\n# src/sms/telnyx_client.py - Telnyx SMS integration\n# src/sms/compliance.py - TCPA/DNC compliance\n\n# src/cms/sheets_client.py - Google Sheets CMS\n# src/cms/webhook.py - Content update webhook",
+        "filePath": "static/index.html",
+        "stepIndex": 1,
+        "stepDescription": "Three input channels: web chat (SSE streaming), Telnyx SMS (with TCPA compliance), and Google Sheets CMS webhooks. All externalized via pydantic-settings for multi-property deployment."
+      }
+    },
+    {
+      "id": "fastapi-backend",
+      "type": "interactive",
+      "position": {"x": 400, "y": 50},
+      "data": {
+        "label": "FastAPI + ASGI Middleware",
+        "category": "process",
+        "group": "api",
+        "details": "FastAPI backend with pure ASGI middleware stack (no BaseHTTPMiddleware -- it breaks SSE streaming).\n\n**Middleware stack** (outermost to innermost):\n1. SecurityHeadersMiddleware -- HSTS, CSP, X-Content-Type-Options\n2. RateLimitMiddleware -- Per-client distributed rate limiting via Redis sorted set sliding window (atomic Lua script)\n3. RequestBodyLimitMiddleware -- Body size guard\n4. ApiKeyMiddleware -- API key authentication\n5. RequestLoggingMiddleware -- Structured request/response logging\n6. ErrorHandlingMiddleware -- Catch-all error handling\n\n**Endpoints**: `/chat` (SSE), `/health`, `/live`, `/metrics` (P50/P95/P99 latency), `/property`, `/graph`, `/sms/webhook`, `/cms/webhook`\n\n**Lifespan**: On startup, builds the LangGraph StateGraph and ingests property data into ChromaDB. On shutdown, graceful stream draining (SIGTERM handler with drain timeout < Cloud Run SIGKILL timeout).\n\n**Cache-Control + ETag** on cacheable endpoints (`/property`, `/graph`, `/health`) for efficient CDN caching.",
+        "codeSnippet": "# src/api/app.py\nfrom fastapi import FastAPI\nfrom sse_starlette.sse import EventSourceResponse\n\n# Pure ASGI middleware (NOT BaseHTTPMiddleware)\nfrom .middleware import (\n    ApiKeyMiddleware, ErrorHandlingMiddleware,\n    RateLimitMiddleware, RequestBodyLimitMiddleware,\n    RequestLoggingMiddleware, SecurityHeadersMiddleware,\n)",
+        "filePath": "src/api/app.py",
+        "stepIndex": 2,
+        "stepDescription": "FastAPI with 6 pure ASGI middleware layers handles SSE streaming, rate limiting (Redis sorted set), security headers, and graceful shutdown. Lifespan builds the graph and ingests data on startup."
+      }
+    },
+    {
+      "id": "compliance-gate",
+      "type": "interactive",
+      "position": {"x": 400, "y": 230},
+      "data": {
+        "label": "Compliance Gate (204 regex)",
+        "category": "gate",
+        "group": "graph-nodes",
+        "details": "Pre-router deterministic guardrail node. Zero LLM calls -- pure regex classification across 204 compiled patterns in 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).\n\n**5 guardrail layers** (priority order, first match wins):\n1. **Turn-limit guard**: If messages > MAX_MESSAGE_LIMIT (40), forces off_topic\n2. **Prompt injection** (`audit_input()`): 47 patterns (20 Latin + 27 non-Latin)\n3. **Responsible gaming** (`detect_responsible_gaming()`): 60 patterns across 10 languages\n4. **Age verification** (`detect_age_verification()`): 13 patterns incl. Hindi/Tagalog\n5. **BSA/AML** (`detect_bsa_aml()`): 47 patterns across 8 languages\n6. **Patron privacy** (`detect_patron_privacy()`): 18 patterns incl. Spanish/Tagalog\n7. **Crisis detection** (`detect_crisis()`): Graduated 4-level crisis escalation (ADR-025)\n8. **Grief/celebration** emotional context: Sets `guest_sentiment` pass-through annotation\n\nAll pass: `query_type=None` signals LLM router to classify. All patterns are re2-compatible (no backtracking, ReDoS-safe).\n\nStructured audit logging for every guardrail trigger (category, pattern matched, IP, timestamp).",
+        "codeSnippet": "# src/agent/compliance_gate.py\ndef compliance_gate_node(state: PropertyQAState) -> dict:\n    # 204 compiled regex patterns, 11 languages\n    if detect_prompt_injection(user_input):\n        return {\"query_type\": \"injection\", \"confidence\": 1.0}\n    if detect_responsible_gaming(user_input):\n        return {\"query_type\": \"gambling_advice\", \"confidence\": 1.0}\n    # All pass -> query_type=None -> LLM router",
+        "filePath": "src/agent/compliance_gate.py",
+        "stepIndex": 3,
+        "stepDescription": "The compliance gate runs 204 compiled regex patterns across 11 languages before any LLM call. It detects prompt injection, responsible gaming queries, age verification, BSA/AML, patron privacy, and crisis situations."
+      }
+    },
+    {
+      "id": "llm-router",
+      "type": "interactive",
+      "position": {"x": 100, "y": 400},
+      "data": {
+        "label": "LLM Router (Structured Output)",
+        "category": "process",
+        "group": "graph-nodes",
+        "details": "Classifies user intent into 7 categories using Gemini 2.5 Flash with Pydantic structured output.\n\n**Categories**: `property_qa`, `hours_schedule`, `greeting`, `off_topic`, `gambling_advice`, `action_request`, `ambiguous`.\n\nPlus 2 additional categories detected by compliance_gate upstream: `age_verification`, `patron_privacy` (9 total effective categories).\n\n**Implementation**: `llm.with_structured_output(RouterOutput)` produces `RouterOutput` Pydantic model with `query_type: Literal[...]` and `confidence: float` (0.0-1.0). No substring matching -- fully typed structured output.\n\n**VADER sentiment detection** with priority guard: If compliance_gate already set a priority sentiment (grief, celebration), VADER is skipped to prevent overwriting emotional context.\n\n**Routing rules**:\n- `greeting` -> greeting node\n- `off_topic/gambling/action` -> off_topic node\n- `confidence < 0.3` -> off_topic (low-confidence catch-all)\n- `property_qa/hours/ambiguous` -> retrieve node",
+        "codeSnippet": "# src/agent/state.py\nclass RouterOutput(BaseModel):\n    query_type: Literal[\"property_qa\", \"hours_schedule\", \"greeting\",\n                        \"off_topic\", \"gambling_advice\", \"action_request\", \"ambiguous\"]\n    confidence: float = Field(ge=0.0, le=1.0)\n\nrouter_llm = llm.with_structured_output(RouterOutput)",
+        "filePath": "src/agent/nodes.py",
+        "stepIndex": 4,
+        "stepDescription": "The LLM router classifies intent into 7 categories using Pydantic structured output (no substring matching). VADER sentiment detection respects priority sentiments set by the compliance gate."
+      }
+    },
+    {
+      "id": "rag-retrieval",
+      "type": "interactive",
+      "position": {"x": 400, "y": 400},
+      "data": {
+        "label": "RAG Retrieval (RRF + ChromaDB)",
+        "category": "data",
+        "group": "rag",
+        "details": "Multi-strategy retrieval with Reciprocal Rank Fusion (RRF) from ChromaDB vector store.\n\n**Retrieval strategies**:\n- `search_knowledge_base()`: (1) direct semantic search + (2) entity-augmented search (`{query} name location details`)\n- `search_hours()`: (1) schedule-augmented search + (2) direct semantic search\n\n**RRF fusion**: `sum(1/(k + rank))` across rankings (k=60 per original paper). Documents in multiple lists get boosted. Uses SHA-256 of content+source for document identity.\n\n**Ingestion** (`ingest.py` / `src/rag/pipeline.py`):\n- Per-item chunking for structured data (NOT text splitters)\n- SHA-256 content hashing for idempotent ingestion\n- Version-stamp purging for stale chunks (`_ingestion_version` metadata)\n- Category-specific formatters for richer embeddings\n- Pinned embedding model: `text-embedding-004`\n\n**Cosine similarity** with `RAG_MIN_RELEVANCE_SCORE=0.3` threshold. ChromaDB for local dev; Vertex AI Vector Search for production.\n\n**Gambling slang normalization** (`src/agent/slang.py`): Normalizes casino slang (\"comp me\", \"whale\", \"YOLO'd\") before search for better retrieval.",
+        "codeSnippet": "# src/rag/reranking.py\ndef _rerank_by_rrf(result_lists, top_k=5, k=60):\n    rrf_scores = {}\n    for results in result_lists:\n        for rank, (doc, score) in enumerate(results):\n            doc_id = hashlib.sha256(content+source).hexdigest()\n            rrf_scores[doc_id] += 1.0 / (k + rank + 1)\n    return sorted by rrf_scores[:top_k]",
+        "filePath": "src/rag/pipeline.py",
+        "stepIndex": 5,
+        "stepDescription": "Multi-strategy RAG retrieval with Reciprocal Rank Fusion. Per-item chunking for structured data, SHA-256 idempotent ingestion, version-stamp purging, and gambling slang normalization for better search results."
+      }
+    },
+    {
+      "id": "whisper-planner",
+      "type": "interactive",
+      "position": {"x": 700, "y": 400},
+      "data": {
+        "label": "Whisper Track Planner",
+        "category": "process",
+        "group": "graph-nodes",
+        "details": "Silent background LLM that guides the speaking agent without generating guest-facing text.\n\nAnalyzes conversation context and guest profile completeness, then produces a structured `WhisperPlan`:\n- `next_topic`: Which profiling topic to explore naturally (dining, party_size, offer_ready, etc.)\n- `extraction_targets`: Specific data points to extract (kids_ages, dietary_restrictions)\n- `offer_readiness`: Float 0.0-1.0 indicating readiness for personalized offer\n- `conversation_note`: Brief tactical note for the speaking agent\n\n**Fail-silent contract**: Any LLM failure returns `{\"whisper_plan\": None}` -- the agent proceeds without guidance. Never crashes the pipeline.\n\n**Cost**: ~$0.0003/turn at Gemini 2.5 Flash pricing. Configurable via `whisper_planner_enabled` feature flag.\n\nThe whisper plan is injected into the specialist agent's context as internal guidance -- the guest never sees it.",
+        "codeSnippet": "# src/agent/whisper_planner.py\nclass WhisperPlan(BaseModel):\n    next_topic: Literal[\"dining\", \"party_size\", \"entertainment\",\n                        \"hotel\", \"spa\", \"gaming\", \"offer_ready\", ...]\n    extraction_targets: list[str]\n    offer_readiness: float = Field(ge=0.0, le=1.0)\n    conversation_note: str\n\n# Fail-silent: any error -> {\"whisper_plan\": None}",
+        "filePath": "src/agent/whisper_planner.py",
+        "stepIndex": 6,
+        "stepDescription": "The Whisper Track Planner silently guides the conversation by analyzing guest profiles and suggesting which topics to explore. Fail-silent contract ensures it never blocks the pipeline."
+      }
+    },
+    {
+      "id": "specialist-agents",
+      "type": "interactive",
+      "position": {"x": 400, "y": 570},
+      "data": {
+        "label": "5 Specialist Agents (DRY base)",
+        "category": "process",
+        "group": "specialists",
+        "details": "Five specialist agents share a common `execute_specialist()` base function via dependency injection:\n\n| Agent | Categories | Focus |\n|-------|-----------|-------|\n| **Host** | General | Concierge with whisper planner guidance |\n| **Dining** | restaurants | Menu/hours/cuisine domain prompts |\n| **Entertainment** | entertainment, spa | Shows, events, spa services |\n| **Comp** | gaming, promotions | Table games, loyalty programs, comp offers |\n| **Hotel** | hotel | Rooms, suites, check-in/out |\n\n**Dispatch**: `DispatchOutput` Pydantic model routes to the correct specialist. Tie-breaking uses three-tuple key: `(count, business_priority, alphabetical)`. Business priority: dining (4) > hotel (3) > entertainment (2) > gaming (1).\n\n**Shared `_base.py`** handles:\n- Circuit breaker checks (fail-open with safe fallback)\n- System prompt construction via `string.Template.safe_substitute()`\n- Retrieved context formatting and injection\n- Whisper planner guidance (host agent only)\n- Retry feedback injection\n- Sliding window on conversation history (last 20 messages)\n- Error handling with `skip_validation=True`\n\n**Profiling enrichment** (`src/agent/profiling.py`): Runs between generate and validate. LLM-powered extraction of guest attributes (party_size, dining preferences, budget signals) with confidence gating.",
+        "codeSnippet": "# src/agent/agents/_base.py\nasync def execute_specialist(\n    state: PropertyQAState,\n    agent_config: AgentConfig,\n    get_llm_fn: Callable,     # DI: preserves test mock paths\n    get_cb_fn: Callable,      # DI: circuit breaker per agent\n) -> dict:\n    cb = get_cb_fn()\n    if cb.is_open:\n        return {\"messages\": [AIMessage(content=FALLBACK)], \"skip_validation\": True}",
+        "filePath": "src/agent/agents/_base.py",
+        "stepIndex": 7,
+        "stepDescription": "Five specialist agents (host, dining, entertainment, comp, hotel) share a DRY base function with dependency injection. Dispatch uses structured LLM output with deterministic tie-breaking for routing."
+      }
+    },
+    {
+      "id": "validation-loop",
+      "type": "interactive",
+      "position": {"x": 700, "y": 570},
+      "data": {
+        "label": "Validate -> Retry -> Fallback",
+        "category": "gate",
+        "group": "graph-nodes",
+        "details": "Adversarial validation of generated responses against 6 criteria:\n1. **Grounded**: Facts must come from retrieved context (category-level suggestions allowed)\n2. **On-topic**: Only property-related content\n3. **No gambling advice**: Must not provide betting strategies\n4. **Read-only**: Must not promise bookings/reservations\n5. **Accurate**: Must not fabricate details\n6. **Responsible gaming**: Must include helplines when triggered\n\n**Separate validator LLM**: Temperature=0.0 for deterministic classification (vs 0.3 for creative generation). Both are TTL-cached singletons with jitter for GCP credential rotation.\n\n**Degraded-pass**: If validator LLM fails on first attempt but generate succeeded, the response passes through (availability over strict validation). On retry attempts, fail-closed (safety).\n\n**Loop**: PASS -> persona_envelope -> respond. RETRY (max 1) -> re-generate with feedback. FAIL -> fallback with static safe message.\n\n**skip_validation**: When True (empty context, circuit breaker open, LLM error), auto-PASS. These paths produce deterministic safe responses.",
+        "codeSnippet": "# src/agent/state.py\nclass ValidationResult(BaseModel):\n    status: Literal[\"PASS\", \"FAIL\", \"RETRY\"]\n    reason: str\n\n# src/agent/nodes.py (validate_node)\nif state.get(\"skip_validation\"):\n    return {\"validation_result\": \"PASS\"}\nif retry_count < 1:\n    return {\"validation_result\": \"RETRY\", \"retry_feedback\": result.reason}\nreturn {\"validation_result\": \"FAIL\"}",
+        "filePath": "src/agent/nodes.py",
+        "stepIndex": 8,
+        "stepDescription": "The validator adversarially reviews responses against 6 criteria with a deterministic LLM (temp=0). Degraded-pass balances availability vs safety. Max 1 retry before fallback with safe static message."
+      }
+    },
+    {
+      "id": "persona-envelope",
+      "type": "interactive",
+      "position": {"x": 400, "y": 740},
+      "data": {
+        "label": "Persona Envelope + PII Redaction",
+        "category": "process",
+        "group": "output",
+        "details": "Post-validation processing pipeline with strict ordering:\n\n1. **PII redaction** (fail-closed): Regex-based detection of emails, phone numbers, SSNs, credit cards. If PII detected, replaces with safe placeholder. Never passes PII through. Streaming PII redactor (`streaming_pii.py`) buffers SSE tokens for cross-token pattern detection.\n\n2. **Persona envelope** (`src/agent/persona.py`): Channel-specific formatting:\n   - **Web mode** (`PERSONA_MAX_CHARS=0`): Pass through unchanged\n   - **SMS mode** (`PERSONA_MAX_CHARS=160`): Truncate to single SMS segment with ellipsis\n\n3. **Guest sentiment response tone**: If `guest_sentiment` is set (grief, celebration), tone guidance is applied to the response.\n\n**Processing order matters**: Safety-critical first (PII), then branding enforcement, then personalization (guest name injection only if not already present), then truncation (always last).\n\nSits between validate (PASS) and respond, enabling channel-specific formatting without modifying the core pipeline.",
+        "codeSnippet": "# src/agent/persona.py\ndef persona_envelope_node(state: PropertyQAState) -> dict:\n    # SMS mode: truncate to 160 chars\n    if PERSONA_MAX_CHARS > 0:\n        text = state[\"messages\"][-1].content[:PERSONA_MAX_CHARS]\n    return {}  # Web mode: passthrough\n\n# src/api/pii_redaction.py - FAIL-CLOSED\n# src/agent/streaming_pii.py - SSE token buffering",
+        "filePath": "src/agent/persona.py",
+        "stepIndex": 9,
+        "stepDescription": "Post-validation pipeline: PII redaction (fail-closed), persona envelope for SMS truncation (160 chars), and sentiment-aware tone guidance. Processing order: safety first, formatting last."
+      }
+    },
+    {
+      "id": "gemini-llm",
+      "type": "interactive",
+      "position": {"x": 750, "y": 230},
+      "data": {
+        "label": "Gemini 2.5 Flash / Pro",
+        "category": "process",
+        "group": "infrastructure",
+        "details": "Google Cloud AI models powering all LLM calls:\n\n**Gemini 2.5 Flash** (primary): Cost-effective ($0.30/1M input, $0.60/1M output). Used for: router, generate (all 5 specialists), whisper planner, profiling extraction.\n\n**Gemini 2.5 Pro** (complex): For complex reasoning tasks.\n\n**TTL-cached singletons**: Separate caches for main LLM (temp=0.3) and validator LLM (temp=0.0), each with `asyncio.Lock` guard and TTL jitter (1h base + random 0-300s) for GCP Workload Identity credential rotation.\n\n**LLM backpressure**: `asyncio.Semaphore(20)` bounds concurrent LLM calls per container. Cloud Run `--concurrency=50` provides container-level backpressure.\n\n**Circuit breaker** (`src/agent/circuit_breaker.py`): Redis L1/L2 sync (local deque + Redis distributed state). Bidirectional recovery propagation. 5 failures within 60s opens the breaker. Thread-safe via `asyncio.Lock`.\n\n**Structured output schemas**: Keep <5 constrained fields for Gemini Flash (Gemini schema overflow at higher counts).",
+        "codeSnippet": "# src/agent/circuit_breaker.py\n# Redis L1/L2: local deque (fast) + Redis (distributed)\n# Bidirectional: closed->open AND open->closed sync\n\n# TTL-cached singleton with jitter\n_llm_cache = TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))\n_validator_cache = TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))",
+        "filePath": "src/agent/circuit_breaker.py",
+        "stepIndex": 10,
+        "stepDescription": "Gemini 2.5 Flash powers all LLM calls with TTL-cached singletons, jittered credential rotation, asyncio.Semaphore backpressure, and a Redis-backed circuit breaker with bidirectional recovery."
+      }
+    },
+    {
+      "id": "chromadb-vectordb",
+      "type": "interactive",
+      "position": {"x": 100, "y": 570},
+      "data": {
+        "label": "ChromaDB / Vertex AI Vector Search",
+        "category": "storage",
+        "group": "rag",
+        "details": "Vector database for RAG knowledge retrieval:\n\n**Local dev**: ChromaDB with cosine similarity (`hnsw:space=cosine`). Lazy-imported (~200MB dependency).\n\n**Production**: Vertex AI Vector Search (GCP-native). Same retriever interface via config-driven abstraction.\n\n**Embedding model**: `text-embedding-004` (pinned -- version mismatch = different vector spaces).\n\n**Knowledge base** (`knowledge-base/` + `data/mohegan_sun.json`):\n- Casino operations (comp system, host workflow)\n- State-by-state regulations\n- Player psychology and retention playbook\n- Company context (Hey Seven overview)\n- Property-specific data (dining, entertainment, hotel, gaming, promotions)\n\n**Ingestion**: Per-item chunking with category-specific formatters. SHA-256 idempotent IDs. Version-stamp purging for stale chunks. `property_id` metadata filter for multi-tenant safety.\n\n**FakeEmbeddings** for tests: Deterministic SHA-384 hash-based embeddings (no API keys needed).",
+        "codeSnippet": "# src/rag/pipeline.py\n# Per-item chunking (NOT text splitters)\nfor item in restaurant_data[\"items\"]:\n    text = _format_restaurant(item)\n    metadata = {\"category\": \"dining\", \"property_id\": property_id}\n    chunks.append((text, metadata))\n\n# SHA-256 idempotent ingestion\nids = [hashlib.sha256((text + source).encode()).hexdigest()]",
+        "filePath": "src/rag/pipeline.py",
+        "stepIndex": 11,
+        "stepDescription": "ChromaDB (dev) / Vertex AI Vector Search (prod) stores property knowledge. Per-item chunking, pinned embedding model, SHA-256 idempotent ingestion, and property_id metadata isolation for multi-tenant safety."
+      }
+    },
+    {
+      "id": "observability",
+      "type": "interactive",
+      "position": {"x": 100, "y": 740},
+      "data": {
+        "label": "Observability (LangFuse + Metrics)",
+        "category": "process",
+        "group": "infrastructure",
+        "details": "Multi-layer observability stack:\n\n**LangFuse** (`src/observability/langfuse_client.py`): Open-source tracing for LangGraph agent execution. Traces each graph invocation with node-level spans, LLM call details, token counts, and latencies.\n\n**LangSmith**: LangGraph ecosystem standard tracing (sampling required at app level).\n\n**`/metrics` endpoint**: Exposes P50/P95/P99 latency percentiles, active stream count, error rates, circuit breaker state, and cache hit rates.\n\n**`/health` endpoint**: System health including DB connectivity, LLM availability, and ChromaDB status. Returns 503 when degraded (circuit breaker open).\n\n**`/live` endpoint**: Always returns 200 (used for Docker HEALTHCHECK -- `/health` returns 503 on degraded state which causes unnecessary container restarts).\n\n**Structured audit logging**: Every compliance gate trigger, PII detection, escalation, and authentication attempt is logged with IP, timestamp, and category.\n\n**Behavioral evaluation**: 195 scenarios across 27 YAML files. LLM-as-judge panel (3 models) for live agent evaluation with ICC measurement.",
+        "codeSnippet": "# src/observability/langfuse_client.py\ndef get_langfuse_handler():\n    \"\"\"Get LangFuse callback handler for LangGraph tracing.\"\"\"\n\n# /metrics endpoint: P50/P95/P99 latency\n# /health: 200 (ok) or 503 (degraded)\n# /live: always 200 (Docker HEALTHCHECK)",
+        "filePath": "src/observability/langfuse_client.py",
+        "stepIndex": 12,
+        "stepDescription": "LangFuse + LangSmith tracing, /metrics endpoint with P50/P95/P99 latencies, structured audit logging, and a 195-scenario behavioral evaluation framework with 3-model judge panel."
+      }
+    },
+    {
+      "id": "gcp-infra",
+      "type": "interactive",
+      "position": {"x": 700, "y": 740},
+      "data": {
+        "label": "GCP Infrastructure",
+        "category": "storage",
+        "group": "infrastructure",
+        "details": "Google Cloud Platform deployment target:\n\n**Cloud Run**: Container deployment with `--concurrency=50`. Dockerfile uses exec-form CMD for proper SIGTERM handling. Multi-stage build, non-root user, `--require-hashes` for pip install.\n\n**Firestore + FirestoreSaver**: LangGraph checkpointer for conversation state persistence. Community package `langgraph-checkpoint-firestore`. Concurrent read/write across instances; last-write-wins per thread_id.\n\n**Redis Memorystore**: Distributed circuit breaker state (L1 local deque + L2 Redis), rate limiting (sorted set sliding window with Lua scripts), and session state.\n\n**Cloud Build** (`cloudbuild.yaml`): CI/CD pipeline with pip-audit for dependency vulnerability scanning, cosign for container image signing (KMS key provisioned).\n\n**Vertex AI Vector Search**: Production vector database (ChromaDB for local dev only).\n\n**VPC Connector**: Provisioned for Redis Memorystore connectivity from Cloud Run.\n\n**3236 tests, 90%+ coverage, 0 failures**. 28 ADRs with status lifecycle. v1.4.0.",
+        "codeSnippet": "# Dockerfile - exec form CMD (MANDATORY)\nCMD [\"uvicorn\", \"src.api.app:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]\n\n# cloudbuild.yaml - CI/CD with pip-audit + cosign\n# Cloud Run: --concurrency=50\n# Firestore: conversation checkpointer\n# Redis Memorystore: circuit breaker + rate limiter",
+        "filePath": "Dockerfile",
+        "stepIndex": 13,
+        "stepDescription": "GCP infrastructure: Cloud Run (concurrency=50, exec-form CMD), Firestore checkpointer, Redis Memorystore (circuit breaker + rate limiter), Cloud Build CI/CD with pip-audit and cosign image signing."
+      }
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source": "chat-frontend", "target": "fastapi-backend", "label": "POST /chat (SSE)", "animated": true},
+    {"id": "e2", "source": "fastapi-backend", "target": "compliance-gate", "label": "Invoke Graph", "animated": true},
+    {"id": "e3", "source": "compliance-gate", "target": "llm-router", "label": "Clean (no match)", "animated": true},
+    {"id": "e4", "source": "llm-router", "target": "rag-retrieval", "label": "property_qa/hours", "animated": true},
+    {"id": "e5", "source": "rag-retrieval", "target": "chromadb-vectordb", "label": "Search", "animated": true},
+    {"id": "e6", "source": "rag-retrieval", "target": "whisper-planner", "label": "Context", "animated": true},
+    {"id": "e7", "source": "whisper-planner", "target": "specialist-agents", "label": "Plan + Generate", "animated": true},
+    {"id": "e8", "source": "specialist-agents", "target": "validation-loop", "label": "Response", "animated": true},
+    {"id": "e9", "source": "validation-loop", "target": "specialist-agents", "label": "RETRY (max 1)", "animated": true},
+    {"id": "e10", "source": "validation-loop", "target": "persona-envelope", "label": "PASS", "animated": true},
+    {"id": "e11", "source": "specialist-agents", "target": "gemini-llm", "label": "LLM Calls", "animated": true},
+    {"id": "e12", "source": "gemini-llm", "target": "gcp-infra", "label": "Credentials", "animated": false},
+    {"id": "e13", "source": "observability", "target": "fastapi-backend", "label": "Traces", "animated": false},
+    {"id": "e14", "source": "gcp-infra", "target": "chromadb-vectordb", "label": "Vertex AI (prod)", "animated": false}
+  ],
+  "meta": {
+    "title": "Hey Seven -- System Architecture",
+    "description": "AI casino host agent for Mohegan Sun. 12-node LangGraph StateGraph with compliance gate (204 regex, 11 languages), 5 specialist agents, RAG with RRF reranking, whisper track planner, adversarial validation loop, and GCP-native infrastructure.",
+    "totalSteps": 13
+  }
+}

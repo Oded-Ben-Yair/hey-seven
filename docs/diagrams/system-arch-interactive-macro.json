@@ -1,0 +1,251 @@
+{
+  "nodes": [
+    {
+      "id": "frontend",
+      "type": "interactive",
+      "position": {
+        "x": 400,
+        "y": 50
+      },
+      "data": {
+        "label": "Frontend",
+        "category": "trigger",
+        "group": "frontend",
+        "details": "Three input channels feed the FastAPI backend:\n\n**Web Chat** (`static/index.html`): Vanilla HTML/JS chat widget using Server-Sent Events (SSE) for token-by-token streaming. Sends `POST /chat` with message + thread_id.\n\n**Telnyx SMS** (`src/sms/`): Inbound SMS webhook handler with TCPA/DNC compliance checking. Processes guest SMS messages and routes through the agent pipeline. Responses truncated to 160-char SMS segments via the persona envelope node.\n\n**Google Sheets CMS** (`src/cms/`): Webhook for content updates from Google Sheets. Allows property staff to update knowledge base content without code changes. Triggers re-ingestion when content changes.\n\nDesign: \"Build for one property, design for N\" -- all configuration externalized via pydantic-settings.",
+        "childCount": 1,
+        "children": [
+          "Chat Frontend + SMS + CMS"
+        ],
+        "stepIndex": 1,
+        "stepDescription": "Three input channels: web chat (SSE streaming), Telnyx SMS (with TCPA compliance), and Google Sheets CMS webhooks. All externalized via pydantic-settings for multi-property deployment.",
+        "codeSnippet": "# static/index.html - SSE streaming chat\n# POST /chat -> EventSourceResponse (token-by-token)\n\n# src/sms/telnyx_client.py - Telnyx SMS integration\n# src/sms/compliance.py - TCPA/DNC compliance\n\n# src/cms/sheets_client.py - Google Sheets CMS\n# src/cms/webhook.py - Content update webhook",
+        "filePath": "static/index.html"
+      }
+    },
+    {
+      "id": "api",
+      "type": "interactive",
+      "position": {
+        "x": 400,
+        "y": 220
+      },
+      "data": {
+        "label": "Api",
+        "category": "process",
+        "group": "api",
+        "details": "FastAPI backend with pure ASGI middleware stack (no BaseHTTPMiddleware -- it breaks SSE streaming).\n\n**Middleware stack** (outermost to innermost):\n1. SecurityHeadersMiddleware -- HSTS, CSP, X-Content-Type-Options\n2. RateLimitMiddleware -- Per-client distributed rate limiting via Redis sorted set sliding window (atomic Lua script)\n3. RequestBodyLimitMiddleware -- Body size guard\n4. ApiKeyMiddleware -- API key authentication\n5. RequestLoggingMiddleware -- Structured request/response logging\n6. ErrorHandlingMiddleware -- Catch-all error handling\n\n**Endpoints**: `/chat` (SSE), `/health`, `/live`, `/metrics` (P50/P95/P99 latency), `/property`, `/graph`, `/sms/webhook`, `/cms/webhook`\n\n**Lifespan**: On startup, builds the LangGraph StateGraph and ingests property data into ChromaDB. On shutdown, graceful stream draining (SIGTERM handler with drain timeout < Cloud Run SIGKILL timeout).\n\n**Cache-Control + ETag** on cacheable endpoints (`/property`, `/graph`, `/health`) for efficient CDN caching.",
+        "childCount": 1,
+        "children": [
+          "FastAPI + ASGI Middleware"
+        ],
+        "stepIndex": 2,
+        "stepDescription": "FastAPI with 6 pure ASGI middleware layers handles SSE streaming, rate limiting (Redis sorted set), security headers, and graceful shutdown. Lifespan builds the graph and ingests data on startup.",
+        "codeSnippet": "# src/api/app.py\nfrom fastapi import FastAPI\nfrom sse_starlette.sse import EventSourceResponse\n\n# Pure ASGI middleware (NOT BaseHTTPMiddleware)\nfrom .middleware import (\n    ApiKeyMiddleware, ErrorHandlingMiddleware,\n    RateLimitMiddleware, RequestBodyLimitMiddleware,\n    RequestLoggingMiddleware, SecurityHeadersMiddleware,\n)",
+        "filePath": "src/api/app.py"
+      }
+    },
+    {
+      "id": "graph-nodes",
+      "type": "interactive",
+      "position": {
+        "x": 180,
+        "y": 390
+      },
+      "data": {
+        "label": "Graph Nodes (4)",
+        "category": "gate",
+        "group": "graph-nodes",
+        "details": "**4 components** working together:\n\n- **Compliance Gate (204 regex)**: Pre-router deterministic guardrail node. Zero LLM calls -- pure regex classification across 204 compiled patterns in 11 ...\n- **LLM Router (Structured Output)**: Classifies user intent into 7 categories using Gemini 2.5 Flash with Pydantic structured output.\n- **Whisper Track Planner**: Silent background LLM that guides the speaking agent without generating guest-facing text.\n- **Validate -> Retry -> Fallback**: Adversarial validation of generated responses against 6 criteria:",
+        "childCount": 4,
+        "children": [
+          "Compliance Gate (204 regex)",
+          "LLM Router (Structured Output)",
+          "Whisper Track Planner",
+          "Validate -> Retry -> Fallback"
+        ],
+        "stepIndex": 3,
+        "stepDescription": "4 components: Compliance Gate (204 regex), LLM Router (Structured Output), Whisper Track Planner, Validate -> Retry -> Fallback.",
+        "codeSnippet": "# src/agent/compliance_gate.py\ndef compliance_gate_node(state: PropertyQAState) -> dict:\n    # 204 compiled regex patterns, 11 languages\n    if detect_prompt_injection(user_input):\n        return {\"query_type\": \"injection\", \"confidence\": 1.0}\n    if detect_responsible_gaming(user_input):\n        return {\"query_type\": \"gambling_advice\", \"confidence\": 1.0}\n    # All pass -> query_type=None -> LLM router",
+        "filePath": "src/agent/compliance_gate.py"
+      }
+    },
+    {
+      "id": "rag",
+      "type": "interactive",
+      "position": {
+        "x": 620,
+        "y": 390
+      },
+      "data": {
+        "label": "Rag (2)",
+        "category": "data",
+        "group": "rag",
+        "details": "**2 components** working together:\n\n- **RAG Retrieval (RRF + ChromaDB)**: Multi-strategy retrieval with Reciprocal Rank Fusion (RRF) from ChromaDB vector store.\n- **ChromaDB / Vertex AI Vector Search**: Vector database for RAG knowledge retrieval:",
+        "childCount": 2,
+        "children": [
+          "RAG Retrieval (RRF + ChromaDB)",
+          "ChromaDB / Vertex AI Vector Search"
+        ],
+        "stepIndex": 4,
+        "stepDescription": "2 components: RAG Retrieval (RRF + ChromaDB), ChromaDB / Vertex AI Vector Search.",
+        "codeSnippet": "# src/rag/reranking.py\ndef _rerank_by_rrf(result_lists, top_k=5, k=60):\n    rrf_scores = {}\n    for results in result_lists:\n        for rank, (doc, score) in enumerate(results):\n            doc_id = hashlib.sha256(content+source).hexdigest()\n            rrf_scores[doc_id] += 1.0 / (k + rank + 1)\n    return sorted by rrf_scores[:top_k]",
+        "filePath": "src/rag/pipeline.py"
+      }
+    },
+    {
+      "id": "specialists",
+      "type": "interactive",
+      "position": {
+        "x": 400,
+        "y": 560
+      },
+      "data": {
+        "label": "Specialists",
+        "category": "process",
+        "group": "specialists",
+        "details": "Five specialist agents share a common `execute_specialist()` base function via dependency injection:\n\n| Agent | Categories | Focus |\n|-------|-----------|-------|\n| **Host** | General | Concierge with whisper planner guidance |\n| **Dining** | restaurants | Menu/hours/cuisine domain prompts |\n| **Entertainment** | entertainment, spa | Shows, events, spa services |\n| **Comp** | gaming, promotions | Table games, loyalty programs, comp offers |\n| **Hotel** | hotel | Rooms, suites, check-in/out |\n\n**Dispatch**: `DispatchOutput` Pydantic model routes to the correct specialist. Tie-breaking uses three-tuple key: `(count, business_priority, alphabetical)`. Business priority: dining (4) > hotel (3) > entertainment (2) > gaming (1).\n\n**Shared `_base.py`** handles:\n- Circuit breaker checks (fail-open with safe fallback)\n- System prompt construction via `string.Template.safe_substitute()`\n- Retrieved context formatting and injection\n- Whisper planner guidance (host agent only)\n- Retry feedback injection\n- Sliding window on conversation history (last 20 messages)\n- Error handling with `skip_validation=True`\n\n**Profiling enrichment** (`src/agent/profiling.py`): Runs between generate and validate. LLM-powered extraction of guest attributes (party_size, dining preferences, budget signals) with confidence gating.",
+        "childCount": 1,
+        "children": [
+          "5 Specialist Agents (DRY base)"
+        ],
+        "stepIndex": 5,
+        "stepDescription": "Five specialist agents (host, dining, entertainment, comp, hotel) share a DRY base function with dependency injection. Dispatch uses structured LLM output with deterministic tie-breaking for routing.",
+        "codeSnippet": "# src/agent/agents/_base.py\nasync def execute_specialist(\n    state: PropertyQAState,\n    agent_config: AgentConfig,\n    get_llm_fn: Callable,     # DI: preserves test mock paths\n    get_cb_fn: Callable,      # DI: circuit breaker per agent\n) -> dict:\n    cb = get_cb_fn()\n    if cb.is_open:\n        return {\"messages\": [AIMessage(content=FALLBACK)], \"skip_validation\": True}",
+        "filePath": "src/agent/agents/_base.py"
+      }
+    },
+    {
+      "id": "output",
+      "type": "interactive",
+      "position": {
+        "x": 180,
+        "y": 730
+      },
+      "data": {
+        "label": "Output",
+        "category": "process",
+        "group": "output",
+        "details": "Post-validation processing pipeline with strict ordering:\n\n1. **PII redaction** (fail-closed): Regex-based detection of emails, phone numbers, SSNs, credit cards. If PII detected, replaces with safe placeholder. Never passes PII through. Streaming PII redactor (`streaming_pii.py`) buffers SSE tokens for cross-token pattern detection.\n\n2. **Persona envelope** (`src/agent/persona.py`): Channel-specific formatting:\n   - **Web mode** (`PERSONA_MAX_CHARS=0`): Pass through unchanged\n   - **SMS mode** (`PERSONA_MAX_CHARS=160`): Truncate to single SMS segment with ellipsis\n\n3. **Guest sentiment response tone**: If `guest_sentiment` is set (grief, celebration), tone guidance is applied to the response.\n\n**Processing order matters**: Safety-critical first (PII), then branding enforcement, then personalization (guest name injection only if not already present), then truncation (always last).\n\nSits between validate (PASS) and respond, enabling channel-specific formatting without modifying the core pipeline.",
+        "childCount": 1,
+        "children": [
+          "Persona Envelope + PII Redaction"
+        ],
+        "stepIndex": 6,
+        "stepDescription": "Post-validation pipeline: PII redaction (fail-closed), persona envelope for SMS truncation (160 chars), and sentiment-aware tone guidance. Processing order: safety first, formatting last.",
+        "codeSnippet": "# src/agent/persona.py\ndef persona_envelope_node(state: PropertyQAState) -> dict:\n    # SMS mode: truncate to 160 chars\n    if PERSONA_MAX_CHARS > 0:\n        text = state[\"messages\"][-1].content[:PERSONA_MAX_CHARS]\n    return {}  # Web mode: passthrough\n\n# src/api/pii_redaction.py - FAIL-CLOSED\n# src/agent/streaming_pii.py - SSE token buffering",
+        "filePath": "src/agent/persona.py"
+      }
+    },
+    {
+      "id": "infrastructure",
+      "type": "interactive",
+      "position": {
+        "x": 620,
+        "y": 730
+      },
+      "data": {
+        "label": "Infrastructure (3)",
+        "category": "process",
+        "group": "infrastructure",
+        "details": "**3 components** working together:\n\n- **Gemini 2.5 Flash / Pro**: Google Cloud AI models powering all LLM calls:\n- **Observability (LangFuse + Metrics)**: Multi-layer observability stack:\n- **GCP Infrastructure**: Google Cloud Platform deployment target:",
+        "childCount": 3,
+        "children": [
+          "Gemini 2.5 Flash / Pro",
+          "Observability (LangFuse + Metrics)",
+          "GCP Infrastructure"
+        ],
+        "stepIndex": 7,
+        "stepDescription": "3 components: Gemini 2.5 Flash / Pro, Observability (LangFuse + Metrics), GCP Infrastructure.",
+        "codeSnippet": "# src/agent/circuit_breaker.py\n# Redis L1/L2: local deque (fast) + Redis (distributed)\n# Bidirectional: closed->open AND open->closed sync\n\n# TTL-cached singleton with jitter\n_llm_cache = TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))\n_validator_cache = TTLCache(maxsize=1, ttl=3600 + random.randint(0, 300))",
+        "filePath": "src/agent/circuit_breaker.py"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-frontend-api",
+      "source": "frontend",
+      "target": "api",
+      "animated": true,
+      "type": "animated",
+      "label": "POST /chat (SSE)"
+    },
+    {
+      "id": "e-api-graph-nodes",
+      "source": "api",
+      "target": "graph-nodes",
+      "animated": true,
+      "type": "animated",
+      "label": "Invoke Graph"
+    },
+    {
+      "id": "e-graph-nodes-rag",
+      "source": "graph-nodes",
+      "target": "rag",
+      "animated": true,
+      "type": "animated",
+      "label": "property_qa/hours"
+    },
+    {
+      "id": "e-rag-graph-nodes",
+      "source": "rag",
+      "target": "graph-nodes",
+      "animated": true,
+      "type": "animated",
+      "label": "Context"
+    },
+    {
+      "id": "e-graph-nodes-specialists",
+      "source": "graph-nodes",
+      "target": "specialists",
+      "animated": true,
+      "type": "animated",
+      "label": "Plan + Generate"
+    },
+    {
+      "id": "e-specialists-graph-nodes",
+      "source": "specialists",
+      "target": "graph-nodes",
+      "animated": true,
+      "type": "animated",
+      "label": "Response"
+    },
+    {
+      "id": "e-graph-nodes-output",
+      "source": "graph-nodes",
+      "target": "output",
+      "animated": true,
+      "type": "animated",
+      "label": "PASS"
+    },
+    {
+      "id": "e-specialists-infrastructure",
+      "source": "specialists",
+      "target": "infrastructure",
+      "animated": true,
+      "type": "animated",
+      "label": "LLM Calls"
+    },
+    {
+      "id": "e-infrastructure-api",
+      "source": "infrastructure",
+      "target": "api",
+      "animated": true,
+      "type": "animated",
+      "label": "Traces"
+    },
+    {
+      "id": "e-infrastructure-rag",
+      "source": "infrastructure",
+      "target": "rag",
+      "animated": true,
+      "type": "animated",
+      "label": "Vertex AI (prod)"
+    }
+  ],
+  "meta": {
+    "title": "Hey Seven -- System Architecture (Overview)",
+    "description": "High-level overview: 7 families from 13 nodes.",
+    "totalSteps": 7
+  }
+}
