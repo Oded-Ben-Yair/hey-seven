@@ -13,6 +13,7 @@ live in ``guardrails.py``.
 import asyncio
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,8 @@ __all__ = [
     "greeting_node",
     "off_topic_node",
     "route_from_router",
+    "_enforce_tone",
+    "_SLOP_PATTERNS",
 ]
 
 
@@ -446,10 +449,13 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
     has_grounding = bool(retrieved)
     context_text = _format_context_block(retrieved, separator="\n")
 
+    # R82 Track 1D: Pass query_type for intent-aware validation criteria.
+    query_type = state.get("query_type", "property_qa")
     prompt_text = VALIDATION_PROMPT.safe_substitute(
         user_question=user_question,
         retrieved_context=context_text,
         generated_response=generated_response,
+        query_type=query_type,
     )
 
     validator_llm = (await _get_validator_llm()).with_structured_output(ValidationResult)
@@ -531,13 +537,99 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
                 "score": round(doc.get("score", 0.0), 3),
             })
 
-    return {
+    # R82 Track 1C: Post-generation tone enforcement on last AI message.
+    # Second pass after persona_envelope_node -- catches patterns that slipped
+    # through or differ slightly from persona.py's _strip_performative_openers().
+    cleaned_message = None
+    for msg in reversed(state.get("messages", [])):
+        if isinstance(msg, AIMessage):
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            cleaned = _enforce_tone(content)
+            if cleaned != content:
+                logger.info("Slop detector: cleaned %d chars from response", len(content) - len(cleaned))
+                cleaned_message = AIMessage(content=cleaned)
+            break
+
+    result: dict[str, Any] = {
         "sources_used": sources,
         "retry_feedback": None,
         # R41 fix D1-M001: Clear retrieved_context before checkpoint write to
         # prevent stale chunk data from accumulating in Firestore checkpoints.
         "retrieved_context": [],
     }
+    if cleaned_message:
+        result["messages"] = [cleaned_message]
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 5b. Post-Generation Slop Detector (R82 Track 1C)
+# ---------------------------------------------------------------------------
+# Second-pass tone enforcement after persona_envelope_node.  persona.py handles
+# the first pass (performative openers, first-paragraph exclamation clustering).
+# This catch-all covers broader patterns (replacements, whole-response exclamation
+# cap, additional opener variants) that persona may miss.
+
+_SLOP_PATTERNS: list[tuple[re.Pattern, str]] = [
+    # "Oh, " and "Ah, " openers
+    (re.compile(r"^Oh[,!]?\s+", re.IGNORECASE), ""),
+    (re.compile(r"^Ah[,!]?\s+", re.IGNORECASE), ""),
+    # Sycophantic openers
+    (re.compile(r"^(?:What a (?:wonderful|great|fantastic|excellent|lovely) question[.!]?\s*)", re.IGNORECASE), ""),
+    (re.compile(r"^(?:That's a (?:wonderful|great|fantastic|excellent) question[.!]?\s*)", re.IGNORECASE), ""),
+    # "I'd be delighted/happy to help" -> simpler
+    (re.compile(r"I'd be (?:absolutely |truly |more than )?(?:delighted|happy|thrilled) to (?:help|assist)(?:\s+(?:you\s+)?(?:with that|explore that))?[.!]?", re.IGNORECASE), "I can help with that."),
+    # "I'd love to help you explore" -> simpler
+    (re.compile(r"I'd (?:absolutely )?love to help (?:you )?explore", re.IGNORECASE), "Let me share some options about"),
+    # "Absolutely!" as sentence opener
+    (re.compile(r"^Absolutely[!.]?\s+", re.IGNORECASE), ""),
+    # "Of course!" as sentence opener
+    (re.compile(r"^Of course[!.]?\s+", re.IGNORECASE), ""),
+    # "Great question!" or "Great choice!"
+    (re.compile(r"^(?:Great|Excellent|Wonderful|Fantastic) (?:question|choice|pick)[!.]?\s*", re.IGNORECASE), ""),
+]
+
+
+def _enforce_tone(response: str) -> str:
+    """Post-generation tone enforcement. Strips AI slop patterns mechanically.
+
+    Runs in <1ms (compiled regex). Called after LLM generation, before streaming.
+    This exists because Gemini Flash ignores "NEVER say X" prompt instructions --
+    the prompt says the right things but the model does not comply.
+
+    R82 Track 1C: Post-generation slop detector.
+    """
+    if not response:
+        return response
+
+    # Apply slop pattern substitutions
+    for pattern, replacement in _SLOP_PATTERNS:
+        response = pattern.sub(replacement, response, count=1)
+
+    # Cap exclamation marks: max 2 per response
+    excl_count = response.count("!")
+    if excl_count > 2:
+        # Replace excess exclamation marks with periods, keeping last 2
+        parts = response.split("!")
+        result_parts = []
+        remaining_excl = excl_count
+        for i, part in enumerate(parts):
+            if i < len(parts) - 1:  # Not the last part (no trailing !)
+                remaining_excl -= 1
+                if remaining_excl >= 2:
+                    result_parts.append(part + ".")
+                else:
+                    result_parts.append(part + "!")
+            else:
+                result_parts.append(part)
+        response = "".join(result_parts)
+
+    # Capitalize first letter after stripping opener
+    response = response.lstrip()
+    if response and response[0].islower():
+        response = response[0].upper() + response[1:]
+
+    return response
 
 
 # ---------------------------------------------------------------------------

@@ -656,6 +656,47 @@ async def execute_specialist(
     )
     system_prompt += behavioral_sections
 
+    # R82 Track 1E: Frustration/crisis suppression of promotional content.
+    # When the guest is frustrated/negative, override promotional specialist prompts
+    # with factual, empathy-first guidance. This is a HARD override — the specialist
+    # prompt template is already loaded but this section takes priority.
+    # Note: `guest_sentiment` here is the effective sentiment (post-sarcasm-override)
+    # returned by _build_behavioral_prompt_sections.
+    _PROMOTIONAL_AGENTS = frozenset({"comp", "promotions"})
+    if guest_sentiment in ("frustrated", "negative") and agent_name in _PROMOTIONAL_AGENTS:
+        frustration_override = (
+            "\n\n## OVERRIDE: Guest Is Frustrated — Suppress Promotional Tone\n"
+            "The guest is upset or frustrated. Your ENTIRE response must follow these rules:\n"
+            "1. NO promotional language. No 'explore rewards', 'benefits shine', 'exciting perks', "
+            "'you're going to love this'.\n"
+            "2. Be factual and direct. State what they qualify for, not how great it is.\n"
+            "3. Acknowledge their frustration FIRST before any comp/loyalty information.\n"
+            "4. Keep response under 3 sentences.\n"
+            "5. End with: 'Would you like me to connect you with a dedicated host who can "
+            "assist you personally?'\n"
+            "6. If you don't have specific comp information for them, just empathize and "
+            "offer the human host connection. Do NOT default to generic promotions."
+        )
+        system_prompt += frustration_override
+        logger.info(
+            "R82 1E: Frustration suppression activated for %s agent (sentiment=%s)",
+            agent_name, guest_sentiment,
+        )
+
+    # R82 Track 1E: Crisis state suppression across ALL specialists.
+    # If crisis_active is True, ALL specialists should avoid any promotional content.
+    if state.get("crisis_active", False):
+        crisis_override = (
+            "\n\n## OVERRIDE: Crisis State Active\n"
+            "The guest may be in distress. Your response must:\n"
+            "1. NOT include any promotional content, upselling, or rewards mentions.\n"
+            "2. Be compassionate and brief.\n"
+            "3. Include crisis resources if relevant.\n"
+            "4. Offer to connect with a human host."
+        )
+        system_prompt += crisis_override
+        logger.info("R82 1E: Crisis suppression activated for %s agent", agent_name)
+
     # Profiling Intelligence: inject guest profile summary and profiling guidance
     from src.casino.feature_flags import DEFAULT_FEATURES as _DEFAULT_FEATURES
 
@@ -814,6 +855,34 @@ async def execute_specialist(
 
     await cb.record_success()
     content = response.content if isinstance(response.content, str) else str(response.content)
+
+    # R82 Track 1G (partial): Response length budgets per intent.
+    # Applied post-generation to enforce limits the LLM ignores from prompt instructions.
+    # Truncates to the nearest sentence boundary within the word budget.
+    _MAX_WORDS_BY_INTENT: dict[str, int] = {
+        "greeting": 50,
+        "acknowledgment": 40,
+        "confirmation": 40,
+        "off_topic": 60,
+    }
+    _query_type = state.get("query_type", "")
+    _max_words = _MAX_WORDS_BY_INTENT.get(_query_type or "", 0)
+    if _max_words > 0 and content:
+        words = content.split()
+        if len(words) > _max_words:
+            truncated = " ".join(words[:_max_words])
+            # Find last sentence boundary — don't cut mid-sentence
+            for punct in (".", "?", "!"):
+                last_punct = truncated.rfind(punct)
+                if last_punct > len(truncated) // 2:
+                    truncated = truncated[: last_punct + 1]
+                    break
+            logger.info(
+                "R82 1G: Response truncated from %d to %d words for %s",
+                len(words), len(truncated.split()), _query_type,
+            )
+            content = truncated
+
     result: dict = {"messages": [AIMessage(content=content)]}
     # R23 fix C-003: persist suggestion_offered flag across turns
     if suggestion_already_offered:

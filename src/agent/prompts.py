@@ -495,9 +495,9 @@ Return valid JSON only, no other text:
 {"query_type": "<category>", "confidence": <float 0.0-1.0>, "detected_language": "<en|es|other>"}""")
 
 # ---------------------------------------------------------------------------
-# 3. VALIDATION_PROMPT
+# 3. VALIDATION_PROMPT  (R82 Track 1D: intent-aware validation)
 # ---------------------------------------------------------------------------
-# Variables: $user_question, $retrieved_context, $generated_response
+# Variables: $user_question, $query_type, $retrieved_context, $generated_response
 
 VALIDATION_PROMPT = Template("""\
 You are an adversarial reviewer. Evaluate the generated response against the
@@ -506,82 +506,91 @@ retrieved context and the original user question.
 ## User Question
 $user_question
 
+## Query Type
+$query_type
+
 ## Retrieved Context
 $retrieved_context
 
 ## Generated Response
 $generated_response
 
-## Evaluation Criteria
-Check each criterion:
+## Evaluation Criteria (adapted by query type)
 
-1. **Grounded**: Specific NUMERICAL facts (hours, prices, distances) in the response
-   must come from the retrieved context. However, mentioning real property venues BY NAME
-   is always acceptable — the concierge knows the property. Only FAIL if the response
-   states specific hours/prices that CONTRADICT the context, or invents a venue that
-   does not exist at the property. Cross-domain suggestions are also acceptable.
-2. **On-topic**: The response is about the property and directly addresses the user question.
-   It does not drift into unrelated subjects.
-3. **No gambling advice**: The response does not contain odds, betting strategies, tips,
-   or any form of gambling advice.
-4. **Read-only**: The response does not promise to take actions such as booking,
-   reserving, purchasing, or signing up on behalf of the user.
-5. **Accurate**: Specific facts (names, hours, prices, locations) in the response
-   match what appears in the retrieved context.
-6. **Responsible gaming**: If the user question relates to problem gambling or
+### Always Check (all query types):
+1. **On-topic**: The response is about the property and addresses the user.
+2. **No gambling advice**: No odds, betting strategies, or gambling tips.
+3. **Read-only**: No promises to book, reserve, purchase, or sign up.
+
+### Grounding Criteria (property_qa, hours_schedule, dining, entertainment, hotel, spa only):
+4. **Grounded**: Specific NUMERICAL facts (hours, prices, distances) must come from
+   retrieved context. Mentioning real property venues BY NAME is always acceptable.
+   Only FAIL if the response states specific hours/prices that CONTRADICT the context,
+   or invents a venue that does not exist. Cross-domain suggestions are acceptable.
+5. **Accurate**: Specific facts in the response match retrieved context.
+
+### Safety Criteria (self_harm, responsible_gaming, crisis only):
+4. **Crisis resources**: Response MUST include helpline information.
+5. **No upsell**: Response must NOT redirect to property services, promotions, or rewards.
+6. **No repetition**: Response must NOT repeat verbatim from a previous turn (check conversation context).
+
+### Light Criteria (greeting, acknowledgment, off_topic, confirmation):
+- Only criteria 1-3 apply. No grounding or detail requirements.
+- A short, warm, on-topic response is a PASS.
+
+### Responsible Gaming Criteria:
+6. **Helpline info**: If the user question relates to problem gambling or
    self-exclusion, the response includes helpline information.
 
 ## Examples
 
-### PASS Example
+### PASS Example (property_qa)
 User asked about restaurant hours. Response cites hours from retrieved context,
 adds a disclaimer about hours varying, does not promise to book a table.
 Result: PASS — all criteria met.
 
-### PASS Example 2
-User asked a follow-up about their evening plans. Response mentions a show at
-the venue (which exists at the property) without specific details from the
-retrieved context. No fabricated facts, just a category-level suggestion.
+### PASS Example (greeting)
+User said "Hey, what's good here?" Response warmly welcomes and mentions a few
+categories available. No specific facts needed.
+Result: PASS — greeting only needs criteria 1-3.
+
+### PASS Example (acknowledgment)
+User said "Sounds good, thanks!" Response acknowledges warmly, asks if there's
+anything else. No RAG grounding needed.
+Result: PASS — acknowledgments only need criteria 1-3.
+
+### PASS Example (cross-domain)
+User asked about dinner. Response mentions a show at the venue (which exists at
+the property) without specific details from retrieved context.
 Result: PASS — category-level suggestions without fabricated specifics are acceptable.
 
-### PASS Example 3
-User mentioned a celebration. Response acknowledges the occasion warmly and
-recommends a restaurant from the retrieved context, then briefly mentions
-the spa as a complement. Spa details not in retrieved context.
-Result: PASS — cross-domain suggestions are acceptable when no specific facts
-are fabricated about the suggested domain.
+### FAIL Example (crisis)
+User expressed distress. Response says "I'd love to help you explore our rewards
+program!" instead of providing crisis resources.
+Result: FAIL — crisis must include helpline info and must NOT upsell.
+
+### FAIL Example (property_qa)
+User asked about restaurant hours. Response states INCORRECT hours that contradict
+the retrieved context.
+Result: FAIL — criterion 5 (Accurate) violated.
 
 ### RETRY Example
 User asked about a specific restaurant. Response uses information from the context
-but omits a key detail that was available. No factual errors.
+but omits a key detail that was available.
 Result: RETRY — minor omission worth correcting.
-
-### PASS Example 4
-User asked for dinner recommendations. Response suggests "Bobby's Steakhouse" and
-"Ballo Italian" with general descriptions but no specific hours or prices, because
-those details weren't in the retrieved context. The venues are real property restaurants.
-Result: PASS — mentioning real property venues by name is acceptable. Only fabricating
-SPECIFIC facts (wrong hours, wrong prices, wrong locations) about them is a violation.
-
-### FAIL Example
-User asked about restaurant hours. Response states INCORRECT hours that contradict
-the retrieved context (context says 5-10 PM, response says 11 AM-midnight).
-Result: FAIL — criterion 5 (Accurate) violated. The hours directly contradict the context.
-Note: If the response mentions a real venue WITHOUT stating specific hours/prices
-(because they're not in the context), that is PASS, not FAIL. Only contradict = FAIL.
 
 ## Response Format
 Return valid JSON only, no other text:
 {"status": "<PASS|FAIL|RETRY>", "reason": "<brief explanation>"}
 
 ## Guidance
-- Use PASS when all 6 criteria are met.
-- Use RETRY for minor issues that are worth correcting (incomplete answer, could be more helpful).
-- Use FAIL for serious violations (hallucination, off-topic, gambling advice, action promises).
+- Use PASS when applicable criteria are met for the query type.
+- Use RETRY for minor issues worth correcting (incomplete answer, could be more helpful).
+- Use FAIL for serious violations (hallucination, off-topic, gambling advice, action promises, crisis upsell).
 - When in doubt between PASS and RETRY, prefer PASS. A slightly imperfect response is
-  better than a fallback. Only use RETRY for clear factual gaps or missed key details.
-- For follow-up confirmations or acknowledgments ("great", "sounds good"), the response
-  just needs to be relevant and on-topic. PASS unless it fabricates specific facts.""")
+  better than a fallback. Only use RETRY for clear factual gaps.
+- For greetings, acknowledgments, and confirmations: PASS unless the response is
+  completely off-topic or contains fabricated facts.""")
 
 # ---------------------------------------------------------------------------
 # 4. WHISPER_PLANNER_PROMPT

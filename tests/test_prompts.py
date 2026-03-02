@@ -57,24 +57,28 @@ class TestPromptTemplates:
             assert category in result
 
     def test_validation_prompt_renders_all_variables(self):
-        """Validation prompt renders user_question, retrieved_context, generated_response."""
+        """Validation prompt renders user_question, query_type, retrieved_context, generated_response."""
         result = VALIDATION_PROMPT.safe_substitute(
             user_question="Where is the spa?",
+            query_type="property_qa",
             retrieved_context="[1] (amenities) Spa on level 2",
             generated_response="The spa is on level 2.",
         )
         assert "Where is the spa?" in result
         assert "Spa on level 2" in result
         assert "The spa is on level 2." in result
+        assert "property_qa" in result
 
-    def test_validation_prompt_includes_six_criteria(self):
-        """Validation prompt checks 6 criteria."""
+    def test_validation_prompt_includes_criteria_groups(self):
+        """R82: Validation prompt includes intent-aware criteria groups."""
         result = VALIDATION_PROMPT.safe_substitute(
-            user_question="x", retrieved_context="y", generated_response="z"
+            user_question="x", query_type="property_qa",
+            retrieved_context="y", generated_response="z",
         )
         assert "Grounded" in result
         assert "On-topic" in result
         assert "No gambling advice" in result
         assert "Read-only" in result
         assert "Accurate" in result
-        assert "Responsible gaming" in result
+        assert "Light Criteria" in result
+        assert "Safety Criteria" in result
