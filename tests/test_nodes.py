@@ -584,12 +584,13 @@ class TestRouteFromRouter:
         state = _state(query_type="hours_schedule", router_confidence=0.9)
         assert route_from_router(state) == "retrieve"
 
-    def test_low_confidence_routes_to_off_topic(self):
-        """Very low confidence (< 0.3) routes to off_topic."""
+    def test_low_confidence_routes_to_retrieve(self):
+        """R81 fix: Very low confidence (< 0.3) routes to retrieve, not off_topic.
+        Uncertain messages are safer through RAG."""
         from src.agent.nodes import route_from_router
 
         state = _state(query_type="property_qa", router_confidence=0.1)
-        assert route_from_router(state) == "off_topic"
+        assert route_from_router(state) == "retrieve"
 
 
 class TestRouteAfterValidateV2:

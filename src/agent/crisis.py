@@ -28,7 +28,7 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_crisis_level", "CrisisLevel", "get_crisis_response_es"]
+__all__ = ["detect_crisis_level", "CrisisLevel", "get_crisis_response_es", "get_crisis_followup_es"]
 
 CrisisLevel = Literal["none", "concern", "urgent", "immediate"]
 
@@ -176,4 +176,39 @@ def get_crisis_response_es(property_name: str, property_phone: str) -> str:
         f"Si deseas hablar con alguien de {property_name} en persona, "
         f"cualquier miembro del equipo puede conectarte con servicios de apoyo. "
         f"También puedes llamarnos al {property_phone}."
+    )
+
+
+def get_crisis_followup_es(user_message: str, property_name: str, property_phone: str) -> str:
+    """Turn 2+ Spanish crisis response — empathetic, shorter, acknowledges guest's words.
+
+    Args:
+        user_message: The guest's current message (used for on-site help detection).
+        property_name: Display name of the casino property.
+        property_phone: Contact phone for the property.
+
+    Returns:
+        Spanish crisis followup response with key resource reminder.
+    """
+    msg_lower = user_message.lower()
+    if any(kw in msg_lower for kw in (
+        "alguien aquí", "hablar con alguien", "en persona", "cara a cara",
+        "someone here", "talk to someone", "in person",
+    )):
+        return (
+            f"Sí — cualquier miembro del equipo de {property_name} puede conectarte "
+            f"con servicios de apoyo ahora mismo. También puedes ir a la recepción "
+            f"o llamar al {property_phone} y pedir hablar con alguien de servicios "
+            "al huésped.\n\n"
+            "La **Línea 988** (llama o envía texto al 988, presiona 2 para español) "
+            "también está siempre disponible si deseas hablar con un consejero capacitado."
+        )
+    return (
+        "Te escucho, y lo que estás pasando es real. No tienes que "
+        "enfrentar esto solo/a.\n\n"
+        "Un consejero capacitado en la **Línea 988** puede ayudar — llama o envía "
+        "texto al **988** (presiona 2 para español), las 24 horas, los 7 días. "
+        "Es gratis y confidencial.\n\n"
+        f"Si deseas hablar con alguien de {property_name} en persona, cualquier "
+        "miembro del equipo puede ayudarte."
     )

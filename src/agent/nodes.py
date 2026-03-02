@@ -688,6 +688,27 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _build_crisis_followup(user_message: str, property_name: str, property_phone: str) -> str:
+    """Turn 2+ crisis response — empathetic, shorter, acknowledges guest's words."""
+    msg_lower = user_message.lower()
+    if any(kw in msg_lower for kw in ("someone here", "talk to someone", "in person", "face to face")):
+        return (
+            f"Yes — any team member at {property_name} can connect you with support "
+            f"services right now. You can also go to the front desk or call {property_phone} "
+            "and ask to speak with someone from guest services.\n\n"
+            "The **988 Lifeline** (call or text 988) is also always available if you'd "
+            "like to talk to a trained counselor."
+        )
+    return (
+        "I hear you, and what you're going through is real. You don't have to "
+        "figure this out alone.\n\n"
+        "A trained counselor at the **988 Lifeline** can help — just call or text "
+        "**988** anytime, 24/7. It's free and confidential.\n\n"
+        f"If you'd like to talk to someone at {property_name} in person, any team "
+        "member can help connect you."
+    )
+
+
 async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     """Handle off-topic, gambling advice, and action requests.
 
@@ -861,33 +882,41 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
             )
     elif query_type == "self_harm":
         # R50 fix (Grok CRITICAL-D1-001): Self-harm crisis response with 988 Lifeline.
-        # compliance_gate detects crisis language and routes here. The response
-        # prioritizes safety resources over property information. Never dismissive,
-        # never minimizing, always empathetic with concrete action steps.
+        # R81 fix: Turn-aware crisis responses — turn 1 gives full resources,
+        # turn 2+ gives empathetic variation acknowledging the guest's words.
         from src.agent.handoff import build_handoff_request
 
+        current_crisis_turn = state.get("crisis_turn_count", 0) + 1
+
         if _is_spanish:
-            from src.agent.crisis import get_crisis_response_es
-            content = get_crisis_response_es(settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
+            from src.agent.crisis import get_crisis_followup_es, get_crisis_response_es
+            if current_crisis_turn <= 1:
+                content = get_crisis_response_es(settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
+            else:
+                content = get_crisis_followup_es(user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
         else:
-            content = (
-                "I can hear that you're going through a really difficult time, and I want "
-                "you to know that help is available right now.\n\n"
-                "**Please reach out to these confidential resources:**\n\n"
-                "- **988 Suicide & Crisis Lifeline**: Call or text **988** (24/7, free, confidential)\n"
-                "- **Crisis Text Line**: Text **HOME** to **741741**\n"
-                "- **Emergency**: Call **911** if you or someone is in immediate danger\n\n"
-                "You don't have to face this alone. Trained counselors are available "
-                "right now who understand what you're going through and can help.\n\n"
-                f"If you'd like to speak with someone at {settings.PROPERTY_NAME} in person, "
-                f"any team member can connect you with support services. You can also call us "
-                f"at {settings.PROPERTY_PHONE}."
-            )
+            if current_crisis_turn <= 1:
+                content = (
+                    "I can hear that you're going through a really difficult time, and I want "
+                    "you to know that help is available right now.\n\n"
+                    "**Please reach out to these confidential resources:**\n\n"
+                    "- **988 Suicide & Crisis Lifeline**: Call or text **988** (24/7, free, confidential)\n"
+                    "- **Crisis Text Line**: Text **HOME** to **741741**\n"
+                    "- **Emergency**: Call **911** if you or someone is in immediate danger\n\n"
+                    "You don't have to face this alone. Trained counselors are available "
+                    "right now who understand what you're going through and can help.\n\n"
+                    f"If you'd like to speak with someone at {settings.PROPERTY_NAME} in person, "
+                    f"any team member can connect you with support services. You can also call us "
+                    f"at {settings.PROPERTY_PHONE}."
+                )
+            else:
+                content = _build_crisis_followup(user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
         # Phase 5: Early return with structured handoff for crisis situations.
         return {
             "messages": [AIMessage(content=content)],
             "sources_used": [],
             "retrieved_context": [],
+            "crisis_turn_count": current_crisis_turn,
             "handoff_request": build_handoff_request(
                 department="responsible_gaming",
                 reason="Guest expressing self-harm or crisis indicators",
@@ -945,7 +974,8 @@ def route_from_router(state: PropertyQAState) -> str:
         return NODE_OFF_TOPIC
 
     if confidence < 0.3:
-        return NODE_OFF_TOPIC
+        logger.info("Low confidence (%.2f) — routing to retrieve instead of off_topic", confidence)
+        return NODE_RETRIEVE
 
     # property_qa, hours_schedule, and ambiguous all route to retrieve.
     # See docstring for ambiguous rationale.

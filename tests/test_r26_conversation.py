@@ -357,10 +357,10 @@ class TestRoutingFlow:
         state = _state(query_type="ambiguous", router_confidence=0.5)
         assert route_from_router(state) == "retrieve"
 
-    def test_low_confidence_routes_to_off_topic(self):
-        """Very low confidence routes to off_topic regardless of query_type."""
+    def test_low_confidence_routes_to_retrieve(self):
+        """R81 fix: Very low confidence routes to retrieve, not off_topic."""
         state = _state(query_type="property_qa", router_confidence=0.1)
-        assert route_from_router(state) == "off_topic"
+        assert route_from_router(state) == "retrieve"
 
     def test_hours_schedule_routes_to_retrieve(self):
         """hours_schedule routes to retrieve node."""

@@ -484,6 +484,7 @@ Also detect the language of the message.
 - Guest reactions ("fine", "whatever", "thanks", "that works"), complaints ("this sucks"), and terse follow-ups ("anything else?", "what about after dinner?") should be classified as **ambiguous**, NOT off_topic.
 - Emotional statements about the guest's EXPERIENCE at the property ("I'm exhausted", "we're celebrating", "I just won big!", "my dad loved this place") are **property_qa** — the guest is sharing context that should inform property recommendations.
 - Grief, loss, or bereavement ("my mom passed", "he died last month") in the context of the property ("she loved this place", "his favorite casino") is **property_qa** — the guest is honoring their loved one at the property.
+- If a message contains both a greeting (hey, hi, hello, I'm [name]) AND a property question (restaurant, show, spa, hotel, etc.), classify as **property_qa** — the question takes priority over the greeting.
 - Only use off_topic for messages genuinely unrelated to a casino resort stay (politics, homework, coding, general knowledge).
 
 ## User Message

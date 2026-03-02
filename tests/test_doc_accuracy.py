@@ -59,13 +59,13 @@ class TestAgentRegistry:
 class TestStateFieldCount:
     """Verify the documented state field count matches code."""
 
-    def test_property_qa_state_has_26_fields(self):
-        """PropertyQAState has exactly 26 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52 + 2 R72/R73 + 1 Phase1-multilingual + 1 Phase5-handoff + 3 profiling)."""
+    def test_property_qa_state_has_27_fields(self):
+        """PropertyQAState has exactly 27 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52 + 2 R72/R73 + 1 R81-crisis-turn + 1 Phase1-multilingual + 1 Phase5-handoff + 3 profiling)."""
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 26, (
-            f"PropertyQAState has {actual} fields, expected 26. "
+        assert actual == 27, (
+            f"PropertyQAState has {actual} fields, expected 27. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 

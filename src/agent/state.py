@@ -256,6 +256,10 @@ class PropertyQAState(TypedDict):
     # maintain crisis awareness even if the specific message doesn't re-trigger
     # crisis regex patterns. Reset only on new session (new thread_id).
     crisis_active: Annotated[bool, _keep_truthy]
+    # R81 fix: Track consecutive crisis turns for response adaptation.
+    # _keep_max reducer: incremented by off_topic_node self_harm branch.
+    # Reset only on new session. Allows empathetic variation on turns 2+.
+    crisis_turn_count: Annotated[int, _keep_max]
     # Phase 1: Language detection for multilingual support.
     # Set by router_node from RouterOutput.detected_language.
     # Used by greeting_node, off_topic_node, and execute_specialist to select

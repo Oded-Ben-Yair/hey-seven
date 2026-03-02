@@ -555,32 +555,17 @@ class TestE2EPipelinePropertyQA:
 class TestE2EPipelineEdgeCases:
     """Edge case tests for the full pipeline."""
 
-    @pytest.mark.asyncio
-    async def test_low_confidence_routes_to_off_topic(self):
-        """When router returns confidence < 0.3, the query routes to off_topic
-        regardless of query_type."""
-        mock_settings = _mock_settings()
-        router_llm = _make_router_llm(query_type="property_qa", confidence=0.1)
+    def test_low_confidence_routes_to_retrieve(self):
+        """R81 fix: When router returns confidence < 0.3, the query routes to
+        retrieve (not off_topic). Uncertain messages are safer through RAG than
+        being refused outright."""
+        from src.agent.nodes import route_from_router
 
-        with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
-            patch("src.agent.nodes.get_settings", return_value=mock_settings),
-            patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
-            patch("src.agent.graph.get_settings", return_value=mock_settings),
-            patch("src.agent.persona.get_settings", return_value=mock_settings),
-        ):
-            graph = build_graph()
-            config = {"configurable": {"thread_id": "e2e-low-confidence"}}
-            state = _initial_state("asdfghjkl")
-            result = await graph.ainvoke(state, config=config)
-
-        messages = result.get("messages", [])
-        ai_messages = [m for m in messages if isinstance(m, AIMessage)]
-        assert len(ai_messages) >= 1
-
-        # Low confidence -> off_topic -> property redirect
-        last_content = ai_messages[-1].content
-        assert "Test Casino" in last_content or "property" in last_content.lower()
+        state = {"query_type": "property_qa", "router_confidence": 0.1}
+        result = route_from_router(state)
+        assert result == "retrieve", (
+            f"Low confidence should route to retrieve, got {result}"
+        )
 
     @pytest.mark.asyncio
     async def test_empty_retrieval_returns_fallback(self):

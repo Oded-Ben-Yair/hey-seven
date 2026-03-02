@@ -340,6 +340,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "domains_discussed": [],  # _append_unique: accumulates across turns
         # R73: Crisis context persistence
         "crisis_active": False,  # _keep_truthy: once True, stays True for session
+        # R81 fix: crisis turn counter for response variation
+        "crisis_turn_count": 0,
         # Phase 1: Language detection for multilingual support
         "detected_language": None,
         # Phase 5: Structured handoff request for human host transfer

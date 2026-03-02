@@ -413,9 +413,12 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # Only match if the ENTIRE message is a short confirmation (< 8 words).
     # Longer messages like "Great, now what about dinner?" have real questions.
     if len(user_message.split()) < 8:
-        msg_stripped = msg_lower.strip().rstrip("!.?")
+        msg_stripped = msg_lower.strip().rstrip("!.?,;:")
         if msg_stripped in _CONFIRMATION_PATTERNS or any(
-            msg_stripped.startswith(p) for p in ("thanks ", "thank you", "great ", "perfect ", "sounds ")
+            msg_stripped.startswith(p) for p in (
+                "thanks ", "thanks,", "thank you", "great ", "great,",
+                "perfect ", "perfect,", "sounds ", "sounds,",
+            )
         ):
             logger.info(
                 json.dumps({

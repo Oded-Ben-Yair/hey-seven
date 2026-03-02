@@ -1,73 +1,73 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R77-R79 sprint complete. Spanish crisis detection, allergy guardrail fix, fallback rate reduction, profiling injection fix, incentive triggers, behavioral polish with few-shot examples. 3305 tests, 0 failures. R80 live eval in progress.",
-    "lastModified": "2026-03-02T07:15:00Z",
+    "summary": "R81 honest audit complete. Behavioral 3.2/10 (cold 3-model audit), technical 9.63/10 (done), profiling unmeasured. 3 behavioral fixes coded (uncommitted). Perfection roadmap created with 3 tracks. API key leaked blocks eval.",
+    "lastModified": "2026-03-02T15:30:00Z",
     "branch": "main",
-    "commitHash": "e427765",
+    "commitHash": "36197d6",
     "tag": "v1.5.0",
-    "phase": "r80-final-evaluation"
+    "phase": "r81-honest-audit-complete"
   },
-  "blockers": [],
+  "blockers": [
+    {
+      "description": "Gemini API key leaked (403 PERMISSION_DENIED). Cannot run live eval.",
+      "severity": "P0",
+      "resolution": "Get new GOOGLE_API_KEY from Google AI Studio"
+    }
+  ],
   "nextSteps": [
-    { "priority": 1, "description": "R80 live eval (84 behavioral + 56 profiling scenarios) — in progress" },
-    { "priority": 1, "description": "R80 judge panel (3-4 MCP models) on live eval responses" },
-    { "priority": 2, "description": "Deploy to GCP Cloud Run — first cosign + canary deployment" }
+    { "priority": 0, "description": "Commit R81 code changes (7 files, 3 fixes)" },
+    { "priority": 0, "description": "Get fresh Gemini API key" },
+    { "priority": 1, "description": "Execute Track 1 of perfection roadmap: full eval baseline, slop detector, intent-aware validation" },
+    { "priority": 2, "description": "Execute Track 2: few-shot examples, comp rewrite, cross-domain bridges" },
+    { "priority": 3, "description": "Execute Track 3: model ceiling test, human host validation" }
   ],
   "reviewHistory": {
-    "r77Sprint": {
+    "r81HonestAudit": {
       "date": "2026-03-02",
-      "fixes": [
-        "7 Spanish self-harm patterns in guardrails.py",
-        "13 Spanish crisis patterns across 3 severity levels",
-        "Allergy/dietary exclusion for age verification",
-        "Confirmation detection at compliance_gate position 7.9",
-        "Validator temperature 0.0 → 0.3",
-        "Comp agent profile completeness gate removed",
-        "Momentum tier data for RAG"
+      "method": "/honest-answer + reasoning-specialist blind-spot validation",
+      "findings": [
+        "Behavioral is 3.2/10 (not 5.8 as previously estimated)",
+        "Profiling NEVER measured — 56 scenarios exist but no eval run",
+        "Prompt already says right things, Gemini Flash ignores them",
+        "Need post-generation enforcement, not more prompt instructions",
+        "5 systemic failures: model noncompliance, validation fallbacks, proactivity gates, comp upsell, crisis rigidity"
       ],
-      "testsTotal": 3287,
-      "commitHash": "7e26b5b"
-    },
-    "r78r79Sprint": {
-      "date": "2026-03-02",
-      "fixes": [
-        "Profiling message ID-based replacement (fixed duplication bug)",
-        "Strengthened profiling question injection to REQUIRED",
-        "profile_completeness_50 + birthday-from-occasion incentive triggers",
-        "format_handoff_summary() for structured crisis handoff",
-        "Few-shot response examples (EN + ES) in system prompts",
-        "Tone calibration in all 4 specialist agents",
-        "Cross-turn profile injection from extracted_fields"
+      "codeChanges": [
+        "Confirmation fallback fix (compliance_gate.py)",
+        "Crisis turn-aware responses (state.py, nodes.py, crisis.py)",
+        "Greeting+question routing (prompts.py, nodes.py)",
+        "Test updates (4 files)"
       ],
-      "testsTotal": 3305,
-      "commitHash": "e427765"
+      "planCreated": "docs/plans/2026-03-02-perfection-roadmap.md"
     },
     "trajectory": {
       "R52": 67.7, "R53": 84.3, "R68_consensus": 92.9,
       "R72_behavioral_live": 4.1, "R73_behavioral_live": 5.0,
       "R74_technical": 9.34, "R74_behavioral_mock": 8.15,
-      "R75_technical": 9.63, "R75_behavioral_live": 5.8,
-      "R76_technical": 9.2, "R76_behavioral_live": 5.24, "R76_profiling_live": 2.99,
-      "R80_pending": "live eval in progress"
+      "R75_technical": 9.63, "R75_behavioral_live_1model": 5.8,
+      "R81_behavioral_cold_3model": 3.2,
+      "R81_profiling": "NEVER_MEASURED"
     }
   },
   "codebaseMetrics": {
     "loc": "21K+",
     "modules": 66,
     "testFiles": 95,
-    "tests": 3305,
+    "tests": 3284,
     "testFailures": 0,
-    "skipped": 1,
+    "skipped": 6,
     "coverage": "90.42%",
     "adrs": 28,
     "guardrailPatterns": 211,
     "behavioralScenarios": 200,
     "profilingScenarios": 56,
-    "graphNodes": 12
+    "graphNodes": 12,
+    "stateFields": 27
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-02",
-    "lastSessionId": "hey-seven-session-r77-r80-sprint"
+    "lastSessionId": "hey-seven-session-20260302-21961c",
+    "handoverPath": ".claude/handover-20260302-21961c.md"
   }
 }
