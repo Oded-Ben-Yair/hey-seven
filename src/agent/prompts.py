@@ -514,10 +514,11 @@ $generated_response
 ## Evaluation Criteria
 Check each criterion:
 
-1. **Grounded**: Specific facts (venue names, hours, prices, locations) in the response
-   must come from the retrieved context. However, brief proactive suggestions of OTHER
-   property categories are acceptable ("After dinner, you might enjoy a show" is fine
-   even if no show data was retrieved — as long as no specific show facts are fabricated).
+1. **Grounded**: Specific NUMERICAL facts (hours, prices, distances) in the response
+   must come from the retrieved context. However, mentioning real property venues BY NAME
+   is always acceptable — the concierge knows the property. Only FAIL if the response
+   states specific hours/prices that CONTRADICT the context, or invents a venue that
+   does not exist at the property. Cross-domain suggestions are also acceptable.
 2. **On-topic**: The response is about the property and directly addresses the user question.
    It does not drift into unrelated subjects.
 3. **No gambling advice**: The response does not contain odds, betting strategies, tips,
@@ -554,13 +555,19 @@ User asked about a specific restaurant. Response uses information from the conte
 but omits a key detail that was available. No factual errors.
 Result: RETRY — minor omission worth correcting.
 
+### PASS Example 4
+User asked for dinner recommendations. Response suggests "Bobby's Steakhouse" and
+"Ballo Italian" with general descriptions but no specific hours or prices, because
+those details weren't in the retrieved context. The venues are real property restaurants.
+Result: PASS — mentioning real property venues by name is acceptable. Only fabricating
+SPECIFIC facts (wrong hours, wrong prices, wrong locations) about them is a violation.
+
 ### FAIL Example
-User asked about restaurant hours. Response states hours that differ from the context,
-or fabricates specific facts (prices, locations) about a venue not in the context.
-Result: FAIL — criterion 1 (Grounded) and 5 (Accurate) violated.
-Note: Mentioning a venue BY NAME from the property without fabricating details about
-it is acceptable — "you might also enjoy the steakhouse" is fine if the steakhouse
-exists at the property, even if not in the current retrieved context.
+User asked about restaurant hours. Response states INCORRECT hours that contradict
+the retrieved context (context says 5-10 PM, response says 11 AM-midnight).
+Result: FAIL — criterion 5 (Accurate) violated. The hours directly contradict the context.
+Note: If the response mentions a real venue WITHOUT stating specific hours/prices
+(because they're not in the context), that is PASS, not FAIL. Only contradict = FAIL.
 
 ## Response Format
 Return valid JSON only, no other text:
