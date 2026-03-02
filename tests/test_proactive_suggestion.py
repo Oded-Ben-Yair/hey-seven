@@ -5,7 +5,7 @@ function for testability — no LLM mocking needed.
 
 Tests the 5 gating conditions:
   1. Whisper plan has a non-empty proactive_suggestion
-  2. suggestion_confidence >= 0.8
+  2. suggestion_confidence >= 0.6 (R82 1F: lowered from 0.8)
   3. Sentiment not negative/frustrated/None
   4. suggestion_offered is False (max 1 per session)
   5. retrieved_context is non-empty (grounding exists)
@@ -82,11 +82,11 @@ class TestProactiveSuggestionInjected:
         assert "Todd English" in section
 
     def test_exact_confidence_threshold(self):
-        """Confidence exactly at 0.8 is accepted (>= not >)."""
+        """Confidence exactly at 0.6 is accepted (R82: lowered from 0.8, >= not >)."""
         state = _base_state(
             whisper_plan={
                 "proactive_suggestion": "Check out the spa",
-                "suggestion_confidence": 0.8,
+                "suggestion_confidence": 0.6,
             }
         )
         section, mark = _should_inject_suggestion(state, "positive", _base_dynamics())
@@ -142,11 +142,11 @@ class TestProactiveSuggestionSuppressed:
         assert section == ""
 
     def test_suppressed_on_low_confidence(self):
-        """Suggestion NOT injected when confidence < 0.8."""
+        """Suggestion NOT injected when confidence < 0.6 (R82: lowered from 0.8)."""
         state = _base_state(
             whisper_plan={
                 "proactive_suggestion": "Try the buffet",
-                "suggestion_confidence": 0.79,
+                "suggestion_confidence": 0.59,
             }
         )
         section, mark = _should_inject_suggestion(state, "positive", _base_dynamics())
@@ -188,14 +188,14 @@ class TestProactiveSuggestionSuppressed:
         assert mark is False
         assert section == ""
 
-    def test_suppressed_on_neutral_without_contextual_signal(self):
-        """Neutral sentiment without occasion or 3+ turns blocks injection."""
+    def test_neutral_without_contextual_signal_now_passes(self):
+        """R82 1F: Neutral sentiment now passes without occasion or 3+ turns."""
         state = _base_state()
         dynamics = _base_dynamics(turn_count=1)
         section, mark = _should_inject_suggestion(state, "neutral", dynamics)
 
-        assert mark is False
-        assert section == ""
+        assert mark is True  # R82: was False, now True
+        assert "Todd English" in section
 
     def test_suppressed_on_missing_confidence_key(self):
         """Missing suggestion_confidence key defaults to 0.0 (blocked)."""
@@ -255,11 +255,11 @@ class TestProactiveSuggestionEdgeCases:
         assert suggestion_text in section
 
     def test_confidence_just_below_threshold(self):
-        """Confidence at 0.799... is rejected."""
+        """Confidence at 0.599... is rejected (R82: threshold is now 0.6)."""
         state = _base_state(
             whisper_plan={
                 "proactive_suggestion": "Try the spa",
-                "suggestion_confidence": 0.7999,
+                "suggestion_confidence": 0.5999,
             }
         )
         section, mark = _should_inject_suggestion(state, "positive", _base_dynamics())

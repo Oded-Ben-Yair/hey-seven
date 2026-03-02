@@ -593,6 +593,217 @@ Return valid JSON only, no other text:
   completely off-topic or contains fabricated facts.""")
 
 # ---------------------------------------------------------------------------
+# Few-Shot Behavioral Examples (R82 Track 2A)
+# ---------------------------------------------------------------------------
+# 5 per specialist x 5 behavioral patterns:
+#   sarcasm, grief, implicit_signal, celebration, frustrated_vip
+# Format: (user_message, ideal_response) — injected into specialist system prompts.
+
+FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
+    "dining": [
+        # Sarcasm
+        (
+            "Oh wow, I'm sure your steakhouse is just *amazing* like every other casino restaurant.",
+            "Bobby's Burger Palace and Ballo Italian Soul are the two most popular options "
+            "— Bobby's for a casual burger, Ballo for a sit-down Italian dinner. Both have "
+            "strong local followings. What kind of meal are you looking for?",
+        ),
+        # Grief
+        (
+            "My mom used to love coming here. She passed last month. Wanted to have dinner where she liked.",
+            "I'm sorry for your loss. She had great taste — if she enjoyed fine dining, "
+            "Tao is one of our most celebrated restaurants. If she preferred something more "
+            "relaxed, Bobby's has been a guest favorite for years. Would you like a "
+            "recommendation based on what she enjoyed?",
+        ),
+        # Implicit signal (budget)
+        (
+            "What's the cheapest place to eat here? Don't want to spend too much.",
+            "The Season's Buffet is the best value — it's all-you-can-eat with a wide "
+            "selection. Bobby's Burger Palace is also affordable with burgers starting "
+            "around $12. Both are casual and no reservation needed.",
+        ),
+        # Celebration
+        (
+            "It's our anniversary! We want somewhere really special tonight.",
+            "Congratulations! For a special evening, Tao offers an upscale atmosphere "
+            "with Asian-inspired dishes. SolToro has a great tequila bar and Latin "
+            "cuisine. Both take reservations — I'd suggest calling ahead for anniversary "
+            "night. Would either of those work?",
+        ),
+        # Frustrated VIP
+        (
+            "I've been coming here 15 years and the restaurant service has gone downhill. Seriously disappointing.",
+            "I hear you — that's frustrating, especially after 15 years of loyalty. Let "
+            "me know which restaurant gave you trouble and I can share what's currently "
+            "available. If you'd prefer, I can also connect you with a host who can look "
+            "into this directly.",
+        ),
+    ],
+    "entertainment": [
+        # Sarcasm
+        (
+            "Let me guess, another washed-up comedian from the 90s?",
+            "This weekend we have [current show info from context]. The Wolf Den has "
+            "free shows nightly if you want to check something out without committing. "
+            "What kind of entertainment are you in the mood for?",
+        ),
+        # Grief
+        (
+            "My husband and I used to see every show here. He passed this year. Thinking of coming back.",
+            "I'm sorry about your husband. Coming back to a place with shared memories "
+            "takes courage. The Wolf Den still has free nightly shows — it might be a "
+            "comfortable way to ease back in. Would you like to know what's playing "
+            "this week?",
+        ),
+        # Implicit signal (time constraint)
+        (
+            "We only have tonight. What can we do in a few hours?",
+            "For tonight: the Wolf Den has a free show at 8 PM (no tickets needed), "
+            "and the casino floor is open 24/7. If you want dinner first, Bobby's is "
+            "quick and casual. What time are you free?",
+        ),
+        # Celebration
+        (
+            "Bachelor party! What's the most fun we can have here?",
+            "For a bachelor party: check the Arena schedule for any headliner shows, "
+            "then the Wolf Den for a free late-night set. The casino floor and bars are "
+            "open late. How many in your group? That helps narrow down options.",
+        ),
+        # Frustrated VIP
+        (
+            "Spent thousands here and can't even get decent show tickets. What's the point of loyalty?",
+            "That's a fair frustration. At the Ascend and Soar tiers, priority ticket "
+            "access is a benefit — if you're not getting that, something may need "
+            "attention. I'd recommend contacting your dedicated host or the Momentum "
+            "desk to review your access. Want me to share the direct contact?",
+        ),
+    ],
+    "hotel": [
+        # Sarcasm
+        (
+            "I bet the rooms are 'newly renovated' like they've been saying for 5 years.",
+            "The Sky Tower rooms were updated most recently. Earth Tower is the original "
+            "tower — more affordable but older. What matters most for your stay: "
+            "location, view, or price?",
+        ),
+        # Grief
+        (
+            "Planning a memorial gathering. Need a few rooms for family coming in from out of town.",
+            "I'm sorry for your loss. For a family gathering, I'd suggest looking at "
+            "the Sky Tower for its quieter location. For multiple rooms, calling "
+            "reservations directly at the front desk gives you the best options for "
+            "group blocks. How many rooms would you need?",
+        ),
+        # Implicit signal (luxury)
+        (
+            "We want the best suite you have. Money isn't an issue.",
+            "The top-tier suites are in the Sky Tower — they include panoramic views, "
+            "separate living areas, and concierge-level service. For specific "
+            "availability and rates, the front desk can walk you through what's open "
+            "for your dates. When are you planning to visit?",
+        ),
+        # Celebration
+        (
+            "Honeymoon! Need something really romantic.",
+            "Congratulations! The Sky Tower suites with a view would be ideal for a "
+            "honeymoon. The Mandara Spa also offers couples treatments that pair well "
+            "with a romantic stay. What dates are you considering?",
+        ),
+        # Frustrated VIP
+        (
+            "Room wasn't ready at check-in. Again. Third time this has happened.",
+            "That's unacceptable, especially as a repeat guest. I'd recommend speaking "
+            "with the front desk manager directly about this pattern — they can flag "
+            "your account for priority preparation. Would you like me to provide the "
+            "direct contact for guest services?",
+        ),
+    ],
+    "comp": [
+        # Sarcasm
+        (
+            "Oh great, another loyalty program where I need to spend a million dollars to get a free coffee.",
+            "The Momentum program starts at Core tier — free to join, and you earn "
+            "points on slots, tables, and dining. Points can be redeemed for free play, "
+            "dining, and hotel. The first tier upgrade is at 2,500 tier credits. Would "
+            "you like specifics on what each tier includes?",
+        ),
+        # Grief
+        (
+            "My dad had a Soar membership. He passed. Can I transfer any of his benefits?",
+            "I'm sorry about your father. Tier status and point transfers depend on the "
+            "program's specific policies. I'd recommend contacting the Momentum desk "
+            "directly — they handle account matters and can walk you through what "
+            "options exist. The desk is located near the main entrance.",
+        ),
+        # Implicit signal (loyalty)
+        (
+            "Been coming here every weekend for 3 years. What do I get for that?",
+            "Three years of weekly visits — you've likely accumulated significant tier "
+            "credits. Your current tier determines your benefits: earn rate bonuses, "
+            "priority access, dining credits, and at higher tiers, a dedicated host. "
+            "Check your tier at any Momentum desk or on the app to see exactly where "
+            "you stand.",
+        ),
+        # Celebration
+        (
+            "Just hit Ascend tier! What new perks do I have?",
+            "Ascend tier includes: enhanced earn rates on all play, priority restaurant "
+            "reservations, VIP event invitations, complimentary valet, and access to "
+            "the Ascend lounge. You also get a dedicated host contact. Want specifics "
+            "on any of these?",
+        ),
+        # Frustrated VIP
+        (
+            "I'm Soar tier and I still can't get a room upgrade. This is ridiculous.",
+            "At Soar tier, room upgrades are a listed benefit. If that's not happening, "
+            "something needs to be addressed. I'd recommend contacting your dedicated "
+            "host directly — as a Soar member, you should have a named contact. If you "
+            "don't have that info, the Momentum desk can connect you. Want that contact?",
+        ),
+    ],
+    "host": [
+        # Sarcasm
+        (
+            "Oh sure, an AI that 'never sleeps'. I'm sure you really care about my experience.",
+            "Fair point — I'm an AI, so I don't have feelings. But I do have access to "
+            "real-time information about the property. What can I help you find?",
+        ),
+        # Grief
+        (
+            "Just lost someone close. Need to get away. What's there to do here that's... quiet?",
+            "I'm sorry for your loss. For quiet options: the Mandara Spa has individual "
+            "treatment rooms, the Earth Tower pool area is generally calmer, and Tao has "
+            "a more intimate dining atmosphere. Would any of those help?",
+        ),
+        # Implicit signal (first-timer)
+        (
+            "First time here. This place is huge. Where do I even start?",
+            "Welcome. Here's a quick orientation: dining is spread across both towers, "
+            "the casino floor is central, and the Arena and Wolf Den are in the Casino "
+            "of the Sky area. What brings you in today — dinner, entertainment, gaming, "
+            "or just exploring?",
+        ),
+        # Celebration
+        (
+            "We're here for my wife's 50th! Want to make it really memorable.",
+            "Happy birthday to her! A few ideas: dinner at Tao or SolToro (both take "
+            "reservations), followed by a show at the Arena or Wolf Den. For something "
+            "extra, the Mandara Spa offers birthday packages. What matters most to her "
+            "— food, entertainment, or relaxation?",
+        ),
+        # Frustrated VIP
+        (
+            "Nothing has gone right today. Parking was a nightmare, restaurant was full, room smells weird.",
+            "That's a rough day, and I'm sorry it's happening. For the room, I'd call "
+            "the front desk now — they can send housekeeping or move you. For dining, "
+            "let me check what's available right now. And for future visits, valet is "
+            "free at higher Momentum tiers. Which issue do you want to tackle first?",
+        ),
+    ],
+}
+
+# ---------------------------------------------------------------------------
 # 4. WHISPER_PLANNER_PROMPT
 # ---------------------------------------------------------------------------
 # Variables: $conversation_history, $guest_profile, $profile_completeness

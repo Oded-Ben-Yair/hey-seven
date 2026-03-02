@@ -815,6 +815,9 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     query_type = state.get("query_type", "off_topic")
     settings = get_settings()
 
+    # R82 fix: Extract user_message for crisis followup (R81 added references without defining it)
+    user_message = _get_last_human_message(state.get("messages", []))
+
     # Phase 1: Detect language once for all off-topic branches
     detected_lang = state.get("detected_language")
     _is_spanish = (

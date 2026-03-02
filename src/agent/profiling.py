@@ -296,6 +296,12 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
             # No user message to analyze — return current state
             completeness = _calculate_profile_completeness_weighted(extracted_fields)
             phase = _determine_profiling_phase(extracted_fields, completeness)
+            logger.debug(
+                "Profiling skip: no user_message, existing_fields=%d, completeness=%.2f, phase=%s",
+                len(extracted_fields),
+                completeness,
+                phase,
+            )
             return {
                 "profiling_phase": phase,
                 "profile_completeness_score": completeness,
@@ -324,25 +330,39 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
         # instead of nested ConfidenceField objects. Confidence gating is
         # handled in the extraction prompt — the LLM only returns facts that
         # are explicitly stated or strongly implied.
+        total_fields = len(ProfileExtractionOutput.model_fields)
         new_fields: dict[str, Any] = {}
+        skipped_fields: list[str] = []
         for field_name in ProfileExtractionOutput.model_fields:
             field_value = getattr(extraction_result, field_name, None)
             if field_value is not None and field_value != "":
                 # Map profiling field names to extracted_fields keys
                 key = _FIELD_NAME_MAP.get(field_name, field_name)
                 new_fields[key] = field_value
+            else:
+                skipped_fields.append(field_name)
 
-        if new_fields:
-            logger.info(
-                "Profiling extracted %d fields: %s",
-                len(new_fields),
-                list(new_fields.keys()),
-            )
+        filled_count = len(new_fields)
+        logger.info(
+            "Profiling extraction: filled=%d/%d fields, keys=%s, skipped=%s",
+            filled_count,
+            total_fields,
+            list(new_fields.keys()) if new_fields else "[]",
+            skipped_fields[:5] if len(skipped_fields) > 5 else skipped_fields,
+        )
 
         # Merge new fields (new_fields will be merged by _merge_dicts reducer)
         merged = {**extracted_fields, **new_fields}
         completeness = _calculate_profile_completeness_weighted(merged)
         phase = _determine_profiling_phase(merged, completeness)
+
+        logger.info(
+            "Profiling state: phase=%s, completeness=%.2f, total_known=%d, new_this_turn=%d",
+            phase,
+            completeness,
+            len(merged),
+            filled_count,
+        )
 
         result: dict[str, Any] = {
             "extracted_fields": new_fields,  # reducer merges with existing
@@ -356,9 +376,18 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
         # The profiling question injection in _base.py is the primary path --
         # this is the fallback for when the LLM ignores the system prompt guidance.
         whisper = state.get("whisper_plan")
+        guest_sentiment = state.get("guest_sentiment", "unknown")
         if whisper and whisper.get("next_profiling_question"):
             question = whisper["next_profiling_question"]
             technique = whisper.get("question_technique", "none")
+
+            logger.info(
+                "Profiling question: candidate='%s', technique=%s, phase=%s, sentiment=%s",
+                question[:60] if question else "none",
+                technique,
+                phase,
+                guest_sentiment,
+            )
 
             # Only inject if technique is not "none" and we have an AI response
             if technique != "none" and ai_response:
@@ -386,6 +415,23 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
                         "Profiling question already in response from system prompt (technique=%s)",
                         technique,
                     )
+
+        if not result["profiling_question_injected"]:
+            _reason = "no_whisper_plan"
+            if whisper and whisper.get("next_profiling_question"):
+                _t = whisper.get("question_technique", "none")
+                if _t == "none":
+                    _reason = "technique_none"
+                elif not ai_response:
+                    _reason = "no_ai_response"
+                else:
+                    _reason = "already_present"
+            elif whisper:
+                _reason = "no_question"
+            logger.debug(
+                "Profiling question: injected=False, reason=%s",
+                _reason,
+            )
 
         return result
 

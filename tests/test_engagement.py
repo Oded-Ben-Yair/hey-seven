@@ -166,9 +166,7 @@ class TestCrossDomainHint:
 
     def test_max_3_suggestions(self):
         hint = _build_cross_domain_hint(["dining"])
-        # Should have at most 3 suggestions despite many unexplored
-        suggest_line = [line for line in hint.split("\n") if "you could mention" in line.lower()]
-        assert len(suggest_line) == 1
-        # Count comma-separated suggestions
-        suggestions = suggest_line[0].split("mention:")[-1].strip().rstrip(".")
-        assert suggestions.count(",") <= 2  # max 3 items = max 2 commas
+        # R82 Track 2C: bridge templates replace generic "you could mention" for known pairs.
+        # At most 3 bridge lines (each starts with "- <domain>:")
+        bridge_lines = [line for line in hint.split("\n") if line.startswith("- ")]
+        assert len(bridge_lines) <= 3

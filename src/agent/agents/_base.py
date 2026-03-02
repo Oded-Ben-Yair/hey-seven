@@ -172,13 +172,35 @@ _ALL_GUEST_DOMAINS = frozenset(
     {"dining", "entertainment", "hotel", "spa", "gaming", "shopping", "promotions", "comp"}
 )
 
+# R82 Track 2C: Cross-domain bridge templates.
+# Specific transition phrases between domain pairs, injected into the system
+# prompt when the guest has discussed domain A and domain B is available.
+# Format: {(from_domain, to_domain): "bridge text"}
+CROSS_DOMAIN_BRIDGES: dict[tuple[str, str], str] = {
+    ("dining", "entertainment"): "Since you're having dinner, there may be shows later tonight worth checking out.",
+    ("dining", "spa"): "After dinner, the spa is a nice way to wind down — open until late.",
+    ("dining", "hotel"): "If you're making an evening of it, room availability tends to be best when booked ahead.",
+    ("entertainment", "dining"): "If you're seeing a show, grabbing dinner beforehand works well — most restaurants are a short walk from the venues.",
+    ("entertainment", "hotel"): "For late shows, staying on-site saves the drive — check room availability if interested.",
+    ("entertainment", "spa"): "After a high-energy show, the spa offers a good contrast to wind down.",
+    ("hotel", "dining"): "As a guest, you're steps from every restaurant — no need to rush anywhere.",
+    ("hotel", "spa"): "Hotel guests get easy access to the spa — worth looking into during your stay.",
+    ("hotel", "entertainment"): "Staying over means you can catch late shows without worrying about the drive home.",
+    ("spa", "dining"): "After a spa session, a quiet dinner is a natural next step — several restaurants are nearby.",
+    ("spa", "hotel"): "If you're planning a full spa day, combining it with an overnight stay makes it a real retreat.",
+    ("comp", "dining"): "Depending on your tier, dining credits may apply at select restaurants — worth checking.",
+    ("comp", "entertainment"): "Higher loyalty tiers sometimes include priority ticket access for shows.",
+    ("comp", "spa"): "Some reward tiers include spa credits — check with the Momentum desk for your specific benefits.",
+    ("gaming", "dining"): "When you're ready for a break from the floor, there are quick options like Bobby's and sit-down spots like Tao nearby.",
+}
+
 
 def _build_cross_domain_hint(domains_discussed: list[str]) -> str:
-    """Build a cross-domain engagement hint for the system prompt.
+    """Build cross-domain engagement hint with specific bridge templates.
 
-    R74 B3: When a guest has explored some domains, generates a prompt section
-    suggesting unexplored domains the agent can naturally mention.  Max 3
-    suggestions to avoid overwhelming the prompt.
+    R82 Track 2C: Enhanced with specific bridge text instead of generic
+    "you could mention X" hints. The LLM gets a concrete transition phrase
+    it can use or adapt, rather than inventing one from scratch.
 
     Args:
         domains_discussed: List of specialist domain names already discussed
@@ -195,13 +217,32 @@ def _build_cross_domain_hint(domains_discussed: list[str]) -> str:
     if not unexplored:
         return ""
 
+    # Find specific bridge templates from discussed -> unexplored
+    bridges: list[str] = []
+    last_domain = domains_discussed[-1] if domains_discussed else ""
+    for target in unexplored[:3]:  # Max 3 suggestions
+        bridge_text = CROSS_DOMAIN_BRIDGES.get((last_domain, target))
+        if bridge_text:
+            bridges.append(f"- {target}: \"{bridge_text}\"")
+
+    if not bridges:
+        # Fallback to generic hint if no specific bridges found
+        explored_str = ", ".join(sorted(domains_discussed))
+        suggest_str = ", ".join(unexplored[:3])
+        return (
+            "## Cross-Domain Awareness (internal context)\n"
+            f"Guest has already explored: {explored_str}.\n"
+            f"If it fits naturally, you could mention: {suggest_str}.\n"
+            "Do NOT force these — only mention if genuinely relevant to the conversation."
+        )
+
     explored_str = ", ".join(sorted(domains_discussed))
-    suggest_str = ", ".join(unexplored[:3])  # Max 3 suggestions
     return (
         "## Cross-Domain Awareness (internal context)\n"
-        f"Guest has already explored: {explored_str}.\n"
-        f"If it fits naturally, you could mention: {suggest_str}.\n"
-        "Do NOT force these — only mention if genuinely relevant to the conversation."
+        f"Guest has explored: {explored_str}.\n"
+        "If natural, you can use one of these transitions:\n"
+        + "\n".join(bridges) + "\n"
+        "Use these as inspiration — adapt to the conversation, don't copy verbatim."
     )
 
 
@@ -384,17 +425,17 @@ def _should_inject_suggestion(
 ) -> tuple[str, bool]:
     """Determine whether to inject a proactive suggestion into the system prompt.
 
-    R74 B4: Extracted from execute_specialist for testability.
+    R82 Track 1F: Added per-gate logging + lowered thresholds.
 
     Gating conditions (ALL must be true):
       1. Whisper plan has a non-empty ``proactive_suggestion``
-      2. ``suggestion_confidence`` >= 0.8
+      2. ``suggestion_confidence`` >= 0.6 (R82 1F: lowered from 0.8)
       3. ``effective_sentiment`` is not negative, frustrated, or None
       4. ``suggestion_offered`` is False (max 1 per session)
       5. ``retrieved_context`` is non-empty (grounding exists)
 
-    For neutral sentiment, an additional contextual signal is required:
-    an occasion is detected OR the conversation has 3+ human turns.
+    R82 1F: Neutral sentiment now passes without extra gates (removed
+    occasion/engagement requirement that was too restrictive).
 
     Returns:
         Tuple of (proactive_prompt_section, should_mark_offered).
@@ -402,41 +443,47 @@ def _should_inject_suggestion(
     """
     whisper = state.get("whisper_plan")
     if not whisper:
+        logger.debug("Proactivity gate: NO whisper_plan")
         return "", False
 
     suggestion = whisper.get("proactive_suggestion")
     if not suggestion:
+        logger.debug("Proactivity gate: NO proactive_suggestion in whisper")
         return "", False
 
+    # R82 1F: Lowered from 0.8 to 0.6 — 0.8 was too strict, almost never passed
     # R76 fix: suggestion_confidence is now a str (simplified WhisperPlan schema).
     try:
         conf = float(whisper.get("suggestion_confidence", 0.0))
     except (ValueError, TypeError):
         conf = 0.0
-    if conf < 0.8:
+    if conf < 0.6:
+        logger.debug("Proactivity gate: confidence %.2f < 0.6 threshold", conf)
         return "", False
 
     if state.get("suggestion_offered", False):
+        logger.debug("Proactivity gate: suggestion already offered this session")
         return "", False
 
     if not state.get("retrieved_context"):
+        logger.debug("Proactivity gate: no retrieved_context for grounding")
         return "", False
 
     # Sentiment gate: block on negative, frustrated, or unknown.
-    # Allow on positive unconditionally.  Allow on neutral only when
-    # strong contextual signals make a proactive suggestion welcome.
-    extracted = state.get("extracted_fields") or {}
+    # R82 1F: Allow on neutral unconditionally (removed extra gate for neutral).
+    # The old code required occasion or 3+ turns for neutral — too restrictive.
     if effective_sentiment == "positive":
         pass  # allowed
     elif effective_sentiment == "neutral":
-        # Require at least one contextual signal for neutral sentiment.
-        has_occasion = bool(extracted.get("occasion"))
-        has_engagement = dynamics.get("turn_count", 0) >= 3
-        if not (has_occasion or has_engagement):
-            return "", False
+        pass  # R82 1F: Allow on neutral without extra gates
     else:
-        # negative, frustrated, None — block
+        logger.debug("Proactivity gate: sentiment '%s' blocked", effective_sentiment)
         return "", False
+
+    logger.info(
+        "Proactivity gate: ALL PASSED (conf=%.2f, sentiment=%s, turn=%d)",
+        conf, effective_sentiment, dynamics.get("turn_count", 0),
+    )
 
     section = (
         "\n\n## Proactive Suggestion (weave naturally into your response — don't force it)\n"
@@ -731,9 +778,9 @@ async def execute_specialist(
                     "If the guest is upset, rushed, or gave a one-word reply, SKIP the question."
                 )
 
-    # R74 B4: Proactive suggestion injection via extracted helper.
-    # Gated by: confidence >= 0.8, sentiment not negative/frustrated,
-    # max 1 per session (suggestion_offered), grounding exists (retrieved_context).
+    # R74 B4 / R82 1F: Proactive suggestion injection via extracted helper.
+    # Gated by: confidence >= 0.6 (R82: lowered from 0.8), sentiment not
+    # negative/frustrated, max 1 per session (suggestion_offered), grounding exists.
     proactive_section, suggestion_already_offered = _should_inject_suggestion(
         state, guest_sentiment, dynamics,
     )
