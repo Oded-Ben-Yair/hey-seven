@@ -70,6 +70,7 @@ from .dispatch import (
 from .profiling import profiling_enrichment_node
 from .whisper_planner import whisper_planner_node
 from .nodes import (
+    _normalize_content,
     fallback_node,
     greeting_node,
     off_topic_node,
@@ -426,7 +427,7 @@ async def chat(
     for msg in reversed(messages):
         if isinstance(msg, AIMessage) and msg.content:
             response_text = (
-                msg.content if isinstance(msg.content, str) else str(msg.content)
+                _normalize_content(msg.content)
             )
             break
 
@@ -566,7 +567,7 @@ async def chat_stream(
                     msgs = output.get("messages", [])
                     for msg in msgs:
                         if isinstance(msg, AIMessage) and msg.content:
-                            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                            content = _normalize_content(msg.content)
                             # R39 fix M-005: Single-pass PII redaction. Previously
                             # called contains_pii() then redact_pii() — two full
                             # regex passes. redact_pii() returns the original text

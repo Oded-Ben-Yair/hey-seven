@@ -18,6 +18,7 @@ from typing import Any, Literal
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
 
+from src.agent.nodes import _normalize_content
 from src.agent.state import PropertyQAState
 from src.config import get_settings
 
@@ -286,9 +287,9 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
 
         for msg in reversed(messages):
             if isinstance(msg, AIMessage) and not ai_response:
-                ai_response = msg.content if isinstance(msg.content, str) else str(msg.content)
+                ai_response = _normalize_content(msg.content)
             elif isinstance(msg, HumanMessage) and not user_message:
-                user_message = msg.content if isinstance(msg.content, str) else str(msg.content)
+                user_message = _normalize_content(msg.content)
             if user_message and ai_response:
                 break
 
@@ -396,7 +397,7 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
                     # Find the last AI message and replace it with enriched version
                     for msg in reversed(messages):
                         if isinstance(msg, AIMessage) and msg.content:
-                            original = msg.content if isinstance(msg.content, str) else str(msg.content)
+                            original = _normalize_content(msg.content)
                             enriched = f"{original}\n\n{question}"
                             # Use the same id to trigger replacement in add_messages reducer
                             replacement = AIMessage(content=enriched, id=msg.id)

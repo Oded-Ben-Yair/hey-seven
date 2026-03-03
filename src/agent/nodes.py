@@ -100,6 +100,27 @@ def _format_context_block(retrieved: list[dict], separator: str = "\n---\n") -> 
     return separator.join(parts)
 
 
+def _normalize_content(content) -> str:
+    """Normalize LangChain message content to a plain string.
+
+    R83 fix: Gemini 3.x returns AIMessage.content as a list of content parts
+    (e.g., [{'type': 'text', 'text': '...'}]) instead of a plain string.
+    This helper extracts the text from both formats.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        # Extract text from content parts (Gemini 3.x multipart format)
+        parts = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                parts.append(part.get("text", ""))
+            elif isinstance(part, str):
+                parts.append(part)
+        return "\n".join(parts) if parts else str(content)
+    return str(content)
+
+
 def _get_last_human_message(messages: list) -> str:
     """Extract the content of the last HumanMessage from a message list.
 
@@ -108,7 +129,7 @@ def _get_last_human_message(messages: list) -> str:
     """
     for msg in reversed(messages):
         if isinstance(msg, HumanMessage):
-            return msg.content if isinstance(msg.content, str) else str(msg.content)
+            return _normalize_content(msg.content)
     return ""
 
 
@@ -530,7 +551,7 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
     generated_response = ""
     for msg in reversed(state.get("messages", [])):
         if isinstance(msg, AIMessage):
-            generated_response = msg.content if isinstance(msg.content, str) else str(msg.content)
+            generated_response = _normalize_content(msg.content)
             break
 
     # Format retrieved context (shared helper with generate_node for consistency)
@@ -632,7 +653,7 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
     cleaned_message = None
     for msg in reversed(state.get("messages", [])):
         if isinstance(msg, AIMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _normalize_content(msg.content)
             cleaned = _enforce_tone(content)
             if cleaned != content:
                 logger.info("Slop detector: cleaned %d chars from response", len(content) - len(cleaned))

@@ -24,6 +24,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from src.agent.prompts import WHISPER_PLANNER_PROMPT
+from src.agent.nodes import _normalize_content
 from src.agent.state import PropertyQAState
 from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
@@ -323,9 +324,9 @@ def _format_history(messages: list) -> str:
     lines = []
     for msg in messages:
         if isinstance(msg, HumanMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _normalize_content(msg.content)
             lines.append(f"Guest: {content}")
         elif isinstance(msg, AIMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _normalize_content(msg.content)
             lines.append(f"Agent: {content}")
     return "\n".join(lines) if lines else "(no conversation yet)"

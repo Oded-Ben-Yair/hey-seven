@@ -19,6 +19,7 @@ from src.api.pii_redaction import redact_pii
 from src.casino.config import get_casino_profile
 from src.config import get_settings
 
+from .nodes import _normalize_content
 from .state import PropertyQAState
 
 logger = logging.getLogger(__name__)
@@ -237,7 +238,7 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     if last_ai_msg is None:
         return {}
 
-    content = last_ai_msg.content if isinstance(last_ai_msg.content, str) else str(last_ai_msg.content)
+    content = _normalize_content(last_ai_msg.content)
 
     # Step 1: Output PII guardrail (always active, fail-closed)
     content = _validate_output(content)
@@ -289,7 +290,7 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
                 content = truncated + "..."
 
     # Only return messages update if content actually changed
-    original = last_ai_msg.content if isinstance(last_ai_msg.content, str) else str(last_ai_msg.content)
+    original = _normalize_content(last_ai_msg.content)
     if content != original:
         return {"messages": [AIMessage(content=content)]}
 

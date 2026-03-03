@@ -19,7 +19,7 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from src.agent.nodes import _format_context_block
+from src.agent.nodes import _format_context_block, _normalize_content
 from src.agent.prompts import (
     EMOTIONAL_CONTEXT_GUIDES,
     FEW_SHOT_EXAMPLES,
@@ -84,7 +84,7 @@ def _detect_conversation_dynamics(messages: list) -> dict[str, Any]:
     human_messages: list[str] = []
     for msg in messages:
         if isinstance(msg, HumanMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _normalize_content(msg.content)
             human_messages.append(content)
 
     dynamics["turn_count"] = len(human_messages)
@@ -155,7 +155,7 @@ def _count_consecutive_frustrated(messages: list) -> int:
     count = 0
     for msg in reversed(messages):
         if isinstance(msg, HumanMessage):
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            content = _normalize_content(msg.content)
             sentiment = detect_sentiment(content)
             if sentiment in ("frustrated", "negative"):
                 count += 1
@@ -271,7 +271,7 @@ def _build_behavioral_prompt_sections(
         recent_sentiments: list[str] = []
         for msg in reversed(state.get("messages", [])):
             if isinstance(msg, HumanMessage) and len(recent_sentiments) < 3:
-                content = msg.content if isinstance(msg.content, str) else str(msg.content)
+                content = _normalize_content(msg.content)
                 recent_sentiments.append(detect_sentiment(content))
         prior_sentiments = recent_sentiments[1:] if len(recent_sentiments) > 1 else []
         if detect_sarcasm_context(user_msg, effective_sentiment, prior_sentiments):
@@ -693,7 +693,7 @@ async def execute_specialist(
     user_msg = ""
     for msg in reversed(state.get("messages", [])):
         if isinstance(msg, HumanMessage):
-            user_msg = msg.content if isinstance(msg.content, str) else str(msg.content)
+            user_msg = _normalize_content(msg.content)
             break
     user_msg_lower = user_msg.lower()
 
