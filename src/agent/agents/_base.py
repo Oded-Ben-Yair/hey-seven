@@ -935,7 +935,7 @@ async def execute_specialist(
             _LLM_SEMAPHORE.release()
 
     await cb.record_success()
-    content = response.content if isinstance(response.content, str) else str(response.content)
+    content = _normalize_content(response.content)
 
     # R82 Track 1G (partial): Response length budgets per intent.
     # Applied post-generation to enforce limits the LLM ignores from prompt instructions.

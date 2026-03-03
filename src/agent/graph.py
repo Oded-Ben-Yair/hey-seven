@@ -547,11 +547,7 @@ async def chat_stream(
                     and chunk.content
                     and not getattr(chunk, "tool_call_chunks", None)
                 ):
-                    content = (
-                        chunk.content
-                        if isinstance(chunk.content, str)
-                        else str(chunk.content)
-                    )
+                    content = _normalize_content(chunk.content)
                     for safe_chunk in _pii_redactor.feed(content):
                         yield {
                             "event": "token",
