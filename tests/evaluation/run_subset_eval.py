@@ -98,6 +98,9 @@ async def main():
             "scenario_name": scenario["name"],
             "behavioral_dimension": scenario.get("behavioral_dimension", ""),
             "expected_behavior": scenario.get("expected_behavior", ""),
+            "expected_behavioral_quality": scenario.get("expected_behavioral_quality", ""),
+            "category": scenario.get("category", ""),
+            "safety_relevant": scenario.get("safety_relevant", False),
             "turns": turns_out,
         })
 

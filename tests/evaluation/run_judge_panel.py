@@ -201,10 +201,13 @@ def format_conversation(scenario_result: dict) -> str:
 def build_judge_prompt(scenario_result: dict) -> str:
     """Build the full judge prompt for a scenario."""
     return JUDGE_RUBRIC.format(
-        scenario_name=scenario_result["scenario_name"],
-        category=scenario_result["category"],
-        behavioral_dimension=scenario_result["behavioral_dimension"],
-        expected_behavioral_quality=scenario_result["expected_behavioral_quality"],
+        scenario_name=scenario_result.get("scenario_name", "Unknown"),
+        category=scenario_result.get("category", scenario_result.get("behavioral_dimension", "unknown")),
+        behavioral_dimension=scenario_result.get("behavioral_dimension", ""),
+        expected_behavioral_quality=scenario_result.get(
+            "expected_behavioral_quality",
+            scenario_result.get("expected_behavior", "No specific expectation provided"),
+        ),
         conversation_text=format_conversation(scenario_result),
     )
 
@@ -265,7 +268,7 @@ def parse_judge_response(text: str) -> dict | None:
 
 
 async def judge_with_gemini(prompt: str) -> dict | None:
-    """Score using Gemini 3.1 Pro via google-genai SDK."""
+    """Score using Gemini 3.1 Pro via google-genai SDK (async)."""
     try:
         from google import genai
 
@@ -274,40 +277,52 @@ async def judge_with_gemini(prompt: str) -> dict | None:
             return None
 
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-3.1-pro-preview",
-            contents=prompt,
-            config=genai.types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=800,
-                response_mime_type="application/json",
+        response = await asyncio.wait_for(
+            asyncio.to_thread(
+                client.models.generate_content,
+                model="gemini-3.1-pro-preview",
+                contents=prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=2000,
+                    response_mime_type="application/json",
+                ),
             ),
+            timeout=120.0,
         )
         return parse_judge_response(response.text)
+    except TimeoutError:
+        logger.warning("Gemini judge timed out (120s)")
+        return None
     except Exception as e:
         logger.warning("Gemini judge failed: %s", e)
         return None
 
 
 async def judge_with_gpt(prompt: str) -> dict | None:
-    """Score using GPT-5.2 via Azure AI Foundry."""
+    """Score using GPT-5.2 via Azure OpenAI-compatible endpoint."""
     try:
-        from azure.ai.inference import ChatCompletionsClient
-        from azure.core.credentials import AzureKeyCredential
+        import httpx
 
-        endpoint = os.environ.get("AZURE_AI_ENDPOINT", "")
+        endpoint = os.environ.get("AZURE_AI_ENDPOINT", "").rstrip("/")
         key = os.environ.get("AZURE_AI_KEY", "")
         if not endpoint or not key:
             return None
 
-        client = ChatCompletionsClient(endpoint=endpoint, credential=AzureKeyCredential(key))
-        response = client.complete(
-            messages=[{"role": "user", "content": prompt}],
-            model="gpt-5.2",
-            temperature=0.1,
-            max_tokens=800,
-        )
-        return parse_judge_response(response.choices[0].message.content)
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{endpoint}/openai/deployments/gpt-5.2/chat/completions?api-version=2024-10-21",
+                headers={"api-key": key, "Content-Type": "application/json"},
+                json={
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                    "max_completion_tokens": 2000,
+                },
+                timeout=60.0,
+            )
+            data = response.json()
+            text = data["choices"][0]["message"]["content"]
+            return parse_judge_response(text)
     except Exception as e:
         logger.warning("GPT judge failed: %s", e)
         return None
@@ -318,7 +333,7 @@ async def judge_with_grok(prompt: str) -> dict | None:
     try:
         import httpx
 
-        api_key = os.environ.get("GROK_API_KEY", "")
+        api_key = os.environ.get("GROK_API_KEY", "").strip()
         if not api_key:
             return None
 
@@ -330,7 +345,7 @@ async def judge_with_grok(prompt: str) -> dict | None:
                     "model": "grok-4",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.1,
-                    "max_tokens": 800,
+                    "max_tokens": 2000,
                 },
                 timeout=60.0,
             )
@@ -736,6 +751,11 @@ async def main():
     all_scores = {}  # {scenario_id: {judge_name: {dim: score}}}
     judge_names = [name for name, _ in available_judges]
 
+    async def _judge_one(judge_name: str, judge_fn, prompt: str) -> tuple[str, dict | None]:
+        """Run a single judge and return (name, scores)."""
+        scores = await judge_fn(prompt)
+        return judge_name, scores
+
     for i, result in enumerate(results):
         sid = result["scenario_id"]
         logger.info("[%d/%d] Judging %s: %s", i + 1, len(results), sid, result["scenario_name"])
@@ -743,12 +763,21 @@ async def main():
         prompt = build_judge_prompt(result)
         scenario_scores = {}
 
-        for judge_name, judge_fn in available_judges:
-            scores = await judge_fn(prompt)
+        # Run all judges in parallel per scenario
+        tasks = [
+            _judge_one(name, fn, prompt)
+            for name, fn in available_judges
+        ]
+        judge_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for jr in judge_results:
+            if isinstance(jr, Exception):
+                logger.warning("  Judge raised exception: %s", jr)
+                continue
+            judge_name, scores = jr
             if scores:
                 scenario_scores[judge_name] = scores
 
-                # Log behavioral dimensions that were scored
                 b_line = _format_dim_log_line(scores, B_DIMS)
                 p_line = _format_dim_log_line(scores, P_DIMS)
                 overall = scores.get("overall", 0)
@@ -762,7 +791,6 @@ async def main():
                 logger.info(" ".join(log_parts))
             else:
                 logger.warning("  %s: FAILED -- no scores returned", judge_name)
-                # Fill with zeros for dimensions, -1 for N/A
                 scenario_scores[judge_name] = {
                     dim: 0 for dim in ALL_DIMS
                 }
@@ -772,14 +800,11 @@ async def main():
                     "reasoning": "Judge failed to return scores",
                 })
 
-            # Rate limit between judge calls
-            await asyncio.sleep(0.3)
-
         all_scores[sid] = scenario_scores
 
         # Rate limit between scenarios
         if i < len(results) - 1:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.0)
 
     # Write raw scores
     scores_path = PROJECT_ROOT / "tests" / "evaluation" / f"{round_name}-judge-scores.json"

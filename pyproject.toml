@@ -16,6 +16,7 @@ markers = [
     "chaos: compound failure tests (run separately in CI: pytest -m chaos)",
     "load: concurrent load tests (run separately in CI: pytest -m load)",
     "slow: tests requiring >10s (skip in fast CI: pytest -m 'not slow')",
+    "live: tests requiring live API keys (skip in CI: pytest -m 'not live')",
 ]
 
 [tool.coverage.run]
