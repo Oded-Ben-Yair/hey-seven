@@ -1,73 +1,87 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R81 honest audit complete. Behavioral 3.2/10 (cold 3-model audit), technical 9.63/10 (done), profiling unmeasured. 3 behavioral fixes coded (uncommitted). Perfection roadmap created with 3 tracks. API key leaked blocks eval.",
-    "lastModified": "2026-03-02T15:30:00Z",
+    "summary": "R82 complete. Track 1+2 implemented, 2-model judge panel scored 4.7/10 behavioral (up from 3.2). Pro ceiling test confirms 2+ point advantage. 3490 tests, 0 failures. Ready for Track 3 (model routing).",
+    "lastModified": "2026-03-02T20:00:00Z",
     "branch": "main",
-    "commitHash": "36197d6",
+    "commitHash": "6e70c0d",
     "tag": "v1.5.0",
-    "phase": "r81-honest-audit-complete"
+    "phase": "r82-complete"
   },
-  "blockers": [
-    {
-      "description": "Gemini API key leaked (403 PERMISSION_DENIED). Cannot run live eval.",
-      "severity": "P0",
-      "resolution": "Get new GOOGLE_API_KEY from Google AI Studio"
-    }
-  ],
+  "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "Commit R81 code changes (7 files, 3 fixes)" },
-    { "priority": 0, "description": "Get fresh Gemini API key" },
-    { "priority": 1, "description": "Execute Track 1 of perfection roadmap: full eval baseline, slop detector, intent-aware validation" },
-    { "priority": 2, "description": "Execute Track 2: few-shot examples, comp rewrite, cross-domain bridges" },
-    { "priority": 3, "description": "Execute Track 3: model ceiling test, human host validation" }
+    { "priority": 0, "description": "Implement Flash→Pro model routing for complex queries (Track 3A confirmed)" },
+    { "priority": 1, "description": "Fix greeting template on acknowledgments (router classifying 'ok'/'great' as greeting)" },
+    { "priority": 1, "description": "Fix fallback cascade on synthesis/planning requests" },
+    { "priority": 2, "description": "Wire few-shot examples into specialist prompts" },
+    { "priority": 2, "description": "Run profiling eval (P1-P10 still unmeasured)" },
+    { "priority": 3, "description": "Human casino host validation (Track 3D)" }
   ],
   "reviewHistory": {
-    "r81HonestAudit": {
+    "r82": {
       "date": "2026-03-02",
-      "method": "/honest-answer + reasoning-specialist blind-spot validation",
-      "findings": [
-        "Behavioral is 3.2/10 (not 5.8 as previously estimated)",
-        "Profiling NEVER measured — 56 scenarios exist but no eval run",
-        "Prompt already says right things, Gemini Flash ignores them",
-        "Need post-generation enforcement, not more prompt instructions",
-        "5 systemic failures: model noncompliance, validation fallbacks, proactivity gates, comp upsell, crisis rigidity"
-      ],
+      "tracksCompleted": ["Track 1 (System Controls)", "Track 2 (Content Fixes)"],
       "codeChanges": [
-        "Confirmation fallback fix (compliance_gate.py)",
-        "Crisis turn-aware responses (state.py, nodes.py, crisis.py)",
-        "Greeting+question routing (prompts.py, nodes.py)",
-        "Test updates (4 files)"
+        "1C: Post-gen slop detector (9 patterns, <1ms)",
+        "1D: Intent-aware validation (per query_type criteria)",
+        "1E: Frustration/crisis suppression (hard override)",
+        "1F: Proactivity gates (0.8→0.6, neutral allowed, logging)",
+        "1G: Response length budgets (50w/40w/60w)",
+        "2A: 25 few-shot examples (5×5)",
+        "2B: Comp agent rewrite (promotional → factual)",
+        "2C: 15 cross-domain bridge templates",
+        "2D: 37 crisis progression tests",
+        "2E: Profiling instrumentation (5 log points)",
+        "Fix: user_message NameError in off_topic_node crisis branch"
       ],
-      "planCreated": "docs/plans/2026-03-02-perfection-roadmap.md"
+      "evalResults": {
+        "scenarios": 109,
+        "turns": 305,
+        "errors": 11,
+        "slop_rate": "0.7%",
+        "fallback_rate": "10.2%",
+        "exclamation_overflow": "0%"
+      },
+      "judgePanel": {
+        "gpt52_B10": 4.2,
+        "grok4_B10": 5.2,
+        "consensus_B10": 4.7,
+        "delta_from_r81": "+1.5"
+      },
+      "ceilingTest": {
+        "finding": "Gemini Pro answers directly where Flash falls back",
+        "recommendation": "Flash→Pro routing for complex/multi-turn queries"
+      }
     },
     "trajectory": {
       "R52": 67.7, "R53": 84.3, "R68_consensus": 92.9,
       "R72_behavioral_live": 4.1, "R73_behavioral_live": 5.0,
-      "R74_technical": 9.34, "R74_behavioral_mock": 8.15,
       "R75_technical": 9.63, "R75_behavioral_live_1model": 5.8,
       "R81_behavioral_cold_3model": 3.2,
-      "R81_profiling": "NEVER_MEASURED"
+      "R82_behavioral_2model": 4.7,
+      "R82_pro_ceiling": "2+ points better than Flash"
     }
   },
   "codebaseMetrics": {
-    "loc": "21K+",
+    "loc": "23K+",
     "modules": 66,
-    "testFiles": 95,
-    "tests": 3284,
+    "testFiles": 102,
+    "tests": 3490,
     "testFailures": 0,
-    "skipped": 6,
-    "coverage": "90.42%",
+    "skipped": 1,
+    "coverage": "90%+",
     "adrs": 28,
     "guardrailPatterns": 211,
-    "behavioralScenarios": 200,
+    "behavioralScenarios": 220,
     "profilingScenarios": 56,
     "graphNodes": 12,
-    "stateFields": 27
+    "stateFields": 27,
+    "slopPatterns": 9,
+    "fewShotExamples": 25,
+    "bridgeTemplates": 15
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-02",
-    "lastSessionId": "hey-seven-session-20260302-21961c",
-    "handoverPath": ".claude/handover-20260302-21961c.md"
+    "lastSessionId": "hey-seven-session-20260302-r82"
   }
 }

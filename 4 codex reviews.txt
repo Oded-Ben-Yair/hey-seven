@@ -1,0 +1,327 @@
+# Review V1 — Executive Summary (Expanded)
+
+## Why this document exists
+This version is for leadership/product owners who need a release decision quickly: what is safe to ship now, what is not, and which fixes change the decision.
+
+## Final verdict
+- **Overall score:** **7.4 / 10**
+- **Technical avg:** **8.2 / 10**
+- **Behavioral avg:** **6.6 / 10**
+- **CRITICAL findings:** **1**
+- **Production-ready now:** **No** (target gate: >= 8.0 overall and 0 criticals)
+
+## Read this in 60 seconds
+1. Core architecture is strong and increasingly production-like.
+2. Safety consistency in emotional/crisis multi-turn flows is still below launch bar.
+3. A few governance gaps (staging promotion + behavior CI gates + doc parity) can create avoidable release risk.
+4. With focused execution, this can likely move to production readiness in 4–6 weeks.
+
+## What is strong enough today
+- Deterministic graph topology with explicit control points.
+- Pre-LLM compliance gate and layered guardrail design.
+- Solid infra-security posture for container supply chain hygiene.
+- High test volume and enforced code coverage threshold.
+
+## Why it is not ready yet
+- **Safety consistency problem:** crisis scenarios are improved but still uneven in important categories.
+- **Behavioral reliability gap:** implicit intent/proactivity/emotional continuity are not yet stable enough for high-trust guest interactions.
+- **Release governance gap:** no strict staging promotion model plus missing behavioral pass/fail gates in CI.
+- **Documentation trust gap:** conflicting docs on key safety metrics (pattern/language counts).
+
+## Risk heatmap (executive)
+| Area | Risk | Why it matters |
+|---|---|---|
+| Crisis/safety behavior | **Critical** | Can produce unsafe or inconsistent support in high-stakes moments |
+| Behavioral quality consistency | Major | Guest trust and brand quality degrade in complex multi-turn chats |
+| Release process governance | Major | Higher chance of regressions reaching production |
+| Documentation parity | Major | Weakens operator confidence and runbook reliability |
+| Technical architecture | Low/Moderate | Mostly sound with targeted improvements needed |
+
+## Top 5 risks to address first
+1. Crisis workflow is not consistently persistent across all distress variants.
+2. Behavioral gates are mostly observational rather than release-blocking.
+3. Deployment strategy lacks strict staging → production promotion.
+4. Retrieval quality can still degrade under ambiguity without semantic reranking.
+5. Doc inconsistencies can mislead operations and reviewers during incidents.
+
+## Top 5 strengths worth preserving
+1. Clear 11-node graph and deterministic route boundaries.
+2. Strong pre-router deterministic safety floor.
+3. Pragmatic resilience patterns (timeouts, circuit breaker, graceful degradation).
+4. Good observability and operational instrumentation baseline.
+5. Fast iteration velocity supported by broad test coverage.
+
+## Decision recommendation
+### Recommended launch mode
+- **Do not launch unrestricted production concierge.**
+- Acceptable interim mode: **limited beta** with traffic controls, explicit human escalation paths, and rollback playbook.
+
+### Preconditions for production go/no-go re-review
+- Critical safety issue closed.
+- Behavioral CI thresholds turned into hard blockers.
+- Staging promotion enforced in release pipeline.
+- Documentation parity checks automated.
+
+## Success criteria for the next review
+- Overall >= 8.0
+- Behavioral >= 7.8
+- Critical findings = 0
+- Crisis scenarios pass at consistent multi-judge rate
+- No release blocking doc contradictions
+
+## Companion documents
+- `review-v2-technical.md` — engineering/system depth
+- `review-v3-behavioral.md` — conversation quality/safety depth
+- `review-v4-remediation-plan.md` — week-by-week action plan
+
+
+# Review V2 — Technical Deep Dive (Expanded)
+
+## Technical scorecard
+| Dimension | Score |
+|---|---:|
+| 1. Graph Architecture | 8.4 |
+| 2. RAG Pipeline | 7.9 |
+| 3. Data Model / State | 8.7 |
+| 4. API Design | 8.1 |
+| 5. Testing Strategy | 8.8 |
+| 6. Docker & DevOps | 8.6 |
+| 7. Guardrails & Security | 8.9 |
+| 8. Scalability | 8.0 |
+| 9. Documentation | 6.8 |
+| 10. Domain Intelligence | 7.6 |
+| **Technical average** | **8.2** |
+
+## Dimension-by-dimension findings
+
+### 1) Graph Architecture — 8.4
+**Strong:** explicit node/edge graph, bounded retry/fallback, deterministic route boundaries.
+**Gap:** topology and streaming/event orchestration concerns are still coupled enough to increase maintenance risk.
+**Fix:** split topology and streaming orchestration into separate modules with strict interface contracts.
+
+### 2) RAG Pipeline — 7.9
+**Strong:** dual-strategy retrieval with RRF fusion and relevance filtering.
+**Gap:** no post-fusion semantic rerank stage for hard-ambiguity and long-tail intents.
+**Fix:** add optional semantic rerank (feature-flagged, bounded cost).
+
+### 3) Data Model / State — 8.7
+**Strong:** reducer design is thoughtful; state persistence semantics are robust.
+**Gap:** backward-compat union patterns still leak complexity into consumers.
+**Fix:** complete migration to strict source schema.
+
+### 4) API Design — 8.1
+**Strong:** middleware ordering is intentional and security-aware.
+**Gap:** SSE reconnect is safe but not truly resumable.
+**Fix:** implement Last-Event-ID replay with bounded event buffers.
+
+### 5) Testing Strategy — 8.8
+**Strong:** large test corpus + enforced coverage floor.
+**Gap:** behavior/safety outcomes are not all release-blocking.
+**Fix:** make behavioral thresholds hard CI gates.
+
+### 6) Docker & DevOps — 8.6
+**Strong:** hash pinning, non-root, signing/attestation/SBOM patterns.
+**Gap:** single-environment release flow still raises blast radius.
+**Fix:** require staged promotion and approval workflow.
+
+### 7) Guardrails & Security — 8.9
+**Strong:** multi-layer deterministic + semantic guardrails with failure handling.
+**Gap:** degraded-classifier mode UX can be clearer and more explicit.
+**Fix:** dedicated degraded-security response type + telemetry.
+
+### 8) Scalability — 8.0
+**Strong:** semaphores, circuit breaker, Redis-backed options.
+**Gap:** overload admission and client-facing overload semantics can be sharper.
+**Fix:** explicit overload response taxonomy + metrics.
+
+### 9) Documentation — 6.8
+**Strong:** ADR density and architecture narrative are rich.
+**Gap:** conflicting safety metric counts across docs.
+**Fix:** one canonical source + parity tests.
+
+### 10) Domain Intelligence — 7.6
+**Strong:** multi-property config posture is good.
+**Gap:** regulation freshness lacks hard expiry governance.
+**Fix:** add review dates, ownership, and stale-content deployment checks.
+
+## Highest-leverage technical fixes
+1. Semantic rerank after RRF.
+2. Resumable SSE event replay.
+3. Behavioral/safety CI blockers.
+4. Staging → production promotion gate.
+5. Canonical doc metric source + tests.
+
+## Technical risk classification
+- **CRITICAL:** 0
+- **MAJOR:** 8
+- **MINOR:** 2
+
+## Targeted engineering acceptance criteria
+- RAG: measurable lift in retrieval quality on ambiguous intents.
+- API: reconnect without duplicate generation on controlled network interruptions.
+- CI: build fails on behavioral/safety threshold regressions.
+- Release: no direct prod deployment path without staging pass.
+- Docs: parity test fails on metric drift.
+
+
+
+# Review V3 — Behavioral Deep Dive (Expanded)
+
+## Behavioral scorecard
+| Dimension | Score |
+|---|---:|
+| 11. B1 Sarcasm Awareness | 7.2 |
+| 12. B2 Implicit Signal Reading | 6.4 |
+| 13. B3 Conversational Engagement | 6.8 |
+| 14. B4 Agentic Proactivity | 5.4 |
+| 15. B5 Emotional Intelligence | 6.6 |
+| 16. B6 Tone Calibration | 8.3 |
+| 17. B7 Multi-turn Coherence | 7.5 |
+| 18. B8 Cultural Sensitivity | 6.2 |
+| 19. B9 Safety Protocol | 5.8 |
+| 20. B10 Response Quality | 6.5 |
+| **Behavioral average** | **6.6** |
+
+## What got better
+- Tone is less performative and more grounded.
+- Sarcasm handling is improved through deterministic + context heuristics.
+- Multi-turn coherence is better than earlier baselines due to sticky context fields.
+
+## Where quality still breaks
+
+### B2 / B4 / B9 are the main bottlenecks
+- **B2 (implicit):** under-detects latent needs (urgency, fatigue, social context, constraints).
+- **B4 (proactivity):** still feels one-shot, not planful journey guidance.
+- **B9 (safety):** improved but not consistently reliable in all crisis-type paths.
+
+### B8 remains constrained by response language strategy
+- Safety detection is multilingual, but response generation is mostly English-first.
+- This limits rapport quality and culturally nuanced communication in non-English contexts.
+
+## Behavioral failure patterns to prioritize
+1. Good first turn, weak second-turn continuity.
+2. Correct facts, weak emotional adaptation.
+3. Helpful intent but insufficiently proactive cross-domain planning.
+4. Safe baseline response that lacks sustained support posture in distress.
+
+## Priority behavioral roadmap
+
+### Tier 1 (must fix before broad launch)
+1. Crisis workflow state machine with sustained follow-up logic.
+2. Behavioral CI pass/fail gates for safety-critical scenarios.
+3. Emotional-state persistence with controlled decay and explicit transition handling.
+
+### Tier 2 (quality multipliers)
+4. Expanded implicit-signal schema and usage in prompts/plans.
+5. Proactive journey planning with breadcrumb continuity.
+6. Better repeated-question semantic detection (paraphrase-aware).
+
+### Tier 3 (global quality improvements)
+7. Multilingual response generation (begin with EN/ES).
+8. Deterministic style lint for tone compliance.
+
+## Release recommendation from behavioral perspective
+- **Not yet safe enough for unrestricted production usage.**
+- Acceptable for guarded beta if crisis escalation/handoff and monitoring are strict.
+
+## Behavioral exit criteria
+- B9 >= 8.0 with stable panel consensus.
+- B4 >= 7.5 with demonstrated multi-turn planning continuity.
+- No major regressions across core behavioral scenario packs for 2 consecutive release cycles.
+
+
+# Review V4 — Remediation Plan (Actionable, Expanded)
+
+## Plan objective
+Move from **7.4/10, not production-ready** to **>= 8.0/10, 0 criticals** with measurable behavioral safety and release-governance reliability.
+
+## 30-day execution plan
+
+## Week 1 — Safety Hardening (Critical path)
+### Deliverables
+- Implement crisis workflow state machine:
+  - `none -> concern -> urgent -> immediate -> stabilized`
+- Enforce multi-turn crisis continuity requirements.
+- Add explicit transition criteria out of crisis mode.
+
+### Tests/validation
+- Scenario suite for sustained distress patterns.
+- Regression tests for “turn 2 drop-off” failures.
+- Alerting hooks for crisis workflow invocations and exits.
+
+### Definition of done
+- No critical safety gap in crisis persistence logic.
+- Safety reviewer signoff for escalation behavior.
+
+---
+
+## Week 2 — Behavioral Reliability
+### Deliverables
+- Expand implicit-signal extraction schema:
+  - urgency, fatigue, mobility, group context, celebration signal.
+- Add emotional-state memory with decay and re-escalation logic.
+- Improve repeated-question handling with semantic similarity.
+
+### Tests/validation
+- Add scenario coverage for implicit-signal combinations.
+- Track false-positive/false-negative trends.
+
+### Definition of done
+- Measurable uplift in B2/B3/B5 stability on evaluation pack.
+
+---
+
+## Week 3 — Retrieval + Response Quality
+### Deliverables
+- Add optional semantic reranker after RRF fusion.
+- Gate degraded-pass behavior behind confidence/retrieval quality checks.
+- Add explicit fallback paths when confidence is low during validator outages.
+
+### Tests/validation
+- A/B compare retrieval precision/grounding against baseline.
+- Add outage simulations for validator + retrieval stress cases.
+
+### Definition of done
+- Reduced hallucination-risk surface during degraded operation.
+- Better quality under ambiguous retrieval contexts.
+
+---
+
+## Week 4 — Release Governance and Trust
+### Deliverables
+- CI hard gates for behavioral and safety threshold failures.
+- Staging → production promotion workflow with approval gates.
+- Documentation parity automation for core architecture/safety metrics.
+
+### Tests/validation
+- End-to-end staged deployment rehearsal.
+- Intentional failure drill: verify rollback + blocked promotion behavior.
+
+### Definition of done
+- No direct path to prod without passing technical + behavioral gates.
+- No contradictory core metrics in release docs.
+
+---
+
+## Cross-cutting ownership model
+| Workstream | Primary owner | Backup owner |
+|---|---|---|
+| Safety workflow | Agent platform | QA/Safety |
+| Behavioral quality | Conversation team | Agent platform |
+| Retrieval quality | RAG team | Platform |
+| Release governance | DevOps | Platform lead |
+| Documentation parity | Tech writing | Engineering owner |
+
+## Exit criteria for production re-evaluation
+1. **Critical findings = 0**
+2. **Overall score >= 8.0**
+3. **Behavioral avg >= 7.8**
+4. Crisis safety scenarios pass consistently across evaluation panel
+5. CI includes blocking behavioral/safety gates
+6. Staging promotion required for production traffic
+7. Documentation parity checks clean for core metrics
+
+## Suggested cadence
+- Weekly audit checkpoint with score deltas.
+- Mid-week risk review for blockers.
+- End-of-week go/no-go update with evidence pack.

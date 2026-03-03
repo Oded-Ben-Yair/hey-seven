@@ -1,0 +1,583 @@
+I couldn’t `git clone` or run `pytest` from this review environment because outbound DNS is blocked (so `github.com` can’t resolve). I **did** review the repo by reading the raw sources (and I’m going to be brutal about what’s actually evidenced in-code vs. claimed).
+
+---
+
+## Dimension 1: Graph Architecture — Score: 8/10
+
+**Evidence:**
+
+* Validation + retry loop exists with explicit FAIL→retry path and fallback gating (`src/agent/nodes.py:L28-L34`). ([GitHub][1])
+* Specialist dispatch split into its own module; retry reuses prior specialist to avoid non-deterministic switching (`src/agent/dispatch.py:L0-L3`, `src/agent/dispatch.py:L11-L13`). ([GitHub][2])
+* Deterministic “compliance gate” is explicitly placed before router classification (`src/agent/compliance_gate.py:L3-L8`). ([GitHub][3])
+* Persona envelope explicitly positioned “between validate and respond” (`src/agent/persona.py:L0-L1`). ([GitHub][4])
+* Whisper planner is explicitly “silent, fail-silent, per-turn, sequential” (`src/agent/whisper_planner.py:L0-L2`, `src/agent/whisper_planner.py:L13-L16`). ([GitHub][5])
+
+**Strengths:**
+
+* Clear graph phases: **deterministic gate → LLM routing → retrieval → specialist execution → validation → persona formatting → respond**, with explicit bounded retry (`src/agent/compliance_gate.py:L3-L8`, `src/agent/nodes.py:L28-L34`, `src/agent/persona.py:L0-L1`). ([GitHub][3])
+* Dispatch logic is decomposed and hardened: timeout, key filtering, and retry specialist reuse (`src/agent/dispatch.py:L11-L13`, `src/agent/dispatch.py:L28-L33`). ([GitHub][2])
+* Fail-silent planning node is the right architectural pattern (it cannot crash the “speaking” path) (`src/agent/whisper_planner.py:L0-L2`, `src/agent/whisper_planner.py:L15-L16`). ([GitHub][5])
+
+**Gaps:**
+
+* Validation “degrade pass” path can ship an unvalidated answer if the validator errors on attempt 0 (`src/agent/nodes.py:L32`). This is a correctness/safety trade-off that needs explicit risk acceptance. ([GitHub][1])
+* You have *multiple* architectural descriptions floating around (README vs ARCHITECTURE) that disagree on node count/topology (see Dimension 9). That increases maintenance risk even if runtime is fine (`ARCHITECTURE.md:L0-L8`, `README.md:L0-L3`). ([GitHub][6])
+
+**Fix (actionable):**
+
+* Gate “degrade pass” behind a stricter condition (e.g., only allow it when retrieved grounding exists and scores exceed threshold), otherwise route to fallback. Implement in `validate_node` (`src/agent/nodes.py:L32-L34`). ([GitHub][1])
+* Add a graph-introspection test that asserts actual node list and edges match the docs (extend doc drift tests; see `tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+
+**Priority:** MINOR
+
+---
+
+## Dimension 2: RAG Pipeline — Score: 6/10
+
+**Evidence:**
+
+* Chunking uses `RecursiveCharacterTextSplitter` with explicit chunk size/overlap (`src/rag/pipeline.py:L7-L9`). ([GitHub][8])
+* “Idempotent ingestion” relies on deterministic IDs computed by hashing **text + source** concatenation (`src/rag/pipeline.py:L10-L12`). ([GitHub][8])
+* Retrieval uses cosine similarity via `similarity_search_with_relevance_scores` (`src/rag/pipeline.py:L15-L17`). ([GitHub][8])
+* Multi-strategy retrieval is implemented in tools layer using concurrent executor calls + RRF fusion (`src/agent/tools.py:L14-L18`). ([GitHub][9])
+* RRF ID hashing elsewhere uses a **null-byte delimiter** to avoid ambiguous concatenation (`src/rag/reranking.py:L3-L4`). ([GitHub][10])
+
+**Strengths:**
+
+* You’re doing the correct “quality gate”: filter by **cosine score**, not RRF rank score (`src/agent/tools.py:L8-L10`, `src/agent/tools.py:L17-L18`). ([GitHub][9])
+* Async retrieval orchestration is sane: `run_in_executor` + `gather` + per-strategy error isolation (`src/agent/tools.py:L10-L17`). ([GitHub][9])
+* Retrieval is property-scoped via metadata filtering (good multi-tenant hygiene) (`src/rag/pipeline.py:L15-L17`). ([GitHub][8])
+
+**Gaps:**
+
+* **Chunk ID collision risk:** `pipeline.py` hashes `text + source` with no delimiter (`src/rag/pipeline.py:L10-L12`), while `reranking.py` explicitly documents why you need a delimiter (`src/rag/reranking.py:L3-L4`). This is a correctness bug: different `(text, source)` pairs can collide under concatenation ambiguity. ([GitHub][8])
+* The retriever implementation shown is **Chroma-only** (`src/rag/pipeline.py:L18-L20`), while other parts of the repo claim/assume different prod backends (see docs + config). This is at minimum a “prod path not proven” gap. ([GitHub][8])
+* No evidence of embedding “pinning” enforcement at ingestion time (e.g., refusing to ingest if embedding model/dims drift). You *document* model normalization (`src/config.py:L5-L6`) but don’t show a hard “index version” contract at vectorstore level. ([GitHub][11])
+
+**Fix (actionable):**
+
+* Patch deterministic IDs to use the same null-byte delimiter pattern as RRF:
+
+  * In `src/rag/pipeline.py` replace `text + str(source)` with `f"{text}\x00{source}"` before hashing (`src/rag/pipeline.py:L10-L12`). ([GitHub][8])
+* Add an “index version” metadata field including embedding model + dimensions and refuse retrieval if mismatch (enforce with settings normalization in `src/config.py:L5-L6` and in `src/rag/pipeline.py:L18-L20`). ([GitHub][11])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 3: Data Model / State — Score: 7/10
+
+**Evidence:**
+
+* State schema is a TypedDict and explicitly supports `extracted_fields` and `whisper_plan` (`src/agent/state.py:L0-L1`). ([GitHub][12])
+* Firestore serialization constraints are explicitly called out; sentinel changed to a string for JSON safety (`src/agent/state.py:L1-L2`). ([GitHub][12])
+* Dispatch filters unknown keys against `PropertyQAState.__annotations__` and strips “dispatch-owned” key collisions (`src/agent/dispatch.py:L2-L3`, `src/agent/dispatch.py:L31-L33`). ([GitHub][2])
+* Persona uses `extracted_fields["name"]` as fallback because `guest_name` “has no reducer” (`src/agent/persona.py:L12`). ([GitHub][4])
+
+**Strengths:**
+
+* You explicitly tackled the **JSON serialization** reality of state backends (sentinel approach + commentary) (`src/agent/state.py:L1-L2`). ([GitHub][12])
+* You actively defend state integrity by filtering unexpected keys from specialist output (`src/agent/dispatch.py:L31-L33`). ([GitHub][2])
+* You recognize reducer semantics (guest_name ephemeral vs extracted_fields persistent) and code around it (`src/agent/persona.py:L12`). ([GitHub][4])
+
+**Gaps:**
+
+* String sentinel still creates a “magic token” contract. You *say* it can’t appear in natural language, but nothing stops a malicious user from pasting it verbatim (the risk is lowered but non-zero) (`src/agent/state.py:L1-L2`). ([GitHub][12])
+* The presence of fields “without reducers” is a footgun that will keep biting you (you already had to implement fallback logic) (`src/agent/persona.py:L12`). ([GitHub][4])
+
+**Fix (actionable):**
+
+* Move “delete field” semantics out of user-reachable text space: represent deletions as structured control messages that are not user-injectable (e.g., dedicated internal state field `pending_deletions: set[str]`). Implement in the dict merge reducer used for extracted_fields (referenced by the `UNSET_SENTINEL` comment in `src/agent/state.py:L1-L2`). ([GitHub][12])
+* Give `guest_name` a reducer or remove it entirely and rely only on `extracted_fields["name"]` (persona already assumes this) (`src/agent/persona.py:L12`). ([GitHub][4])
+
+**Priority:** MINOR
+
+---
+
+## Dimension 4: API Design — Score: 7/10
+
+**Evidence:**
+
+* SSE streaming is a first-class design constraint; middleware is “pure ASGI” to preserve SSE (`src/api/app.py:L0-L1`, `src/api/middleware.py:L0-L1`). ([GitHub][13])
+* Middleware stack includes ApiKey, RateLimit, RequestBodyLimit, SecurityHeaders, ErrorHandling (`src/api/app.py:L1`). ([GitHub][13])
+* PII redaction exists for logs/traces/error messages and “fails CLOSED” (`src/api/pii_redaction.py:L0-L1`). ([GitHub][14])
+* Thread ID is UUID-validated to protect state backend assumptions (`src/api/models.py:L0-L1`). ([GitHub][15])
+* Error responses are RFC 7807 “Problem Details” (`src/api/errors.py:L0-L1`). ([GitHub][16])
+
+**Strengths:**
+
+* Correct SSE-aware middleware approach (no `BaseHTTPMiddleware` trap) (`src/api/app.py:L0-L1`, `src/api/middleware.py:L0-L1`). ([GitHub][13])
+* You’ve clearly thought about PII leakage into logs/traces and built a centralized redaction module (`src/api/pii_redaction.py:L0-L1`). ([GitHub][14])
+* Strong client contract building blocks: RFC7807 errors + schema models (`src/api/errors.py:L0-L1`, `src/api/models.py:L0-L1`). ([GitHub][16])
+
+**Gaps:**
+
+* Auth is implied to be API-key-based, but without seeing the actual middleware logic here, I can’t verify the usual hard parts: proxy IP trust, replay protection, key rotation, key scoping (`src/api/app.py:L1`, `src/api/middleware.py:L0-L1`). ([GitHub][13])
+* The models only validate `thread_id` format; there’s no evidence of a threat model for “thread fixation” / cross-user thread_id guessing (UUID helps, but isn’t a full authorization model) (`src/api/models.py:L0-L1`). ([GitHub][15])
+
+**Fix (actionable):**
+
+* Add explicit auth scope binding: require API key + `casino_id` header or embed tenant scope inside the API key itself. Update ApiKeyMiddleware (in `src/api/middleware.py`, referenced by imports `src/api/app.py:L1`). ([GitHub][13])
+* Add middleware tests that validate ordering and redaction (PII must be redacted before logging/tracing). Start from `src/api/pii_redaction.py:L0-L1` and `src/api/middleware.py:L0-L1`. ([GitHub][14])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 5: Testing Strategy — Score: 7/10
+
+**Evidence:**
+
+* Coverage gate is enforced at **90%** (`pyproject.toml:L0`). ([GitHub][17])
+* CI test target explicitly runs pytest with coverage and excludes eval tests (`Makefile:L0`). ([GitHub][18])
+* Documentation drift tests exist (`tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+* Eval tests exist but are skipped unless `GOOGLE_API_KEY` is present (`tests/test_eval.py:L0-L1`). ([GitHub][19])
+* A “frozen eval prompt” exists as a process artifact (`docs/eval-prompt-v2.0.md:L0-L1`). ([GitHub][20])
+
+**Strengths:**
+
+* Hard coverage floor is a real production-readiness signal (`pyproject.toml:L0`). ([GitHub][17])
+* Doc drift tests are the right idea and directly acknowledge the rot problem (`tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+* Live eval suite exists for behavior/regression checking (`tests/test_eval.py:L0-L1`). ([GitHub][19])
+
+**Gaps:**
+
+* Your “real behavior” tests are opt-in (need live API key), meaning the default CI path can still ship behavioral regressions without noticing (`tests/test_eval.py:L0-L1`, `Makefile:L0`). ([GitHub][19])
+* The doc drift test shown asserts a magic number “66 settings fields”; that’s fragile and encourages “change the test” instead of “keep docs accurate” if you don’t also assert *what those fields are for* (`tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+
+**Fix (actionable):**
+
+* Add a deterministic LLM stub mode and run a “behavioral contract suite” in CI without external keys (use the existing dependency injection pattern noted in `_base.py`) (`src/agent/agents/_base.py:L1-L2`, `tests/test_eval.py:L0-L1`). ([GitHub][21])
+* Expand doc drift tests to validate topology/version parity (see Dimension 9); keep the “count” assertions but add semantic checks (extend `tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 6: Docker & DevOps — Score: 6/10
+
+**Evidence:**
+
+* Multi-stage build and non-root runtime user (`Dockerfile:L0-L2`). ([GitHub][22])
+* Healthcheck exists (`Dockerfile:L0-L2`). ([GitHub][22])
+* Security audit script explicitly checks for `--require-hashes` and pinned deps (`scripts/security-audit.sh:L0-L3`). ([GitHub][23])
+* Requirements are pinned, but not hashed (`requirements.txt:L0-L1`). ([GitHub][24])
+
+**Strengths:**
+
+* Non-root runtime is correct baseline hardening (`Dockerfile:L0-L2`). ([GitHub][22])
+* You *know* `--require-hashes` matters enough to script-check it (`scripts/security-audit.sh:L0-L3`). ([GitHub][23])
+
+**Gaps:**
+
+* The Docker build still installs deps without hashes (`Dockerfile:L0-L2` + no hashed lockfile shown in repo), which undermines your own security-audit intent (`scripts/security-audit.sh:L0-L3`). ([GitHub][22])
+* You rely on `google-re2` for ReDoS safety, but don’t show build-time enforcement that it’s actually present (see Dimension 7’s CRITICAL) (`requirements.txt:L0-L1`, `src/agent/regex_engine.py:L0-L1`). ([GitHub][24])
+
+**Fix (actionable):**
+
+* Generate a hashed production lockfile (pip-compile `--generate-hashes`) and make Dockerfile install with `pip install --require-hashes -r requirements-prod.txt` (align with `scripts/security-audit.sh:L0-L3`). ([GitHub][23])
+* Add a startup assertion (or build step) that fails if `RE2_AVAILABLE` is false in non-dev (see `src/agent/regex_engine.py:L0-L1`). ([GitHub][25])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 7: Guardrails & Security — Score: 8/10
+
+**Evidence:**
+
+* Guardrail suite: 6 categories, 204 regex patterns, 11 languages; semantic injection classifier is “fail closed” (`src/agent/compliance_gate.py:L0-L2`). ([GitHub][3])
+* Regex engine prefers RE2 but explicitly falls back to stdlib re with “ReDoS risk” (`src/agent/regex_engine.py:L0-L1`). ([GitHub][25])
+* Output PII guardrail runs post-generation, logs when redaction changes content (`src/agent/persona.py:L3-L4`). ([GitHub][4])
+* Streaming-safe PII redaction exists and reuses the same redaction core (`src/agent/streaming_pii.py:L0-L1`). ([GitHub][26])
+* Production secret validation exists for API key + webhook secrets (`src/config.py:L7-L10`). ([GitHub][11])
+
+**Strengths:**
+
+* Deterministic-first guardrail ordering is intentional and documented (injection before content checks) (`src/agent/compliance_gate.py:L4-L7`). ([GitHub][3])
+* Dual-layer injection detection (regex + semantic classifier) is the right defense-in-depth idea (`src/agent/compliance_gate.py:L0-L2`). ([GitHub][3])
+* You built both **non-streaming** and **streaming** PII redaction paths (that’s rare and good) (`src/agent/persona.py:L3-L4`, `src/agent/streaming_pii.py:L0-L1`). ([GitHub][4])
+
+**Gaps:**
+
+* **CRITICAL DoS risk:** if `google-re2` isn’t available, you knowingly revert to stdlib regex and explicitly call out “ReDoS risk” (`src/agent/regex_engine.py:L0-L1`). This is a security vulnerability unless you *enforce* RE2 availability in production. ([GitHub][25])
+* Crisis persistence uses a brittle keyword heuristic to decide whether to keep crisis mode; misclassification here is a safety issue (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+
+**Fix (actionable):**
+
+* **Fail fast in production if RE2 is missing:** in `src/agent/regex_engine.py`, if `ENVIRONMENT != "development"` and `RE2_AVAILABLE == False`, raise on import / startup (or enforce via Docker build). (`src/agent/regex_engine.py:L0-L1`, `src/config.py:L7-L10`). ([GitHub][25])
+* Replace the crisis persistence keyword list with a safer classifier (deterministic, high-recall) or keep crisis_active unless the guest explicitly confirms they’re safe / wants to move on (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+
+**Priority:** **CRITICAL**
+
+---
+
+## Dimension 8: Scalability — Score: 7/10
+
+**Evidence:**
+
+* Retrieval thread pool sized for Cloud Run concurrency and used via `run_in_executor` (`src/agent/tools.py:L4-L5`, `src/agent/tools.py:L14-L17`). ([GitHub][9])
+* Circuit breaker exists, but the state transition may mutate outside lock (`src/agent/circuit_breaker.py:L1`). ([GitHub][27])
+* Whisper LLM is TTL-cached with jitter and protected by `asyncio.Lock` (`src/agent/whisper_planner.py:L3-L5`). ([GitHub][5])
+* Pluggable state backend supports Redis for distributed counters (`src/state_backend.py:L0-L2`). ([GitHub][28])
+* Specialist execution is bounded via timeouts (`src/agent/dispatch.py:L28-L30`). ([GitHub][2])
+
+**Strengths:**
+
+* You’re aware of thundering herd and implemented jittered TTL caching (`src/agent/whisper_planner.py:L3-L5`, `src/config.py:L14-L17`). ([GitHub][5])
+* Executor-based bridging is done cleanly and concurrently, not serially (`src/agent/tools.py:L15-L17`). ([GitHub][9])
+* Redis option exists for scaling rate limits / counters beyond a single instance (`src/state_backend.py:L0-L2`). ([GitHub][28])
+
+**Gaps:**
+
+* Circuit breaker correctness under concurrency is explicitly suspect because `state` can mutate outside lock (`src/agent/circuit_breaker.py:L1`). That can lead to incorrect “half_open probe” behavior under load. ([GitHub][27])
+* Retrieval pool is hard-coded to 50 workers. If Cloud Run concurrency differs or CPU throttles, you can saturate threads and amplify latency (`src/agent/tools.py:L4-L5`). ([GitHub][9])
+
+**Fix (actionable):**
+
+* Make circuit breaker transitions lock-safe: move state transitions into an `async def` that always acquires the lock; eliminate side-effectful `@property state` (`src/agent/circuit_breaker.py:L1`). ([GitHub][27])
+* Make retrieval pool sizing configurable (settings), and add backpressure (semaphore) around retrieval strategy fanout (`src/agent/tools.py:L4-L5`, `src/config.py:L0-L4`). ([GitHub][9])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 9: Documentation — Score: 5/10
+
+**Evidence:**
+
+* ARCHITECTURE.md describes an “8-node” graph and older module names (`ARCHITECTURE.md:L0-L10`). ([GitHub][6])
+* README claims “11-node v2 graph pipeline” (`README.md:L0-L3`). ([GitHub][29])
+* There’s a doc-drift test suite meant to prevent this (`tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+* Version mismatches: `pyproject.toml` is 0.1.0 (`pyproject.toml:L0`), `.env.example` references 0.1.0 (`.env.example:L1`), but code declares 1.3.0 (`src/config.py:L4`). ([GitHub][17])
+* ADR system exists with a maintained index (`docs/adr/README.md:L0-L1`). ([GitHub][30])
+
+**Strengths:**
+
+* You actually built a mechanism to detect doc drift (good instinct) (`tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+* ADR index exists and looks structured (`docs/adr/README.md:L0-L1`). ([GitHub][30])
+
+**Gaps:**
+
+* The docs **still drifted** on a major claim (node count + topology) (`README.md:L0-L3` vs `ARCHITECTURE.md:L0-L10`). Your drift tests aren’t covering what matters most. ([GitHub][29])
+* The project version is inconsistent across packaging, runtime config, and env templates (`pyproject.toml:L0`, `.env.example:L1`, `src/config.py:L4`). That breaks release automation and makes incident response harder (“what version is deployed?”). ([GitHub][17])
+
+**Fix (actionable):**
+
+* Expand `tests/test_doc_accuracy.py` to assert:
+
+  * Node count + node names (derive from graph builder / constants) match README/ARCHITECTURE. (`tests/test_doc_accuracy.py:L0-L1`). ([GitHub][7])
+  * Version is single-source-of-truth (e.g., read from pyproject into code at build time) and tests enforce parity (`pyproject.toml:L0`, `src/config.py:L4`). ([GitHub][17])
+* Update or delete ARCHITECTURE.md if it’s no longer authoritative (`ARCHITECTURE.md:L0-L10`). ([GitHub][6])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 10: Domain Intelligence — Score: 6/10
+
+**Evidence:**
+
+* Per-casino config includes regulatory fields (gaming age minimum, disclosure requirement, helplines) (`src/casino/config.py:L0-L1`). ([GitHub][31])
+* Responsible gaming guidance includes state-specific mention and self-exclusion language (`src/agent/prompts.py:L3-L7`). ([GitHub][32])
+* Property knowledge base contains real venue data (Mohegan Sun + restaurants/hours) (`data/mohegan_sun.json:L0-L1`). ([GitHub][33])
+
+**Strengths:**
+
+* Regulatory config is modeled explicitly instead of hidden in prompts (`src/casino/config.py:L0-L1`). ([GitHub][31])
+* Responsible gaming content is not generic fluff; it calls out self-exclusion and compliance framing (`src/agent/prompts.py:L3-L7`). ([GitHub][32])
+
+**Gaps:**
+
+* The KB data is largely free-text (hours as strings), which makes “what’s open right now?” brittle unless you parse and timezone-normalize (`data/mohegan_sun.json:L1`, `tests/test_eval.py:L0-L1`). ([GitHub][33])
+* You can’t claim “multi-property readiness” unless you have tooling to generate/validate property KBs + config docs; the evidence here shows one property JSON and default config fallbacks (`data/mohegan_sun.json:L0-L1`, `src/casino/config.py:L0-L1`). ([GitHub][33])
+
+**Fix (actionable):**
+
+* Introduce a structured “hours schema” (timezone-aware) and generate natural-language hours text at render time; store canonical data to prevent hallucinated “open now” answers (`data/mohegan_sun.json:L0-L1`). ([GitHub][33])
+* Add a “property onboarding validator” script that checks required fields and normalizes category taxonomy used by dispatch (`src/agent/dispatch.py:L5-L9`). ([GitHub][2])
+
+**Priority:** MAJOR
+
+---
+
+# Behavioral Audit
+
+## Dimension 11: B1 Sarcasm Awareness — Score: 7/10
+
+**Evidence:**
+
+* System prompt explicitly says don’t mirror sarcasm and respond calmly (`src/agent/prompts.py:L16-L19`). ([GitHub][32])
+* Dedicated sarcasm detection helper exists (`src/agent/sentiment.py:L0-L1`). ([GitHub][34])
+* Latest eval shows B1 improved 5.6 → 7.0 (`tests/evaluation/r73-delta-report.md:L1-L2`). ([GitHub][35])
+
+**Strengths:**
+
+* You have both **instruction-level** and **heuristic signal-level** support for sarcasm (`src/agent/prompts.py:L16-L19`, `src/agent/sentiment.py:L0-L1`). ([GitHub][32])
+
+**Gaps:**
+
+* The repo shows sarcasm detection exists, but doesn’t show a “hard contract” that it’s used to modulate tone consistently (it’s imported in `_base.py`, but behavior coupling isn’t proven here) (`src/agent/agents/_base.py:L2`, `src/agent/sentiment.py:L0-L1`). ([GitHub][21])
+
+**Fix (actionable):**
+
+* Add unit tests that feed sarcastic user turns and assert the response is calm/non-mirroring (use evaluation harness patterns; see `tests/test_eval.py:L0-L1`). ([GitHub][19])
+
+**Priority:** MINOR
+
+---
+
+## Dimension 12: B2 Implicit Signal Reading — Score: 6/10
+
+**Evidence:**
+
+* System prompt explicitly instructs reading implicit signals (fatigue, urgency, celebration) (`src/agent/prompts.py:L16-L19`). ([GitHub][32])
+* Whisper planner tracks “next profiling topic” and “offer readiness” (`src/agent/whisper_planner.py:L9-L12`). ([GitHub][5])
+* Eval shows B2 moved 4.8 → 5.4 (still mediocre) (`tests/evaluation/r73-delta-report.md:L1-L2`). ([GitHub][35])
+
+**Strengths:**
+
+* You have an internal planning channel designed to steer implicit-signal handling (`src/agent/whisper_planner.py:L0-L2`, `src/agent/whisper_planner.py:L9-L12`). ([GitHub][5])
+
+**Gaps:**
+
+* “Offer readiness” is defined, but I don’t see a proved enforcement path (max 1 suggestion per session, not when sentiment negative) beyond comments (`src/agent/whisper_planner.py:L10-L12`). ([GitHub][5])
+
+**Fix (actionable):**
+
+* Persist a structured “implicit_signals” object in `extracted_fields` and use it to calibrate response length + next questions. Couple it to the specialist execution path (import surface exists in `_base.py`) (`src/agent/state.py:L0-L1`, `src/agent/agents/_base.py:L2`). ([GitHub][12])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 13: B3 Conversational Engagement — Score: 6/10
+
+**Evidence:**
+
+* System prompt mandates energy matching and conversational style constraints (`src/agent/prompts.py:L9-L15`). ([GitHub][32])
+* Persona layer enforces branding constraints (exclamation limit, emoji policy) (`src/agent/persona.py:L4-L6`). ([GitHub][4])
+* Eval shows B3 moved 4.5 → 5.0 (`tests/evaluation/r73-delta-report.md:L1-L2`). ([GitHub][35])
+
+**Strengths:**
+
+* You don’t rely on “prompt vibes” only; you enforce output style post-generation (`src/agent/persona.py:L4-L6`). ([GitHub][4])
+
+**Gaps:**
+
+* No evidence of systematic repeated-question handling or “conversation summary” reuse beyond `extracted_fields` and `domains_discussed` (which is tracked, but not shown being used to vary engagement) (`src/agent/dispatch.py:L33-L34`). ([GitHub][2])
+
+**Fix (actionable):**
+
+* Use `domains_discussed` to avoid repeating the same generic suggestions and instead ask one targeted clarifying question (hook into specialist execution path where sentiment + whisper plan are already imported) (`src/agent/dispatch.py:L33-L34`, `src/agent/agents/_base.py:L2`). ([GitHub][2])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 14: B4 Agentic Proactivity — Score: 4/10
+
+**Evidence:**
+
+* WhisperPlan has explicit `proactive_suggestion` + confidence gating (>0.8) (`src/agent/whisper_planner.py:L10-L12`). ([GitHub][5])
+* Eval explicitly says B4 “barely moved” and needs structural work (`tests/evaluation/r73-delta-report.md:L5-L6`). ([GitHub][35])
+
+**Strengths:**
+
+* You at least created the right shape: suggestions are structured, confidence-scored, and constrained (`src/agent/whisper_planner.py:L10-L12`). ([GitHub][5])
+
+**Gaps:**
+
+* The repo evidence shows “infrastructure” but not proven execution: it’s still not delivering meaningful proactive planning in eval (`tests/evaluation/r73-delta-report.md:L5-L6`). ([GitHub][35])
+
+**Fix (actionable):**
+
+* Wire proactive suggestions into the speaking agent *only when*:
+
+  * retrieved context supports it (doc_count > 0),
+  * sentiment is not negative, and
+  * suggestion_confidence ≥ 0.8.
+    Implement inside shared `execute_specialist()` (it already imports whisper plan and sentiment tools) (`src/agent/agents/_base.py:L2`, `src/agent/whisper_planner.py:L10-L12`). ([GitHub][21])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 15: B5 Emotional Intelligence — Score: 7/10
+
+**Evidence:**
+
+* System prompt includes emotional intelligence and crisis sensitivity guidance (`src/agent/prompts.py:L16-L19`). ([GitHub][32])
+* Crisis persistence is implemented to keep crisis mode across turns (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+* Eval grief scenario improved (0/3 → 2/3) (`tests/evaluation/r73-delta-report.md:L4-L5`). ([GitHub][35])
+
+**Strengths:**
+
+* Crisis follow-up continuity is explicitly handled (this is a real-world failure mode) (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+
+**Gaps:**
+
+* Crisis persistence heuristic is still brittle (keyword-based), which can produce incorrect transitions in emotionally sensitive situations (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+
+**Fix (actionable):**
+
+* Require an explicit “I’m safe / I’m okay now” to exit crisis mode, or degrade to a “soft-check” follow-up before switching back to concierge mode (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+
+**Priority:** MINOR
+
+---
+
+## Dimension 16: B6 Tone Calibration — Score: 8/10
+
+**Evidence:**
+
+* System prompt bans “Oh!” openers and mandates warm-but-not-performative tone (`src/agent/prompts.py:L9-L15`). ([GitHub][32])
+* Branding enforcement clamps exclamation marks and strips emoji if disallowed (`src/agent/persona.py:L4-L6`). ([GitHub][4])
+
+**Strengths:**
+
+* This is one of the few agents I’ve seen that enforces tone in code, not just in prompts (`src/agent/persona.py:L4-L6`). ([GitHub][4])
+
+**Gaps:**
+
+* Exclamation “replacement with periods” can produce awkward punctuation in edge cases (mechanical rewriting) (`src/agent/persona.py:L5-L6`). ([GitHub][4])
+
+**Fix (actionable):**
+
+* Replace “excess ! → .” with “collapse runs of ! to a single !” to preserve semantics and reduce awkwardness (`src/agent/persona.py:L5-L6`). ([GitHub][4])
+
+**Priority:** MINOR
+
+---
+
+## Dimension 17: B7 Multi-turn Coherence — Score: 6/10
+
+**Evidence:**
+
+* State includes `extracted_fields` and is designed for multi-turn routing/planning (`src/agent/state.py:L0-L1`). ([GitHub][12])
+* Specialist routing reuses the same specialist on retry (`src/agent/dispatch.py:L11-L13`). ([GitHub][2])
+* Crisis is sticky across turns (`src/agent/compliance_gate.py:L16-L17`). ([GitHub][3])
+* Whisper plans reset per turn by design (`src/agent/whisper_planner.py:L0-L2`). ([GitHub][5])
+
+**Strengths:**
+
+* You’ve implemented stateful persistence where it matters for safety and personalization (crisis + extracted_fields) (`src/agent/compliance_gate.py:L16-L17`, `src/agent/state.py:L0-L1`). ([GitHub][3])
+
+**Gaps:**
+
+* Whisper being per-turn is fine, but there’s no evidence of a longer-term “preference memory” contract beyond extracted_fields (which is generic and can become a dumping ground) (`src/agent/state.py:L0-L1`). ([GitHub][12])
+
+**Fix (actionable):**
+
+* Split `extracted_fields` into stable namespaces (`preferences`, `trip_context`, `vip_signals`, `constraints`) and enforce schema validation (Pydantic) before merge (`src/agent/state.py:L0-L2`). ([GitHub][12])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 18: B8 Cultural Sensitivity — Score: 5/10
+
+**Evidence:**
+
+* Guardrails are multilingual (11 languages) (`src/agent/compliance_gate.py:L0-L2`). ([GitHub][3])
+* Default config includes Spanish greeting template and spanish flag (`src/casino/config.py:L0-L1`). ([GitHub][31])
+* Eval report explicitly notes language expansion is still a TODO (“ADR-005 deferred”) (`tests/evaluation/r73-delta-report.md:L6-L7`). ([GitHub][35])
+
+**Strengths:**
+
+* Input safety works across languages (better than most systems) (`src/agent/compliance_gate.py:L0-L2`). ([GitHub][3])
+
+**Gaps:**
+
+* Output language behavior is not proven (Spanish support exists as config/flag, but you aren’t demonstrating robust multilingual answering) (`src/casino/config.py:L0-L1`, `tests/evaluation/r73-delta-report.md:L6-L7`). ([GitHub][31])
+
+**Fix (actionable):**
+
+* Detect user language and select a language-specific system prompt + fallback messages, and ensure KB has localized content; wire through per-casino prompts (`src/casino/config.py:L0-L1`, `src/agent/prompts.py:L9-L15`). ([GitHub][31])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 19: B9 Safety Protocol — Score: 7/10
+
+**Evidence:**
+
+* Responsible gaming detection escalates after 3 triggers in-session (`src/agent/compliance_gate.py:L12-L13`). ([GitHub][3])
+* Crisis detection is graduated (concern/urgent/immediate) and sets `crisis_active` (`src/agent/compliance_gate.py:L18-L21`). ([GitHub][3])
+* Crisis module defines escalation levels and protocol intent (`src/agent/crisis.py:L0-L1`). ([GitHub][36])
+* Eval notes crisis scenario improved 1/3 → 3/3 for crisis-04 but still weak overall (1/3 overall pass) (`tests/evaluation/r73-delta-report.md:L3-L4`). ([GitHub][35])
+* Responsible gaming helpline test asserts “1-800-MY-RESET” appears (`tests/test_eval.py:L0-L1`). ([GitHub][19])
+
+**Strengths:**
+
+* You’re not doing a single binary “self-harm detector”; you implemented graduated severity plus persistence (`src/agent/compliance_gate.py:L16-L21`). ([GitHub][3])
+
+**Gaps:**
+
+* Safety eval still fails too often (1/3). That’s not production-grade for a casino environment with real problem gambling and crisis risk (`tests/evaluation/r73-delta-report.md:L3-L4`). ([GitHub][35])
+
+**Fix (actionable):**
+
+* Add explicit crisis response templates per severity and require “warm handoff” language (offer to connect to onsite security/medical, 988, etc.) and ensure multi-turn persistence doesn’t exit early (`src/agent/compliance_gate.py:L16-L21`, `src/agent/prompts.py:L15-L16`). ([GitHub][3])
+
+**Priority:** MAJOR
+
+---
+
+## Dimension 20: B10 Response Quality — Score: 7/10
+
+**Evidence:**
+
+* Validation node uses a structured `ValidationResult` with pass/fail and a retry gate (`src/agent/nodes.py:L28-L34`). ([GitHub][1])
+* Retrieval results are filtered by min cosine score for grounding (`src/agent/tools.py:L8-L10`, `src/agent/tools.py:L17-L18`). ([GitHub][9])
+* System prompt instructs grounded-only answers and to admit uncertainty (and disallows gambling advice) (`src/agent/prompts.py:L9-L15`). ([GitHub][32])
+* Eval tests explicitly check “unknown question → don’t know / contact concierge” behavior (`tests/test_eval.py:L0-L1`). ([GitHub][19])
+
+**Strengths:**
+
+* RAG is treated as grounding, not just “retrieve for vibes” (min relevance score + validation loop) (`src/agent/tools.py:L8-L10`, `src/agent/nodes.py:L28-L34`). ([GitHub][9])
+
+**Gaps:**
+
+* The validator failure “degrade pass” can let low-quality or hallucinated responses through exactly when you’re blind (validator down) (`src/agent/nodes.py:L32`). ([GitHub][1])
+
+**Fix (actionable):**
+
+* On validator errors, fail safer: if `retrieved_context` is empty OR scores low, route to fallback instead of serving unvalidated text. Implement inside `validate_node` (`src/agent/nodes.py:L32-L34`). ([GitHub][1])
+
+**Priority:** MAJOR
+
+---
+
+# Summary Section
+
+## Production Readiness Score
+
+* **Technical avg:** 6.7/10
+* **Behavioral avg:** 6.3/10
+* **Overall:** 6.5/10
+* **CRITICALs:** 1
+* **MAJORs:** 14
+* **Production-ready:** **NO** (threshold: 8.0 avg, 0 CRITICALs)
+
+## Top 5 Fixes (Priority Order)
+
+1. **Enforce RE2 in production or fail startup** to eliminate known ReDoS/DoS risk (`src/agent/regex_engine.py:L0-L1`). ([GitHub][25])
+2. **Fix chunk ID hashing ambiguity** by using a delimiter in ingestion IDs (`src/rag/pipeline.py:L10-L12` vs `src/rag/reranking.py:L3-L4`). ([GitHub][8])
+3. **Add hashed dependency lock + `--require-hashes` in Docker** (align with your own audit script) (`scripts/security-audit.sh:L0-L3`, `requirements.txt:L0-L1`, `Dockerfile:L0-L2`). ([GitHub][23])
+4. **Fix circuit breaker race** (state mutation outside lock) (`src/agent/circuit_breaker.py:L1`). ([GitHub][27])
+5. **Make behavior regressions catchable in CI** by adding a deterministic mock LLM mode; stop relying on API-key-gated eval tests for core behavior (`tests/test_eval.py:L0-L1`, `Makefile:L0`, `src/agent/agents/_base.py:L1-L2`). ([GitHub][19])
+
+## Top 5 Strengths
+
+1. **Real guardrail depth**: deterministic multilingual checks + semantic injection layer + explicit ordering (`src/agent/compliance_gate.py:L0-L7`). ([GitHub][3])
+2. **Streaming-safe design**: SSE-first, pure ASGI middleware, plus streaming PII redaction (`src/api/app.py:L0-L1`, `src/api/middleware.py:L0-L1`, `src/agent/streaming_pii.py:L0-L1`). ([GitHub][13])
+3. **Post-generation persona enforcement** (branding + PII redaction + truncation at sentence boundary) (`src/agent/persona.py:L0-L14`). ([GitHub][4])
+4. **Hardening around specialist execution**: timeouts, key filtering, retry specialist reuse (`src/agent/dispatch.py:L11-L13`, `src/agent/dispatch.py:L28-L33`). ([GitHub][2])
+5. **Process discipline exists** (ADRs + frozen eval prompt + doc drift tests), even if not fully effective yet (`docs/adr/README.md:L0-L1`, `docs/eval-prompt-v2.0.md:L0-L1`, `tests/test_doc_accuracy.py:L0-L1`). ([GitHub][30])
+
+---
+
+If you want this audit to be *truly* production-grade, the next step isn’t more docs or more prompts — it’s eliminating the single CRITICAL (RE2 fallback), then hardening the RAG ID contract + dependency supply chain, and then turning behavior regression detection into something CI can actually enforce.
+
