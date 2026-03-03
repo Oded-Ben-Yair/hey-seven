@@ -139,6 +139,8 @@ import random as _random
 _LLM_CACHE_TTL = 3600
 _llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
 _llm_lock = asyncio.Lock()
+_complex_llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
+_complex_llm_lock = asyncio.Lock()
 _validator_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
 _validator_lock = asyncio.Lock()
 
@@ -168,6 +170,93 @@ async def _get_llm() -> ChatGoogleGenerativeAI:
         return llm
 
 
+async def _get_complex_llm() -> ChatGoogleGenerativeAI:
+    """Get or create the complex/Pro LLM instance (TTL-cached singleton).
+
+    R83: Used for complex queries routed by _select_model(). Uses
+    COMPLEX_MODEL_NAME (Gemini 3.1 Pro) for synthesis, planning,
+    emotional contexts, and low-confidence routing decisions.
+
+    Separate cache and lock from _get_llm() to prevent contention
+    between Flash and Pro model construction.
+    """
+    async with _complex_llm_lock:
+        cached = _complex_llm_cache.get("complex_llm")
+        if cached is not None:
+            return cached
+        settings = get_settings()
+        llm = ChatGoogleGenerativeAI(
+            model=settings.COMPLEX_MODEL_NAME,
+            temperature=settings.MODEL_TEMPERATURE,
+            timeout=settings.MODEL_TIMEOUT + 15,  # Pro is slower; allow extra time
+            max_retries=settings.MODEL_MAX_RETRIES,
+            max_output_tokens=settings.MODEL_MAX_OUTPUT_TOKENS,
+        )
+        _complex_llm_cache["complex_llm"] = llm
+        return llm
+
+
+def _select_model(state: dict) -> str:
+    """Determine which model to use for this query.
+
+    R83: Routes to Pro (COMPLEX_MODEL_NAME) for queries that benefit
+    from deeper reasoning. Routes to Flash (MODEL_NAME) for everything else.
+
+    Deterministic routing — no LLM call. Decision based on state signals
+    already computed by upstream nodes (router confidence, sentiment,
+    whisper plan complexity, crisis state).
+
+    Returns:
+        "complex" if Pro should be used, "default" otherwise.
+    """
+    settings = get_settings()
+    if not settings.MODEL_ROUTING_ENABLED:
+        return "default"
+
+    confidence = state.get("router_confidence", 1.0)
+    sentiment = state.get("guest_sentiment")
+    whisper = state.get("whisper_plan") or {}
+
+    # Pro for low-confidence routing (ambiguous intent needs better reasoning)
+    if confidence < 0.7:
+        logger.info("R83 model routing: Pro (low confidence %.2f)", confidence)
+        return "complex"
+
+    # Pro for emotional contexts (grief, frustration need nuanced responses)
+    if sentiment in ("frustrated", "grief", "negative"):
+        logger.info("R83 model routing: Pro (sentiment=%s)", sentiment)
+        return "complex"
+
+    # Pro for synthesis/planning queries (detected by whisper planner)
+    query_complexity = whisper.get("query_complexity")
+    if query_complexity in ("high", "multi_domain"):
+        logger.info("R83 model routing: Pro (complexity=%s)", query_complexity)
+        return "complex"
+
+    # Pro for crisis
+    if state.get("crisis_active"):
+        logger.info("R83 model routing: Pro (crisis_active)")
+        return "complex"
+
+    return "default"
+
+
+async def _get_routed_llm(state: dict) -> tuple[ChatGoogleGenerativeAI, str]:
+    """Get the appropriate LLM based on model routing decision.
+
+    Returns:
+        Tuple of (llm_instance, model_name_used).
+    """
+    route = _select_model(state)
+    if route == "complex":
+        llm = await _get_complex_llm()
+        settings = get_settings()
+        return llm, settings.COMPLEX_MODEL_NAME
+    llm = await _get_llm()
+    settings = get_settings()
+    return llm, settings.MODEL_NAME
+
+
 async def _get_validator_llm() -> ChatGoogleGenerativeAI:
     """Get or create the validation LLM instance (TTL-cached singleton).
 
@@ -189,7 +278,7 @@ async def _get_validator_llm() -> ChatGoogleGenerativeAI:
         settings = get_settings()
         llm = ChatGoogleGenerativeAI(
             model=settings.MODEL_NAME,
-            temperature=0.3,  # R77: Relaxed from 0.0 to reduce over-strict grounding rejections
+            temperature=1.0,  # R83: Gemini 3.x requires 1.0; lower causes looping/degradation
             timeout=settings.MODEL_TIMEOUT,
             max_retries=settings.MODEL_MAX_RETRIES,
             max_output_tokens=512,  # Validation produces short structured output
@@ -734,11 +823,44 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     Categories are derived from the actual property data file (cached)
     to stay in sync with available knowledge-base content.
 
+    R83: When the user message is a mid-conversation acknowledgment ("ok", "great",
+    "sounds good"), return a brief contextual follow-up instead of the full greeting
+    template. The full greeting template is only appropriate for the first turn.
+
     Feature flag: ``ai_disclosure_enabled`` — when True, includes an
     explicit AI disclosure line ("I'm an AI assistant") per regulatory
     best practice for automated guest interactions.
     """
     settings = get_settings()
+    messages = state.get("messages", [])
+
+    # R83: Detect mid-conversation acknowledgments.
+    # If there are prior AI messages, the guest is continuing a conversation,
+    # not starting fresh. A full greeting template would lose conversational context.
+    human_count = sum(1 for m in messages if isinstance(m, HumanMessage))
+    if human_count > 1:
+        user_msg = _get_last_human_message(messages)
+        # This is a mid-conversation acknowledgment routed here by compliance_gate 7.9.
+        # Return a brief, contextual follow-up that maintains conversation flow.
+        domains_discussed = state.get("domains_discussed", [])
+        if domains_discussed:
+            last_domain = domains_discussed[-1]
+            return {
+                "messages": [AIMessage(content=(
+                    f"Glad to help! Anything else about {last_domain} "
+                    "or something different you'd like to explore?"
+                ))],
+                "sources_used": [],
+                "retrieved_context": [],
+            }
+        return {
+            "messages": [AIMessage(content=(
+                "Happy to help! What else can I assist you with?"
+            ))],
+            "sources_used": [],
+            "retrieved_context": [],
+        }
+
     categories = _build_greeting_categories(casino_id=settings.CASINO_ID)
     bullets = "\n".join(f"- **{label}**" for label in categories.values())
 

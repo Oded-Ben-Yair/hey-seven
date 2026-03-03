@@ -132,6 +132,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "extraction_llm_augmented": True,
         "profiling_enabled": True,
         "incentives_enabled": True,
+        "few_shot_examples_enabled": True,
     },
     "prompts": {
         "system_prompt_override": None,
@@ -215,6 +216,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "extraction_llm_augmented": True,
             "profiling_enabled": True,
             "incentives_enabled": True,
+            "few_shot_examples_enabled": True,
         },
         "branding": {
             "persona_name": "Seven",
@@ -311,6 +313,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "extraction_llm_augmented": True,
             "profiling_enabled": True,
             "incentives_enabled": True,
+            "few_shot_examples_enabled": True,
         },
         "branding": {
             "persona_name": "Foxy",
@@ -406,6 +409,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "extraction_llm_augmented": True,
             "profiling_enabled": True,
             "incentives_enabled": True,
+            "few_shot_examples_enabled": True,
         },
         "branding": {
             "persona_name": "Lucky",
@@ -496,6 +500,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "extraction_llm_augmented": True,
             "profiling_enabled": True,
             "incentives_enabled": True,
+            "few_shot_examples_enabled": True,
         },
         "branding": {
             "persona_name": "Wynn Host",
@@ -585,6 +590,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "extraction_llm_augmented": True,
             "profiling_enabled": True,
             "incentives_enabled": True,
+            "few_shot_examples_enabled": True,
         },
         "branding": {
             "persona_name": "Ace",

@@ -29,7 +29,7 @@ from .constants import (
     NODE_VALIDATE,
     NODE_WHISPER,
 )
-from .nodes import _get_last_human_message, _get_llm
+from .nodes import _get_last_human_message, _get_llm, _select_model
 from .state import DispatchOutput, PropertyQAState
 
 logger = logging.getLogger(__name__)
@@ -481,10 +481,20 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # Phase 2: Inject guest profile context
     guest_context_update = _inject_guest_context(state, profile_enabled)
 
+    # R83: Compute model routing decision BEFORE specialist execution.
+    # The model_route is recorded in state for observability and passed through
+    # to execute_specialist which uses it to select Flash vs Pro LLM.
+    model_route = _select_model(state)
+    model_name = settings.COMPLEX_MODEL_NAME if model_route == "complex" else settings.MODEL_NAME
+
     # Phase 3: Execute specialist agent
     logger.info(
-        "Dispatching to %s agent (method=%s)",
+        "Dispatching to %s agent (method=%s, model=%s)",
         agent_name,
         dispatch_method,
+        model_name,
     )
-    return await _execute_specialist(state, agent_name, guest_context_update, settings, dispatch_method)
+    result = await _execute_specialist(state, agent_name, guest_context_update, settings, dispatch_method)
+    # R83: Record model routing decision in state for observability
+    result["model_used"] = model_name
+    return result

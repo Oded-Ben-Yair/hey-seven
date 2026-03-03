@@ -22,6 +22,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from src.agent.nodes import _format_context_block
 from src.agent.prompts import (
     EMOTIONAL_CONTEXT_GUIDES,
+    FEW_SHOT_EXAMPLES,
     HEART_ESCALATION_LANGUAGE,
     SENTIMENT_TONE_GUIDES,
     get_persona_style,
@@ -703,6 +704,30 @@ async def execute_specialist(
     )
     system_prompt += behavioral_sections
 
+    # R83: Inject few-shot behavioral examples for the current specialist.
+    # Examples show the model the exact tone and style expected — more effective
+    # than descriptive instructions alone. Gated by few_shot_examples_enabled flag.
+    # Cap at 3 examples to avoid prompt bloat.
+    from src.casino.feature_flags import is_feature_enabled as _is_few_shot_enabled
+
+    if await _is_few_shot_enabled(settings.CASINO_ID, "few_shot_examples_enabled"):
+        specialist_examples = FEW_SHOT_EXAMPLES.get(agent_name, [])
+        if specialist_examples:
+            # Cap at 3 most relevant examples to limit prompt size
+            capped = specialist_examples[:3]
+            examples_parts = []
+            for user_ex, response_ex in capped:
+                examples_parts.append(
+                    f"Guest: \"{user_ex}\"\n"
+                    f"You: \"{response_ex}\""
+                )
+            examples_text = "\n\n".join(examples_parts)
+            system_prompt += (
+                "\n\n## Response Examples (match this style)\n\n"
+                f"{examples_text}"
+            )
+            logger.info("R83: Injected %d few-shot examples for %s agent", len(capped), agent_name)
+
     # R82 Track 1E: Frustration/crisis suppression of promotional content.
     # When the guest is frustrated/negative, override promotional specialist prompts
     # with factual, empathy-first guidance. This is a HARD override — the specialist
@@ -831,7 +856,16 @@ async def execute_specialist(
     window = history[-settings.MAX_HISTORY_MESSAGES:]
     llm_messages.extend(window)
 
-    llm = await get_llm_fn()
+    # R83: Model routing — use Pro model when dispatch layer determined complex routing.
+    # The dispatch layer sets model_used in the state dict passed to the agent.
+    # If it matches COMPLEX_MODEL_NAME, use _get_complex_llm() instead.
+    _model_used = state.get("model_used")
+    if _model_used and _model_used == settings.COMPLEX_MODEL_NAME:
+        from src.agent.nodes import _get_complex_llm
+        llm = await _get_complex_llm()
+        logger.info("R83: Using Pro model (%s) for %s agent", _model_used, agent_name)
+    else:
+        llm = await get_llm_fn()
 
     # R46 D8: Semaphore acquisition with timeout for backpressure.
     # If all 20 LLM slots are busy, return a fallback instead of

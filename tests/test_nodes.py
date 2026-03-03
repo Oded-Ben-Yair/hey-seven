@@ -1772,3 +1772,126 @@ class TestCircuitBreakerConcurrency:
         await asyncio.gather(*[mixed_calls() for _ in range(20)])
         # After all mixed calls, state should be closed (success resets)
         assert cb.state == "closed"
+
+
+class TestModelRouting:
+    """R83: Tests for Flash→Pro model routing logic."""
+
+    def test_default_routes_to_flash(self):
+        """Normal queries route to Flash (default)."""
+        from src.agent.nodes import _select_model
+        state = _state(router_confidence=0.9, guest_sentiment="positive")
+        assert _select_model(state) == "default"
+
+    def test_low_confidence_routes_to_pro(self):
+        """Low router confidence routes to Pro model."""
+        from src.agent.nodes import _select_model
+        state = _state(router_confidence=0.5, guest_sentiment="neutral")
+        assert _select_model(state) == "complex"
+
+    def test_frustrated_routes_to_pro(self):
+        """Frustrated sentiment routes to Pro model."""
+        from src.agent.nodes import _select_model
+        state = _state(router_confidence=0.9, guest_sentiment="frustrated")
+        assert _select_model(state) == "complex"
+
+    def test_grief_routes_to_pro(self):
+        """Grief sentiment routes to Pro model."""
+        from src.agent.nodes import _select_model
+        state = _state(router_confidence=0.9, guest_sentiment="grief")
+        assert _select_model(state) == "complex"
+
+    def test_crisis_routes_to_pro(self):
+        """Crisis state routes to Pro model."""
+        from src.agent.nodes import _select_model
+        state = _state(router_confidence=0.9, crisis_active=True)
+        assert _select_model(state) == "complex"
+
+    def test_high_complexity_routes_to_pro(self):
+        """High query complexity from whisper planner routes to Pro model."""
+        from src.agent.nodes import _select_model
+        state = _state(
+            router_confidence=0.9,
+            whisper_plan={"query_complexity": "high"},
+        )
+        assert _select_model(state) == "complex"
+
+    def test_routing_disabled_returns_default(self):
+        """When MODEL_ROUTING_ENABLED=False, always returns default."""
+        from src.agent.nodes import _select_model
+        from src.config import get_settings
+        get_settings.cache_clear()
+        with patch.dict("os.environ", {"MODEL_ROUTING_ENABLED": "false"}):
+            get_settings.cache_clear()
+            state = _state(router_confidence=0.3, guest_sentiment="grief")
+            assert _select_model(state) == "default"
+        get_settings.cache_clear()
+
+    def test_simple_greeting_stays_flash(self):
+        """Simple greetings stay on Flash model."""
+        from src.agent.nodes import _select_model
+        state = _state(
+            router_confidence=0.95,
+            guest_sentiment="positive",
+            query_type="greeting",
+        )
+        assert _select_model(state) == "default"
+
+
+class TestGreetingNodeAcknowledgment:
+    """R83: Tests for mid-conversation acknowledgment handling."""
+
+    async def test_first_turn_gets_full_greeting(self):
+        """First-time visitor gets the full greeting template."""
+        from src.agent.nodes import greeting_node
+
+        state = _state(messages=[HumanMessage(content="hello")])
+        result = await greeting_node(state)
+        content = result["messages"][0].content
+        assert "Seven" in content
+        assert "help with" in content.lower()
+
+    async def test_mid_conversation_ack_gets_brief_response(self):
+        """Mid-conversation acknowledgment gets brief follow-up, not full greeting."""
+        from src.agent.nodes import greeting_node
+
+        state = _state(messages=[
+            HumanMessage(content="What restaurants do you have?"),
+            AIMessage(content="We have Bobby's Burger Palace and Tao."),
+            HumanMessage(content="great"),
+        ])
+        result = await greeting_node(state)
+        content = result["messages"][0].content
+        assert "Seven" not in content  # No full greeting
+        assert len(content) < 100  # Brief response
+
+    async def test_ack_with_domain_context(self):
+        """Acknowledgment references last discussed domain."""
+        from src.agent.nodes import greeting_node
+
+        state = _state(
+            messages=[
+                HumanMessage(content="Tell me about dining"),
+                AIMessage(content="We have many restaurants."),
+                HumanMessage(content="sounds good"),
+            ],
+            domains_discussed=["dining"],
+        )
+        result = await greeting_node(state)
+        content = result["messages"][0].content
+        assert "dining" in content.lower()
+
+    async def test_ack_without_domain_context(self):
+        """Acknowledgment without domain gives generic follow-up."""
+        from src.agent.nodes import greeting_node
+
+        state = _state(
+            messages=[
+                HumanMessage(content="hi"),
+                AIMessage(content="Welcome!"),
+                HumanMessage(content="ok"),
+            ],
+        )
+        result = await greeting_node(state)
+        content = result["messages"][0].content
+        assert "else" in content.lower() or "help" in content.lower()

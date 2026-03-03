@@ -279,6 +279,10 @@ class PropertyQAState(TypedDict):
     # profiling_question_injected: Ephemeral per-turn flag indicating a profiling
     # question was appended to the AI response in this turn.
     profiling_question_injected: bool
+    # R83: Model routing observability. Records which model was used for this turn
+    # (e.g., "gemini-3-flash-preview" or "gemini-3.1-pro-preview").
+    # Ephemeral per-turn — reset by _initial_state().
+    model_used: str | None
 
 
 class RouterOutput(BaseModel):

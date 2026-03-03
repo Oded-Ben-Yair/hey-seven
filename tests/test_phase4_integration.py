@@ -193,7 +193,7 @@ class TestObservabilityModuleIntegration:
         record_node_span(ctx, "router", 120, metadata={"query_type": "property_qa"})
         record_node_span(ctx, "retrieve", 200, metadata={"doc_count": 5})
         record_node_span(ctx, "whisper_planner", 80, metadata={"has_plan": True})
-        record_node_span(ctx, "generate", 800, metadata={"model": "gemini-2.5-flash"})
+        record_node_span(ctx, "generate", 800, metadata={"model": "gemini-3-flash-preview"})
         record_node_span(ctx, "validate", 100, metadata={"result": "PASS"})
         record_node_span(ctx, "persona_envelope", 10)
         record_node_span(ctx, "respond", 5, metadata={"sources": ["dining"]})

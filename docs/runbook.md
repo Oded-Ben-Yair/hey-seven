@@ -581,18 +581,19 @@ All 6 layers normalize input (R50 fix) to catch URL-encoded, Unicode confusable,
 ## Environment Variables (Key Settings)
 
 > **Note**: For the complete list of all ~65 configurable settings, see `src/config.py`.
-> Override any setting via environment variable (e.g., `MODEL_NAME=gemini-2.5-pro`).
+> Override any setting via environment variable (e.g., `MODEL_NAME=gemini-3.1-pro-preview`).
 
 | Variable | Default | Production | Purpose |
 |----------|---------|------------|---------|
 | `ENVIRONMENT` | `development` | `production` | Enables production secret validation |
 | `LOG_LEVEL` | `INFO` | `INFO` | Logging level |
-| `VERSION` | `1.3.0` | `$COMMIT_SHA` | Version reported by /health |
+| `VERSION` | `1.5.0` | `$COMMIT_SHA` | Version reported by /health |
 | `GOOGLE_API_KEY` | (empty) | Secret Manager | Gemini LLM access |
 | `API_KEY` | (empty) | Secret Manager | Client authentication (required in production) |
 | `CMS_WEBHOOK_SECRET` | (empty) | Secret Manager | CMS webhook verification (required in production) |
 | `TELNYX_PUBLIC_KEY` | (empty) | Secret Manager | SMS webhook verification |
-| `MODEL_NAME` | `gemini-2.5-flash` | `gemini-2.5-flash` | Primary LLM model |
+| `MODEL_NAME` | `gemini-3-flash-preview` | `gemini-3-flash-preview` | Primary LLM model (fast) |
+| `COMPLEX_MODEL_NAME` | `gemini-3.1-pro-preview` | `gemini-3.1-pro-preview` | Complex query LLM (routing) |
 | `EMBEDDING_MODEL` | `gemini-embedding-001` | `gemini-embedding-001` | Embedding model (pinned) |
 | `VECTOR_DB` | `chroma` | `firestore` | Vector store backend |
 | `CASINO_ID` | `mohegan_sun` | Per-tenant | Multi-tenant casino identifier |

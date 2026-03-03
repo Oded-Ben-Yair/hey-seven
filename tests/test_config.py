@@ -11,20 +11,20 @@ class TestSettings:
 
         s = Settings()
         assert s.PROPERTY_NAME == "Mohegan Sun"
-        assert s.MODEL_NAME == "gemini-2.5-flash"
-        assert s.MODEL_TEMPERATURE == 0.3
+        assert s.MODEL_NAME == "gemini-3-flash-preview"
+        assert s.MODEL_TEMPERATURE == 1.0
         assert s.RAG_TOP_K == 5
         assert s.RAG_CHUNK_SIZE == 800
         assert s.RATE_LIMIT_CHAT == 20
-        assert s.VERSION == "1.0.0"
+        assert s.VERSION == "1.5.0"
 
     def test_env_var_overrides(self):
         """Environment variables override default settings."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {"MODEL_NAME": "gemini-2.5-pro", "RAG_TOP_K": "10"}):
+        with patch.dict(os.environ, {"MODEL_NAME": "gemini-3.1-pro-preview", "RAG_TOP_K": "10"}):
             s = Settings()
-            assert s.MODEL_NAME == "gemini-2.5-pro"
+            assert s.MODEL_NAME == "gemini-3.1-pro-preview"
             assert s.RAG_TOP_K == 10
 
     def test_settings_are_reusable(self):

@@ -199,8 +199,8 @@ class TestNodeSpan:
             start_time=now - 0.5,
             end_time=now,
             duration_ms=500,
-            metadata={"model": "gemini-2.5-flash"},
+            metadata={"model": "gemini-3-flash-preview"},
             error=None,
         )
         assert span.duration_ms == 500
-        assert span.metadata["model"] == "gemini-2.5-flash"
+        assert span.metadata["model"] == "gemini-3-flash-preview"

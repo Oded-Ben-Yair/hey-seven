@@ -24,8 +24,8 @@ class TestSettingsCount:
         # Count fields defined directly on Settings (exclude inherited)
         fields = Settings.model_fields
         actual_count = len(fields)
-        assert actual_count == 68, (
-            f"Settings has {actual_count} fields, but docs say 68. "
+        assert actual_count == 70, (
+            f"Settings has {actual_count} fields, but docs say 70. "
             f"Update README.md and .env.example if count changed."
         )
 
@@ -59,13 +59,13 @@ class TestAgentRegistry:
 class TestStateFieldCount:
     """Verify the documented state field count matches code."""
 
-    def test_property_qa_state_has_27_fields(self):
-        """PropertyQAState has exactly 27 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52 + 2 R72/R73 + 1 R81-crisis-turn + 1 Phase1-multilingual + 1 Phase5-handoff + 3 profiling)."""
+    def test_property_qa_state_has_28_fields(self):
+        """PropertyQAState has exactly 28 fields (13 v1/v2 + 3 v3 + 1 v4 + 1 R37 + 1 R52 + 2 R72/R73 + 1 R81-crisis-turn + 1 Phase1-multilingual + 1 Phase5-handoff + 3 profiling + 1 R83-model-routing)."""
         from src.agent.state import PropertyQAState
 
         actual = len(PropertyQAState.__annotations__)
-        assert actual == 27, (
-            f"PropertyQAState has {actual} fields, expected 27. "
+        assert actual == 28, (
+            f"PropertyQAState has {actual} fields, expected 28. "
             f"Update ARCHITECTURE.md State Schema section if count changed."
         )
 
@@ -198,12 +198,12 @@ class TestVersionConsistency:
     """Verify VERSION defaults are consistent across config and .env files."""
 
     def test_config_version_default(self):
-        """config.py VERSION default is 1.4.0."""
+        """config.py VERSION default is 1.5.0."""
         from src.config import Settings
 
         default = Settings.model_fields["VERSION"].default
-        assert default == "1.4.0", (
-            f"config.py VERSION default is {default!r}, expected '1.4.0'. "
+        assert default == "1.5.0", (
+            f"config.py VERSION default is {default!r}, expected '1.5.0'. "
             f"Sync .env, .env.example, and ARCHITECTURE.md."
         )
 
@@ -213,7 +213,7 @@ class TestVersionConsistency:
         content = env_example.read_text()
         match = re.search(r"^VERSION=([^\s#]+)", content, re.MULTILINE)
         assert match, "VERSION not found in .env.example"
-        assert match.group(1).strip() == "1.4.0"
+        assert match.group(1).strip() == "1.5.0"
 
 
 class TestCategoryToAgentMapping:

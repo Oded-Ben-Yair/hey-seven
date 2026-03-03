@@ -350,6 +350,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "profiling_phase": None,  # _keep_latest_str: persists across turns
         "profile_completeness_score": 0.0,
         "profiling_question_injected": False,
+        # R83: Model routing observability
+        "model_used": None,
     }
 
 

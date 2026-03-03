@@ -1,7 +1,7 @@
 """Centralized configuration via pydantic-settings.
 
 All magic numbers, model names, paths, and tuning knobs live here.
-Override any value via environment variable (e.g., ``MODEL_NAME=gemini-2.5-pro``).
+Override any value via environment variable (e.g., ``MODEL_NAME=gemini-3.1-pro-preview``).
 """
 
 import threading
@@ -25,8 +25,10 @@ class Settings(BaseSettings):
     PROPERTY_STATE: str = "Connecticut"  # Jurisdiction for age/gaming regulations
 
     # --- LLM ---
-    MODEL_NAME: str = "gemini-2.5-flash"
-    MODEL_TEMPERATURE: float = 0.3
+    MODEL_NAME: str = "gemini-3-flash-preview"
+    COMPLEX_MODEL_NAME: str = "gemini-3.1-pro-preview"  # R83: Used for complex/emotional queries via model routing
+    MODEL_TEMPERATURE: float = 1.0  # Gemini 3.x REQUIRES temperature=1.0; lower causes looping/degradation
+    MODEL_ROUTING_ENABLED: bool = True  # R83: Route complex queries to COMPLEX_MODEL_NAME
     MODEL_TIMEOUT: int = 30  # LLM call timeout in seconds
     MODEL_MAX_RETRIES: int = 2  # LLM call retry count
     MODEL_MAX_OUTPUT_TOKENS: int = 2048  # Max response tokens
@@ -105,7 +107,7 @@ class Settings(BaseSettings):
     # --- Observability ---
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
-    VERSION: str = "1.4.0"  # Profiling Intelligence System. Production deploy overrides with COMMIT_SHA.
+    VERSION: str = "1.5.0"  # R83: Gemini 3.1 migration + behavioral improvements. Production deploy overrides with COMMIT_SHA.
     LANGFUSE_PUBLIC_KEY: str = ""
     LANGFUSE_SECRET_KEY: SecretStr = SecretStr("")
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"

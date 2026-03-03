@@ -47,6 +47,7 @@ class FeatureFlags(TypedDict, total=False):
     extraction_llm_augmented: bool
     profiling_enabled: bool
     incentives_enabled: bool
+    few_shot_examples_enabled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +81,7 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
     "extraction_llm_augmented": True,  # Phase 2: LLM fallback for regex misses
     "profiling_enabled": True,  # Profiling enrichment node in graph topology (Layer 1)
     "incentives_enabled": True,  # Incentive engine for proactive offers
+    "few_shot_examples_enabled": True,  # R83: Inject behavioral examples into specialist prompts
 })
 
 # Parity check: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.

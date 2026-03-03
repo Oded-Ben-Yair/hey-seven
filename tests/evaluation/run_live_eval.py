@@ -197,7 +197,7 @@ async def main():
     output_data = {
         "metadata": {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "model": os.environ.get("MODEL_NAME", "gemini-2.5-flash"),
+            "model": os.environ.get("MODEL_NAME", "gemini-3-flash-preview"),
             "total_scenarios": len(scenarios),
             "total_turns": total_turns,
             "total_errors": errors,

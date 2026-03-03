@@ -675,8 +675,10 @@ All settings in `src/config.py` using `pydantic-settings`. Every value is overri
 | `PROPERTY_DATA_PATH` | `data/mohegan_sun.json` | Path to property JSON |
 | `PROPERTY_WEBSITE` | `mohegansun.com` | Property website (used in fallback messages) |
 | `PROPERTY_PHONE` | `1-888-226-7711` | Property phone (used in fallback and error messages) |
-| `MODEL_NAME` | `gemini-2.5-flash` | LLM model |
-| `MODEL_TEMPERATURE` | `0.3` | LLM temperature |
+| `MODEL_NAME` | `gemini-3-flash-preview` | Primary LLM model (fast) |
+| `COMPLEX_MODEL_NAME` | `gemini-3.1-pro-preview` | Complex query LLM (reasoning) |
+| `MODEL_TEMPERATURE` | `1.0` | LLM temperature (Gemini 3.x requires 1.0) |
+| `MODEL_ROUTING_ENABLED` | `true` | Route complex queries to Pro model |
 | `MODEL_TIMEOUT` | `30` | LLM call timeout (seconds) |
 | `MODEL_MAX_RETRIES` | `2` | LLM retry count on failure |
 | `MODEL_MAX_OUTPUT_TOKENS` | `2048` | Max response tokens |

@@ -275,7 +275,7 @@ async def judge_with_gemini(prompt: str) -> dict | None:
 
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-2.5-pro-preview-06-05",
+            model="gemini-3.1-pro-preview",
             contents=prompt,
             config=genai.types.GenerateContentConfig(
                 temperature=0.1,

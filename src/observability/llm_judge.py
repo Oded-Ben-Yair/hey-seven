@@ -717,8 +717,8 @@ async def evaluate_conversation_llm(
         )
 
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0.0,
+            model="gemini-3-flash-preview",
+            temperature=1.0,  # Gemini 3.x requires temperature=1.0
             max_output_tokens=2048,
         )
         judge_llm = llm.with_structured_output(LLMJudgeOutput, method="json_schema")
