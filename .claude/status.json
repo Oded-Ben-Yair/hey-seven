@@ -1,56 +1,40 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R82 complete. Track 1+2 implemented, 2-model judge panel scored 4.7/10 behavioral (up from 3.2). Pro ceiling test confirms 2+ point advantage. 3490 tests, 0 failures. Ready for Track 3 (model routing).",
-    "lastModified": "2026-03-02T20:00:00Z",
+    "summary": "R83 in progress. Waves 1-3 complete: Gemini 3.1 migration (Flash+Pro), Flash→Pro model routing, few-shot wiring, ack fix. 3502 tests, 0 failures. Live eval running.",
+    "lastModified": "2026-03-03T02:00:00Z",
     "branch": "main",
-    "commitHash": "6e70c0d",
+    "commitHash": "07bdb3d",
     "tag": "v1.5.0",
-    "phase": "r82-complete"
+    "phase": "r83-eval"
   },
   "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "Implement Flash→Pro model routing for complex queries (Track 3A confirmed)" },
-    { "priority": 1, "description": "Fix greeting template on acknowledgments (router classifying 'ok'/'great' as greeting)" },
-    { "priority": 1, "description": "Fix fallback cascade on synthesis/planning requests" },
-    { "priority": 2, "description": "Wire few-shot examples into specialist prompts" },
-    { "priority": 2, "description": "Run profiling eval (P1-P10 still unmeasured)" },
-    { "priority": 3, "description": "Human casino host validation (Track 3D)" }
+    { "priority": 0, "description": "Wait for live eval results, analyze per-dimension scores" },
+    { "priority": 1, "description": "Run judge panel on eval results" },
+    { "priority": 2, "description": "Score-driven fix loop targeting lowest dimensions" },
+    { "priority": 3, "description": "Run profiling eval (P1-P10 still unmeasured)" }
   ],
   "reviewHistory": {
+    "r83": {
+      "date": "2026-03-03",
+      "tracksCompleted": ["Wave 1 (Gemini 3.1 migration)", "Wave 2A (few-shot wiring)", "Wave 2B (ack fix)", "Wave 3 (model routing)"],
+      "codeChanges": [
+        "Wave 1: gemini-2.5-flash → gemini-3-flash-preview, added gemini-3.1-pro-preview, temp 0.3→1.0",
+        "Wave 2A: 25 FEW_SHOT_EXAMPLES wired into _base.py execute_specialist, capped at 3/specialist",
+        "Wave 2B: greeting_node mid-conversation ack detection (brief follow-up vs full greeting)",
+        "Wave 3: _select_model() routes to Pro for low conf/grief/frustrated/crisis/high complexity",
+        "Wave 3: _get_complex_llm() separate TTL-cached Pro singleton, model_used state field",
+        "Version 1.5.0, 3502 tests pass"
+      ]
+    },
     "r82": {
       "date": "2026-03-02",
-      "tracksCompleted": ["Track 1 (System Controls)", "Track 2 (Content Fixes)"],
-      "codeChanges": [
-        "1C: Post-gen slop detector (9 patterns, <1ms)",
-        "1D: Intent-aware validation (per query_type criteria)",
-        "1E: Frustration/crisis suppression (hard override)",
-        "1F: Proactivity gates (0.8→0.6, neutral allowed, logging)",
-        "1G: Response length budgets (50w/40w/60w)",
-        "2A: 25 few-shot examples (5×5)",
-        "2B: Comp agent rewrite (promotional → factual)",
-        "2C: 15 cross-domain bridge templates",
-        "2D: 37 crisis progression tests",
-        "2E: Profiling instrumentation (5 log points)",
-        "Fix: user_message NameError in off_topic_node crisis branch"
-      ],
-      "evalResults": {
-        "scenarios": 109,
-        "turns": 305,
-        "errors": 11,
-        "slop_rate": "0.7%",
-        "fallback_rate": "10.2%",
-        "exclamation_overflow": "0%"
-      },
       "judgePanel": {
         "gpt52_B10": 4.2,
         "grok4_B10": 5.2,
         "consensus_B10": 4.7,
         "delta_from_r81": "+1.5"
-      },
-      "ceilingTest": {
-        "finding": "Gemini Pro answers directly where Flash falls back",
-        "recommendation": "Flash→Pro routing for complex/multi-turn queries"
       }
     },
     "trajectory": {
@@ -63,10 +47,10 @@
     }
   },
   "codebaseMetrics": {
-    "loc": "23K+",
+    "loc": "24K+",
     "modules": 66,
     "testFiles": 102,
-    "tests": 3490,
+    "tests": 3502,
     "testFailures": 0,
     "skipped": 1,
     "coverage": "90%+",
@@ -75,13 +59,15 @@
     "behavioralScenarios": 220,
     "profilingScenarios": 56,
     "graphNodes": 12,
-    "stateFields": 27,
+    "stateFields": 28,
     "slopPatterns": 9,
     "fewShotExamples": 25,
-    "bridgeTemplates": 15
+    "bridgeTemplates": 15,
+    "modelRoutingRules": 4,
+    "featureFlags": 17
   },
   "sessionNotes": {
-    "lastSessionDate": "2026-03-02",
-    "lastSessionId": "hey-seven-session-20260302-r82"
+    "lastSessionDate": "2026-03-03",
+    "lastSessionId": "hey-seven-session-20260303-r83"
   }
 }

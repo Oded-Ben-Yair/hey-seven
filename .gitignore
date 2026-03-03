@@ -38,6 +38,7 @@ Thumbs.db
 # Testing/linting caches
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 .mypy_cache/
 .pytest_cache/
@@ -63,10 +64,14 @@ heyseven-full-page.png
 CLAUDE.md
 reviews/
 
-# Evaluation artifacts (keep scripts and reports, not raw data)
+# Evaluation artifacts (keep scripts, reports, and delta reports; ignore raw logs/data)
 tests/evaluation/*-raw.txt
+tests/evaluation/*-eval-log.txt
 tests/evaluation/*-baseline.json
+tests/evaluation/*-batch-judge-prompt.txt
+tests/evaluation/*-batch-*.txt
+tests/evaluation/*-responses.json
+tests/evaluation/*-judge-scores*.json
 tests/evaluation/eval-log.txt
-tests/evaluation/r73-eval-log.txt
 tests/evaluation/batch-judge-prompt.txt
 tests/evaluation/judge-prompts.json

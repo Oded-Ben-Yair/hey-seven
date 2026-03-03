@@ -13,18 +13,19 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 
-## Current State (Updated 2026-03-01)
+## Current State (Updated 2026-03-03)
 
-- **Codebase**: 20K+ LOC, 66 source modules across 10 packages
-- **Tests**: 3236 tests, 0 failures, 90%+ coverage
-- **Agent**: 12-node LangGraph StateGraph v2.3 with 6 specialist agents + profiling enrichment node
-- **Review Score**: R75 tech 9.63/10, R75 behavioral live 5.8/10
-- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R75(5.8) behavioral
-- **Version**: v1.4.0
-- **Latest commit**: feat: Guest Profiling Intelligence System (ADR-028)
+- **Codebase**: 24K+ LOC, 66 source modules across 10 packages
+- **Tests**: 3502 tests, 0 failures, 90%+ coverage
+- **Agent**: 12-node LangGraph StateGraph v2.3 (28 state fields, 17 feature flags) with 6 specialist agents + profiling enrichment node
+- **Model routing**: Flash→Pro for complex/emotional queries (low confidence, grief, frustrated, crisis, high-complexity)
+- **Review Score**: R75 tech 9.63/10, R82 behavioral 4.7/10
+- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R82(4.7) behavioral
+- **Version**: v1.5.0
+- **Latest commit**: R83: Gemini 3.1 migration, Flash→Pro model routing, few-shot wiring, ack fix
 - **ADRs**: 28 architectural decision records with status lifecycle
 - **Research**: 8 deep domain research docs (R72)
-- **Behavioral scenarios**: 195 across 27 YAML files (74 behavioral + 56 profiling + 65 other)
+- **Behavioral scenarios**: 220 across 27+ YAML files (74 behavioral + 56 profiling + 90 other)
 - **Profiling**: 10-dimension evaluation framework (P1-P10), incentive engine with tiered autonomy
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
@@ -33,8 +34,8 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 | Component | Choice | Why |
 |-----------|--------|-----|
 | Agent Framework | LangGraph 1.0 (pinned 0.2.60) | Production-grade state machine with validation loops |
-| Primary LLM | Gemini 2.5 Flash | GCP alignment, cost-effective ($0.30/1M input) |
-| Complex LLM | Gemini 2.5 Pro | For complex reasoning tasks |
+| Primary LLM | Gemini 3 Flash (preview) | GCP alignment, cost-effective. Default for most queries |
+| Complex LLM | Gemini 3.1 Pro (preview) | For complex reasoning tasks via deterministic model routing |
 | Cloud | GCP Cloud Run | Target deployment platform |
 | Vector DB | Vertex AI Vector Search | GCP-native. ChromaDB for local dev only |
 | State/Memory | Firestore + FirestoreSaver | **Community package** (NOT official LangGraph). `pip install langgraph-checkpoint-firestore` |
@@ -62,7 +63,7 @@ src/                         - Production source code
     constants.py             - Node name constants (single source of truth)
     graph.py                 - 12-node StateGraph assembly (v2.3)
     state.py                 - CasinoHostState TypedDict
-    nodes.py                 - LLM nodes, router, formatter
+    nodes.py                 - LLM nodes, router, formatter, Flash→Pro model routing
     tools.py                 - Casino domain tools
     prompts.py               - System prompts with persona
     guardrails.py            - Pre-LLM deterministic guardrails (5 layers)
@@ -110,7 +111,7 @@ src/                         - Production source code
     traces.py                - Distributed tracing
     evaluation.py            - Automated evaluation framework
   config.py                  - Global settings (Pydantic BaseSettings)
-tests/                       - 95 test files, 3236 tests, 90%+ coverage
+tests/                       - 102 test files, 3502 tests, 90%+ coverage
   conftest.py                - Singleton cleanup, async fixtures
   test_graph_v2.py           - Full pipeline integration tests
   test_nodes.py              - Node-level unit tests
@@ -173,6 +174,8 @@ Key architectural patterns:
 - **re2-compatible guardrail patterns** across all 5 guardrail categories
 - **Guest profiling enrichment node** between generate and validate with LLM-powered extraction, confidence gating, and golden path sequencing (ADR-028)
 - **Incentive engine** with per-casino rules, tiered autonomy ($50 auto-approve threshold), and natural language framing templates
+- **Flash→Pro model routing** — deterministic routing to Pro for low confidence, grief, frustrated, crisis, and high-complexity queries (R83)
+- **Few-shot behavioral examples** — 25 examples (5 specialists x 5 patterns) injected into specialist system prompts via feature flag (R83)
 
 ## Known Limitations
 
