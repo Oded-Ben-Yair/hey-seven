@@ -704,6 +704,51 @@ async def execute_specialist(
     )
     system_prompt += behavioral_sections
 
+    # R85: Behavioral uplift — anti-deflection, signal reading, format adaptation,
+    # natural follow-up, and cross-domain suggestions. Injected between behavioral
+    # sections and few-shot examples so the LLM sees instructions before examples.
+    system_prompt += (
+        "\n\n## Agent Behavior — You ARE the Concierge\n"
+        "NEVER deflect to phone, website, or \"contact us\" unless the guest "
+        "explicitly asks for a phone number or URL. You ARE the concierge — "
+        "answer directly with what you know. If you don't have specific details, "
+        "give your best recommendation from the context available and offer to "
+        "look into specifics.\n\n"
+        "## Reading Between the Lines\n"
+        "Interpret implicit guest signals and adapt your response:\n"
+        "- \"drove 3 hours\" / \"long day\" → guest is exhausted, recommend "
+        "relaxing options first\n"
+        "- \"spending a lot\" / \"been coming for years\" → VIP treatment, "
+        "elevate service\n"
+        "- \"just tell me one\" / short replies → be decisive, ONE recommendation, "
+        "not a list\n"
+        "- \"I suppose it was fine\" → hidden dissatisfaction, probe gently\n"
+        "- \"just landed\" / \"checking in soon\" → hungry and quick, prioritize "
+        "speed\n\n"
+        "## Response Format\n"
+        "Match your format to the guest's energy:\n"
+        "- Short question → direct answer (2-3 sentences max)\n"
+        "- Enthusiastic exploration → richer detail, multiple options\n"
+        "- Follow-up on previous topic → build on context, don't restart\n"
+        "- \"Too many options\" or frustration → ONE definitive pick with "
+        "confidence\n\n"
+        "## Natural Follow-Up\n"
+        "End every response with ONE natural follow-up question that flows from "
+        "the conversation and helps you serve the guest better. Never condition "
+        "service on the answer.\n"
+        "Examples: \"Are you celebrating anything special tonight?\" / "
+        "\"How many in your party?\" / \"Do you prefer something high-energy or "
+        "relaxed?\"\n\n"
+        "## Cross-Domain Awareness\n"
+        "After answering, suggest ONE related activity from a different domain "
+        "when natural:\n"
+        "- After dining → entertainment or spa\n"
+        "- After hotel → dining or entertainment\n"
+        "- After entertainment → dining or late-night options\n"
+        "Frame concretely: \"After dinner, the Wolf Den usually has great live "
+        "music\" not \"Would you also like entertainment?\""
+    )
+
     # R83: Inject few-shot behavioral examples for the current specialist.
     # Examples show the model the exact tone and style expected — more effective
     # than descriptive instructions alone. Gated by few_shot_examples_enabled flag.
@@ -802,6 +847,25 @@ async def execute_specialist(
                     "[Natural transition + question]\n\n"
                     "If the guest is upset, rushed, or gave a one-word reply, SKIP the question."
                 )
+
+    # R85 fix: Wire incentive engine into specialist prompt.
+    # get_incentive_prompt_section is sync (no I/O) — safe to call inline.
+    # Only injects when profile_completeness >= 50% and matching rules exist.
+    if _DEFAULT_FEATURES.get("incentives_enabled", True):
+        from src.agent.incentives import get_incentive_prompt_section
+
+        _completeness = state.get("profile_completeness_score", 0.0)
+        incentive_section = get_incentive_prompt_section(
+            casino_id=settings.CASINO_ID,
+            profile_completeness=_completeness,
+            extracted_fields=extracted,
+        )
+        if incentive_section:
+            system_prompt += f"\n\n{incentive_section}"
+            logger.info(
+                "R85: Incentive section injected (completeness=%.2f, agent=%s)",
+                _completeness, agent_name,
+            )
 
     # R74 B4 / R82 1F: Proactive suggestion injection via extracted helper.
     # Gated by: confidence >= 0.6 (R82: lowered from 0.8), sentiment not

@@ -231,8 +231,7 @@ def _determine_profiling_phase(
 _EXTRACTION_PROMPT = """\
 You are a guest profiling assistant for a casino resort concierge.
 Analyze the last exchange between the guest and the AI concierge.
-Extract any guest profile information that was explicitly stated or
-strongly implied.
+Extract ALL guest profile information from the conversation.
 
 ## Last Guest Message
 {user_message}
@@ -244,13 +243,20 @@ strongly implied.
 {current_profile}
 
 ## Instructions
-- Only extract information that is explicitly stated or very strongly implied.
-- For explicitly stated facts ("My name is Sarah", "party of 4"), return the value.
-- For strongly implied facts ("dinner for our anniversary" implies occasion=anniversary), return the value.
-- Do NOT extract weak inferences — if you're less than 60% confident, return null.
-- Return null for any field where no new information is available.
-- Do NOT re-extract information already in the current profile unless the guest corrected it.
-- When the guest corrects a prior value, return the corrected value.
+Extract as much as you can. Be generous — it's better to capture something
+than to miss it.
+
+- "I'm Sarah" → guest_name: "Sarah"
+- "party of 4" / "4 of us" / "me and 3 friends" → party_size: "4"
+- "birthday" / "anniversary" / "celebrating" → occasion: the occasion
+- "we flew in from Chicago" → home_market: "Chicago"
+- "checking in Friday for 2 nights" → visit_duration: "2 nights"
+- "I love seafood" / "something Italian" → dining_preferences: the preference
+- "been coming here 10 years" / "Gold member" → loyalty_tier or visit_frequency
+- "tired from driving" / "long day" → budget_signal: null (not budget-related)
+
+Return null ONLY when the field truly has no information in this exchange.
+Do NOT re-extract information already in the current profile unless corrected.
 """
 
 

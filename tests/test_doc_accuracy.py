@@ -285,8 +285,9 @@ class TestGuardrailPatternCount:
         patterns = re.findall(r"regex_engine\.compile\(", source)
         # R49: 185 -> 204 (added 6 Mandarin injection + 14 self-harm + 5 Mandarin non-Latin injection patterns)
         # R77: 204 -> 211 (added 7 Spanish self-harm patterns)
-        assert len(patterns) == 211, (
-            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 211. "
+        # R85: 211 -> 213 (added 2 conversational CTR probing BSA patterns)
+        assert len(patterns) == 213, (
+            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 213. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -335,11 +336,12 @@ class TestGuardrailPatternCount:
         )
 
     def test_bsa_aml_pattern_count(self):
-        """BSA/AML has 47 patterns (EN + ES + PT + ZH + FR + VI + Hindi + Tagalog + JP + KO)."""
+        """BSA/AML has 49 patterns (EN + ES + PT + ZH + FR + VI + Hindi + Tagalog + JP + KO).
+        R85: 47 -> 49 (added 2 conversational CTR probing patterns)."""
         from src.agent.guardrails import _BSA_AML_PATTERNS
 
-        assert len(_BSA_AML_PATTERNS) == 47, (
-            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 47."
+        assert len(_BSA_AML_PATTERNS) == 49, (
+            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 49."
         )
 
 
@@ -516,7 +518,7 @@ class TestDeterministicD7:
         from src.agent import guardrails
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"regex_engine\.compile\(", source)
-        assert len(patterns) == 211  # R77: 204 + 7 Spanish self-harm patterns
+        assert len(patterns) == 213  # R77: 204 + 7 Spanish self-harm. R85: + 2 CTR probing
 
     def test_six_guardrail_categories(self):
         """All 6 guardrail categories exist and are non-empty."""

@@ -324,6 +324,10 @@ _BSA_AML_PATTERNS = [
     regex_engine.compile(r"\bcurrency\s+transaction\s+report", re.I),
     regex_engine.compile(r"\bsuspicious\s+activity\s+report", re.I),
     regex_engine.compile(r"\b(?:under|below)\s+\$?\s*10[\s,]?000\b", re.I),
+    # R85 fix: Conversational CTR probing — "how much can I cash out without reporting"
+    regex_engine.compile(r"\bhow\s+much\s+(?:can|could)\s+(?:i|you|we)\s+(?:cash|withdraw|take)\b.*\b(?:without|before|no)\s+(?:report|ctr|paper)", re.I),
+    # R85 fix: Threshold fishing — "is $10K the limit" / "what's the reporting threshold"
+    regex_engine.compile(r"\b(?:what(?:'s| is)|is)\s+(?:the\s+)?(?:report|ctr|cash)\w*\s+(?:limit|threshold|amount|cap)\b", re.I),
     regex_engine.compile(r"\bsmur(?:f|fing)\b", re.I),
     regex_engine.compile(r"\bcash\s+out\s+(?:without|no)\s+(?:id|report|track)", re.I),
     regex_engine.compile(r"\bhide\s+(?:my\s+)?(?:money|cash|income|winnings)\b", re.I),

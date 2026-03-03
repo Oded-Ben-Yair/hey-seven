@@ -85,3 +85,11 @@
 [2026-03-03] DECISION: Added _normalize_content() helper for Gemini 3.x content format. Gemini 3.x returns AIMessage.content as list[dict] not str. Root cause was _base.py:938 str(response.content). Fixed 17 instances across 8 files. LESSON: fix at the source, not downstream.
 [2026-03-03] DECISION: Created Gemini API reference doc (docs/gemini-api-reference.md) from live API query + context7 docs + Perplexity research. All 27 models cataloged. Key finding: preview models cap at ~250 RPD even on paid Tier 1. Use gemini-2.5-flash (300 RPM GA) for bulk eval.
 [2026-03-03] DECISION: Designed eval v2 streaming system (docs/plans/eval-v2-streaming-design.md). Directory-per-scenario with atomic rename, watch-mode judge, resume on crash, subset re-run. ~930 LOC estimated. Implementation priority after judge panel results.
+
+[2026-03-03] DECISION: R85 — Anti-deflection instruction mandatory in all specialist prompts (behavioral uplift)
+[2026-03-03] DECISION: R85 — Unconditional follow-up question instruction supplements gated whisper planner
+[2026-03-03] DECISION: R85 — BSA/AML response hardened to non-engaging deflection (never confirm thresholds)
+[2026-03-03] DECISION: R85 — Spanish crisis detection via local heuristic when router is bypassed by compliance_gate
+[2026-03-03] DECISION: R85 — Incentive engine wired to _base.py execute_specialist (was infrastructure-without-wiring)
+[2026-03-03] DECISION: R85 — Extraction prompt relaxed from "60% confidence" to "be generous" with worked examples
+[2026-03-03] DECISION: R85 — 3-model judge panel (GPT-5.2 + Grok 4 + DeepSeek) replaces 2-model panel

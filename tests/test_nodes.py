@@ -1544,14 +1544,19 @@ class TestBsaAmlRouting:
         assert route_from_router(state) == "off_topic"
 
     async def test_bsa_aml_response_directs_to_compliance_team(self):
-        """BSA/AML response directs guest to compliance team."""
+        """BSA/AML response is non-engaging, redirects to financial services."""
         from src.agent.nodes import off_topic_node
 
         state = _state(query_type="bsa_aml")
         result = await off_topic_node(state)
         content = result["messages"][0].content.lower()
-        assert "compliance" in content
+        # R85: Response must not confirm thresholds or engage with compliance details.
+        # Redirects to "financial services team" without elaboration.
+        assert "financial" in content
         assert "resort amenities" in content or "anything else" in content
+        # Verify it does NOT contain compliance-engaging language
+        assert "reporting requirements" not in content
+        assert "currency transaction report" not in content
 
 
 class TestGetLastHumanMessage:

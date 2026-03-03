@@ -969,21 +969,20 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     )
 
     if query_type == "bsa_aml":
+        # R85 fix: Non-engaging BSA/AML deflection. Never confirm thresholds,
+        # never discuss structuring, never engage with financial compliance questions.
+        # Immediate redirect to financial services team without elaboration.
         if _is_spanish:
             content = (
-                "Gracias por tu pregunta. Los asuntos relacionados con el cumplimiento "
-                "financiero y los requisitos de informes son manejados por nuestro equipo "
-                "dedicado de cumplimiento. Para asistencia, por favor habla con un anfitrión "
-                "del casino o contacta a nuestro departamento de cumplimiento directamente. "
-                "¿Hay algo más sobre las amenidades del resort en lo que pueda ayudarte?"
+                "Puedo conectarte con nuestro equipo de servicios financieros para "
+                "cualquier asunto relacionado con finanzas. ¿Hay algo más sobre las "
+                "amenidades del resort en lo que pueda ayudarte?"
             )
         else:
             content = (
-                "Thank you for your question. Matters related to financial compliance "
-                "and reporting requirements are handled by our dedicated compliance team. "
-                "For assistance, please speak with a casino host or contact our compliance "
-                "department directly. Is there anything else about our resort amenities "
-                "I can help you with?"
+                "I can connect you with our financial services team for anything "
+                "related to financial matters. Is there anything else about our "
+                "resort amenities I can help you with?"
             )
     elif query_type == "patron_privacy":
         if _is_spanish:
@@ -1125,6 +1124,25 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         from src.agent.handoff import build_handoff_request
 
         current_crisis_turn = state.get("crisis_turn_count", 0) + 1
+
+        # R85 CRITICAL fix: Spanish detection for crisis messages.
+        # detected_language is set by the router, but crisis messages are caught
+        # by compliance_gate_node which short-circuits BEFORE the router runs.
+        # Without this local heuristic, Spanish-speaking guests in crisis
+        # ALWAYS get English responses because detected_language is never set.
+        if not _is_spanish and user_message:
+            _user_msg_lower = user_message.lower()
+            _SPANISH_CRISIS_INDICATORS = (
+                "ayuda", "necesito", "hablar", "alguien", "por favor",
+                "estoy", "quiero", "socorro", "no puedo", "me siento",
+            )
+            if any(ind in _user_msg_lower for ind in _SPANISH_CRISIS_INDICATORS):
+                _spanish_enabled = await is_feature_enabled(
+                    settings.CASINO_ID, "spanish_support_enabled",
+                )
+                if _spanish_enabled:
+                    _is_spanish = True
+                    logger.info("R85: Spanish detected via crisis heuristic for self_harm")
 
         if _is_spanish:
             from src.agent.crisis import get_crisis_followup_es, get_crisis_response_es

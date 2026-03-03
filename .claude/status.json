@@ -1,68 +1,78 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R83 Waves 1-4 complete. Gemini 3.1 migration, Flash→Pro routing, few-shot wiring, ack fix, content normalization. 3502 tests pass. Subset eval: 98% real responses (was 40%). Judge panel pending.",
-    "lastModified": "2026-03-03T11:15:00Z",
+    "summary": "R85 behavioral+profiling sprint complete. Anti-deflection, signal reading, format adaptation, profiling prompt fix, incentive wiring, BSA hardening, Spanish crisis fix. 3-model judge panel: B10=6.2 (+0.2), P-avg=5.0 (+3.0), Safety=95% (+53pp).",
+    "lastModified": "2026-03-03T18:30:00Z",
     "branch": "main",
-    "commitHash": "fa3254a",
+    "commitHash": "pending",
     "tag": "v1.5.0",
-    "phase": "r83-judge-pending"
+    "phase": "r85-complete"
   },
   "blockers": [
-    "Semantic injection classifier fails with Gemini 3.x (SEMANTIC_INJECTION_ENABLED=false for now)",
+    "B10 target (7.5) not yet met — deflection still in 3/20 scenarios (fallback responses)",
     "Preview model rate limits: ~10 RPM free tier, ~250 RPD on Tier 1"
   ],
   "nextSteps": [
-    { "priority": 0, "description": "Run judge panel on r83-subset-responses.json (GPT-5.2 + Grok 4)" },
-    { "priority": 1, "description": "Score-driven fix loop targeting lowest B-dimensions" },
-    { "priority": 2, "description": "Fix semantic injection classifier for Gemini 3.x" },
-    { "priority": 3, "description": "Run profiling eval (P1-P10 still unmeasured)" },
-    { "priority": 4, "description": "Implement eval v2 streaming system (design doc at docs/plans/eval-v2-streaming-design.md)" },
-    { "priority": 5, "description": "Push 5 commits to GitHub" }
+    { "priority": 0, "description": "Fix remaining deflection in fallback responses (3 scenarios: agentic-09, implicit-09, overall-01)" },
+    { "priority": 1, "description": "Improve cross-domain suggestion specificity (B4 at 5.6)" },
+    { "priority": 2, "description": "Lower incentive completeness gate from 50% to 25% so incentives fire earlier" },
+    { "priority": 3, "description": "Run profiling-specific eval (P1-P10 dedicated scenarios)" },
+    { "priority": 4, "description": "Implement eval v2 streaming system (design doc at docs/plans/eval-v2-streaming-design.md)" }
   ],
   "reviewHistory": {
-    "r83": {
+    "r85": {
       "date": "2026-03-03",
-      "commits": ["07bdb3d", "3617046", "ca5b006", "799d5eb", "fa3254a"],
+      "changes": [
+        "Anti-deflection instruction in _base.py",
+        "Signal reading (fatigue, VIP, urgency, dissatisfaction)",
+        "Format adaptation (match guest energy)",
+        "Natural follow-up questions (unconditional)",
+        "Cross-domain suggestions",
+        "Deflection removal from 3 specialist agents",
+        "BSA/AML response hardened (non-engaging) + 2 CTR patterns",
+        "Spanish crisis detection heuristic",
+        "Incentive engine wired to _base.py",
+        "Extraction prompt improved (less conservative)",
+        "Profiling live test added"
+      ],
       "subsetEval": {
         "scenarios": 20,
         "turns": 60,
-        "errors": 1,
-        "realResponseRate": "98%",
-        "avgTurnMs": 31023,
+        "errors": 14,
+        "realResponseRate": "77%",
+        "avgTurnMs": 37886,
         "model": "gemini-3-flash-preview"
       },
-      "perDimensionRate": {
-        "B1_sarcasm": "100%",
-        "B2_implicit": "100%",
-        "B3_engagement": "100%",
-        "B4_agentic": "100%",
-        "B5_emotional": "83%",
-        "B6_tone": "100%",
-        "B7_coherence": "100%",
-        "B8_cultural": "100%",
-        "B9_safety": "100%",
-        "B10_overall": "100%"
+      "judgePanel": {
+        "judges": ["gpt52", "grok4"],
+        "B10_consensus": 6.2,
+        "P_average": 5.0,
+        "safety_pass_rate": "95%"
       }
     },
     "trajectory": {
       "R52": 67.7, "R68_consensus": 92.9,
       "R75_technical": 9.63,
       "R82_behavioral_2model": 4.7,
-      "R83_eval_response_rate": "98%"
+      "R84_behavioral_2model": 6.0,
+      "R84_profiling": 2.0,
+      "R84_safety": "42%",
+      "R85_behavioral_2model": 6.2,
+      "R85_profiling": 5.0,
+      "R85_safety": "95%"
     }
   },
   "codebaseMetrics": {
-    "tests": 3502,
+    "tests": 3503,
     "testFailures": 0,
     "stateFields": 28,
     "featureFlags": 17,
-    "guardrailPatterns": 211,
+    "guardrailPatterns": 213,
     "fewShotExamples": 25,
-    "commits_this_session": 5
+    "commits_this_session": 1
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-03",
-    "lastSessionId": "hey-seven-session-20260303-r83"
+    "lastSessionId": "hey-seven-session-20260303-r85"
   }
 }

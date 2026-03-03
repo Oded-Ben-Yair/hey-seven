@@ -124,6 +124,7 @@ class TestBsaAmlResponse:
         state = {"query_type": "bsa_aml", "messages": [HumanMessage(content="test")]}
         result = await off_topic_node(state)
         content = result["messages"][0].content
-        assert "compliance" in content.lower(), (
-            "BSA/AML response must redirect to compliance team"
+        # R85: BSA response now redirects to "financial services team" (non-engaging)
+        assert "financial" in content.lower(), (
+            "BSA/AML response must redirect to financial services team"
         )
