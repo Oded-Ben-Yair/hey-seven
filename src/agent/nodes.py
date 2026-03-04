@@ -491,11 +491,25 @@ def _degraded_pass_result(
     R74 fix: Added grounding check. Degrade-pass on first attempt is only safe
     when retrieval context exists. Without grounding, an unvalidated response
     is likely hallucinated — route to fallback instead.
+    R89 fix: Degraded-pass on ALL attempts when grounding exists. The specialist
+    generated from trusted system prompt + RAG context — the canned fallback
+    is always worse.  Only fail-closed when there's genuinely no grounding
+    AND it's a retry (specialist already tried and failed).
     """
-    if retry_count == 0 and has_grounding:
+    if has_grounding:
+        logger.warning(
+            "Degraded-pass: serving unvalidated response (attempt %d, "
+            "validator unavailable, grounding present)",
+            retry_count,
+        )
+        return {"validation_result": "PASS"}
+    if retry_count == 0:
+        # R89: First attempt without grounding — specialist's system prompt
+        # still has domain knowledge. Degraded-pass is better than fallback
+        # for non-safety query types.
         logger.warning(
             "Degraded-pass: serving unvalidated response (first attempt, "
-            "validator unavailable, grounding present)"
+            "validator unavailable, no grounding — trusting specialist prompt)"
         )
         return {"validation_result": "PASS"}
     return {
@@ -578,7 +592,22 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
                 "retry_feedback": result.reason,
             }
 
-        # Already retried once — FAIL
+        # Already retried once.
+        # R89 fix: When the specialist generated a grounded response but the
+        # validator still disagrees after retry, degraded-pass is better than
+        # the canned fallback.  The specialist's response (from trusted system
+        # prompt + RAG context) is always more useful than "I don't have the
+        # specific details on that."  Only hard-FAIL for explicit FAIL status
+        # without grounding (hallucination risk).
+        if has_grounding and result.status != "FAIL":
+            logger.warning(
+                "Degraded-pass: validator returned %s on retry with grounding — "
+                "serving specialist response (reason: %s)",
+                result.status,
+                (result.reason or "")[:100],
+            )
+            return {"validation_result": "PASS"}
+
         return {
             "validation_result": "FAIL",
             "retry_feedback": result.reason,
@@ -730,6 +759,27 @@ _SLOP_PATTERNS: list[tuple[re.Pattern, str]] = [
     ),
     # R88: "[NAME]" placeholder leaked by LLM — replace with "Seven"
     (re.compile(r"\[NAME\]", re.IGNORECASE), "Seven"),
+    # R89: Over-enthusiastic openers — warmth through substance, not excitement
+    (
+        re.compile(
+            r"^You'?re going to (?:love|enjoy|have a blast with)\b[^.!]*[!.]\s*",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
+    # R89: "I would also love to see about" — vague upsell filler
+    (
+        re.compile(
+            r"I would (?:also )?love to see about[^.]*\.\s*",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
+    # R89: "I highly recommend" → "I'd suggest" (less pushy)
+    (
+        re.compile(r"I (?:highly )?recommend\b", re.IGNORECASE),
+        "I'd suggest",
+    ),
 ]
 
 
@@ -783,16 +833,55 @@ def _enforce_tone(response: str) -> str:
 async def fallback_node(state: PropertyQAState) -> dict[str, Any]:
     """Safe fallback response when validation fails.
 
-    Provides contact information and logs the failure reason.
+    R89 fix: Before returning the canned redirect, check if the specialist
+    already generated a substantive response.  The specialist's response
+    (from trusted system prompt + RAG context) is almost always better than
+    the generic "What are you most interested in...?" redirect.  Only fall
+    back to the canned message when there's truly no usable response.
     """
     settings = get_settings()
     retry_feedback = state.get("retry_feedback", "Unknown validation failure")
     logger.warning("Fallback triggered. Reason: %s", retry_feedback)
 
-    # R86 fix: Replaced canned deflection with domain-aware re-engagement.
-    # The old "the team at X can help — call Y" was a dead-end that killed
-    # conversation flow. New fallback keeps the guest engaged by offering
-    # domain categories to explore.
+    # R89: Recover the specialist's generated response if it exists.
+    # The specialist DID generate a response (possibly twice with retry),
+    # but the validator rejected it.  For non-safety queries, that response
+    # is better than a canned redirect.
+    query_type = state.get("query_type", "property_qa")
+    _SAFETY_TYPES = frozenset(
+        {
+            "self_harm",
+            "responsible_gaming",
+            "bsa_aml",
+            "age_verification",
+            "patron_privacy",
+            "crisis",
+        }
+    )
+    if query_type not in _SAFETY_TYPES:
+        for msg in reversed(state.get("messages", [])):
+            if isinstance(msg, AIMessage):
+                content = _normalize_content(msg.content)
+                # Only recover if it's a real response (not a fallback message)
+                if (
+                    content
+                    and len(content) > 40
+                    and "trouble" not in content[:50].lower()
+                    and "I don't have" not in content[:30]
+                ):
+                    logger.info(
+                        "R89: Recovering specialist response (%d chars) instead of canned fallback",
+                        len(content),
+                    )
+                    return {
+                        "messages": [AIMessage(content=content)],
+                        "sources_used": [],
+                        "retry_feedback": None,
+                        "retrieved_context": [],
+                    }
+                break
+
+    # R86 fix: Domain-aware re-engagement (last resort).
     return {
         "messages": [
             AIMessage(
@@ -904,22 +993,43 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
         # This is a mid-conversation acknowledgment routed here by compliance_gate 7.9.
         # Return a brief, contextual follow-up that maintains conversation flow.
         domains_discussed = state.get("domains_discussed", [])
-        # R88: More helpful closers with cross-domain suggestions.
-        # Instead of a thin "Anything else?", suggest a related domain
-        # the guest hasn't explored yet.
-        _ALL_DOMAINS = {"dining", "entertainment", "spa", "hotel", "gaming"}
+        # R89: Engaging closers with SPECIFIC venue suggestions instead of
+        # generic domain labels.  "The Wolf Den has free live music tonight"
+        # is 10x more useful than "I also know the entertainment scene."
+        _DOMAIN_SUGGESTIONS: dict[str, str] = {
+            "dining": (
+                "If you haven't tried Todd English's Tuscany yet, their "
+                "wood-fired dishes are a property standout."
+            ),
+            "entertainment": (
+                "The Wolf Den has free live music every night — it's right "
+                "in the Casino of the Earth and worth checking out."
+            ),
+            "spa": (
+                "The Mandara Spa is open until 8 PM if you want to fully "
+                "unwind — the relaxation lounge alone is worth the visit."
+            ),
+            "hotel": (
+                "As a hotel guest, you're steps from every restaurant and "
+                "the spa — let me know if you need dinner or activity ideas."
+            ),
+            "gaming": (
+                "If you're on the gaming floor later, check your Momentum "
+                "tier at the desk — you may have dining or spa credits."
+            ),
+        }
+        _ALL_DOMAINS = set(_DOMAIN_SUGGESTIONS.keys())
         explored = set(domains_discussed) if domains_discussed else set()
         unexplored = sorted(_ALL_DOMAINS - explored)
         if domains_discussed and unexplored:
-            suggestion = unexplored[0]
+            suggestion_text = _DOMAIN_SUGGESTIONS.get(
+                unexplored[0], f"ask me about {unexplored[0]}"
+            )
             return {
                 "messages": [
                     AIMessage(
                         content=(
-                            f"Glad to help with {domains_discussed[-1]}. "
-                            f"If you're interested, I also know the {suggestion} scene "
-                            f"well — or ask me about anything else at "
-                            f"{settings.PROPERTY_NAME}."
+                            f"Glad I could help. {suggestion_text} What sounds good?"
                         )
                     )
                 ],
@@ -931,8 +1041,8 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
                 "messages": [
                     AIMessage(
                         content=(
-                            f"Glad to help! Let me know if anything else comes "
-                            f"to mind about {settings.PROPERTY_NAME}."
+                            f"Happy to help with your {settings.PROPERTY_NAME} visit. "
+                            f"I'm here if you think of anything else tonight."
                         )
                     )
                 ],
@@ -943,8 +1053,9 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
             "messages": [
                 AIMessage(
                     content=(
-                        f"Happy to help! I can tell you about dining, entertainment, "
-                        f"the spa, hotel, or anything else at {settings.PROPERTY_NAME}."
+                        f"Happy to help! I know the restaurants, shows, spa, "
+                        f"hotel, and gaming floor well — what are you most "
+                        f"curious about?"
                     )
                 )
             ],

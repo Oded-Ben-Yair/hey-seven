@@ -44,9 +44,18 @@ def cli() -> None:
     default=True,
     help="Run subset (20) or all scenarios.",
 )
-@click.option("--concurrency", default=4, type=int, help="Max parallel scenarios.")
 @click.option(
-    "--rpm", default=50, type=int, help="Requests per minute for rate limiter."
+    "--concurrency",
+    default=1,
+    type=int,
+    help="Max parallel scenarios (default 1; higher values multiply API load).",
+)
+@click.option(
+    "--rpm",
+    default=15,
+    type=int,
+    help="Requests per minute for rate limiter (default 15; Gemini free tier ~10 RPM, "
+    "each turn needs ~6 LLM calls).",
 )
 @click.option(
     "--output-dir",
@@ -54,7 +63,10 @@ def cli() -> None:
     help="Directory for per-scenario JSON results.",
 )
 @click.option(
-    "--turn-timeout", default=60.0, type=float, help="Timeout per turn in seconds."
+    "--turn-timeout",
+    default=90.0,
+    type=float,
+    help="Timeout per turn in seconds (default 90; allows for rate-limit retries).",
 )
 def run(
     subset_only: bool,
@@ -78,9 +90,17 @@ def run(
 
 
 @cli.command("rerun-failed")
-@click.option("--concurrency", default=4, type=int, help="Max parallel scenarios.")
 @click.option(
-    "--rpm", default=50, type=int, help="Requests per minute for rate limiter."
+    "--concurrency",
+    default=1,
+    type=int,
+    help="Max parallel scenarios (default 1; higher values multiply API load).",
+)
+@click.option(
+    "--rpm",
+    default=15,
+    type=int,
+    help="Requests per minute for rate limiter.",
 )
 @click.option(
     "--output-dir",
@@ -88,7 +108,10 @@ def run(
     help="Directory for per-scenario JSON results.",
 )
 @click.option(
-    "--turn-timeout", default=60.0, type=float, help="Timeout per turn in seconds."
+    "--turn-timeout",
+    default=90.0,
+    type=float,
+    help="Timeout per turn in seconds.",
 )
 def rerun_failed(
     concurrency: int,

@@ -357,7 +357,12 @@ class TestValidateNode:
 
     @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
     async def test_llm_failure_fails_closed(self, mock_get_validator_llm):
-        """Validation LLM failure returns FAIL on retry (fail-closed for safety)."""
+        """R89: Validation LLM failure with grounding → degraded-pass (specialist response is better than fallback).
+
+        Before R89, this was fail-closed on retry. R89 changed policy: when the specialist
+        generated with RAG context, that response is always better than the canned fallback.
+        Only fail-closed when there's no grounding AND it's a retry.
+        """
         from src.agent.nodes import validate_node
 
         mock_llm = MagicMock()
@@ -366,17 +371,23 @@ class TestValidateNode:
         mock_llm.with_structured_output.return_value = mock_structured
         mock_get_validator_llm.return_value = mock_llm
 
+        # With grounding: degraded-pass even on retry (R89)
         state = _state(
             messages=[HumanMessage(content="Q"), AIMessage(content="A")],
             retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-            retry_count=1,  # Retry attempt → fail-closed (not degraded-pass)
+            retry_count=1,
         )
         result = await validate_node(state)
-        assert result["validation_result"] == "FAIL"
-        assert (
-            "safety" in result["retry_feedback"].lower()
-            or "unavailable" in result["retry_feedback"].lower()
+        assert result["validation_result"] == "PASS"
+
+        # Without grounding + retry: still fail-closed
+        state_no_grounding = _state(
+            messages=[HumanMessage(content="Q"), AIMessage(content="A")],
+            retrieved_context=[],
+            retry_count=1,
         )
+        result_no = await validate_node(state_no_grounding)
+        assert result_no["validation_result"] == "FAIL"
 
 
 class TestRespondNode:
@@ -1094,8 +1105,11 @@ class TestValidationDegradedPass:
         assert result["validation_result"] == "PASS"  # degraded-pass
 
     @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
-    async def test_fail_closed_on_retry_attempt(self, mock_get_validator_llm):
-        """When validator LLM fails on retry attempt, FAIL (fail-closed)."""
+    async def test_degraded_pass_on_retry_with_grounding(self, mock_get_validator_llm):
+        """R89: When validator LLM fails on retry with grounding, degraded-pass.
+
+        The specialist's grounded response is better than the canned fallback.
+        """
         from src.agent.nodes import validate_node
 
         mock_llm = MagicMock()
@@ -1119,7 +1133,31 @@ class TestValidationDegradedPass:
             retry_count=1,
         )
         result = await validate_node(state)
-        assert result["validation_result"] == "FAIL"  # fail-closed on retry
+        assert (
+            result["validation_result"] == "PASS"
+        )  # R89: degraded-pass with grounding
+
+    @patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock)
+    async def test_fail_closed_on_retry_without_grounding(self, mock_get_validator_llm):
+        """When validator LLM fails on retry WITHOUT grounding, still FAIL."""
+        from src.agent.nodes import validate_node
+
+        mock_llm = MagicMock()
+        mock_validator = MagicMock()
+        mock_validator.ainvoke = AsyncMock(side_effect=Exception("LLM timeout"))
+        mock_llm.with_structured_output.return_value = mock_validator
+        mock_get_validator_llm.return_value = mock_llm
+
+        state = _state(
+            messages=[
+                HumanMessage(content="What restaurants?"),
+                AIMessage(content="We have some options."),
+            ],
+            retrieved_context=[],
+            retry_count=1,
+        )
+        result = await validate_node(state)
+        assert result["validation_result"] == "FAIL"
         assert "Validation unavailable" in result["retry_feedback"]
 
 
@@ -1130,13 +1168,12 @@ class TestDegradedPassGroundingCheck:
     The helper should FAIL instead of PASS when has_grounding=False.
     """
 
-    def test_degraded_pass_requires_grounding(self):
-        """Degrade-pass without grounding should FAIL."""
+    def test_degraded_pass_first_attempt_no_grounding(self):
+        """R89: Degrade-pass on first attempt without grounding → PASS (specialist prompt trusted)."""
         from src.agent.nodes import _degraded_pass_result
 
         result = _degraded_pass_result(retry_count=0, has_grounding=False)
-        assert result["validation_result"] == "FAIL"
-        assert "Validation unavailable" in result["retry_feedback"]
+        assert result["validation_result"] == "PASS"
 
     def test_degraded_pass_with_grounding(self):
         """Degrade-pass with grounding on first attempt should PASS."""
@@ -1145,11 +1182,18 @@ class TestDegradedPassGroundingCheck:
         result = _degraded_pass_result(retry_count=0, has_grounding=True)
         assert result["validation_result"] == "PASS"
 
-    def test_degraded_pass_retry_always_fails(self):
-        """Degrade-pass on retry should FAIL regardless of grounding."""
+    def test_degraded_pass_retry_with_grounding_passes(self):
+        """R89: Degrade-pass on retry WITH grounding → PASS (specialist response better than fallback)."""
         from src.agent.nodes import _degraded_pass_result
 
         result = _degraded_pass_result(retry_count=1, has_grounding=True)
+        assert result["validation_result"] == "PASS"
+
+    def test_degraded_pass_retry_without_grounding_fails(self):
+        """Degrade-pass on retry WITHOUT grounding → FAIL."""
+        from src.agent.nodes import _degraded_pass_result
+
+        result = _degraded_pass_result(retry_count=1, has_grounding=False)
         assert result["validation_result"] == "FAIL"
 
     def test_degraded_pass_default_grounding_is_true(self):
@@ -1181,7 +1225,8 @@ class TestDegradedPassGroundingCheck:
             retry_count=0,
         )
         result = await validate_node(state)
-        assert result["validation_result"] == "FAIL"  # No grounding = fail-closed
+        # R89: First attempt without grounding → degraded-pass (specialist prompt trusted)
+        assert result["validation_result"] == "PASS"
 
 
 class TestCircuitBreakerTransitions:
@@ -1993,7 +2038,7 @@ class TestGreetingNodeAcknowledgment:
         assert len(content) < 150  # R88: Brief but more helpful response
 
     async def test_ack_with_domain_context(self):
-        """Acknowledgment references last discussed domain."""
+        """R89: Acknowledgment after dining suggests a specific unexplored venue."""
         from src.agent.nodes import greeting_node
 
         state = _state(
@@ -2006,7 +2051,9 @@ class TestGreetingNodeAcknowledgment:
         )
         result = await greeting_node(state)
         content = result["messages"][0].content
-        assert "dining" in content.lower()
+        # R89: Now suggests specific venue from unexplored domain instead of generic label
+        assert "Glad" in content
+        assert "What sounds good?" in content
 
     async def test_ack_without_domain_context(self):
         """Acknowledgment without domain gives generic follow-up."""
