@@ -45,13 +45,13 @@ class TestWhisperGraphWiring:
     """Verify whisper_planner is correctly wired in the graph topology."""
 
     def test_whisper_node_in_graph(self):
-        """whisper_planner is one of the 12 nodes."""
+        """whisper_planner is one of the 13 nodes."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
         all_nodes = set(graph.get_graph().nodes) - {"__start__", "__end__"}
         assert "whisper_planner" in all_nodes
-        assert len(all_nodes) == 12
+        assert len(all_nodes) == 13
 
     def test_retrieve_to_whisper_edge(self):
         """retrieve has an edge to whisper_planner."""
@@ -62,8 +62,8 @@ class TestWhisperGraphWiring:
         retrieve_targets = {e.target for e in drawable.edges if e.source == "retrieve"}
         assert "whisper_planner" in retrieve_targets
 
-    def test_whisper_to_generate_edge(self):
-        """whisper_planner has an edge to generate."""
+    def test_whisper_to_pre_extract_edge(self):
+        """whisper_planner has an edge to pre_extract (R87: pre_extract inserted before generate)."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -71,7 +71,7 @@ class TestWhisperGraphWiring:
         whisper_targets = {
             e.target for e in drawable.edges if e.source == "whisper_planner"
         }
-        assert "generate" in whisper_targets
+        assert "pre_extract" in whisper_targets
 
     def test_no_direct_retrieve_to_generate(self):
         """No direct edge from retrieve to generate (whisper is in between)."""
@@ -589,12 +589,12 @@ class TestGraphEndpointV2:
         app.state.ready = True
         return TestClient(app)
 
-    def test_graph_returns_12_nodes(self, client):
-        """GET /graph returns exactly 12 nodes."""
+    def test_graph_returns_13_nodes(self, client):
+        """GET /graph returns exactly 13 nodes."""
         response = client.get("/graph")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["nodes"]) == 12
+        assert len(data["nodes"]) == 13
 
     def test_graph_includes_whisper_planner(self, client):
         """whisper_planner is in the node list."""
@@ -632,13 +632,15 @@ class TestGraphEndpointV2:
         ]
         assert len(matching) == 1
 
-    def test_graph_whisper_to_generate_edge(self, client):
-        """whisper_planner -> generate edge exists."""
+    def test_graph_whisper_to_pre_extract_edge(self, client):
+        """whisper_planner -> pre_extract edge exists (R87: pre_extract before generate)."""
         response = client.get("/graph")
         data = response.json()
         edges = data["edges"]
         matching = [
-            e for e in edges if e["from"] == "whisper_planner" and e["to"] == "generate"
+            e
+            for e in edges
+            if e["from"] == "whisper_planner" and e["to"] == "pre_extract"
         ]
         assert len(matching) == 1
 

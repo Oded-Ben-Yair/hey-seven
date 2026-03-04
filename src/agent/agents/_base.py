@@ -103,8 +103,8 @@ def _detect_conversation_dynamics(messages: list) -> dict[str, Any]:
 
     # Detect list format in last human message (numbered or bullet lists)
     last_msg = human_messages[-1]
-    has_numbers = bool(re.search(r'(?:^|\n)\s*\d+[.\)]\s', last_msg))
-    has_bullets = bool(re.search(r'(?:^|\n)\s*[-*\u2022]\s', last_msg))
+    has_numbers = bool(re.search(r"(?:^|\n)\s*\d+[.\)]\s", last_msg))
+    has_bullets = bool(re.search(r"(?:^|\n)\s*[-*\u2022]\s", last_msg))
     dynamics["list_format"] = has_numbers or has_bullets
 
     # Detect terse replies (< 5 words in recent messages)
@@ -122,10 +122,42 @@ def _detect_conversation_dynamics(messages: list) -> dict[str, Any]:
         last = set(human_messages[-1].lower().split())
         prev = set(human_messages[-2].lower().split())
         # Remove common stop words for comparison
-        stop = {"i", "the", "a", "an", "is", "are", "was", "were", "do", "does",
-                "did", "can", "could", "what", "where", "when", "how", "about",
-                "for", "to", "at", "in", "on", "of", "and", "or", "my", "me",
-                "you", "your", "it", "that", "this", "with"}
+        stop = {
+            "i",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "do",
+            "does",
+            "did",
+            "can",
+            "could",
+            "what",
+            "where",
+            "when",
+            "how",
+            "about",
+            "for",
+            "to",
+            "at",
+            "in",
+            "on",
+            "of",
+            "and",
+            "or",
+            "my",
+            "me",
+            "you",
+            "your",
+            "it",
+            "that",
+            "this",
+            "with",
+        }
         last_content = last - stop
         prev_content = prev - stop
         if last_content and prev_content:
@@ -170,7 +202,16 @@ def _count_consecutive_frustrated(messages: list) -> int:
 # experience.  "host" is excluded from suggestions since it's meta (not a domain
 # the guest "explores").
 _ALL_GUEST_DOMAINS = frozenset(
-    {"dining", "entertainment", "hotel", "spa", "gaming", "shopping", "promotions", "comp"}
+    {
+        "dining",
+        "entertainment",
+        "hotel",
+        "spa",
+        "gaming",
+        "shopping",
+        "promotions",
+        "comp",
+    }
 )
 
 # R82 Track 2C: Cross-domain bridge templates.
@@ -178,21 +219,66 @@ _ALL_GUEST_DOMAINS = frozenset(
 # prompt when the guest has discussed domain A and domain B is available.
 # Format: {(from_domain, to_domain): "bridge text"}
 CROSS_DOMAIN_BRIDGES: dict[tuple[str, str], str] = {
-    ("dining", "entertainment"): "Since you're having dinner, there may be shows later tonight worth checking out.",
-    ("dining", "spa"): "After dinner, the spa is a nice way to wind down — open until late.",
-    ("dining", "hotel"): "If you're making an evening of it, room availability tends to be best when booked ahead.",
-    ("entertainment", "dining"): "If you're seeing a show, grabbing dinner beforehand works well — most restaurants are a short walk from the venues.",
-    ("entertainment", "hotel"): "For late shows, staying on-site saves the drive — check room availability if interested.",
-    ("entertainment", "spa"): "After a high-energy show, the spa offers a good contrast to wind down.",
-    ("hotel", "dining"): "As a guest, you're steps from every restaurant — no need to rush anywhere.",
-    ("hotel", "spa"): "Hotel guests get easy access to the spa — worth looking into during your stay.",
-    ("hotel", "entertainment"): "Staying over means you can catch late shows without worrying about the drive home.",
-    ("spa", "dining"): "After a spa session, a quiet dinner is a natural next step — several restaurants are nearby.",
-    ("spa", "hotel"): "If you're planning a full spa day, combining it with an overnight stay makes it a real retreat.",
-    ("comp", "dining"): "Depending on your tier, dining credits may apply at select restaurants — worth checking.",
-    ("comp", "entertainment"): "Higher loyalty tiers sometimes include priority ticket access for shows.",
-    ("comp", "spa"): "Some reward tiers include spa credits — check with the Momentum desk for your specific benefits.",
-    ("gaming", "dining"): "When you're ready for a break from the floor, there are quick options like Bobby's and sit-down spots like Tao nearby.",
+    (
+        "dining",
+        "entertainment",
+    ): "Since you're having dinner, there may be shows later tonight worth checking out.",
+    (
+        "dining",
+        "spa",
+    ): "After dinner, the spa is a nice way to wind down — open until late.",
+    (
+        "dining",
+        "hotel",
+    ): "If you're making an evening of it, room availability tends to be best when booked ahead.",
+    (
+        "entertainment",
+        "dining",
+    ): "If you're seeing a show, grabbing dinner beforehand works well — most restaurants are a short walk from the venues.",
+    (
+        "entertainment",
+        "hotel",
+    ): "For late shows, staying on-site saves the drive — check room availability if interested.",
+    (
+        "entertainment",
+        "spa",
+    ): "After a high-energy show, the spa offers a good contrast to wind down.",
+    (
+        "hotel",
+        "dining",
+    ): "As a guest, you're steps from every restaurant — no need to rush anywhere.",
+    (
+        "hotel",
+        "spa",
+    ): "Hotel guests get easy access to the spa — worth looking into during your stay.",
+    (
+        "hotel",
+        "entertainment",
+    ): "Staying over means you can catch late shows without worrying about the drive home.",
+    (
+        "spa",
+        "dining",
+    ): "After a spa session, a quiet dinner is a natural next step — several restaurants are nearby.",
+    (
+        "spa",
+        "hotel",
+    ): "If you're planning a full spa day, combining it with an overnight stay makes it a real retreat.",
+    (
+        "comp",
+        "dining",
+    ): "Depending on your tier, dining credits may apply at select restaurants — worth checking.",
+    (
+        "comp",
+        "entertainment",
+    ): "Higher loyalty tiers sometimes include priority ticket access for shows.",
+    (
+        "comp",
+        "spa",
+    ): "Some reward tiers include spa credits — check with the Momentum desk for your specific benefits.",
+    (
+        "gaming",
+        "dining",
+    ): "When you're ready for a break from the floor, there are quick options like Bobby's and sit-down spots like Tao nearby.",
 }
 
 
@@ -224,7 +310,7 @@ def _build_cross_domain_hint(domains_discussed: list[str]) -> str:
     for target in unexplored[:3]:  # Max 3 suggestions
         bridge_text = CROSS_DOMAIN_BRIDGES.get((last_domain, target))
         if bridge_text:
-            bridges.append(f"- {target}: \"{bridge_text}\"")
+            bridges.append(f'- {target}: "{bridge_text}"')
 
     if not bridges:
         # Fallback to generic hint if no specific bridges found
@@ -242,7 +328,8 @@ def _build_cross_domain_hint(domains_discussed: list[str]) -> str:
         "## Cross-Domain Awareness (internal context)\n"
         f"Guest has explored: {explored_str}.\n"
         "If natural, you can use one of these transitions:\n"
-        + "\n".join(bridges) + "\n"
+        + "\n".join(bridges)
+        + "\n"
         "Use these as inspiration — adapt to the conversation, don't copy verbatim."
     )
 
@@ -276,7 +363,9 @@ def _build_behavioral_prompt_sections(
         prior_sentiments = recent_sentiments[1:] if len(recent_sentiments) > 1 else []
         if detect_sarcasm_context(user_msg, effective_sentiment, prior_sentiments):
             effective_sentiment = "frustrated"
-            logger.info("Sarcasm override: %s → frustrated (context contrast)", guest_sentiment)
+            logger.info(
+                "Sarcasm override: %s → frustrated (context contrast)", guest_sentiment
+            )
 
     # Sentiment tone guide
     if effective_sentiment:
@@ -286,15 +375,45 @@ def _build_behavioral_prompt_sections(
 
     # Emotional context guides (grief, anxiety, celebration, allergy, gambling frustration)
     emotional_guides: list[str] = []
-    if any(kw in user_msg_lower for kw in ("passed away", "passed on", "lost my", "funeral", "in memory", "rest in peace")):
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "passed away",
+            "passed on",
+            "lost my",
+            "funeral",
+            "in memory",
+            "rest in peace",
+        )
+    ):
         emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["grief"])
-    if any(kw in user_msg_lower for kw in ("first time", "never been", "nervous", "anxious", "intimidat", "overwhelm")):
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "first time",
+            "never been",
+            "nervous",
+            "anxious",
+            "intimidat",
+            "overwhelm",
+        )
+    ):
         emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["anxiety"])
     if extracted.get("occasion"):
         emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["celebration"])
     if any(kw in user_msg_lower for kw in ("allerg", "anaphyla", "epipen", "celiac")):
         emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["allergy_concern"])
-    if any(kw in user_msg_lower for kw in ("losing", "lost all", "bad day", "bad luck", "cold streak", "down a lot")):
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "losing",
+            "lost all",
+            "bad day",
+            "bad luck",
+            "cold streak",
+            "down a lot",
+        )
+    ):
         emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["gambling_frustration"])
     if emotional_guides:
         sections.append("## Emotional Context\n" + "\n\n".join(emotional_guides))
@@ -303,7 +422,7 @@ def _build_behavioral_prompt_sections(
     if extracted.get("loyalty_signal"):
         sections.append(
             "## Loyalty Context\n"
-            f"The guest has signaled loyalty: \"{extracted['loyalty_signal']}\". "
+            f'The guest has signaled loyalty: "{extracted["loyalty_signal"]}". '
             "Treat them as a valued long-term guest. Acknowledge their history warmly. "
             "Recommend elevated, VIP-appropriate experiences."
         )
@@ -337,7 +456,9 @@ def _build_behavioral_prompt_sections(
         sections.append(cross_domain_hint)
 
     # Conversation dynamics
-    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    history = [
+        m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))
+    ]
     dynamics = _detect_conversation_dynamics(history)
 
     dynamics_guides: list[str] = []
@@ -386,7 +507,10 @@ def _build_behavioral_prompt_sections(
 
     # Frustration escalation (HEART framework)
     frustrated_count = _count_consecutive_frustrated(history)
-    if frustrated_count >= 2 and state.get("guest_sentiment") in ("frustrated", "negative"):
+    if frustrated_count >= 2 and state.get("guest_sentiment") in (
+        "frustrated",
+        "negative",
+    ):
         heart = HEART_ESCALATION_LANGUAGE
         if frustrated_count >= 3:
             heart_steps = (
@@ -407,9 +531,9 @@ def _build_behavioral_prompt_sections(
             "The guest has expressed frustration across multiple messages. "
             "Follow these steps in your response:\n"
             f"{heart_steps}\n"
-            "After addressing their concern, offer: \"Would you like me to "
+            'After addressing their concern, offer: "Would you like me to '
             "connect you with one of our dedicated hosts who can assist you "
-            "personally?\""
+            'personally?"'
         )
 
     prompt_text = ""
@@ -483,7 +607,9 @@ def _should_inject_suggestion(
 
     logger.info(
         "Proactivity gate: ALL PASSED (conf=%.2f, sentiment=%s, turn=%d)",
-        conf, effective_sentiment, dynamics.get("turn_count", 0),
+        conf,
+        effective_sentiment,
+        dynamics.get("turn_count", 0),
     )
 
     section = (
@@ -558,7 +684,9 @@ async def execute_specialist(
     if not await cb.allow_request():
         logger.warning("Circuit breaker open — %s agent returning fallback", agent_name)
         return {
-            "messages": [AIMessage(content=_fallback_message("temporary technical difficulties"))],
+            "messages": [
+                AIMessage(content=_fallback_message("temporary technical difficulties"))
+            ],
             "skip_validation": True,
         }
 
@@ -570,7 +698,9 @@ async def execute_specialist(
     system_prompt = system_prompt_template.safe_substitute(
         property_name=settings.PROPERTY_NAME,
         current_time=current_time,
-        responsible_gaming_helplines=get_responsible_gaming_helplines(casino_id=settings.CASINO_ID),
+        responsible_gaming_helplines=get_responsible_gaming_helplines(
+            casino_id=settings.CASINO_ID
+        ),
         property_description=_property_description,
     )
 
@@ -600,14 +730,16 @@ async def execute_specialist(
     # Format and append retrieved context
     if retrieved:
         context_block = _format_context_block(retrieved)
-        system_prompt += Template(
-            "\n\n## $header\n$context"
-        ).safe_substitute(header=context_header, context=context_block)
+        system_prompt += Template("\n\n## $header\n$context").safe_substitute(
+            header=context_header, context=context_block
+        )
 
         # Phase 5: Annotate retrieved context with real-time open/closed status.
         from src.agent.hours import is_open_now as _is_open_now
 
-        _casino_tz = _casino_profile.get("operational", {}).get("timezone", "America/New_York")
+        _casino_tz = _casino_profile.get("operational", {}).get(
+            "timezone", "America/New_York"
+        )
         hours_annotations: list[str] = []
         for chunk in retrieved:
             meta = chunk.get("metadata", {})
@@ -620,7 +752,9 @@ async def execute_specialist(
                 elif open_status is False:
                     hours_annotations.append(f"- {item_name}: CLOSED ({hours_str})")
         if hours_annotations:
-            system_prompt += "\n\n## Current Availability\n" + "\n".join(hours_annotations)
+            system_prompt += "\n\n## Current Availability\n" + "\n".join(
+                hours_annotations
+            )
     else:
         # No context found -- return domain-specific fallback
         return {
@@ -657,17 +791,26 @@ async def execute_specialist(
             if _profile_fields.get("party_size"):
                 profile_parts.append(f"- Party size: {_profile_fields['party_size']}")
             if _profile_fields.get("visit_purpose"):
-                profile_parts.append(f"- Visit purpose: {_profile_fields['visit_purpose']}")
+                profile_parts.append(
+                    f"- Visit purpose: {_profile_fields['visit_purpose']}"
+                )
             if _profile_fields.get("preferences"):
-                profile_parts.append(f"- Dining preferences: {_profile_fields['preferences']}")
+                profile_parts.append(
+                    f"- Dining preferences: {_profile_fields['preferences']}"
+                )
             if _profile_fields.get("occasion"):
                 profile_parts.append(f"- Occasion: {_profile_fields['occasion']}")
             if _profile_fields.get("dietary"):
-                profile_parts.append(f"- Dietary restrictions: {_profile_fields['dietary']}")
+                profile_parts.append(
+                    f"- Dietary restrictions: {_profile_fields['dietary']}"
+                )
             if _profile_fields.get("budget_signal"):
                 profile_parts.append(f"- Budget: {_profile_fields['budget_signal']}")
             if profile_parts:
-                system_prompt += "\n\n## Guest Profile (from conversation)\n" + "\n".join(profile_parts)
+                system_prompt += (
+                    "\n\n## Guest Profile (from conversation)\n"
+                    + "\n".join(profile_parts)
+                )
 
     # Inject whisper planner guidance
     if include_whisper:
@@ -684,7 +827,9 @@ async def execute_specialist(
         if persona_style:
             system_prompt += persona_style
     except Exception:
-        logger.debug("Persona style injection failed, continuing without", exc_info=True)
+        logger.debug(
+            "Persona style injection failed, continuing without", exc_info=True
+        )
 
     # R72 C6: Extract behavioral signals into dedicated helper (SRP refactor).
     # Detects sarcasm, emotional context, implicit signals, conversation dynamics,
@@ -699,7 +844,11 @@ async def execute_specialist(
 
     behavioral_sections, guest_sentiment, dynamics, frustrated_count = (
         _build_behavioral_prompt_sections(
-            state, user_msg, user_msg_lower, extracted, state.get("guest_sentiment"),
+            state,
+            user_msg,
+            user_msg_lower,
+            extracted,
+            state.get("guest_sentiment"),
         )
     )
     system_prompt += behavioral_sections
@@ -709,44 +858,44 @@ async def execute_specialist(
     # sections and few-shot examples so the LLM sees instructions before examples.
     system_prompt += (
         "\n\n## Agent Behavior — You ARE the Concierge\n"
-        "NEVER deflect to phone, website, or \"contact us\" unless the guest "
+        'NEVER deflect to phone, website, or "contact us" unless the guest '
         "explicitly asks for a phone number or URL. You ARE the concierge — "
         "answer directly with what you know. If you don't have specific details, "
         "give your best recommendation from the context available and offer to "
         "look into specifics.\n\n"
         "## Reading Between the Lines\n"
         "Interpret implicit guest signals and adapt your response:\n"
-        "- \"drove 3 hours\" / \"long day\" → guest is exhausted, recommend "
+        '- "drove 3 hours" / "long day" → guest is exhausted, recommend '
         "relaxing options first\n"
-        "- \"spending a lot\" / \"been coming for years\" → VIP treatment, "
+        '- "spending a lot" / "been coming for years" → VIP treatment, '
         "elevate service\n"
-        "- \"just tell me one\" / short replies → be decisive, ONE recommendation, "
+        '- "just tell me one" / short replies → be decisive, ONE recommendation, '
         "not a list\n"
-        "- \"I suppose it was fine\" → hidden dissatisfaction, probe gently\n"
-        "- \"just landed\" / \"checking in soon\" → hungry and quick, prioritize "
+        '- "I suppose it was fine" → hidden dissatisfaction, probe gently\n'
+        '- "just landed" / "checking in soon" → hungry and quick, prioritize '
         "speed\n\n"
         "## Response Format\n"
         "Match your format to the guest's energy:\n"
         "- Short question → direct answer (2-3 sentences max)\n"
         "- Enthusiastic exploration → richer detail, multiple options\n"
         "- Follow-up on previous topic → build on context, don't restart\n"
-        "- \"Too many options\" or frustration → ONE definitive pick with "
+        '- "Too many options" or frustration → ONE definitive pick with '
         "confidence\n\n"
         "## Natural Follow-Up\n"
         "End every response with ONE natural follow-up question that flows from "
         "the conversation and helps you serve the guest better. Never condition "
         "service on the answer.\n"
-        "Examples: \"Are you celebrating anything special tonight?\" / "
-        "\"How many in your party?\" / \"Do you prefer something high-energy or "
-        "relaxed?\"\n\n"
+        'Examples: "Are you celebrating anything special tonight?" / '
+        '"How many in your party?" / "Do you prefer something high-energy or '
+        'relaxed?"\n\n'
         "## Cross-Domain Awareness\n"
         "After answering, suggest ONE related activity from a different domain "
         "when natural:\n"
         "- After dining → entertainment or spa\n"
         "- After hotel → dining or entertainment\n"
         "- After entertainment → dining or late-night options\n"
-        "Frame concretely: \"After dinner, the Wolf Den usually has great live "
-        "music\" not \"Would you also like entertainment?\""
+        'Frame concretely: "After dinner, the Wolf Den usually has great live '
+        'music" not "Would you also like entertainment?"'
     )
 
     # R83: Inject few-shot behavioral examples for the current specialist.
@@ -762,16 +911,16 @@ async def execute_specialist(
             capped = specialist_examples[:3]
             examples_parts = []
             for user_ex, response_ex in capped:
-                examples_parts.append(
-                    f"Guest: \"{user_ex}\"\n"
-                    f"You: \"{response_ex}\""
-                )
+                examples_parts.append(f'Guest: "{user_ex}"\nYou: "{response_ex}"')
             examples_text = "\n\n".join(examples_parts)
             system_prompt += (
-                "\n\n## Response Examples (match this style)\n\n"
-                f"{examples_text}"
+                f"\n\n## Response Examples (match this style)\n\n{examples_text}"
             )
-            logger.info("R83: Injected %d few-shot examples for %s agent", len(capped), agent_name)
+            logger.info(
+                "R83: Injected %d few-shot examples for %s agent",
+                len(capped),
+                agent_name,
+            )
 
     # R82 Track 1E: Frustration/crisis suppression of promotional content.
     # When the guest is frustrated/negative, override promotional specialist prompts
@@ -780,7 +929,10 @@ async def execute_specialist(
     # Note: `guest_sentiment` here is the effective sentiment (post-sarcasm-override)
     # returned by _build_behavioral_prompt_sections.
     _PROMOTIONAL_AGENTS = frozenset({"comp", "promotions"})
-    if guest_sentiment in ("frustrated", "negative") and agent_name in _PROMOTIONAL_AGENTS:
+    if (
+        guest_sentiment in ("frustrated", "negative")
+        and agent_name in _PROMOTIONAL_AGENTS
+    ):
         frustration_override = (
             "\n\n## OVERRIDE: Guest Is Frustrated — Suppress Promotional Tone\n"
             "The guest is upset or frustrated. Your ENTIRE response must follow these rules:\n"
@@ -797,7 +949,8 @@ async def execute_specialist(
         system_prompt += frustration_override
         logger.info(
             "R82 1E: Frustration suppression activated for %s agent (sentiment=%s)",
-            agent_name, guest_sentiment,
+            agent_name,
+            guest_sentiment,
         )
 
     # R82 Track 1E: Crisis state suppression across ALL specialists.
@@ -830,7 +983,11 @@ async def execute_specialist(
         whisper = state.get("whisper_plan")
         if whisper and whisper.get("next_profiling_question"):
             technique = whisper.get("question_technique", "none")
-            if technique != "none" and guest_sentiment not in ("frustrated", "negative", "grief"):
+            if technique != "none" and guest_sentiment not in (
+                "frustrated",
+                "negative",
+                "grief",
+            ):
                 from src.agent.profiling import PROFILING_TECHNIQUE_PROMPTS
 
                 technique_guide = PROFILING_TECHNIQUE_PROMPTS.get(technique, "")
@@ -839,7 +996,7 @@ async def execute_specialist(
                     "\n\n## REQUIRED: Ask This Question\n"
                     "After answering the guest's question, you MUST include the following "
                     "question naturally at the end of your response. Do NOT skip it.\n\n"
-                    f"Question to ask: \"{question}\"\n"
+                    f'Question to ask: "{question}"\n'
                     f"Technique: {technique_guide}\n\n"
                     "Format: Answer the guest's question first (2-3 sentences). Then add a "
                     "natural transition and ask the question. Example format:\n"
@@ -851,11 +1008,13 @@ async def execute_specialist(
     # R85 fix: Wire incentive engine into specialist prompt.
     # get_incentive_prompt_section is sync (no I/O) — safe to call inline.
     # Only injects when profile_completeness >= 50% and matching rules exist.
+    # R87: Returns tuple (prompt_section, approval_request_or_none).
+    _incentive_approval: dict | None = None
     if _DEFAULT_FEATURES.get("incentives_enabled", True):
         from src.agent.incentives import get_incentive_prompt_section
 
         _completeness = state.get("profile_completeness_score", 0.0)
-        incentive_section = get_incentive_prompt_section(
+        incentive_section, _incentive_approval = get_incentive_prompt_section(
             casino_id=settings.CASINO_ID,
             profile_completeness=_completeness,
             extracted_fields=extracted,
@@ -864,14 +1023,17 @@ async def execute_specialist(
             system_prompt += f"\n\n{incentive_section}"
             logger.info(
                 "R85: Incentive section injected (completeness=%.2f, agent=%s)",
-                _completeness, agent_name,
+                _completeness,
+                agent_name,
             )
 
     # R74 B4 / R82 1F: Proactive suggestion injection via extracted helper.
     # Gated by: confidence >= 0.6 (R82: lowered from 0.8), sentiment not
     # negative/frustrated, max 1 per session (suggestion_offered), grounding exists.
     proactive_section, suggestion_already_offered = _should_inject_suggestion(
-        state, guest_sentiment, dynamics,
+        state,
+        guest_sentiment,
+        dynamics,
     )
     if proactive_section:
         system_prompt += proactive_section
@@ -880,7 +1042,9 @@ async def execute_specialist(
     llm_messages = [SystemMessage(content=system_prompt)]
 
     # Compute conversation history for persona reinject and sliding window
-    history = [m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))]
+    history = [
+        m for m in state.get("messages", []) if isinstance(m, (HumanMessage, AIMessage))
+    ]
 
     # Phase 4: Persona drift prevention — re-inject condensed persona reminder
     # when conversation history exceeds threshold. Research: persona consistency
@@ -891,33 +1055,41 @@ async def execute_specialist(
     if human_turn_count > _PERSONA_REINJECT_THRESHOLD // 2:
         # R23/R29 fix: read persona name from property-specific profile
         try:
-            _persona_name = get_casino_profile(
-                settings.CASINO_ID
-            ).get("branding", {}).get("persona_name", "Seven")
+            _persona_name = (
+                get_casino_profile(settings.CASINO_ID)
+                .get("branding", {})
+                .get("persona_name", "Seven")
+            )
         except Exception:
             _persona_name = "Seven"
-        llm_messages.append(SystemMessage(content=(
-            f"PERSONA REMINDER: You are {_persona_name}, the AI concierge for "
-            f"{settings.PROPERTY_NAME}. Maintain your warm, professional tone. "
-            "Never provide gambling advice or discuss competitors. "
-            "Always stay on-property topics. Be concise and helpful."
-        )))
+        llm_messages.append(
+            SystemMessage(
+                content=(
+                    f"PERSONA REMINDER: You are {_persona_name}, the AI concierge for "
+                    f"{settings.PROPERTY_NAME}. Maintain your warm, professional tone. "
+                    "Never provide gambling advice or discuss competitors. "
+                    "Always stay on-property topics. Be concise and helpful."
+                )
+            )
+        )
 
     # On retry, inject feedback
     if retry_count > 0 and retry_feedback:
-        llm_messages.append(SystemMessage(
-            content=Template(
-                "IMPORTANT: Your previous response failed validation. Reason: $feedback. "
-                "Please generate a corrected response that addresses this issue."
-            ).safe_substitute(feedback=retry_feedback)
-        ))
+        llm_messages.append(
+            SystemMessage(
+                content=Template(
+                    "IMPORTANT: Your previous response failed validation. Reason: $feedback. "
+                    "Please generate a corrected response that addresses this issue."
+                ).safe_substitute(feedback=retry_feedback)
+            )
+        )
 
     # Sliding window on conversation history.
     # On retry, exclude the last AIMessage (the one that failed validation)
     # to prevent the LLM from parroting the invalid response.
     if retry_count > 0 and history and isinstance(history[-1], AIMessage):
         history = history[:-1]
-    window = history[-settings.MAX_HISTORY_MESSAGES:]
+    window = history[-settings.MAX_HISTORY_MESSAGES :]
     llm_messages.extend(window)
 
     # R83: Model routing — use Pro model when dispatch layer determined complex routing.
@@ -926,6 +1098,7 @@ async def execute_specialist(
     _model_used = state.get("model_used")
     if _model_used and _model_used == settings.COMPLEX_MODEL_NAME:
         from src.agent.nodes import _get_complex_llm
+
         llm = await _get_complex_llm()
         logger.info("R83: Using Pro model (%s) for %s agent", _model_used, agent_name)
     else:
@@ -952,7 +1125,9 @@ async def execute_specialist(
                 semaphore_timeout,
             )
             return {
-                "messages": [AIMessage(content=_fallback_message("high demand right now"))],
+                "messages": [
+                    AIMessage(content=_fallback_message("high demand right now"))
+                ],
                 "skip_validation": True,
             }
 
@@ -960,7 +1135,9 @@ async def execute_specialist(
             response = await llm.ainvoke(llm_messages)
         except (ValueError, TypeError) as exc:
             await cb.record_failure()
-            logger.warning("%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc)
+            logger.warning(
+                "%s agent LLM response parsing failed: %s", agent_name.capitalize(), exc
+            )
             # ValueError/TypeError may produce malformed content that still
             # warrants validation.  Incrementing retry_count ensures the
             # validator runs; the validate_node's "retry_count < 1" check
@@ -969,7 +1146,11 @@ async def execute_specialist(
             # R10 fix (DeepSeek F3): was hard-coded to 1 which reset the
             # retry budget when retry_count was already >= 1.
             return {
-                "messages": [AIMessage(content=_fallback_message("trouble processing that response"))],
+                "messages": [
+                    AIMessage(
+                        content=_fallback_message("trouble processing that response")
+                    )
+                ],
                 "skip_validation": False,
                 "retry_count": retry_count + 1,
             }
@@ -991,7 +1172,13 @@ async def execute_specialist(
             await cb.record_failure()
             logger.exception("%s agent LLM call failed", agent_name.capitalize())
             return {
-                "messages": [AIMessage(content=_fallback_message("trouble generating a response right now"))],
+                "messages": [
+                    AIMessage(
+                        content=_fallback_message(
+                            "trouble generating a response right now"
+                        )
+                    )
+                ],
                 "skip_validation": True,
             }
     finally:
@@ -1024,7 +1211,9 @@ async def execute_specialist(
                     break
             logger.info(
                 "R82 1G: Response truncated from %d to %d words for %s",
-                len(words), len(truncated.split()), _query_type,
+                len(words),
+                len(truncated.split()),
+                _query_type,
             )
             content = truncated
 
@@ -1033,7 +1222,12 @@ async def execute_specialist(
     if suggestion_already_offered:
         result["suggestion_offered"] = True  # _keep_truthy: once True, stays True
 
-    # Phase 5: Wire handoff for persistent frustration.
+    # R87: Wire incentive approval handoff for above-threshold comps.
+    # Lower priority than frustration handoff (frustration overwrites below).
+    if _incentive_approval:
+        result["handoff_request"] = _incentive_approval
+
+    # Phase 5: Wire handoff for persistent frustration (overwrites incentive handoff).
     if frustrated_count >= 3:
         from src.agent.handoff import build_handoff_request
 

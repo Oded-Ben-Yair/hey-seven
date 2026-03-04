@@ -291,10 +291,13 @@ class TestFormatIncentiveOffer:
             incentive_value=25.0,
             framing_template="Enjoy $$$value at $property_name!",
         )
-        result = engine.format_incentive_offer(rule, {
-            "property_name": "Mohegan Sun",
-            "value": "25",
-        })
+        result = engine.format_incentive_offer(
+            rule,
+            {
+                "property_name": "Mohegan Sun",
+                "value": "25",
+            },
+        )
         assert "Mohegan Sun" in result
         assert "$25" in result
 
@@ -307,9 +310,12 @@ class TestFormatIncentiveOffer:
             incentive_value=25.0,
             framing_template="Enjoy at $property_name, $missing_key!",
         )
-        result = engine.format_incentive_offer(rule, {
-            "property_name": "Mohegan Sun",
-        })
+        result = engine.format_incentive_offer(
+            rule,
+            {
+                "property_name": "Mohegan Sun",
+            },
+        )
         assert "Mohegan Sun" in result
         assert "$missing_key" in result
 
@@ -359,24 +365,27 @@ class TestBuildHostApprovalRequest:
 
 
 class TestGetIncentivePromptSection:
-    """Integration point: get_incentive_prompt_section()."""
+    """Integration point: get_incentive_prompt_section() — R87: returns tuple."""
 
     def test_returns_empty_when_no_incentives(self, monkeypatch):
         monkeypatch.setenv("PROPERTY_NAME", "Test Casino")
         from src.config import get_settings
+
         get_settings.cache_clear()
-        result = get_incentive_prompt_section(
+        result, approval = get_incentive_prompt_section(
             casino_id="mohegan_sun",
             profile_completeness=0.3,
             extracted_fields={},
         )
         assert result == ""
+        assert approval is None
 
     def test_returns_section_with_applicable(self, monkeypatch):
         monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
         from src.config import get_settings
+
         get_settings.cache_clear()
-        result = get_incentive_prompt_section(
+        result, approval = get_incentive_prompt_section(
             casino_id="mohegan_sun",
             profile_completeness=0.80,
             extracted_fields={"birthday": "March 15"},
@@ -387,8 +396,9 @@ class TestGetIncentivePromptSection:
     def test_unknown_casino_uses_defaults(self, monkeypatch):
         monkeypatch.setenv("PROPERTY_NAME", "Unknown Resort")
         from src.config import get_settings
+
         get_settings.cache_clear()
-        result = get_incentive_prompt_section(
+        result, approval = get_incentive_prompt_section(
             casino_id="unknown_casino",
             profile_completeness=0.3,
             extracted_fields={"birthday": "June 1"},
@@ -398,17 +408,21 @@ class TestGetIncentivePromptSection:
     def test_high_value_shows_approval_note(self, monkeypatch):
         monkeypatch.setenv("PROPERTY_NAME", "Test Casino")
         from src.config import get_settings
+
         get_settings.cache_clear()
 
         engine = IncentiveEngine("mohegan_sun")
         birthday_rules = [r for r in engine.rules if r.trigger_field == "birthday"]
-        assert all(r.incentive_value <= r.auto_approve_threshold for r in birthday_rules)
+        assert all(
+            r.incentive_value <= r.auto_approve_threshold for r in birthday_rules
+        )
 
     def test_weave_naturally_instruction(self, monkeypatch):
         monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
         from src.config import get_settings
+
         get_settings.cache_clear()
-        result = get_incentive_prompt_section(
+        result, approval = get_incentive_prompt_section(
             casino_id="mohegan_sun",
             profile_completeness=0.80,
             extracted_fields={},
@@ -430,7 +444,13 @@ class TestImmutability:
             INCENTIVE_RULES["new_casino"] = ()  # type: ignore[index]
 
     def test_all_casinos_present(self):
-        expected = {"mohegan_sun", "foxwoods", "parx_casino", "wynn_las_vegas", "hard_rock_ac"}
+        expected = {
+            "mohegan_sun",
+            "foxwoods",
+            "parx_casino",
+            "wynn_las_vegas",
+            "hard_rock_ac",
+        }
         assert set(INCENTIVE_RULES.keys()) == expected
 
 
@@ -491,4 +511,6 @@ class TestR78LowerThresholdTriggers:
         for casino_id in INCENTIVE_RULES:
             engine = IncentiveEngine(casino_id)
             triggers = {r.trigger_field for r in engine.rules}
-            assert "profile_completeness_50" in triggers, f"{casino_id} missing profile_completeness_50"
+            assert "profile_completeness_50" in triggers, (
+                f"{casino_id} missing profile_completeness_50"
+            )

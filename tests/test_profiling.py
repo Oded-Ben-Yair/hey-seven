@@ -120,7 +120,9 @@ class TestProfileExtractionOutput:
         """ProfileExtractionOutput has exactly 16 fields matching _FIELD_NAME_MAP."""
         assert len(ProfileExtractionOutput.model_fields) == 16
         for field_name in ProfileExtractionOutput.model_fields:
-            assert field_name in _FIELD_NAME_MAP, f"{field_name} missing from _FIELD_NAME_MAP"
+            assert field_name in _FIELD_NAME_MAP, (
+                f"{field_name} missing from _FIELD_NAME_MAP"
+            )
 
     def test_field_name_map_covers_all_output_fields(self):
         """Every ProfileExtractionOutput field has a mapping in _FIELD_NAME_MAP."""
@@ -341,7 +343,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["extracted_fields"]["name"] == "Mike"
@@ -357,7 +363,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["extracted_fields"]["party_size"] == "4"
@@ -378,7 +388,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         # None values are not added to extracted_fields
@@ -395,7 +409,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["extracted_fields"]["occasion"] == "anniversary"
@@ -410,7 +428,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["extracted_fields"] == {}
@@ -457,7 +479,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         # name(0.15) + party_size(0.12) + preferences(0.10) = 0.37
@@ -466,18 +492,24 @@ class TestProfilingEnrichmentNode:
     @pytest.mark.asyncio
     async def test_multiple_fields_extracted_at_once(self):
         state = _build_state(user_msg="I'm Mike, party of 4 for our anniversary")
-        extraction = _make_mock_extraction({
-            "guest_name": "Mike",
-            "party_size": "4",
-            "occasion": "anniversary",
-        })
+        extraction = _make_mock_extraction(
+            {
+                "guest_name": "Mike",
+                "party_size": "4",
+                "occasion": "anniversary",
+            }
+        )
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["extracted_fields"]["name"] == "Mike"
@@ -488,17 +520,23 @@ class TestProfilingEnrichmentNode:
     async def test_field_name_mapping_applied(self):
         """guest_name -> name, dining_preferences -> preferences in extracted_fields."""
         state = _build_state(user_msg="I'm Sarah and I love sushi")
-        extraction = _make_mock_extraction({
-            "guest_name": "Sarah",
-            "dining_preferences": "sushi",
-        })
+        extraction = _make_mock_extraction(
+            {
+                "guest_name": "Sarah",
+                "dining_preferences": "sushi",
+            }
+        )
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         # Mapped keys, not original model field names
@@ -518,7 +556,11 @@ class TestProfilingEnrichmentNode:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert "name" not in result.get("extracted_fields", {})
@@ -549,7 +591,11 @@ class TestProfilingQuestionInjection:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_question_injected"] is True
@@ -572,7 +618,11 @@ class TestProfilingQuestionInjection:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_question_injected"] is False
@@ -587,7 +637,11 @@ class TestProfilingQuestionInjection:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_question_injected"] is False
@@ -611,7 +665,11 @@ class TestProfilingQuestionInjection:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_question_injected"] is False
@@ -633,7 +691,11 @@ class TestProfilingQuestionInjection:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_question_injected"] is False
@@ -669,12 +731,16 @@ class TestProfilingTechniquePrompts:
         assert "none" in PROFILING_TECHNIQUE_PROMPTS
 
     def test_none_disables_questions(self):
-        assert "not ask" in PROFILING_TECHNIQUE_PROMPTS["none"].lower() or \
-            "do not" in PROFILING_TECHNIQUE_PROMPTS["none"].lower()
+        assert (
+            "not ask" in PROFILING_TECHNIQUE_PROMPTS["none"].lower()
+            or "do not" in PROFILING_TECHNIQUE_PROMPTS["none"].lower()
+        )
 
     def test_all_prompts_are_non_empty_strings(self):
         for technique, prompt in PROFILING_TECHNIQUE_PROMPTS.items():
-            assert isinstance(prompt, str) and len(prompt) > 0, f"{technique} prompt is empty"
+            assert isinstance(prompt, str) and len(prompt) > 0, (
+                f"{technique} prompt is empty"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -706,7 +772,11 @@ class TestR78MessageReplacement:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_question_injected"] is True
@@ -737,7 +807,11 @@ class TestR78MessageReplacement:
             return_value=extraction,
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         # Should still mark as injected (the LLM did it via system prompt)
@@ -772,13 +846,17 @@ class TestIncentiveEngine:
     def test_profile_completeness_75_trigger(self):
         engine = IncentiveEngine("mohegan_sun")
         applicable = engine.get_applicable_incentives(0.80, {})
-        completeness_rules = [r for r in applicable if r.trigger_field == "profile_completeness_75"]
+        completeness_rules = [
+            r for r in applicable if r.trigger_field == "profile_completeness_75"
+        ]
         assert len(completeness_rules) == 1
 
     def test_profile_completeness_below_threshold(self):
         engine = IncentiveEngine("mohegan_sun")
         applicable = engine.get_applicable_incentives(0.50, {})
-        completeness_rules = [r for r in applicable if r.trigger_field == "profile_completeness_75"]
+        completeness_rules = [
+            r for r in applicable if r.trigger_field == "profile_completeness_75"
+        ]
         assert len(completeness_rules) == 0
 
     def test_no_triggers_returns_empty(self):
@@ -788,18 +866,23 @@ class TestIncentiveEngine:
 
     def test_anniversary_trigger_from_occasion(self):
         engine = IncentiveEngine("mohegan_sun")
-        applicable = engine.get_applicable_incentives(0.0, {"occasion": "wedding anniversary"})
+        applicable = engine.get_applicable_incentives(
+            0.0, {"occasion": "wedding anniversary"}
+        )
         anniversary_rules = [r for r in applicable if r.trigger_field == "anniversary"]
         assert len(anniversary_rules) == 1
 
     def test_format_incentive_offer(self):
         engine = IncentiveEngine("mohegan_sun")
         rule = engine.rules[0]  # birthday rule
-        offer = engine.format_incentive_offer(rule, {
-            "property_name": "Mohegan Sun",
-            "value": "25",
-            "incentive_type": "dining credit",
-        })
+        offer = engine.format_incentive_offer(
+            rule,
+            {
+                "property_name": "Mohegan Sun",
+                "value": "25",
+                "incentive_type": "dining credit",
+            },
+        )
         assert "Mohegan Sun" in offer
 
     def test_auto_approve_within_threshold(self):
@@ -833,38 +916,53 @@ class TestIncentiveEngine:
         assert request["guest_context"]["name"] == "Sarah"
 
     def test_all_five_casinos_have_rules(self):
-        for casino_id in ("mohegan_sun", "foxwoods", "parx_casino", "wynn_las_vegas", "hard_rock_ac"):
+        for casino_id in (
+            "mohegan_sun",
+            "foxwoods",
+            "parx_casino",
+            "wynn_las_vegas",
+            "hard_rock_ac",
+        ):
             assert casino_id in INCENTIVE_RULES
             assert len(INCENTIVE_RULES[casino_id]) >= 2
 
 
 class TestGetIncentivePromptSection:
-    """Tests for get_incentive_prompt_section integration point."""
+    """Tests for get_incentive_prompt_section integration point (R87: returns tuple)."""
 
     def test_returns_empty_when_no_triggers(self):
-        result = get_incentive_prompt_section("mohegan_sun", 0.0, {})
+        result, approval = get_incentive_prompt_section("mohegan_sun", 0.0, {})
         assert result == ""
+        assert approval is None
 
     def test_returns_section_for_birthday(self):
-        result = get_incentive_prompt_section("mohegan_sun", 0.0, {"birthday": "2026-03-15"})
+        result, approval = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"birthday": "2026-03-15"}
+        )
         assert "Available Incentives" in result
         assert "Mohegan Sun" in result
+        assert approval is None  # Mohegan birthday=$25, threshold=$50 → auto-approved
 
     def test_returns_section_for_completeness_75(self):
-        result = get_incentive_prompt_section("mohegan_sun", 0.80, {})
+        result, approval = get_incentive_prompt_section("mohegan_sun", 0.80, {})
         assert "Available Incentives" in result
 
     def test_includes_natural_offer_guidance(self):
-        result = get_incentive_prompt_section("mohegan_sun", 0.0, {"birthday": "2026-03-15"})
+        result, approval = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"birthday": "2026-03-15"}
+        )
         assert "naturally" in result.lower()
 
     def test_host_approval_note_for_high_value(self):
         """Incentives above auto_approve_threshold should note host approval required."""
         # Create a high-value rule scenario -- Wynn $50 = threshold, so it auto-approves.
         # We need to check the format output for normal auto-approve cases.
-        result = get_incentive_prompt_section("wynn_las_vegas", 0.0, {"birthday": "2026-03-15"})
+        result, approval = get_incentive_prompt_section(
+            "wynn_las_vegas", 0.0, {"birthday": "2026-03-15"}
+        )
         # Wynn birthday is $50 with threshold $50, so auto-approved
         assert "REQUIRES HOST APPROVAL" not in result
+        assert approval is None
 
 
 class TestIncentiveRuleValidation:

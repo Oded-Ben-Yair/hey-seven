@@ -1,6 +1,6 @@
 """Integration tests for profiling in the full graph pipeline.
 
-Tests profiling_enrichment_node wired into the 12-node StateGraph:
+Tests profiling_enrichment_node wired into the 13-node StateGraph:
 topology verification, feature flag gating, multi-turn accumulation,
 and coexistence with the validate retry loop.
 """
@@ -37,23 +37,24 @@ from src.casino.feature_flags import DEFAULT_FEATURES
 class TestProfilingGraphTopology:
     """Verify profiling_enrichment node is correctly wired in the graph."""
 
-    def test_graph_has_12_nodes(self):
-        """Graph with profiling enabled has 12 user nodes."""
+    def test_graph_has_13_nodes(self):
+        """Graph with profiling enabled has 13 user nodes."""
         graph = build_graph()
         graph_data = graph.get_graph()
-        user_nodes = {
-            n for n in graph_data.nodes
-            if not str(n).startswith("__")
-        }
-        assert len(user_nodes) == 12, f"Expected 12 nodes, got {len(user_nodes)}: {sorted(user_nodes)}"
+        user_nodes = {n for n in graph_data.nodes if not str(n).startswith("__")}
+        assert len(user_nodes) == 13, (
+            f"Expected 13 nodes, got {len(user_nodes)}: {sorted(user_nodes)}"
+        )
 
     def test_profiling_node_exists_in_graph(self):
         """profiling_enrichment node is present in the compiled graph."""
         graph = build_graph()
         graph_data = graph.get_graph()
-        node_names = set(graph_data.nodes.keys()) if isinstance(graph_data.nodes, dict) else {
-            n.id if hasattr(n, "id") else str(n) for n in graph_data.nodes
-        }
+        node_names = (
+            set(graph_data.nodes.keys())
+            if isinstance(graph_data.nodes, dict)
+            else {n.id if hasattr(n, "id") else str(n) for n in graph_data.nodes}
+        )
         assert NODE_PROFILING in node_names
 
     def test_profiling_between_generate_and_validate(self):
@@ -75,7 +76,10 @@ class TestProfilingGraphTopology:
     def test_profiling_disabled_removes_node_from_edges(self):
         """When profiling_enabled=False, generate connects directly to validate."""
         import types
-        disabled = types.MappingProxyType({**DEFAULT_FEATURES, "profiling_enabled": False})
+
+        disabled = types.MappingProxyType(
+            {**DEFAULT_FEATURES, "profiling_enabled": False}
+        )
         with patch("src.agent.graph.DEFAULT_FEATURES", disabled):
             graph = build_graph()
             graph_data = graph.get_graph()
@@ -109,27 +113,35 @@ def _make_smart_mock_llm():
     def _with_structured_output(schema, **kwargs):
         inner_mock = AsyncMock()
         if schema == RouterOutput:
-            inner_mock.ainvoke = AsyncMock(return_value=RouterOutput(
-                query_type="property_qa",
-                confidence=0.95,
-                detected_language="en",
-            ))
+            inner_mock.ainvoke = AsyncMock(
+                return_value=RouterOutput(
+                    query_type="property_qa",
+                    confidence=0.95,
+                    detected_language="en",
+                )
+            )
         elif schema == DispatchOutput:
-            inner_mock.ainvoke = AsyncMock(return_value=DispatchOutput(
-                specialist="dining",
-                confidence=0.9,
-                reasoning="food query",
-            ))
+            inner_mock.ainvoke = AsyncMock(
+                return_value=DispatchOutput(
+                    specialist="dining",
+                    confidence=0.9,
+                    reasoning="food query",
+                )
+            )
         elif schema == ValidationResult:
-            inner_mock.ainvoke = AsyncMock(return_value=ValidationResult(
-                status="PASS",
-                reason="Response meets criteria",
-            ))
+            inner_mock.ainvoke = AsyncMock(
+                return_value=ValidationResult(
+                    status="PASS",
+                    reason="Response meets criteria",
+                )
+            )
         elif schema == ProfileExtractionOutput:
-            inner_mock.ainvoke = AsyncMock(return_value=ProfileExtractionOutput(
-                guest_name="Mike",
-                party_size="4",
-            ))
+            inner_mock.ainvoke = AsyncMock(
+                return_value=ProfileExtractionOutput(
+                    guest_name="Mike",
+                    party_size="4",
+                )
+            )
         else:
             # Default: return a mock that works
             inner_mock.ainvoke = AsyncMock(return_value=MagicMock())
@@ -138,9 +150,11 @@ def _make_smart_mock_llm():
     mock_llm.with_structured_output = _with_structured_output
 
     # For direct ainvoke (generate node)
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(
-        content="Here are our restaurant options.",
-    ))
+    mock_llm.ainvoke = AsyncMock(
+        return_value=AIMessage(
+            content="Here are our restaurant options.",
+        )
+    )
 
     return mock_llm
 
@@ -151,7 +165,10 @@ class TestProfilingPipelineIntegration:
     @pytest.mark.asyncio
     async def test_profiling_state_populated_after_node_call(self):
         """Direct call to profiling_enrichment_node populates state fields."""
-        from src.agent.profiling import profiling_enrichment_node, ProfileExtractionOutput
+        from src.agent.profiling import (
+            profiling_enrichment_node,
+            ProfileExtractionOutput,
+        )
 
         mock_llm = MagicMock()
         mock_extraction = ProfileExtractionOutput(
@@ -165,13 +182,19 @@ class TestProfilingPipelineIntegration:
         state = {
             "messages": [
                 HumanMessage(content="I'm Mike, party of 4 for dinner"),
-                AIMessage(content="Welcome Mike! Let me find dining options for your group."),
+                AIMessage(
+                    content="Welcome Mike! Let me find dining options for your group."
+                ),
             ],
             "extracted_fields": {},
             "whisper_plan": None,
         }
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await profiling_enrichment_node(state)
 
         assert result["profiling_phase"] is not None
@@ -196,7 +219,10 @@ class TestProfilingPipelineIntegration:
     def test_profiling_disabled_graph_has_11_connected_nodes(self):
         """With profiling disabled, graph still has correct topology."""
         import types
-        disabled = types.MappingProxyType({**DEFAULT_FEATURES, "profiling_enabled": False})
+
+        disabled = types.MappingProxyType(
+            {**DEFAULT_FEATURES, "profiling_enabled": False}
+        )
         with patch("src.agent.graph.DEFAULT_FEATURES", disabled):
             graph = build_graph()
             graph_data = graph.get_graph()

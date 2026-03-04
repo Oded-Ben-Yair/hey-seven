@@ -1,6 +1,6 @@
-"""Tests for v2 graph topology: compliance gate, persona envelope, routing.
+"""Tests for v2.4 graph topology: compliance gate, persona envelope, routing.
 
-Validates the 10-node graph (v2) changes without requiring API keys.
+Validates the 13-node graph (v2.4) changes without requiring API keys.
 All LLM calls are mocked.
 """
 
@@ -16,6 +16,7 @@ from src.agent.graph import (
     NODE_GREETING,
     NODE_OFF_TOPIC,
     NODE_PERSONA,
+    NODE_PRE_EXTRACT,
     NODE_ROUTER,
     NODE_WHISPER,
     _extract_node_metadata,
@@ -84,22 +85,32 @@ def _high_completeness_fields():
 
 
 class TestGraphV2Compilation:
-    """v2.3 graph compiles with 12 nodes."""
+    """v2.4 graph compiles with 13 nodes."""
 
     def test_compiles_without_error(self):
         """build_graph() returns a compiled graph without errors."""
         graph = build_graph()
         assert graph is not None
 
-    def test_has_12_nodes(self):
-        """The compiled graph contains exactly 12 user-defined nodes."""
+    def test_has_13_nodes(self):
+        """The compiled graph contains exactly 13 user-defined nodes."""
         graph = build_graph()
         all_nodes = set(graph.get_graph().nodes)
         user_nodes = all_nodes - {"__start__", "__end__"}
         expected = {
-            "compliance_gate", "router", "retrieve", "whisper_planner",
-            "generate", "validate", "persona_envelope", "respond",
-            "fallback", "greeting", "off_topic", "profiling_enrichment",
+            "compliance_gate",
+            "router",
+            "retrieve",
+            "whisper_planner",
+            "pre_extract",
+            "generate",
+            "validate",
+            "persona_envelope",
+            "respond",
+            "fallback",
+            "greeting",
+            "off_topic",
+            "profiling_enrichment",
         }
         assert user_nodes == expected
 
@@ -108,15 +119,12 @@ class TestGraphV2Compilation:
         graph = build_graph()
         drawable = graph.get_graph()
         # Find edges from __start__
-        start_edges = [
-            e for e in drawable.edges
-            if e.source == "__start__"
-        ]
+        start_edges = [e for e in drawable.edges if e.source == "__start__"]
         assert len(start_edges) == 1
         assert start_edges[0].target == "compliance_gate"
 
-    def test_retrieve_to_whisper_to_generate(self):
-        """retrieve → whisper_planner → generate edge chain exists."""
+    def test_retrieve_to_whisper_to_pre_extract_to_generate(self):
+        """retrieve → whisper_planner → pre_extract → generate edge chain exists."""
         graph = build_graph()
         drawable = graph.get_graph()
 
@@ -124,9 +132,13 @@ class TestGraphV2Compilation:
         retrieve_edges = [e for e in drawable.edges if e.source == "retrieve"]
         assert any(e.target == "whisper_planner" for e in retrieve_edges)
 
-        # whisper_planner → generate
+        # whisper_planner → pre_extract
         whisper_edges = [e for e in drawable.edges if e.source == "whisper_planner"]
-        assert any(e.target == "generate" for e in whisper_edges)
+        assert any(e.target == "pre_extract" for e in whisper_edges)
+
+        # pre_extract → generate
+        pre_extract_edges = [e for e in drawable.edges if e.source == "pre_extract"]
+        assert any(e.target == "generate" for e in pre_extract_edges)
 
         # No direct retrieve → generate edge
         assert not any(e.target == "generate" for e in retrieve_edges)
@@ -213,10 +225,12 @@ class TestPersonaEnvelope:
         """PERSONA_MAX_CHARS=0 (web mode): returns empty dict (no modification)."""
         from src.agent.persona import persona_envelope_node
 
-        state = _state(messages=[
-            HumanMessage(content="What restaurants?"),
-            AIMessage(content="Mohegan Sun has great dining options."),
-        ])
+        state = _state(
+            messages=[
+                HumanMessage(content="What restaurants?"),
+                AIMessage(content="Mohegan Sun has great dining options."),
+            ]
+        )
 
         with patch("src.agent.persona.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(PERSONA_MAX_CHARS=0)
@@ -230,10 +244,12 @@ class TestPersonaEnvelope:
         from src.agent.persona import persona_envelope_node
 
         long_content = "A" * 300
-        state = _state(messages=[
-            HumanMessage(content="Tell me about dining"),
-            AIMessage(content=long_content),
-        ])
+        state = _state(
+            messages=[
+                HumanMessage(content="Tell me about dining"),
+                AIMessage(content=long_content),
+            ]
+        )
 
         with patch("src.agent.persona.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(PERSONA_MAX_CHARS=160)
@@ -249,10 +265,12 @@ class TestPersonaEnvelope:
         """Short messages are not truncated even in SMS mode."""
         from src.agent.persona import persona_envelope_node
 
-        state = _state(messages=[
-            HumanMessage(content="Hi"),
-            AIMessage(content="Welcome!"),
-        ])
+        state = _state(
+            messages=[
+                HumanMessage(content="Hi"),
+                AIMessage(content="Welcome!"),
+            ]
+        )
 
         with patch("src.agent.persona.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(PERSONA_MAX_CHARS=160)
@@ -351,11 +369,11 @@ class TestNodeConstantsV2:
         """NODE_GENERATE is preserved for backward compat."""
         assert NODE_GENERATE == "generate"
 
-    def test_known_nodes_has_12(self):
-        """_KNOWN_NODES includes all 12 v2.3 nodes."""
+    def test_known_nodes_has_13(self):
+        """_KNOWN_NODES includes all 13 v2.4 nodes."""
         from src.agent.graph import _KNOWN_NODES
 
-        assert len(_KNOWN_NODES) == 12
+        assert len(_KNOWN_NODES) == 13
         assert NODE_COMPLIANCE_GATE in _KNOWN_NODES
         assert NODE_PERSONA in _KNOWN_NODES
         assert NODE_GENERATE in _KNOWN_NODES
@@ -378,6 +396,7 @@ class TestNodeConstantsV2:
 def _mock_cb_blocking():
     """Return a mock circuit breaker that blocks all requests (forces keyword fallback)."""
     from unittest.mock import AsyncMock
+
     cb = AsyncMock()
     cb.allow_request = AsyncMock(return_value=False)
     return cb
@@ -401,14 +420,31 @@ class TestSpecialistDispatch:
         state = _state(
             messages=[HumanMessage(content="What restaurants?")],
             retrieved_context=[
-                {"content": "Todd English's Tuscany", "metadata": {"category": "restaurants"}, "score": 0.9},
-                {"content": "Bobby's Burger Palace", "metadata": {"category": "restaurants"}, "score": 0.8},
+                {
+                    "content": "Todd English's Tuscany",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
+                {
+                    "content": "Bobby's Burger Palace",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.8,
+                },
             ],
         )
 
-        mock_dining = AsyncMock(return_value={"messages": [AIMessage(content="Dining response")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_dining) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        mock_dining = AsyncMock(
+            return_value={"messages": [AIMessage(content="Dining response")]}
+        )
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_dining
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("dining")
@@ -424,14 +460,31 @@ class TestSpecialistDispatch:
         state = _state(
             messages=[HumanMessage(content="What shows?")],
             retrieved_context=[
-                {"content": "Arena shows", "metadata": {"category": "entertainment"}, "score": 0.9},
-                {"content": "Comedy club", "metadata": {"category": "entertainment"}, "score": 0.8},
+                {
+                    "content": "Arena shows",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.9,
+                },
+                {
+                    "content": "Comedy club",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.8,
+                },
             ],
         )
 
-        mock_ent = AsyncMock(return_value={"messages": [AIMessage(content="Entertainment")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_ent) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        mock_ent = AsyncMock(
+            return_value={"messages": [AIMessage(content="Entertainment")]}
+        )
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_ent
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("entertainment")
@@ -446,13 +499,24 @@ class TestSpecialistDispatch:
         state = _state(
             messages=[HumanMessage(content="Tell me about rewards")],
             retrieved_context=[
-                {"content": "Momentum rewards", "metadata": {"category": "gaming"}, "score": 0.9},
+                {
+                    "content": "Momentum rewards",
+                    "metadata": {"category": "gaming"},
+                    "score": 0.9,
+                },
             ],
         )
 
         mock_comp = AsyncMock(return_value={"messages": [AIMessage(content="Comp")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_comp) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_comp
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("comp")
@@ -467,15 +531,30 @@ class TestSpecialistDispatch:
         state = _state(
             messages=[HumanMessage(content="Tell me about the resort")],
             retrieved_context=[
-                {"content": "Restaurant", "metadata": {"category": "restaurants"}, "score": 0.9},
-                {"content": "Shows", "metadata": {"category": "entertainment"}, "score": 0.8},
+                {
+                    "content": "Restaurant",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
+                {
+                    "content": "Shows",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.8,
+                },
                 {"content": "Rooms", "metadata": {"category": "hotel"}, "score": 0.7},
             ],
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_host
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         # With 3 categories each at count=1, tie-break uses _CATEGORY_PRIORITY:
@@ -495,8 +574,15 @@ class TestSpecialistDispatch:
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_host
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("host")
@@ -511,13 +597,24 @@ class TestSpecialistDispatch:
         state = _state(
             messages=[HumanMessage(content="Where is the pool?")],
             retrieved_context=[
-                {"content": "Pool info", "metadata": {"category": "amenities"}, "score": 0.9},
+                {
+                    "content": "Pool info",
+                    "metadata": {"category": "amenities"},
+                    "score": 0.9,
+                },
             ],
         )
 
         mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_host
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         mock_get.assert_called_once_with("host")
@@ -547,7 +644,11 @@ class TestSpecialistDispatch:
         state = _state(
             messages=[HumanMessage(content="What restaurants?")],
             retrieved_context=[
-                {"content": "Todd English's Tuscany", "metadata": {"category": "restaurants"}, "score": 0.9},
+                {
+                    "content": "Todd English's Tuscany",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
             ],
         )
 
@@ -557,10 +658,22 @@ class TestSpecialistDispatch:
                 return False
             return True
 
-        mock_host = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
-        with mock_patch("src.agent.dispatch.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
-             mock_patch("src.agent.dispatch.get_agent", return_value=mock_host) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        mock_host = AsyncMock(
+            return_value={"messages": [AIMessage(content="Host response")]}
+        )
+        with (
+            mock_patch(
+                "src.agent.dispatch.is_feature_enabled",
+                side_effect=_mock_is_feature_enabled,
+            ),
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_host
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         # Should dispatch to host, not dining
@@ -592,7 +705,9 @@ class TestSpecialistDispatchIntegration:
         from src.agent.graph import _dispatch_to_specialist
 
         mock_llm_response = MagicMock()
-        mock_llm_response.content = "Todd English's Tuscany is an excellent choice for Italian dining."
+        mock_llm_response.content = (
+            "Todd English's Tuscany is an excellent choice for Italian dining."
+        )
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
@@ -603,17 +718,33 @@ class TestSpecialistDispatchIntegration:
         state = _state(
             messages=[HumanMessage(content="Where can I get Italian food?")],
             retrieved_context=[
-                {"content": "Todd English's Tuscany offers authentic Italian cuisine",
-                 "metadata": {"category": "restaurants"}, "score": 0.92},
-                {"content": "Bobby Flay's Bar Americain features American grill",
-                 "metadata": {"category": "restaurants"}, "score": 0.85},
+                {
+                    "content": "Todd English's Tuscany offers authentic Italian cuisine",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.92,
+                },
+                {
+                    "content": "Bobby Flay's Bar Americain features American grill",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.85,
+                },
             ],
         )
 
         with (
-            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
-            mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+            mock_patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.agents.dining_agent._get_circuit_breaker",
+                return_value=mock_cb,
+            ),
         ):
             result = await _dispatch_to_specialist(state)
 
@@ -635,7 +766,9 @@ class TestSpecialistDispatchIntegration:
         from src.agent.graph import _dispatch_to_specialist
 
         mock_llm_response = MagicMock()
-        mock_llm_response.content = "Tonight's show at the Arena features a great lineup."
+        mock_llm_response.content = (
+            "Tonight's show at the Arena features a great lineup."
+        )
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
@@ -646,15 +779,28 @@ class TestSpecialistDispatchIntegration:
         state = _state(
             messages=[HumanMessage(content="What shows are on tonight?")],
             retrieved_context=[
-                {"content": "Mohegan Sun Arena hosts concerts and comedy shows",
-                 "metadata": {"category": "entertainment"}, "score": 0.90},
+                {
+                    "content": "Mohegan Sun Arena hosts concerts and comedy shows",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.90,
+                },
             ],
         )
 
         with (
-            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
-            mock_patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            mock_patch("src.agent.agents.entertainment_agent._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+            mock_patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.agents.entertainment_agent._get_circuit_breaker",
+                return_value=mock_cb,
+            ),
         ):
             result = await _dispatch_to_specialist(state)
 
@@ -670,7 +816,9 @@ class TestSpecialistDispatchIntegration:
         from src.agent.graph import _dispatch_to_specialist
 
         mock_llm_response = MagicMock()
-        mock_llm_response.content = "Based on your gaming preferences, I can suggest some great promotions."
+        mock_llm_response.content = (
+            "Based on your gaming preferences, I can suggest some great promotions."
+        )
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
@@ -681,15 +829,27 @@ class TestSpecialistDispatchIntegration:
         state = _state(
             messages=[HumanMessage(content="What slots do you have?")],
             retrieved_context=[
-                {"content": "Casino floor features 5000+ slot machines",
-                 "metadata": {"category": "gaming"}, "score": 0.88},
+                {
+                    "content": "Casino floor features 5000+ slot machines",
+                    "metadata": {"category": "gaming"},
+                    "score": 0.88,
+                },
             ],
         )
 
         with (
-            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
-            mock_patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            mock_patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+            mock_patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
+            ),
         ):
             result = await _dispatch_to_specialist(state)
 
@@ -715,9 +875,18 @@ class TestSpecialistDispatchIntegration:
         )
 
         with (
-            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
-            mock_patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            mock_patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+            mock_patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
+            ),
         ):
             result = await _dispatch_to_specialist(state)
 
@@ -750,15 +919,33 @@ class TestSpecialistDispatchIntegration:
         state = _state(
             messages=[HumanMessage(content="What can I do tonight?")],
             retrieved_context=[
-                {"content": "Live music at the bar", "metadata": {"category": "entertainment"}, "score": 0.8},
-                {"content": "Late night dining options", "metadata": {"category": "restaurants"}, "score": 0.8},
+                {
+                    "content": "Live music at the bar",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.8,
+                },
+                {
+                    "content": "Late night dining options",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.8,
+                },
             ],
         )
 
         with (
-            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()),
-            mock_patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            mock_patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+            mock_patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.agents.dining_agent._get_circuit_breaker",
+                return_value=mock_cb,
+            ),
         ):
             result = await _dispatch_to_specialist(state)
 
@@ -776,6 +963,7 @@ def _whisper_disabled_features():
     """Return a MappingProxyType with whisper_planner_enabled=False."""
     import types
     from src.casino.feature_flags import DEFAULT_FEATURES
+
     overrides = dict(DEFAULT_FEATURES)
     overrides["whisper_planner_enabled"] = False
     return types.MappingProxyType(overrides)
@@ -795,19 +983,22 @@ class TestGraphWithWhisperDisabled:
             graph = build_graph()
             assert graph is not None
 
-    def test_retrieve_connects_directly_to_generate(self):
-        """With whisper disabled, retrieve → generate (skipping whisper_planner)."""
+    def test_retrieve_connects_to_pre_extract_skipping_whisper(self):
+        """With whisper disabled, retrieve → pre_extract → generate (skipping whisper_planner)."""
         with patch("src.agent.graph.DEFAULT_FEATURES", _whisper_disabled_features()):
             graph = build_graph()
             drawable = graph.get_graph()
             retrieve_edges = [e for e in drawable.edges if e.source == "retrieve"]
-            # Direct edge to generate (not via whisper_planner)
-            assert any(e.target == "generate" for e in retrieve_edges), (
-                "retrieve must connect directly to generate when whisper is disabled"
+            # Direct edge to pre_extract (not via whisper_planner)
+            assert any(e.target == "pre_extract" for e in retrieve_edges), (
+                "retrieve must connect to pre_extract when whisper is disabled"
             )
             assert not any(e.target == "whisper_planner" for e in retrieve_edges), (
                 "retrieve must NOT connect to whisper_planner when disabled"
             )
+            # pre_extract → generate
+            pre_extract_edges = [e for e in drawable.edges if e.source == "pre_extract"]
+            assert any(e.target == "generate" for e in pre_extract_edges)
 
     def test_no_edges_to_whisper_planner(self):
         """With whisper disabled, no edges route to whisper_planner (unreachable node)."""
@@ -864,10 +1055,21 @@ class TestHITLInterrupt:
 
         with (
             patch("src.agent.graph.get_settings") as mock_settings,
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes.search_knowledge_base", return_value=[
-                {"content": "Test", "metadata": {"category": "restaurants"}, "score": 0.9},
-            ]),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=[
+                    {
+                        "content": "Test",
+                        "metadata": {"category": "restaurants"},
+                        "score": 0.9,
+                    },
+                ],
+            ),
             patch(
                 "src.agent.compliance_gate.classify_injection_semantic",
                 new_callable=AsyncMock,
@@ -922,14 +1124,31 @@ class TestSpecialistDispatchTieBreaking:
         state = _state(
             messages=[HumanMessage(content="Tell me about the resort")],
             retrieved_context=[
-                {"content": "Restaurant", "metadata": {"category": "restaurants"}, "score": 0.9},
-                {"content": "Shows", "metadata": {"category": "entertainment"}, "score": 0.8},
+                {
+                    "content": "Restaurant",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
+                {
+                    "content": "Shows",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.8,
+                },
             ],
         )
 
-        mock_dining = AsyncMock(return_value={"messages": [AIMessage(content="Dining")]})
-        with mock_patch("src.agent.dispatch.get_agent", return_value=mock_dining) as mock_get, \
-             mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()):
+        mock_dining = AsyncMock(
+            return_value={"messages": [AIMessage(content="Dining")]}
+        )
+        with (
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_dining
+            ) as mock_get,
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+        ):
             result = await _dispatch_to_specialist(state)
 
         # restaurants (priority 4) > entertainment (priority 2) → dining agent
@@ -955,7 +1174,11 @@ class TestStructuredDispatch:
         state = _state(
             messages=[HumanMessage(content="What shows are on tonight?")],
             retrieved_context=[
-                {"content": "Arena concerts", "metadata": {"category": "entertainment"}, "score": 0.9},
+                {
+                    "content": "Arena concerts",
+                    "metadata": {"category": "entertainment"},
+                    "score": 0.9,
+                },
             ],
         )
 
@@ -974,11 +1197,21 @@ class TestStructuredDispatch:
         mock_cb.allow_request = AsyncMock(return_value=True)
         mock_cb.record_success = AsyncMock()
 
-        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Entertainment response")]})
+        mock_agent = AsyncMock(
+            return_value={"messages": [AIMessage(content="Entertainment response")]}
+        )
 
-        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
+        with (
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_agent
+            ) as mock_get,
+        ):
             result = await _dispatch_to_specialist(state)
 
         # Structured dispatch used LLM result
@@ -996,8 +1229,16 @@ class TestStructuredDispatch:
         state = _state(
             messages=[HumanMessage(content="What restaurants do you have?")],
             retrieved_context=[
-                {"content": "Todd English's Tuscany", "metadata": {"category": "restaurants"}, "score": 0.9},
-                {"content": "Bobby's Burger Palace", "metadata": {"category": "restaurants"}, "score": 0.8},
+                {
+                    "content": "Todd English's Tuscany",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
+                {
+                    "content": "Bobby's Burger Palace",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.8,
+                },
             ],
         )
 
@@ -1010,11 +1251,21 @@ class TestStructuredDispatch:
         mock_cb = AsyncMock()
         mock_cb.allow_request = AsyncMock(return_value=True)
 
-        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Dining response")]})
+        mock_agent = AsyncMock(
+            return_value={"messages": [AIMessage(content="Dining response")]}
+        )
 
-        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
+        with (
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_agent
+            ) as mock_get,
+        ):
             result = await _dispatch_to_specialist(state)
 
         # Falls back to keyword counting: restaurants dominant → dining
@@ -1030,7 +1281,11 @@ class TestStructuredDispatch:
         state = _state(
             messages=[HumanMessage(content="Where is the pool?")],
             retrieved_context=[
-                {"content": "Pool info", "metadata": {"category": "amenities"}, "score": 0.9},
+                {
+                    "content": "Pool info",
+                    "metadata": {"category": "amenities"},
+                    "score": 0.9,
+                },
             ],
         )
 
@@ -1043,11 +1298,21 @@ class TestStructuredDispatch:
         mock_cb = AsyncMock()
         mock_cb.allow_request = AsyncMock(return_value=True)
 
-        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
+        mock_agent = AsyncMock(
+            return_value={"messages": [AIMessage(content="Host response")]}
+        )
 
-        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
+        with (
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_agent
+            ) as mock_get,
+        ):
             result = await _dispatch_to_specialist(state)
 
         # Falls back to keyword counting: amenities not in mapping → host
@@ -1063,7 +1328,11 @@ class TestStructuredDispatch:
         state = _state(
             messages=[HumanMessage(content="What restaurants?")],
             retrieved_context=[
-                {"content": "Steakhouse", "metadata": {"category": "restaurants"}, "score": 0.9},
+                {
+                    "content": "Steakhouse",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
             ],
         )
 
@@ -1071,9 +1340,20 @@ class TestStructuredDispatch:
 
         mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Dining")]})
 
-        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=_mock_cb_blocking()), \
-             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
+        with (
+            mock_patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                return_value=_mock_cb_blocking(),
+            ),
+            mock_patch(
+                "src.agent.dispatch._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_agent
+            ) as mock_get,
+        ):
             result = await _dispatch_to_specialist(state)
 
         # Keyword fallback used
@@ -1092,7 +1372,11 @@ class TestStructuredDispatch:
         state = _state(
             messages=[HumanMessage(content="What restaurants?")],
             retrieved_context=[
-                {"content": "Steakhouse", "metadata": {"category": "restaurants"}, "score": 0.9},
+                {
+                    "content": "Steakhouse",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
             ],
         )
 
@@ -1115,12 +1399,25 @@ class TestStructuredDispatch:
                 return False
             return True
 
-        mock_agent = AsyncMock(return_value={"messages": [AIMessage(content="Host response")]})
+        mock_agent = AsyncMock(
+            return_value={"messages": [AIMessage(content="Host response")]}
+        )
 
-        with mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb), \
-             mock_patch("src.agent.dispatch._get_llm", new_callable=AsyncMock, return_value=mock_llm), \
-             mock_patch("src.agent.dispatch.is_feature_enabled", side_effect=_mock_is_feature_enabled), \
-             mock_patch("src.agent.dispatch.get_agent", return_value=mock_agent) as mock_get:
+        with (
+            mock_patch("src.agent.dispatch._get_circuit_breaker", return_value=mock_cb),
+            mock_patch(
+                "src.agent.dispatch._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            mock_patch(
+                "src.agent.dispatch.is_feature_enabled",
+                side_effect=_mock_is_feature_enabled,
+            ),
+            mock_patch(
+                "src.agent.dispatch.get_agent", return_value=mock_agent
+            ) as mock_get,
+        ):
             result = await _dispatch_to_specialist(state)
 
         # LLM said "dining" but feature flag forced "host"

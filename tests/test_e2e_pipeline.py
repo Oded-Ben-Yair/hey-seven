@@ -311,10 +311,10 @@ class TestE2EPipelineResponsibleGaming:
 
 
 class TestE2EPipelinePropertyQA:
-    """Verify full property QA path through all 12 nodes.
+    """Verify full property QA path through all 13 nodes.
 
-    compliance_gate -> router -> retrieve -> whisper_planner -> generate
-    -> validate -> persona_envelope -> respond -> END
+    compliance_gate -> router -> retrieve -> whisper_planner -> pre_extract
+    -> generate -> validate -> persona_envelope -> respond -> END
     """
 
     @pytest.mark.asyncio

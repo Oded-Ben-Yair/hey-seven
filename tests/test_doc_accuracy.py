@@ -257,8 +257,8 @@ class TestGraphNodeCount:
                 if (n.id if hasattr(n, "id") else str(n))
                 not in ("__start__", "__end__")
             ]
-        assert len(nodes) == 12, (
-            f"Graph has {len(nodes)} nodes, expected 12. Nodes: {nodes}"
+        assert len(nodes) == 13, (
+            f"Graph has {len(nodes)} nodes, expected 13. Nodes: {nodes}"
         )
 
     def test_known_nodes_frozenset_matches_graph(self):
@@ -924,7 +924,7 @@ class TestGraphTopology:
     """
 
     def test_node_count_matches_docs(self):
-        """Graph must have exactly 12 nodes (documented in ARCHITECTURE.md and README)."""
+        """Graph must have exactly 13 nodes (documented in ARCHITECTURE.md and README)."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -938,8 +938,8 @@ class TestGraphTopology:
                 for n in graph_data.nodes
                 if not (n.id if hasattr(n, "id") else str(n)).startswith("__")
             ]
-        assert len(real_nodes) == 12, (
-            f"Expected 12 nodes, got {len(real_nodes)}: {real_nodes}"
+        assert len(real_nodes) == 13, (
+            f"Expected 13 nodes, got {len(real_nodes)}: {real_nodes}"
         )
 
     def test_node_names_use_constants(self):

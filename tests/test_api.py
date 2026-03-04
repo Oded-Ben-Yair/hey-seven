@@ -59,7 +59,6 @@ class TestHealthEndpoint:
             assert data["agent_ready"] is True
             assert data["property_loaded"] is True
 
-
     def test_health_includes_circuit_breaker_state(self):
         """GET /health includes circuit_breaker_state field."""
         app, _ = _make_test_app()
@@ -67,7 +66,12 @@ class TestHealthEndpoint:
             resp = client.get("/health")
             data = resp.json()
             assert "circuit_breaker_state" in data
-            assert data["circuit_breaker_state"] in ("closed", "open", "half_open", "unknown")
+            assert data["circuit_breaker_state"] in (
+                "closed",
+                "open",
+                "half_open",
+                "unknown",
+            )
 
 
 class TestPropertyEndpoint:
@@ -88,7 +92,9 @@ class TestPropertyEndpoint:
             assert data["location"] == "Uncasville, CT"
             assert "restaurants" in data["categories"]
             assert "entertainment" in data["categories"]
-            assert data["document_count"] == 4  # 2 restaurants + 1 entertainment + 1 gaming
+            assert (
+                data["document_count"] == 4
+            )  # 2 restaurants + 1 entertainment + 1 gaming
 
 
 def _mock_chat_stream(thread_id="test-thread-123", tokens=None, sources=None):
@@ -239,6 +245,7 @@ class TestChatValidation:
 
 def _make_test_app_no_agent():
     """Create a test app with agent=None (for 503/degraded tests)."""
+
     @asynccontextmanager
     async def no_agent_lifespan(app):
         app.state.agent = None
@@ -248,6 +255,7 @@ def _make_test_app_no_agent():
         app.state.ready = False
 
     import src.api.app  # noqa: F401
+
     app_module = sys.modules["src.api.app"]
     original = app_module.lifespan
     app_module.lifespan = no_agent_lifespan
@@ -283,6 +291,7 @@ class TestHealthDegraded:
 
 def _mock_chat_stream_error():
     """Create a mock that raises an exception mid-stream."""
+
     async def failing_stream(agent, message, tid=None, request_id=None):
         yield {"event": "metadata", "data": json.dumps({"thread_id": "err-thread"})}
         yield {"event": "token", "data": json.dumps({"content": "partial "})}
@@ -293,6 +302,7 @@ def _mock_chat_stream_error():
 
 def _mock_chat_stream_slow():
     """Create a mock that hangs (simulates timeout)."""
+
     async def slow_stream(agent, message, tid=None, request_id=None):
         yield {"event": "metadata", "data": json.dumps({"thread_id": "slow-thread"})}
         await asyncio.sleep(999)  # Will be interrupted by timeout
@@ -347,8 +357,14 @@ class TestChatReplaceEvent:
         """POST /chat can include 'replace' SSE events (from greeting/off_topic/fallback)."""
 
         async def replace_stream(agent, message, tid=None, request_id=None):
-            yield {"event": "metadata", "data": json.dumps({"thread_id": "replace-test"})}
-            yield {"event": "replace", "data": json.dumps({"content": "Welcome to Mohegan Sun!"})}
+            yield {
+                "event": "metadata",
+                "data": json.dumps({"thread_id": "replace-test"}),
+            }
+            yield {
+                "event": "replace",
+                "data": json.dumps({"content": "Welcome to Mohegan Sun!"}),
+            }
             yield {"event": "done", "data": json.dumps({"done": True})}
 
         mock_stream.side_effect = replace_stream
@@ -412,8 +428,14 @@ class TestSSEStreamingContract:
         """SSE stream with replace event: metadata -> replace -> done."""
 
         async def replace_stream(agent, message, tid=None, request_id=None):
-            yield {"event": "metadata", "data": json.dumps({"thread_id": "replace-sse"})}
-            yield {"event": "replace", "data": json.dumps({"content": "Full replacement text."})}
+            yield {
+                "event": "metadata",
+                "data": json.dumps({"thread_id": "replace-sse"}),
+            }
+            yield {
+                "event": "replace",
+                "data": json.dumps({"content": "Full replacement text."}),
+            }
             yield {"event": "sources", "data": json.dumps({"sources": ["faq"]})}
             yield {"event": "done", "data": json.dumps({"done": True})}
 
@@ -458,7 +480,9 @@ class TestPropertyETag:
             resp = client.get("/property")
             assert resp.status_code == 200
             assert "etag" in resp.headers
-            assert resp.headers["etag"].startswith('"') and resp.headers["etag"].endswith('"')
+            assert resp.headers["etag"].startswith('"') and resp.headers[
+                "etag"
+            ].endswith('"')
             assert "cache-control" in resp.headers
             assert "max-age=300" in resp.headers["cache-control"]
 
@@ -534,7 +558,9 @@ class TestPropertyETag:
         """R69 fix D5: Non-matching comma-separated ETags returns 200."""
         app, _ = _make_test_app()
         with TestClient(app) as client:
-            resp = client.get("/property", headers={"If-None-Match": '"wrong1", "wrong2"'})
+            resp = client.get(
+                "/property", headers={"If-None-Match": '"wrong1", "wrong2"'}
+            )
             assert resp.status_code == 200
             assert "etag" in resp.headers
 
@@ -557,7 +583,7 @@ class TestGraphEndpoint:
             assert "validate" in data["nodes"]
             assert "persona_envelope" in data["nodes"]
             assert "respond" in data["nodes"]
-            assert len(data["nodes"]) == 12
+            assert len(data["nodes"]) == 13
             assert len(data["edges"]) > 0
             # Verify start edge exists and goes to compliance_gate
             start_edges = [e for e in data["edges"] if e["from"] == "__start__"]
@@ -599,9 +625,7 @@ class TestGraphEndpointAuth:
             get_settings.cache_clear()
             app, _ = _make_test_app()
             with TestClient(app) as client:
-                resp = client.get(
-                    "/graph", headers={"X-API-Key": "test-graph-secret"}
-                )
+                resp = client.get("/graph", headers={"X-API-Key": "test-graph-secret"})
                 assert resp.status_code == 200
                 data = resp.json()
                 assert "nodes" in data
@@ -616,9 +640,7 @@ class TestGraphEndpointAuth:
             get_settings.cache_clear()
             app, _ = _make_test_app()
             with TestClient(app) as client:
-                resp = client.get(
-                    "/graph", headers={"X-API-Key": "wrong-key"}
-                )
+                resp = client.get("/graph", headers={"X-API-Key": "wrong-key"})
                 assert resp.status_code == 401
                 assert resp.json()["code"] == "unauthorized"
 
@@ -921,6 +943,7 @@ class TestLifespanIntegration:
     def test_lifespan_initializes_agent_and_sets_ready(self):
         """Real lifespan sets app.state.agent, property_data, and ready=True."""
         import src.api.app  # noqa: F401
+
         app_module = sys.modules["src.api.app"]
 
         mock_graph = MagicMock()
@@ -929,14 +952,19 @@ class TestLifespanIntegration:
         with (
             patch("src.agent.graph.build_graph", return_value=mock_graph),
             patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.open", MagicMock(
-                return_value=MagicMock(
-                    __enter__=MagicMock(return_value=MagicMock(
-                        read=MagicMock(return_value=json.dumps(test_data))
-                    )),
-                    __exit__=MagicMock(return_value=False),
-                )
-            )),
+            patch(
+                "builtins.open",
+                MagicMock(
+                    return_value=MagicMock(
+                        __enter__=MagicMock(
+                            return_value=MagicMock(
+                                read=MagicMock(return_value=json.dumps(test_data))
+                            )
+                        ),
+                        __exit__=MagicMock(return_value=False),
+                    )
+                ),
+            ),
             patch("json.load", return_value=test_data),
         ):
             test_app = app_module.create_app()
@@ -947,10 +975,13 @@ class TestLifespanIntegration:
     def test_lifespan_agent_failure_sets_none(self):
         """When build_graph() raises, agent is None but app still starts."""
         import src.api.app  # noqa: F401
+
         app_module = sys.modules["src.api.app"]
 
         with (
-            patch("src.agent.graph.build_graph", side_effect=RuntimeError("init failed")),
+            patch(
+                "src.agent.graph.build_graph", side_effect=RuntimeError("init failed")
+            ),
             patch("pathlib.Path.exists", return_value=False),
         ):
             test_app = app_module.create_app()
@@ -974,7 +1005,9 @@ class TestConcurrentChatRequests:
         app.state.ready = True
 
         transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
             coros = [
                 client.post("/chat", json={"message": f"Question {i}"})
                 for i in range(5)
@@ -1001,10 +1034,11 @@ class TestConcurrentChatRequests:
         app.state.ready = True
 
         transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
             coros = [
-                client.post("/chat", json={"message": f"Rapid {i}"})
-                for i in range(25)
+                client.post("/chat", json={"message": f"Rapid {i}"}) for i in range(25)
             ]
             responses = await asyncio.gather(*coros)
 
@@ -1206,7 +1240,9 @@ class TestEndToEndGraphIntegration:
             graph_events = [e for e in events if e["event"] == "graph_node"]
 
             # compliance_gate should have both start and complete
-            cg_events = [e for e in graph_events if e["data"]["node"] == "compliance_gate"]
+            cg_events = [
+                e for e in graph_events if e["data"]["node"] == "compliance_gate"
+            ]
             statuses = [e["data"]["status"] for e in cg_events]
             assert "start" in statuses, "compliance_gate must emit start"
             assert "complete" in statuses, "compliance_gate must emit complete"
@@ -1293,10 +1329,26 @@ class TestEndToEndGraphIntegration:
         ]
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_validator_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.hotel_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_validator_llm,
+            ),
             patch(
                 "src.agent.whisper_planner._get_whisper_llm",
                 new_callable=AsyncMock,
@@ -1307,9 +1359,7 @@ class TestEndToEndGraphIntegration:
                 new_callable=AsyncMock,
                 return_value=None,
             ),
-            patch(
-                "src.agent.nodes.search_knowledge_base", return_value=mock_chunks
-            ),
+            patch("src.agent.nodes.search_knowledge_base", return_value=mock_chunks),
             patch(
                 "src.agent.agents.host_agent._get_circuit_breaker",
                 return_value=mock_cb,
@@ -1356,9 +1406,7 @@ class TestEndToEndGraphIntegration:
                 # Each node must have start+complete lifecycle events
                 for node_name in expected_nodes:
                     node_events = [
-                        e
-                        for e in graph_events
-                        if e["data"]["node"] == node_name
+                        e for e in graph_events if e["data"]["node"] == node_name
                     ]
                     statuses = [e["data"]["status"] for e in node_events]
                     assert "start" in statuses, f"{node_name} missing 'start'"
@@ -1366,9 +1414,7 @@ class TestEndToEndGraphIntegration:
 
                 # Sources from retrieved context
                 assert "sources" in event_types
-                sources_event = next(
-                    e for e in events if e["event"] == "sources"
-                )
+                sources_event = next(e for e in events if e["event"] == "sources")
                 # Wave 2: sources are now dicts with category/source/score provenance
                 source_categories = [
                     s["category"] if isinstance(s, dict) else s

@@ -160,8 +160,7 @@ _PARX_RULES: tuple[IncentiveRule, ...] = (
         max_per_guest=1,
         auto_approve_threshold=50.0,
         framing_template=(
-            "Happy birthday from $property_name! Enjoy $$$value in free play "
-            "on us."
+            "Happy birthday from $property_name! Enjoy $$$value in free play on us."
         ),
     ),
     IncentiveRule(
@@ -286,13 +285,15 @@ _DEFAULT_RULES: tuple[IncentiveRule, ...] = (
 
 # Immutable mapping: casino_id -> tuple of rules.
 # MappingProxyType prevents accidental mutation of module-level data.
-INCENTIVE_RULES: MappingProxyType[str, tuple[IncentiveRule, ...]] = MappingProxyType({
-    "mohegan_sun": _MOHEGAN_SUN_RULES,
-    "foxwoods": _FOXWOODS_RULES,
-    "parx_casino": _PARX_RULES,
-    "wynn_las_vegas": _WYNN_RULES,
-    "hard_rock_ac": _HARD_ROCK_AC_RULES,
-})
+INCENTIVE_RULES: MappingProxyType[str, tuple[IncentiveRule, ...]] = MappingProxyType(
+    {
+        "mohegan_sun": _MOHEGAN_SUN_RULES,
+        "foxwoods": _FOXWOODS_RULES,
+        "parx_casino": _PARX_RULES,
+        "wynn_las_vegas": _WYNN_RULES,
+        "hard_rock_ac": _HARD_ROCK_AC_RULES,
+    }
+)
 
 _DEFAULT_INCENTIVE_RULES: tuple[IncentiveRule, ...] = _DEFAULT_RULES
 
@@ -473,12 +474,18 @@ def get_incentive_prompt_section(
     casino_id: str,
     profile_completeness: float,
     extracted_fields: dict[str, Any],
-) -> str:
+) -> tuple[str, dict[str, Any] | None]:
     """Build a system prompt section listing applicable incentives.
 
     Called by specialist agents to inject incentive awareness into the LLM
-    system prompt. Returns an empty string when no incentives apply or when
-    the feature is disabled.
+    system prompt. Returns a tuple of (prompt_section, approval_request).
+    When no incentives apply, returns ("", None).
+
+    If any applicable incentive exceeds the auto-approve threshold,
+    ``build_host_approval_request()`` is called and the approval dict
+    is returned as the second element. The caller (_base.py) sets
+    ``handoff_request`` in the graph state so the SSE stream emits a
+    ``handoff`` event for the host dashboard.
 
     Feature gate: checks ``incentives_enabled`` from DEFAULT_FEATURES
     (synchronous, no I/O). This is a Layer 1 (build-time) check -- runtime
@@ -491,20 +498,21 @@ def get_incentive_prompt_section(
         extracted_fields: Dict of extracted guest data.
 
     Returns:
-        A prompt section string (may be empty).
+        Tuple of (prompt_section, approval_request_or_none).
     """
     from src.casino.feature_flags import DEFAULT_FEATURES
 
     if not DEFAULT_FEATURES.get("incentives_enabled", True):
-        return ""
+        return "", None
 
     engine = IncentiveEngine(casino_id)
     applicable = engine.get_applicable_incentives(
-        profile_completeness, extracted_fields,
+        profile_completeness,
+        extracted_fields,
     )
 
     if not applicable:
-        return ""
+        return "", None
 
     from src.config import get_settings
 
@@ -512,16 +520,30 @@ def get_incentive_prompt_section(
     property_name = settings.PROPERTY_NAME
 
     lines: list[str] = ["## Available Incentives (offer naturally, do not force)"]
+    approval_request: dict[str, Any] | None = None
 
     for rule in applicable:
-        offer_text = engine.format_incentive_offer(rule, {
-            "property_name": property_name,
-            "value": f"{rule.incentive_value:.0f}" if rule.incentive_value else "a complimentary",
-            "incentive_type": rule.incentive_type.replace("_", " "),
-        })
+        offer_text = engine.format_incentive_offer(
+            rule,
+            {
+                "property_name": property_name,
+                "value": f"{rule.incentive_value:.0f}"
+                if rule.incentive_value
+                else "a complimentary",
+                "incentive_type": rule.incentive_type.replace("_", " "),
+            },
+        )
         approval_note = ""
         if not engine.check_auto_approve(rule):
-            approval_note = " [REQUIRES HOST APPROVAL -- do not promise, say you will check]"
+            approval_note = (
+                " [REQUIRES HOST APPROVAL -- do not promise, say you will check]"
+            )
+            # R87: Build approval request for host dashboard handoff
+            if approval_request is None:
+                approval_request = engine.build_host_approval_request(
+                    rule,
+                    extracted_fields,
+                )
         lines.append(f"- {offer_text}{approval_note}")
 
     lines.append(
@@ -529,4 +551,4 @@ def get_incentive_prompt_section(
         "or list them unprompted. Only mention when contextually relevant."
     )
 
-    return "\n".join(lines)
+    return "\n".join(lines), approval_request

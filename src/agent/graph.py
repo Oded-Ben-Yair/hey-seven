@@ -1,9 +1,9 @@
-"""Custom 11-node StateGraph for property Q&A.
+"""Custom 13-node StateGraph for property Q&A.
 
 Topology:
     START -> compliance_gate -> {greeting, off_topic, router}
     router -> {greeting, off_topic, retrieve}
-    retrieve -> whisper_planner -> generate -> validate -> {persona_envelope -> respond, generate (RETRY), fallback}
+    retrieve -> whisper_planner -> pre_extract -> generate -> validate -> {persona_envelope -> respond, generate (RETRY), fallback}
 
 The ``generate`` node runs ``_dispatch_to_specialist()`` which orchestrates
 three extracted helpers (see ``dispatch.py``):
@@ -67,6 +67,7 @@ from .dispatch import (
     _keyword_dispatch,
     _route_to_specialist,
 )
+from .pre_extract import pre_extract_node
 from .profiling import profiling_enrichment_node
 from .whisper_planner import whisper_planner_node
 from .nodes import (
@@ -87,6 +88,7 @@ from .constants import (
     NODE_GREETING,
     NODE_OFF_TOPIC,
     NODE_PERSONA,
+    NODE_PRE_EXTRACT,
     NODE_PROFILING,
     NODE_RESPOND,
     NODE_RETRIEVE,
@@ -161,7 +163,7 @@ def _route_after_validate_v2(state: PropertyQAState) -> str:
 
 
 def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
-    """Build the custom 12-node property Q&A graph (v2.3).
+    """Build the custom 13-node property Q&A graph (v2.4).
 
     v2.3 topology:
         START → compliance_gate → {greeting, off_topic, router}
@@ -178,12 +180,15 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     settings = get_settings()
     graph = StateGraph(PropertyQAState)
 
-    # Add all 12 nodes
+    # Add all 13 nodes
     graph.add_node(NODE_COMPLIANCE_GATE, compliance_gate_node)
     graph.add_node(NODE_ROUTER, router_node)
     graph.add_node(NODE_RETRIEVE, retrieve_node)
     graph.add_node(NODE_WHISPER, whisper_planner_node)
-    graph.add_node(NODE_GENERATE, _dispatch_to_specialist)  # v2.2: dispatches to specialist via registry
+    graph.add_node(NODE_PRE_EXTRACT, pre_extract_node)
+    graph.add_node(
+        NODE_GENERATE, _dispatch_to_specialist
+    )  # v2.2: dispatches to specialist via registry
     graph.add_node(NODE_VALIDATE, validate_node)
     graph.add_node(NODE_PERSONA, persona_envelope_node)
     graph.add_node(NODE_RESPOND, respond_node)
@@ -197,18 +202,26 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
     graph.add_edge(START, NODE_COMPLIANCE_GATE)
 
     # compliance_gate → {greeting, off_topic, router}
-    graph.add_conditional_edges(NODE_COMPLIANCE_GATE, route_from_compliance, {
-        NODE_ROUTER: NODE_ROUTER,
-        NODE_GREETING: NODE_GREETING,
-        NODE_OFF_TOPIC: NODE_OFF_TOPIC,
-    })
+    graph.add_conditional_edges(
+        NODE_COMPLIANCE_GATE,
+        route_from_compliance,
+        {
+            NODE_ROUTER: NODE_ROUTER,
+            NODE_GREETING: NODE_GREETING,
+            NODE_OFF_TOPIC: NODE_OFF_TOPIC,
+        },
+    )
 
     # router → {retrieve, greeting, off_topic} (defense-in-depth: router still has guardrails)
-    graph.add_conditional_edges(NODE_ROUTER, route_from_router, {
-        NODE_RETRIEVE: NODE_RETRIEVE,
-        NODE_GREETING: NODE_GREETING,
-        NODE_OFF_TOPIC: NODE_OFF_TOPIC,
-    })
+    graph.add_conditional_edges(
+        NODE_ROUTER,
+        route_from_router,
+        {
+            NODE_RETRIEVE: NODE_RETRIEVE,
+            NODE_GREETING: NODE_GREETING,
+            NODE_OFF_TOPIC: NODE_OFF_TOPIC,
+        },
+    )
 
     # -------------------------------------------------------------------
     # Feature Flag Architecture (Dual-Layer Design)
@@ -254,9 +267,10 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
 
     if whisper_enabled:
         graph.add_edge(NODE_RETRIEVE, NODE_WHISPER)
-        graph.add_edge(NODE_WHISPER, NODE_GENERATE)
+        graph.add_edge(NODE_WHISPER, NODE_PRE_EXTRACT)
     else:
-        graph.add_edge(NODE_RETRIEVE, NODE_GENERATE)
+        graph.add_edge(NODE_RETRIEVE, NODE_PRE_EXTRACT)
+    graph.add_edge(NODE_PRE_EXTRACT, NODE_GENERATE)
 
     if profiling_enabled:
         graph.add_edge(NODE_GENERATE, NODE_PROFILING)
@@ -265,11 +279,15 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         graph.add_edge(NODE_GENERATE, NODE_VALIDATE)
 
     # validate → {persona_envelope (PASS), generate (RETRY), fallback (FAIL)}
-    graph.add_conditional_edges(NODE_VALIDATE, _route_after_validate_v2, {
-        NODE_PERSONA: NODE_PERSONA,
-        NODE_GENERATE: NODE_GENERATE,
-        NODE_FALLBACK: NODE_FALLBACK,
-    })
+    graph.add_conditional_edges(
+        NODE_VALIDATE,
+        _route_after_validate_v2,
+        {
+            NODE_PERSONA: NODE_PERSONA,
+            NODE_GENERATE: NODE_GENERATE,
+            NODE_FALLBACK: NODE_FALLBACK,
+        },
+    )
 
     # persona_envelope → respond → END
     graph.add_edge(NODE_PERSONA, NODE_RESPOND)
@@ -426,9 +444,7 @@ async def chat(
     response_text = ""
     for msg in reversed(messages):
         if isinstance(msg, AIMessage) and msg.content:
-            response_text = (
-                _normalize_content(msg.content)
-            )
+            response_text = _normalize_content(msg.content)
             break
 
     sources = result.get("sources_used", [])
@@ -476,6 +492,7 @@ async def chat_stream(
         token     – incremental text chunk (from generate node only)
         replace   – full response from non-streaming nodes (greeting, off_topic, fallback)
         sources   – cited knowledge-base categories
+        handoff   – handoff request (self-harm, frustrated x3, incentive approval)
         done      – signals end of stream
         error     – on failure
 
@@ -507,6 +524,9 @@ async def chat_stream(
     }
 
     sources: list[dict | str] = []  # Support both old str and new dict format
+    _handoff_request: dict | None = (
+        None  # R87: Capture handoff_request from terminal nodes
+    )
     node_start_times: dict[str, float] = {}
     errored = False
     # Streaming PII redactor: buffers incoming tokens and applies regex-based
@@ -593,16 +613,30 @@ async def chat_stream(
                     (time.monotonic() - node_start_times.pop(langgraph_node)) * 1000
                 )
                 output = event.get("data", {}).get("output", {})
-                meta = _extract_node_metadata(langgraph_node, output, duration_ms=duration_ms)
+                meta = _extract_node_metadata(
+                    langgraph_node, output, duration_ms=duration_ms
+                )
                 yield {
                     "event": "graph_node",
-                    "data": json.dumps({
-                        "node": langgraph_node,
-                        "status": "complete",
-                        "duration_ms": duration_ms,
-                        "metadata": meta,
-                    }),
+                    "data": json.dumps(
+                        {
+                            "node": langgraph_node,
+                            "status": "complete",
+                            "duration_ms": duration_ms,
+                            "metadata": meta,
+                        }
+                    ),
                 }
+
+                # R87: Capture handoff_request from any node output.
+                # Set by off_topic_node (self-harm), _base.py (frustrated x3),
+                # or incentive approval path (above-threshold comps).
+                if (
+                    isinstance(output, dict)
+                    and "handoff_request" in output
+                    and output["handoff_request"]
+                ):
+                    _handoff_request = output["handoff_request"]
 
     except asyncio.CancelledError:
         # Intentionally NOT flushing _pii_redactor on cancel: dropping
@@ -616,18 +650,26 @@ async def chat_stream(
         raise
     except GraphRecursionError:
         # R42 fix D1-M001: Explicit handling for recursion limit exceeded.
-        logger.error("GraphRecursionError during SSE stream — retry_count tracking bug suspected")
+        logger.error(
+            "GraphRecursionError during SSE stream — retry_count tracking bug suspected"
+        )
         errored = True
         yield {
             "event": "error",
-            "data": json.dumps({"error": "I encountered an issue processing your request. Please try again."}),
+            "data": json.dumps(
+                {
+                    "error": "I encountered an issue processing your request. Please try again."
+                }
+            ),
         }
     except Exception:
         logger.exception("Error during SSE stream")
         errored = True
         yield {
             "event": "error",
-            "data": json.dumps({"error": "An error occurred while generating the response."}),
+            "data": json.dumps(
+                {"error": "An error occurred while generating the response."}
+            ),
         }
 
     # Flush remaining PII redactor buffer (tokens accumulated but not yet emitted)
@@ -645,6 +687,15 @@ async def chat_stream(
         yield {
             "event": "sources",
             "data": json.dumps({"sources": sources, "citations": sources}),
+        }
+
+    # R87: Emit handoff event when handoff_request is set (self-harm, frustrated x3,
+    # incentive approval). Emitted after sources, before done — client can show
+    # handoff UI while agent response is still visible.
+    if _handoff_request and not errored:
+        yield {
+            "event": "handoff",
+            "data": json.dumps(_handoff_request),
         }
 
     yield {

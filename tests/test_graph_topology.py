@@ -5,7 +5,7 @@ BFS-based verification that the compiled StateGraph has:
 2. All nodes can reach END (no stuck states)
 3. No self-loops
 4. Only allowed loops exist (validate->generate retry)
-5. Node count matches expected architecture (12 user nodes)
+5. Node count matches expected architecture (13 user nodes)
 """
 
 import pytest
@@ -17,6 +17,7 @@ from src.agent.graph import (
     NODE_GREETING,
     NODE_OFF_TOPIC,
     NODE_PERSONA,
+    NODE_PRE_EXTRACT,
     NODE_PROFILING,
     NODE_RESPOND,
     NODE_RETRIEVE,
@@ -141,10 +142,10 @@ class TestGraphTopology:
     # ------------------------------------------------------------------
 
     def test_node_count_matches_expected(self):
-        """Graph has exactly 12 user-defined nodes (plus __start__ and __end__)."""
+        """Graph has exactly 13 user-defined nodes (plus __start__ and __end__)."""
         user_nodes = self._get_user_nodes()
-        assert len(user_nodes) == 12, (
-            f"Expected 12 user nodes, got {len(user_nodes)}: {sorted(user_nodes)}"
+        assert len(user_nodes) == 13, (
+            f"Expected 13 user nodes, got {len(user_nodes)}: {sorted(user_nodes)}"
         )
 
     def test_all_known_nodes_present(self):
@@ -207,8 +208,7 @@ class TestGraphTopology:
         for node in terminal_nodes:
             targets = adj.get(node, set())
             assert "__end__" in targets, (
-                f"Terminal node {node} does not connect to __end__. "
-                f"Targets: {targets}"
+                f"Terminal node {node} does not connect to __end__. Targets: {targets}"
             )
 
     def test_respond_is_final_node_before_end(self):
@@ -236,14 +236,15 @@ class TestGraphTopology:
 
     def test_happy_path_chain(self):
         """The full happy path is: compliance_gate -> router -> retrieve ->
-        whisper_planner -> generate -> profiling_enrichment -> validate -> persona_envelope -> respond -> __end__."""
+        whisper_planner -> pre_extract -> generate -> profiling_enrichment -> validate -> persona_envelope -> respond -> __end__."""
         adj = self._get_adjacency()
 
         happy_path = [
             (NODE_COMPLIANCE_GATE, NODE_ROUTER),
             (NODE_ROUTER, NODE_RETRIEVE),
             (NODE_RETRIEVE, NODE_WHISPER),
-            (NODE_WHISPER, NODE_GENERATE),
+            (NODE_WHISPER, NODE_PRE_EXTRACT),
+            (NODE_PRE_EXTRACT, NODE_GENERATE),
             (NODE_GENERATE, NODE_PROFILING),
             (NODE_PROFILING, NODE_VALIDATE),
             (NODE_VALIDATE, NODE_PERSONA),

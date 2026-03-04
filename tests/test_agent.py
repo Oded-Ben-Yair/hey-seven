@@ -16,8 +16,8 @@ class TestBuildGraph:
         assert graph is not None
         assert hasattr(graph, "invoke") or hasattr(graph, "ainvoke")
 
-    def test_graph_has_12_nodes(self):
-        """The compiled graph contains exactly 12 user-defined nodes (v2.3)."""
+    def test_graph_has_13_nodes(self):
+        """The compiled graph contains exactly 13 user-defined nodes (v2.4)."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -25,9 +25,19 @@ class TestBuildGraph:
         all_nodes = set(graph.get_graph().nodes)
         user_nodes = all_nodes - {"__start__", "__end__"}
         expected = {
-            "compliance_gate", "router", "retrieve", "whisper_planner",
-            "generate", "validate", "persona_envelope", "respond",
-            "fallback", "greeting", "off_topic", "profiling_enrichment",
+            "compliance_gate",
+            "router",
+            "retrieve",
+            "whisper_planner",
+            "pre_extract",
+            "generate",
+            "validate",
+            "persona_envelope",
+            "respond",
+            "fallback",
+            "greeting",
+            "off_topic",
+            "profiling_enrichment",
         }
         assert user_nodes == expected
 
@@ -271,9 +281,7 @@ class TestChatStream:
         # StreamingPIIRedactor may combine short chunks in the lookahead buffer.
         # Verify content integrity (no data loss) rather than per-chunk emission.
         assert len(token_events) >= 1
-        combined = "".join(
-            json.loads(e["data"])["content"] for e in token_events
-        )
+        combined = "".join(json.loads(e["data"])["content"] for e in token_events)
         assert "Hello " in combined
         assert "world!" in combined
 
@@ -304,7 +312,10 @@ class TestChatStream:
 
         replace_events = [e for e in events if e["event"] == "replace"]
         assert len(replace_events) == 1
-        assert json.loads(replace_events[0]["data"])["content"] == "Welcome to Mohegan Sun!"
+        assert (
+            json.loads(replace_events[0]["data"])["content"]
+            == "Welcome to Mohegan Sun!"
+        )
 
     @pytest.mark.asyncio
     async def test_stream_sources_from_respond_node(self):
@@ -342,7 +353,7 @@ class TestNodeConstants:
     """Node name constants prevent silent breakage from string typos."""
 
     def test_constants_exported(self):
-        """All 12 node constants are importable from graph module."""
+        """All 13 node constants are importable from graph module."""
         from src.agent.graph import (
             NODE_COMPLIANCE_GATE,
             NODE_FALLBACK,
@@ -350,6 +361,7 @@ class TestNodeConstants:
             NODE_GREETING,
             NODE_OFF_TOPIC,
             NODE_PERSONA,
+            NODE_PRE_EXTRACT,
             NODE_PROFILING,
             NODE_RESPOND,
             NODE_RETRIEVE,
@@ -361,6 +373,7 @@ class TestNodeConstants:
         assert NODE_COMPLIANCE_GATE == "compliance_gate"
         assert NODE_ROUTER == "router"
         assert NODE_RETRIEVE == "retrieve"
+        assert NODE_PRE_EXTRACT == "pre_extract"
         assert NODE_GENERATE == "generate"
         assert NODE_VALIDATE == "validate"
         assert NODE_PERSONA == "persona_envelope"
@@ -380,6 +393,7 @@ class TestNodeConstants:
             NODE_GREETING,
             NODE_OFF_TOPIC,
             NODE_PERSONA,
+            NODE_PRE_EXTRACT,
             NODE_PROFILING,
             NODE_RESPOND,
             NODE_RETRIEVE,
@@ -392,9 +406,19 @@ class TestNodeConstants:
         graph = build_graph()
         all_nodes = set(graph.get_graph().nodes) - {"__start__", "__end__"}
         expected = {
-            NODE_COMPLIANCE_GATE, NODE_ROUTER, NODE_RETRIEVE, NODE_WHISPER,
-            NODE_GENERATE, NODE_VALIDATE, NODE_PERSONA, NODE_RESPOND,
-            NODE_FALLBACK, NODE_GREETING, NODE_OFF_TOPIC, NODE_PROFILING,
+            NODE_COMPLIANCE_GATE,
+            NODE_ROUTER,
+            NODE_RETRIEVE,
+            NODE_WHISPER,
+            NODE_PRE_EXTRACT,
+            NODE_GENERATE,
+            NODE_VALIDATE,
+            NODE_PERSONA,
+            NODE_RESPOND,
+            NODE_FALLBACK,
+            NODE_GREETING,
+            NODE_OFF_TOPIC,
+            NODE_PROFILING,
         }
         assert all_nodes == expected
 
@@ -473,8 +497,12 @@ class TestExtractNodeMetadata:
         """Generate node returns specialist name metadata (R41 fix D1-M002)."""
         from src.agent.graph import _extract_node_metadata
 
-        assert _extract_node_metadata("generate", {"specialist_name": "dining"}) == {"specialist": "dining"}
-        assert _extract_node_metadata("generate", {"some": "data"}) == {"specialist": None}
+        assert _extract_node_metadata("generate", {"specialist_name": "dining"}) == {
+            "specialist": "dining"
+        }
+        assert _extract_node_metadata("generate", {"some": "data"}) == {
+            "specialist": None
+        }
 
     def test_unknown_node_returns_empty(self):
         """Unknown or unhandled nodes return empty dict."""

@@ -1,4 +1,4 @@
-"""Node functions for the 11-node Property Q&A StateGraph (v2).
+"""Node functions for the 13-node Property Q&A StateGraph (v2.4).
 
 Each node takes PropertyQAState and returns a partial dict update.
 Two routing functions determine conditional edges.
@@ -32,7 +32,6 @@ from .prompts import (
     get_responsible_gaming_helplines,
 )
 from .constants import NODE_GREETING, NODE_OFF_TOPIC, NODE_RETRIEVE
-from .extraction import extract_fields
 from .sentiment import detect_sentiment
 from .slang import normalize_for_search
 from .state import PropertyQAState, RouterOutput, ValidationResult
@@ -371,39 +370,8 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
                 )
                 sentiment_update["guest_sentiment"] = augmented
 
-    # Phase 4: Deterministic field extraction (sub-1ms regex, no LLM).
-    # Populates extracted_fields for whisper planner + guest profile.
-    # Feature flag: field_extraction_enabled (default True).
-    extraction_update: dict[str, Any] = {}
-    if await is_feature_enabled(settings.CASINO_ID, "field_extraction_enabled"):
-        extracted = extract_fields(user_message)
-        if extracted:
-            # Merge with existing fields (accumulate across turns)
-            existing = dict(state.get("extracted_fields", {}) or {})
-            existing.update(extracted)
-            extraction_update["extracted_fields"] = existing
-            # Also set guest_name if extracted
-            if extracted.get("name"):
-                extraction_update["guest_name"] = extracted["name"]
-
-    # Phase 5: LLM fallback for regex extraction misses (15+ word messages).
-    # Feature flag: extraction_llm_augmented (default True).
-    if (
-        not extraction_update.get("extracted_fields")
-        and len(user_message.split()) >= 15
-        and await is_feature_enabled(settings.CASINO_ID, "extraction_llm_augmented")
-    ):
-        from src.agent.extraction import extract_fields_augmented
-
-        augmented = await extract_fields_augmented(
-            user_message, state.get("extracted_fields", {}), _get_llm
-        )
-        if augmented:
-            existing = dict(state.get("extracted_fields", {}) or {})
-            existing.update(augmented)
-            extraction_update["extracted_fields"] = existing
-            if augmented.get("name"):
-                extraction_update["guest_name"] = augmented["name"]
+    # R87: Field extraction moved to pre_extract_node (SRP refactor).
+    # The router now focuses solely on LLM classification.
 
     # Note: All 5 deterministic guardrail checks (prompt injection, responsible
     # gaming, age verification, BSA/AML, patron privacy) are handled by the
@@ -422,7 +390,6 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
             "router_confidence": result.confidence,
             "detected_language": result.detected_language,
             **sentiment_update,
-            **extraction_update,
         }
     except (ValueError, TypeError) as exc:
         # Structured output parsing failure (invalid JSON from LLM)
@@ -432,7 +399,6 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
             "router_confidence": 0.5,
             "detected_language": "en",
             **sentiment_update,
-            **extraction_update,
         }
     except Exception:
         # Network errors, API failures, timeouts — broad catch is intentional
@@ -447,7 +413,6 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
             "router_confidence": 0.0,
             "detected_language": "en",
             **sentiment_update,
-            **extraction_update,
         }
 
 

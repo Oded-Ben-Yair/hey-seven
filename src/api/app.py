@@ -135,7 +135,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     loop = asyncio.get_running_loop()
 
     def _sigterm_handler():
-        logger.info("SIGTERM received, initiating graceful drain (%d active streams)", len(_active_streams))
+        logger.info(
+            "SIGTERM received, initiating graceful drain (%d active streams)",
+            len(_active_streams),
+        )
         _shutting_down.set()
 
     try:
@@ -154,10 +157,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # during drain call _active_streams.discard(), mutating the set during
     # iteration — RuntimeError: Set changed size during iteration.
     if _active_streams:
-        logger.info("Draining %d active SSE streams (timeout=%ds)", len(_active_streams), _DRAIN_TIMEOUT_S)
-        done, pending = await asyncio.wait(set(_active_streams), timeout=_DRAIN_TIMEOUT_S)
+        logger.info(
+            "Draining %d active SSE streams (timeout=%ds)",
+            len(_active_streams),
+            _DRAIN_TIMEOUT_S,
+        )
+        done, pending = await asyncio.wait(
+            set(_active_streams), timeout=_DRAIN_TIMEOUT_S
+        )
         if pending:
-            logger.warning("Force-closing %d SSE streams after drain timeout", len(pending))
+            logger.warning(
+                "Force-closing %d SSE streams after drain timeout", len(pending)
+            )
             for task in pending:
                 task.cancel()
 
@@ -167,6 +178,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # errors if the pool is reused during drain.
     try:
         from src.agent.tools import _RETRIEVAL_POOL
+
         _RETRIEVAL_POOL.shutdown(wait=False)
         logger.info("Retrieval thread pool shut down.")
     except Exception:
@@ -317,14 +329,16 @@ def create_app() -> FastAPI:
             }
 
         settings = get_settings()
-        return JSONResponse(content={
-            "circuit_breaker": cb_metrics,
-            "rate_limit_clients": rate_limit_clients,
-            "version": settings.VERSION,
-            "environment": settings.ENVIRONMENT,
-            "uptime_seconds": round(_time_mod.monotonic() - _app_start_time, 1),
-            "latency": latency_stats,
-        })
+        return JSONResponse(
+            content={
+                "circuit_breaker": cb_metrics,
+                "rate_limit_clients": rate_limit_clients,
+                "version": settings.VERSION,
+                "environment": settings.ENVIRONMENT,
+                "uptime_seconds": round(_time_mod.monotonic() - _app_start_time, 1),
+                "latency": latency_stats,
+            }
+        )
 
     # ---------------------------------------------------------------------------
     # Deprecation infrastructure (scaffolded, not yet wired)
@@ -350,7 +364,11 @@ def create_app() -> FastAPI:
 
             return JSONResponse(
                 status_code=503,
-                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Server is shutting down. Please retry.", status=503),
+                content=error_response(
+                    ErrorCode.AGENT_UNAVAILABLE,
+                    "Server is shutting down. Please retry.",
+                    status=503,
+                ),
                 headers={"Retry-After": "5"},
                 media_type="application/problem+json",
             )
@@ -361,7 +379,11 @@ def create_app() -> FastAPI:
 
             return JSONResponse(
                 status_code=503,
-                content=error_response(ErrorCode.AGENT_UNAVAILABLE, "Agent not initialized. Try again later.", status=503),
+                content=error_response(
+                    ErrorCode.AGENT_UNAVAILABLE,
+                    "Agent not initialized. Try again later.",
+                    status=503,
+                ),
                 headers={"Retry-After": "30"},
                 media_type="application/problem+json",
             )
@@ -376,12 +398,19 @@ def create_app() -> FastAPI:
         # replay-from-checkpoint support is deferred to post-MVP.
         last_event_id = request.headers.get("last-event-id")
         if last_event_id:
-            logger.info("SSE reconnection detected (Last-Event-ID=%s), skipping re-invoke", last_event_id)
+            logger.info(
+                "SSE reconnection detected (Last-Event-ID=%s), skipping re-invoke",
+                last_event_id,
+            )
 
             async def _reconnect_response():
                 yield {
                     "event": "error",
-                    "data": json.dumps({"error": "Connection was interrupted. Please resend your message."}),
+                    "data": json.dumps(
+                        {
+                            "error": "Connection was interrupted. Please resend your message."
+                        }
+                    ),
                 }
                 yield {"event": "done", "data": json.dumps({"done": True})}
 
@@ -421,7 +450,9 @@ def create_app() -> FastAPI:
                     # Firestore handles), causing resource leaks during LLM degradation.
                     _HEARTBEAT_INTERVAL = 15  # seconds
                     event_iter = chat_stream(
-                        agent, body.message, body.thread_id,
+                        agent,
+                        body.message,
+                        body.thread_id,
                         request_id=request_id,
                     )
 
@@ -446,14 +477,18 @@ def create_app() -> FastAPI:
                 logger.warning("SSE stream timed out after %ds", sse_timeout)
                 yield {
                     "event": "error",
-                    "data": json.dumps({"error": "Response timed out. Please try again."}),
+                    "data": json.dumps(
+                        {"error": "Response timed out. Please try again."}
+                    ),
                 }
                 yield {"event": "done", "data": json.dumps({"done": True})}
             except Exception:
                 logger.exception("Error during SSE stream")
                 yield {
                     "event": "error",
-                    "data": json.dumps({"error": "An error occurred while generating the response."}),
+                    "data": json.dumps(
+                        {"error": "An error occurred while generating the response."}
+                    ),
                 }
                 yield {"event": "done", "data": json.dumps({"done": True})}
 
@@ -548,6 +583,7 @@ def create_app() -> FastAPI:
 
         # R66 fix: Surface re2 availability for ReDoS protection monitoring
         from src.agent.regex_engine import is_re2_active
+
         _re2_active = is_re2_active()
 
         # CB open means functionally degraded — report as such
@@ -629,20 +665,47 @@ def create_app() -> FastAPI:
     # introspection fails.
     _STATIC_GRAPH_STRUCTURE = {
         "nodes": [
-            "compliance_gate", "router", "retrieve", "whisper_planner",
-            "generate", "profiling_enrichment", "validate", "persona_envelope",
-            "respond", "fallback", "greeting", "off_topic",
+            "compliance_gate",
+            "router",
+            "retrieve",
+            "whisper_planner",
+            "pre_extract",
+            "generate",
+            "profiling_enrichment",
+            "validate",
+            "persona_envelope",
+            "respond",
+            "fallback",
+            "greeting",
+            "off_topic",
         ],
         "edges": [
             {"from": "__start__", "to": "compliance_gate"},
-            {"from": "compliance_gate", "to": "router", "condition": "clean (no guardrail match)"},
+            {
+                "from": "compliance_gate",
+                "to": "router",
+                "condition": "clean (no guardrail match)",
+            },
             {"from": "compliance_gate", "to": "greeting", "condition": "greeting"},
-            {"from": "compliance_gate", "to": "off_topic", "condition": "guardrail triggered"},
-            {"from": "router", "to": "retrieve", "condition": "property_qa | hours_schedule | ambiguous"},
+            {
+                "from": "compliance_gate",
+                "to": "off_topic",
+                "condition": "guardrail triggered",
+            },
+            {
+                "from": "router",
+                "to": "retrieve",
+                "condition": "property_qa | hours_schedule | ambiguous",
+            },
             {"from": "router", "to": "greeting", "condition": "greeting"},
-            {"from": "router", "to": "off_topic", "condition": "off_topic | gambling_advice | action_request"},
+            {
+                "from": "router",
+                "to": "off_topic",
+                "condition": "off_topic | gambling_advice | action_request",
+            },
             {"from": "retrieve", "to": "whisper_planner"},
-            {"from": "whisper_planner", "to": "generate"},
+            {"from": "whisper_planner", "to": "pre_extract"},
+            {"from": "pre_extract", "to": "generate"},
             {"from": "generate", "to": "profiling_enrichment"},
             {"from": "profiling_enrichment", "to": "validate"},
             {"from": "validate", "to": "persona_envelope", "condition": "PASS"},
@@ -720,7 +783,9 @@ def create_app() -> FastAPI:
         settings = get_settings()
         if not settings.SMS_ENABLED:
             return JSONResponse(
-                content=error_response(ErrorCode.NOT_FOUND, "SMS channel is not enabled.", status=404),
+                content=error_response(
+                    ErrorCode.NOT_FOUND, "SMS channel is not enabled.", status=404
+                ),
                 status_code=404,
                 media_type="application/problem+json",
             )
@@ -737,11 +802,18 @@ def create_app() -> FastAPI:
                 signature = request.headers.get("telnyx-signature-ed25519", "")
                 timestamp = request.headers.get("telnyx-timestamp", "")
                 if not await verify_webhook_signature(
-                    raw_body, signature, timestamp, telnyx_public_key,
+                    raw_body,
+                    signature,
+                    timestamp,
+                    telnyx_public_key,
                 ):
                     logger.warning("SMS webhook signature verification failed")
                     return JSONResponse(
-                        content=error_response(ErrorCode.UNAUTHORIZED, "Invalid webhook signature.", status=401),
+                        content=error_response(
+                            ErrorCode.UNAUTHORIZED,
+                            "Invalid webhook signature.",
+                            status=401,
+                        ),
                         status_code=401,
                         media_type="application/problem+json",
                     )
@@ -776,7 +848,9 @@ def create_app() -> FastAPI:
         except Exception:
             logger.exception("SMS webhook error")
             return JSONResponse(
-                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error", status=500),
+                content=error_response(
+                    ErrorCode.INTERNAL_ERROR, "Internal error", status=500
+                ),
                 status_code=500,
                 media_type="application/problem+json",
             )
@@ -809,7 +883,9 @@ def create_app() -> FastAPI:
         except Exception:
             logger.exception("CMS webhook error")
             return JSONResponse(
-                content=error_response(ErrorCode.INTERNAL_ERROR, "Internal error", status=500),
+                content=error_response(
+                    ErrorCode.INTERNAL_ERROR, "Internal error", status=500
+                ),
                 status_code=500,
                 media_type="application/problem+json",
             )
