@@ -1,57 +1,67 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R85 behavioral+profiling sprint complete. Anti-deflection, signal reading, format adaptation, profiling prompt fix, incentive wiring, BSA hardening, Spanish crisis fix. 3-model judge panel: B10=6.2 (+0.2), P-avg=5.0 (+3.0), Safety=95% (+53pp).",
-    "lastModified": "2026-03-03T18:30:00Z",
+    "summary": "R86 complete — Phase A Foundation. Eval v2 system built, BSA/AML CTR safety fix, canned deflection eliminated from all fallbacks.",
+    "lastModified": "2026-03-04T08:30:00Z",
     "branch": "main",
-    "commitHash": "pending",
+    "commitHash": "a85e687",
     "tag": "v1.5.0",
-    "phase": "r85-complete"
+    "phase": "r86-complete"
   },
-  "blockers": [
-    "B10 target (7.5) not yet met — deflection still in 3/20 scenarios (fallback responses)",
-    "Preview model rate limits: ~10 RPM free tier, ~250 RPD on Tier 1"
-  ],
+  "blueprintPhase": "Phase A: Foundation (2/2 sessions complete)",
+  "roundNumber": 86,
+  "scores": {
+    "technical": 9.63,
+    "behavioral": 6.2,
+    "profiling": 5.0,
+    "hostTriangle": null,
+    "safety": 95
+  },
+  "blockers": [],
   "nextSteps": [
-    { "priority": 0, "description": "Fix remaining deflection in fallback responses (3 scenarios: agentic-09, implicit-09, overall-01)" },
-    { "priority": 1, "description": "Improve cross-domain suggestion specificity (B4 at 5.6)" },
-    { "priority": 2, "description": "Lower incentive completeness gate from 50% to 25% so incentives fire earlier" },
-    { "priority": 3, "description": "Run profiling-specific eval (P1-P10 dedicated scenarios)" },
-    { "priority": 4, "description": "Implement eval v2 streaming system (design doc at docs/plans/eval-v2-streaming-design.md)" }
+    {
+      "priority": 0,
+      "description": "R87: Pre-extraction node (src/agent/pre_extract.py) — fix one-turn profiling lag"
+    },
+    {
+      "priority": 1,
+      "description": "R87: Handoff SSE emission — emit handoff event when handoff_request is set"
+    },
+    {
+      "priority": 2,
+      "description": "R87: Wire incentive approval path + lower completeness gate 50%→25%"
+    },
+    {
+      "priority": 3,
+      "description": "R87: Run eval v2 baseline (20 scenarios with gemini-2.5-flash)"
+    }
   ],
   "reviewHistory": {
-    "r85": {
-      "date": "2026-03-03",
+    "r86": {
+      "date": "2026-03-04",
       "changes": [
-        "Anti-deflection instruction in _base.py",
-        "Signal reading (fatigue, VIP, urgency, dissatisfaction)",
-        "Format adaptation (match guest energy)",
-        "Natural follow-up questions (unconditional)",
-        "Cross-domain suggestions",
-        "Deflection removal from 3 specialist agents",
-        "BSA/AML response hardened (non-engaging) + 2 CTR patterns",
-        "Spanish crisis detection heuristic",
-        "Incentive engine wired to _base.py",
-        "Extraction prompt improved (less conservative)",
-        "Profiling live test added"
+        "Eval v2 system: tests/evaluation/v2/ (runner, storage, rate_limiter, schemas, cli)",
+        "BSA/AML CTR threshold removed from knowledge-base",
+        "CTR amount detection pattern added to guardrails (215 total)",
+        "CTR amount redaction in persona.py _validate_output()",
+        "Fallback_node replaced with domain-aware re-engagement",
+        "All 5 specialist fallbacks replaced (no more phone/website deflection)",
+        "Deflection slop pattern added",
+        "7 test files updated for new fallback wording",
+        "/hey-seven-session skill created"
       ],
-      "subsetEval": {
-        "scenarios": 20,
-        "turns": 60,
-        "errors": 14,
-        "realResponseRate": "77%",
-        "avgTurnMs": 37886,
-        "model": "gemini-3-flash-preview"
-      },
-      "judgePanel": {
-        "judges": ["gpt52", "grok4"],
-        "B10_consensus": 6.2,
-        "P_average": 5.0,
-        "safety_pass_rate": "95%"
+      "teamUsed": {
+        "name": "r86-sprint",
+        "teammates": [
+          "eval-builder",
+          "safety-fixer"
+        ],
+        "lead": "team-lead"
       }
     },
     "trajectory": {
-      "R52": 67.7, "R68_consensus": 92.9,
+      "R52": 67.7,
+      "R68_consensus": 92.9,
       "R75_technical": 9.63,
       "R82_behavioral_2model": 4.7,
       "R84_behavioral_2model": 6.0,
@@ -63,16 +73,17 @@
     }
   },
   "codebaseMetrics": {
-    "tests": 3503,
+    "tests": 3494,
     "testFailures": 0,
     "stateFields": 28,
     "featureFlags": 17,
-    "guardrailPatterns": 213,
+    "guardrailPatterns": 215,
+    "slopPatterns": 10,
     "fewShotExamples": 25,
     "commits_this_session": 1
   },
   "sessionNotes": {
-    "lastSessionDate": "2026-03-03",
-    "lastSessionId": "hey-seven-session-20260303-r85"
+    "lastSessionDate": "2026-03-04",
+    "lastSessionId": "hey-seven-session-20260304-d53003"
   }
 }
