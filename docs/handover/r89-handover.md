@@ -47,9 +47,23 @@ Greeting_node acknowledgments now suggest specific venues instead of generic dom
 - `tests/evaluation/r88-judge-scores.json` — R88 scoring results
 
 ## R89 Eval Status
-**Running** in background with new RPM settings. Expected completion: ~30 min.
-If completed, results in `tests/evaluation/v2-results/`.
-Run judge panel: same methodology as R88 (GPT-5.2 + Grok 4).
+**Running** in background (task `bxzzbxpef`). At ~7 min/scenario, full run takes ~2+ hours.
+Check progress: `tail /tmp/claude-1000/-home-odedbe-projects-hey-seven/tasks/bxzzbxpef.output`
+Results in: `tests/evaluation/v2-results/`
+
+### First Scenario (agentic-01) Results:
+- **Turn 0**: EXCELLENT — SolToro rec, hours, follow-up question, cross-domain Wolf Den. 66s.
+- **Turn 1**: TIMEOUT (90s) — API rate limit. Not code issue.
+- **Turn 2**: NEW venue-specific closer working ("Wolf Den has free live music")
+
+### Observed Improvements vs R88:
+1. Follow-up questions present in turn 0 (was missing in R88)
+2. Venue-specific closers replacing generic domain labels
+3. Slop patterns ("I'd suggest" instead of "I highly recommend")
+4. Cross-domain suggestions with specific venues
+
+### After Eval Completes:
+Run judge panel: same methodology as R88 (GPT-5.2 + Grok 4). Score all 20 scenarios.
 
 ## Next Steps (R90)
 1. **Score R89 eval** — if eval completed, run judge panel. Target: B-avg 7.5+ (up from 6.85).
