@@ -29,12 +29,37 @@ __all__ = ["persona_envelope_node"]
 # Common sentence starters that should be lowercased when prepending guest name.
 # e.g., "We have great restaurants" -> "Sarah, we have great restaurants".
 # Proper nouns (Mohegan, Bobby) are NOT in this set, so they stay capitalized.
-_LOWERCASE_STARTERS: frozenset[str] = frozenset({
-    "I", "We", "Our", "You", "Your", "The", "There", "Here",
-    "It", "This", "That", "As", "For", "With", "At", "To",
-    "A", "An", "Yes", "No", "So", "Well", "Now", "Actually",
-    "Absolutely", "Of", "Sure",
-})
+_LOWERCASE_STARTERS: frozenset[str] = frozenset(
+    {
+        "I",
+        "We",
+        "Our",
+        "You",
+        "Your",
+        "The",
+        "There",
+        "Here",
+        "It",
+        "This",
+        "That",
+        "As",
+        "For",
+        "With",
+        "At",
+        "To",
+        "A",
+        "An",
+        "Yes",
+        "No",
+        "So",
+        "Well",
+        "Now",
+        "Actually",
+        "Absolutely",
+        "Of",
+        "Sure",
+    }
+)
 
 
 def _validate_output(response_text: str) -> str:
@@ -52,6 +77,8 @@ def _validate_output(response_text: str) -> str:
     redacted = redact_pii(response_text)
     if redacted != response_text:
         logger.warning("Output guardrail: PII detected in LLM response, redacting")
+    # R86: CTR threshold redaction — prevent BSA/AML threshold disclosure
+    redacted = re.sub(r"\$\s*10[,.]?000", "[regulatory threshold]", redacted)
     return redacted
 
 
@@ -91,12 +118,12 @@ def _enforce_branding(content: str, branding: dict) -> str:
         # Remove common emoji ranges (supplementary multilingual plane)
         content = re.sub(
             r"[\U0001F600-\U0001F64F"  # emoticons
-            r"\U0001F300-\U0001F5FF"   # symbols & pictographs
-            r"\U0001F680-\U0001F6FF"   # transport & map
-            r"\U0001F1E0-\U0001F1FF"   # flags
-            r"\U00002702-\U000027B0"   # dingbats
-            r"\U0000FE00-\U0000FE0F"   # variation selectors
-            r"\U0000200D"              # zero-width joiner
+            r"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            r"\U0001F680-\U0001F6FF"  # transport & map
+            r"\U0001F1E0-\U0001F1FF"  # flags
+            r"\U00002702-\U000027B0"  # dingbats
+            r"\U0000FE00-\U0000FE0F"  # variation selectors
+            r"\U0000200D"  # zero-width joiner
             r"]+",
             "",
             content,
@@ -143,19 +170,26 @@ def _inject_guest_name(content: str, guest_name: str | None) -> str:
 # Performative openers that make responses sound artificial
 _PERFORMATIVE_OPENER_PATTERNS: list[re.Pattern] = [
     # "Absolutely! " / "Absolutely, "
-    re.compile(r'^Absolutely[!,]\s*', re.IGNORECASE),
+    re.compile(r"^Absolutely[!,]\s*", re.IGNORECASE),
     # "Oh, " / "Oh! " at start of response
-    re.compile(r'^Oh[,!]\s*', re.IGNORECASE),
+    re.compile(r"^Oh[,!]\s*", re.IGNORECASE),
     # "I'd be absolutely delighted" / "I'd be happy to" / "I'd be glad to"
-    re.compile(r"^I'?d be (?:absolutely )?(?:delighted|happy|glad) to[!.]?\s*", re.IGNORECASE),
+    re.compile(
+        r"^I'?d be (?:absolutely )?(?:delighted|happy|glad) to[!.]?\s*", re.IGNORECASE
+    ),
     # "What a wonderful question!" / "What a great question!"
-    re.compile(r'^What a (?:wonderful|great|fantastic|excellent) question[!.]?\s*', re.IGNORECASE),
+    re.compile(
+        r"^What a (?:wonderful|great|fantastic|excellent) question[!.]?\s*",
+        re.IGNORECASE,
+    ),
     # "Great question!" at start
-    re.compile(r'^(?:Great|Excellent|Wonderful|Fantastic) question[!.]?\s*', re.IGNORECASE),
+    re.compile(
+        r"^(?:Great|Excellent|Wonderful|Fantastic) question[!.]?\s*", re.IGNORECASE
+    ),
     # "Of course!" at start
-    re.compile(r'^Of course[!,]\s*', re.IGNORECASE),
+    re.compile(r"^Of course[!,]\s*", re.IGNORECASE),
     # "Sure thing!" at start
-    re.compile(r'^Sure thing[!,]\s*', re.IGNORECASE),
+    re.compile(r"^Sure thing[!,]\s*", re.IGNORECASE),
 ]
 
 
@@ -181,7 +215,7 @@ def _strip_performative_openers(content: str) -> str:
     for _ in range(3):  # Max 3 passes (handles "Oh, absolutely! Great question!")
         original = content
         for pattern in _PERFORMATIVE_OPENER_PATTERNS:
-            content = pattern.sub('', content, count=1)
+            content = pattern.sub("", content, count=1)
         if content == original:
             break
 
@@ -190,21 +224,21 @@ def _strip_performative_openers(content: str) -> str:
         content = content[0].upper() + content[1:]
 
     # Reduce exclamation clustering in first paragraph
-    first_para_end = content.find('\n\n')
+    first_para_end = content.find("\n\n")
     if first_para_end == -1:
         first_para_end = len(content)
     first_para = content[:first_para_end]
-    excl_count = first_para.count('!')
+    excl_count = first_para.count("!")
     if excl_count >= 3:
         # Keep only the first exclamation mark, replace rest with periods
         found = 0
         chars = list(first_para)
         for i, ch in enumerate(chars):
-            if ch == '!':
+            if ch == "!":
                 found += 1
                 if found > 1:
-                    chars[i] = '.'
-        content = ''.join(chars) + content[first_para_end:]
+                    chars[i] = "."
+        content = "".join(chars) + content[first_para_end:]
 
     return content
 
@@ -259,9 +293,9 @@ async def persona_envelope_node(state: PropertyQAState) -> dict[str, Any]:
     # Fall back to extracted_fields["name"] when guest_name is None.
     # guest_name has no reducer so it resets per-turn; extracted_fields
     # persists via _merge_dicts reducer across turns.
-    guest_name = state.get("guest_name") or (
-        state.get("extracted_fields") or {}
-    ).get("name")
+    guest_name = state.get("guest_name") or (state.get("extracted_fields") or {}).get(
+        "name"
+    )
     content = _inject_guest_name(content, guest_name)
 
     # Step 4: SMS truncation (only when max_chars > 0)

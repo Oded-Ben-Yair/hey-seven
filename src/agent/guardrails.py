@@ -42,7 +42,10 @@ __all__ = [
 
 #: Regex patterns for prompt injection detection.
 _INJECTION_PATTERNS = [
-    regex_engine.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)", re.I),
+    regex_engine.compile(
+        r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)",
+        re.I,
+    ),
     regex_engine.compile(r"you\s+are\s+now\s+(?:a|an|the)\b", re.I),
     regex_engine.compile(r"system\s*:\s*", re.I),
     # R38 fix D7-M1: re.DOTALL so .* matches newlines. Without it,
@@ -62,31 +65,55 @@ _INJECTION_PATTERNS = [
     # Base64/encoding tricks
     regex_engine.compile(r"\b(?:base64|decode|encode)\s*[\(:]", re.I),
     # Unicode homoglyph/obfuscation
-    regex_engine.compile(r"[\u200b-\u200f\u2028-\u202f\ufeff]", re.I),  # zero-width chars
+    regex_engine.compile(
+        r"[\u200b-\u200f\u2028-\u202f\ufeff]", re.I
+    ),  # zero-width chars
     # Multi-line injection attempts
     regex_engine.compile(r"---\s*(?:system|admin|root|override)", re.I),
     # Jailbreak prompt framing
     regex_engine.compile(r"\bjailbreak\b", re.I),
     # Tagalog/Taglish injection patterns (significant Filipino-American casino clientele)
-    regex_engine.compile(r"\bkalimutan\s+(?:ang\s+)?(?:mga\s+)?(?:tagubilin|instruksyon)", re.I),  # forget instructions
-    regex_engine.compile(r"\bhuwag\s+(?:mong?\s+)?(?:sundin|pansinin)", re.I),  # don't follow / ignore
+    regex_engine.compile(
+        r"\bkalimutan\s+(?:ang\s+)?(?:mga\s+)?(?:tagubilin|instruksyon)", re.I
+    ),  # forget instructions
+    regex_engine.compile(
+        r"\bhuwag\s+(?:mong?\s+)?(?:sundin|pansinin)", re.I
+    ),  # don't follow / ignore
     regex_engine.compile(r"\bmagkunwari\s+(?:ka|kang)\b", re.I),  # pretend you are
-    regex_engine.compile(r"\bikaw\s+(?:ay\s+)?(?:ngayon|na)\s+(?:isang?\s+)?", re.I),  # you are now a
+    regex_engine.compile(
+        r"\bikaw\s+(?:ay\s+)?(?:ngayon|na)\s+(?:isang?\s+)?", re.I
+    ),  # you are now a
     regex_engine.compile(r"\bkumilos\s+(?:bilang|na\s+parang)\b", re.I),  # act as
-    regex_engine.compile(r"\bi[- ]?override\s+(?:ang\s+)?(?:mga\s+)?(?:patakaran|rules?)", re.I),  # override rules/policies
-    regex_engine.compile(r"\bipakita\s+(?:ang\s+)?(?:mga\s+)?(?:lihim|sikreto)", re.I),  # reveal secrets
+    regex_engine.compile(
+        r"\bi[- ]?override\s+(?:ang\s+)?(?:mga\s+)?(?:patakaran|rules?)", re.I
+    ),  # override rules/policies
+    regex_engine.compile(
+        r"\bipakita\s+(?:ang\s+)?(?:mga\s+)?(?:lihim|sikreto)", re.I
+    ),  # reveal secrets
     # Taglish hybrid injection (English words with Filipino structure)
-    regex_engine.compile(r"\bignore\s+na\s+(?:ang\s+)?(?:mga\s+)?instructions?", re.I),  # Taglish: ignore the instructions
-    regex_engine.compile(r"\bforget\s+na\s+(?:yung|ang)\s+(?:previous\s+)?instructions?", re.I),  # Taglish: forget previous instructions
+    regex_engine.compile(
+        r"\bignore\s+na\s+(?:ang\s+)?(?:mga\s+)?instructions?", re.I
+    ),  # Taglish: ignore the instructions
+    regex_engine.compile(
+        r"\bforget\s+na\s+(?:yung|ang)\s+(?:previous\s+)?instructions?", re.I
+    ),  # Taglish: forget previous instructions
 ]
 
 # Casino-domain role terms that are legitimate in "act as a [role]" context.
 # Used by _audit_input() to whitelist casino-domain roles that would otherwise
 # be caught by the broad "act as a \w+" injection pattern in _INJECTION_PATTERNS.
-_ACT_AS_WHITELIST = frozenset({
-    "guide", "concierge", "host", "member", "vip", "guest", "player",
-    "high",  # "high roller" — "high" is the first \w+ captured
-})
+_ACT_AS_WHITELIST = frozenset(
+    {
+        "guide",
+        "concierge",
+        "host",
+        "member",
+        "vip",
+        "guest",
+        "player",
+        "high",  # "high roller" — "high" is the first \w+ captured
+    }
+)
 
 # Compiled pattern for whitelist check (same as the one in _INJECTION_PATTERNS).
 # Uses stdlib re.compile directly (not regex_engine.compile) to avoid inflating
@@ -124,45 +151,63 @@ def _is_act_as_whitelisted(message: str) -> bool:
 _NON_LATIN_INJECTION_PATTERNS = [
     # Arabic
     regex_engine.compile(r"تجاهل التعليمات", re.I),  # "ignore instructions"
-    regex_engine.compile(r"أنت الآن", re.I),           # "you are now"
-    regex_engine.compile(r"تصرف كـ", re.I),           # "act as"
-    regex_engine.compile(r"نظام جديد", re.I),          # "new system"
-    regex_engine.compile(r"كشف الأسرار", re.I),        # "reveal secrets"
+    regex_engine.compile(r"أنت الآن", re.I),  # "you are now"
+    regex_engine.compile(r"تصرف كـ", re.I),  # "act as"
+    regex_engine.compile(r"نظام جديد", re.I),  # "new system"
+    regex_engine.compile(r"كشف الأسرار", re.I),  # "reveal secrets"
     # Japanese
-    regex_engine.compile(r"すべての指示を無視", re.I),    # "ignore all instructions"
-    regex_engine.compile(r"DANモード"),                  # "DAN mode"
-    regex_engine.compile(r"システムプロンプト"),           # "system prompt"
-    regex_engine.compile(r"制限を解除"),                  # "remove restrictions"
-    regex_engine.compile(r"秘密を教えて"),                # "tell me secrets"
+    regex_engine.compile(r"すべての指示を無視", re.I),  # "ignore all instructions"
+    regex_engine.compile(r"DANモード"),  # "DAN mode"
+    regex_engine.compile(r"システムプロンプト"),  # "system prompt"
+    regex_engine.compile(r"制限を解除"),  # "remove restrictions"
+    regex_engine.compile(r"秘密を教えて"),  # "tell me secrets"
     # Korean
-    regex_engine.compile(r"모든 지시 무시"),              # "ignore all instructions"
-    regex_engine.compile(r"시스템 프롬프트"),             # "system prompt"
-    regex_engine.compile(r"제한 해제"),                  # "remove restrictions"
+    regex_engine.compile(r"모든 지시 무시"),  # "ignore all instructions"
+    regex_engine.compile(r"시스템 프롬프트"),  # "system prompt"
+    regex_engine.compile(r"제한 해제"),  # "remove restrictions"
     # Mandarin/Chinese (R49 fix — Gemini CRITICAL-D7-002)
     # Injection layer had zero CJK coverage while RG+BSA layers had full coverage.
-    regex_engine.compile(r"忽略(?:所有)?(?:之前的?|以前的?)?(?:指令|指示|规则)"),  # ignore instructions
-    regex_engine.compile(r"(?:你|您)(?:现在|从现在起)(?:是|变成)"),              # you are now
-    regex_engine.compile(r"假装(?:你|您)?(?:是|为)"),                           # pretend you are
-    regex_engine.compile(r"新(?:的)?系统(?:提示|指令|角色)"),                    # new system prompt/role
-    regex_engine.compile(r"(?:揭示|显示|泄露)(?:系统|隐藏)?(?:提示|指令|秘密)"), # reveal secrets/prompts
-    regex_engine.compile(r"越狱"),                                              # jailbreak (越狱)
+    regex_engine.compile(
+        r"忽略(?:所有)?(?:之前的?|以前的?)?(?:指令|指示|规则)"
+    ),  # ignore instructions
+    regex_engine.compile(r"(?:你|您)(?:现在|从现在起)(?:是|变成)"),  # you are now
+    regex_engine.compile(r"假装(?:你|您)?(?:是|为)"),  # pretend you are
+    regex_engine.compile(r"新(?:的)?系统(?:提示|指令|角色)"),  # new system prompt/role
+    regex_engine.compile(
+        r"(?:揭示|显示|泄露)(?:系统|隐藏)?(?:提示|指令|秘密)"
+    ),  # reveal secrets/prompts
+    regex_engine.compile(r"越狱"),  # jailbreak (越狱)
     # French (significant US casino patron demographic)
-    regex_engine.compile(r"ignorer\s+(?:toutes?\s+)?(?:les?\s+)?instructions?", re.I),  # ignore instructions
+    regex_engine.compile(
+        r"ignorer\s+(?:toutes?\s+)?(?:les?\s+)?instructions?", re.I
+    ),  # ignore instructions
     regex_engine.compile(r"tu\s+es\s+maintenant", re.I),  # you are now
     regex_engine.compile(r"agis?\s+comme", re.I),  # act as
     regex_engine.compile(r"nouveau\s+syst[eè]me", re.I),  # new system
-    regex_engine.compile(r"r[eé]v[eé]ler?\s+(?:les?\s+)?secrets?", re.I),  # reveal secrets
+    regex_engine.compile(
+        r"r[eé]v[eé]ler?\s+(?:les?\s+)?secrets?", re.I
+    ),  # reveal secrets
     # Vietnamese (significant US casino patron demographic)
-    regex_engine.compile(r"bỏ qua\s+(?:tất cả\s+)?hướng dẫn", re.I),  # ignore instructions
+    regex_engine.compile(
+        r"bỏ qua\s+(?:tất cả\s+)?hướng dẫn", re.I
+    ),  # ignore instructions
     regex_engine.compile(r"bây giờ bạn là", re.I),  # you are now
     regex_engine.compile(r"hệ thống mới", re.I),  # new system
     regex_engine.compile(r"tiết lộ bí mật", re.I),  # reveal secrets
     # Hindi/Devanagari (significant US casino Indian-American clientele)
-    regex_engine.compile(r"(?:पिछले|पहले)\s*(?:निर्देशों?|नियमों?)\s*(?:को\s+)?(?:अनदेखा|भूल)", re.I),  # ignore previous instructions
+    regex_engine.compile(
+        r"(?:पिछले|पहले)\s*(?:निर्देशों?|नियमों?)\s*(?:को\s+)?(?:अनदेखा|भूल)", re.I
+    ),  # ignore previous instructions
     regex_engine.compile(r"(?:तुम|आप)\s+अब\s+(?:एक\s+)?", re.I),  # you are now
-    regex_engine.compile(r"(?:की\s+तरह|बनकर|का\s+(?:रोल|किरदार))\s*(?:करो|कीजिए)", re.I),  # act as / pretend to be
-    regex_engine.compile(r"(?:अपने|आपके)\s*(?:निर्देश|नियम)\s*(?:भूल|बदलो|हटाओ)", re.I),  # forget your instructions
-    regex_engine.compile(r"(?:राज़?|सीक्रेट|गुप्त)\s*(?:बताओ|दिखाओ|खोलो)", re.I),  # reveal secrets
+    regex_engine.compile(
+        r"(?:की\s+तरह|बनकर|का\s+(?:रोल|किरदार))\s*(?:करो|कीजिए)", re.I
+    ),  # act as / pretend to be
+    regex_engine.compile(
+        r"(?:अपने|आपके)\s*(?:निर्देश|नियम)\s*(?:भूल|बदलो|हटाओ)", re.I
+    ),  # forget your instructions
+    regex_engine.compile(
+        r"(?:राज़?|सीक्रेट|गुप्त)\s*(?:बताओ|दिखाओ|खोलो)", re.I
+    ),  # reveal secrets
 ]
 
 # ---------------------------------------------------------------------------
@@ -187,7 +232,9 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     regex_engine.compile(r"(?:want|need)\s+to\s+(?:ban|exclude)\s+(?:myself|me)", re.I),
     regex_engine.compile(r"limit\s+my\s+(?:gambl|play|betting)", re.I),
     regex_engine.compile(r"take\s+a\s+break\s+from\s+gambl", re.I),
-    regex_engine.compile(r"spend(?:ing)?\s+too\s+much\s+(?:at\s+(?:the\s+)?casino|gambl)", re.I),
+    regex_engine.compile(
+        r"spend(?:ing)?\s+too\s+much\s+(?:at\s+(?:the\s+)?casino|gambl)", re.I
+    ),
     regex_engine.compile(r"(?:my\s+)?family\s+(?:says?|thinks?)\s+I\s+gambl", re.I),
     regex_engine.compile(r"cool(?:ing)?[- ]?off\s+period", re.I),
     # Spanish patterns (US casino diverse clientele)
@@ -196,17 +243,25 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     regex_engine.compile(r"no\s+puedo\s+(?:parar|dejar)\s+de\s+jugar", re.I),
     regex_engine.compile(r"ayuda\s+con\s+(?:el\s+)?juego", re.I),
     regex_engine.compile(r"juego\s+compulsivo", re.I),
-    regex_engine.compile(r"auto[- ]?exclusi[oó]n", re.I),   # self-exclusion in Spanish
-    regex_engine.compile(r"l[ií]mite\s+(?:de\s+)?(?:juego|apuesta)", re.I),  # betting limit
-    regex_engine.compile(r"perd[ií]\s+todo\s+(?:en\s+el\s+)?(?:casino|juego)", re.I),  # lost everything
+    regex_engine.compile(r"auto[- ]?exclusi[oó]n", re.I),  # self-exclusion in Spanish
+    regex_engine.compile(
+        r"l[ií]mite\s+(?:de\s+)?(?:juego|apuesta)", re.I
+    ),  # betting limit
+    regex_engine.compile(
+        r"perd[ií]\s+todo\s+(?:en\s+el\s+)?(?:casino|juego)", re.I
+    ),  # lost everything
     # Portuguese patterns (CT casino diverse clientele)
     regex_engine.compile(r"problema\s+(?:com|de)\s+jogo", re.I),  # gambling problem
-    regex_engine.compile(r"v[ií]cio\s+(?:em|de)\s+jogo", re.I),   # gambling addiction
-    regex_engine.compile(r"n[aã]o\s+consigo\s+parar\s+de\s+jogar", re.I),  # can't stop gambling
+    regex_engine.compile(r"v[ií]cio\s+(?:em|de)\s+jogo", re.I),  # gambling addiction
+    regex_engine.compile(
+        r"n[aã]o\s+consigo\s+parar\s+de\s+jogar", re.I
+    ),  # can't stop gambling
     # Mandarin patterns (CT casino significant Asian clientele)
-    regex_engine.compile(r"赌博\s*(?:成瘾|上瘾|问题)", re.I),  # gambling addiction/problem
-    regex_engine.compile(r"戒\s*赌", re.I),                     # quit gambling
-    regex_engine.compile(r"赌瘾", re.I),                         # gambling addiction (colloquial)
+    regex_engine.compile(
+        r"赌博\s*(?:成瘾|上瘾|问题)", re.I
+    ),  # gambling addiction/problem
+    regex_engine.compile(r"戒\s*赌", re.I),  # quit gambling
+    regex_engine.compile(r"赌瘾", re.I),  # gambling addiction (colloquial)
     # French responsible gaming patterns
     regex_engine.compile(r"probl[eè]me\s+de\s+jeu", re.I),  # gambling problem
     regex_engine.compile(r"d[eé]pendance?\s+au\s+jeu", re.I),  # gambling addiction
@@ -214,35 +269,71 @@ _RESPONSIBLE_GAMING_PATTERNS = [
     # Vietnamese responsible gaming patterns
     regex_engine.compile(r"nghiện\s+(?:cờ\s+)?bạc", re.I),  # gambling addiction
     regex_engine.compile(r"vấn đề\s+(?:cờ\s+)?bạc", re.I),  # gambling problem
-    regex_engine.compile(r"không\s+thể\s+ngừng\s+(?:chơi|đánh\s+bạc)", re.I),  # can't stop gambling
+    regex_engine.compile(
+        r"không\s+thể\s+ngừng\s+(?:chơi|đánh\s+bạc)", re.I
+    ),  # can't stop gambling
     # Hindi responsible gaming patterns (NJ/CT significant Indian-American clientele)
-    regex_engine.compile(r"जु(?:ए|आ)\s*(?:की|का)\s*(?:लत|आदत|नशा)", re.I),  # gambling addiction (जुए की लत)
-    regex_engine.compile(r"(?:जुआ|सट्टा)\s*(?:रोक|छोड़|बंद)\s*नहीं", re.I),  # can't stop gambling
-    regex_engine.compile(r"(?:जुए?|सट्टे?)\s*(?:की|का)\s*(?:समस्या|दिक्कत)", re.I),  # gambling problem
-    regex_engine.compile(r"(?:जुआ|सट्टा|गैंबलिंग)\s*(?:छोड़ना|बंद\s*करना)\s*(?:चाहता|चाहती|चाहिए)", re.I),  # want to stop gambling
-    regex_engine.compile(r"(?:जुए?|सट्टे?|गैंबलिंग)\s*(?:में|से)?\s*(?:मदद|सहायता|हेल्प)", re.I),  # need help with gambling
-    regex_engine.compile(r"(?:कर्ज़?|कर्ज)\s*(?:में\s+(?:डूब|फंस)|का\s+जाल)", re.I),  # drowning in debt
-    regex_engine.compile(r"(?:जुए?|सट्टे?)\s*(?:से|की\s+वजह\s+से)\s*(?:परिवार|घर|रिश्ते?)", re.I),  # family problems from gambling
+    regex_engine.compile(
+        r"जु(?:ए|आ)\s*(?:की|का)\s*(?:लत|आदत|नशा)", re.I
+    ),  # gambling addiction (जुए की लत)
+    regex_engine.compile(
+        r"(?:जुआ|सट्टा)\s*(?:रोक|छोड़|बंद)\s*नहीं", re.I
+    ),  # can't stop gambling
+    regex_engine.compile(
+        r"(?:जुए?|सट्टे?)\s*(?:की|का)\s*(?:समस्या|दिक्कत)", re.I
+    ),  # gambling problem
+    regex_engine.compile(
+        r"(?:जुआ|सट्टा|गैंबलिंग)\s*(?:छोड़ना|बंद\s*करना)\s*(?:चाहता|चाहती|चाहिए)", re.I
+    ),  # want to stop gambling
+    regex_engine.compile(
+        r"(?:जुए?|सट्टे?|गैंबलिंग)\s*(?:में|से)?\s*(?:मदद|सहायता|हेल्प)", re.I
+    ),  # need help with gambling
+    regex_engine.compile(
+        r"(?:कर्ज़?|कर्ज)\s*(?:में\s+(?:डूब|फंस)|का\s+जाल)", re.I
+    ),  # drowning in debt
+    regex_engine.compile(
+        r"(?:जुए?|सट्टे?)\s*(?:से|की\s+वजह\s+से)\s*(?:परिवार|घर|रिश्ते?)", re.I
+    ),  # family problems from gambling
     # Tagalog/Taglish responsible gaming patterns (significant Filipino-American clientele)
-    regex_engine.compile(r"\badik\s+sa\s+(?:sugal|pustahan|gambling)", re.I),  # addicted to gambling
-    regex_engine.compile(r"\bhindi\s+(?:ko\s+)?(?:na\s+)?(?:makatigil|mapigilan|maiwasan)", re.I),  # can't stop
-    regex_engine.compile(r"\bproblema\s+sa\s+(?:sugal|pustahan|gambling)", re.I),  # gambling problem
+    regex_engine.compile(
+        r"\badik\s+sa\s+(?:sugal|pustahan|gambling)", re.I
+    ),  # addicted to gambling
+    regex_engine.compile(
+        r"\bhindi\s+(?:ko\s+)?(?:na\s+)?(?:makatigil|mapigilan|maiwasan)", re.I
+    ),  # can't stop
+    regex_engine.compile(
+        r"\bproblema\s+sa\s+(?:sugal|pustahan|gambling)", re.I
+    ),  # gambling problem
     regex_engine.compile(r"\bnatalo\s+(?:ng|ako\s+ng)\s+malaki", re.I),  # lost big
     regex_engine.compile(r"\bbaon\s+sa\s+utang", re.I),  # drowning in debt
-    regex_engine.compile(r"\bwala\s+(?:na\s+)?(?:akong?\s+)?pera", re.I),  # no more money
-    regex_engine.compile(r"\bkailangan\s+(?:ko\s+(?:ng\s+)?)?(?:tulong|help)", re.I),  # need help
-    regex_engine.compile(r"\bipagbawal\s+(?:ang\s+)?(?:sarili|ako)", re.I),  # self-exclusion (ban myself)
+    regex_engine.compile(
+        r"\bwala\s+(?:na\s+)?(?:akong?\s+)?pera", re.I
+    ),  # no more money
+    regex_engine.compile(
+        r"\bkailangan\s+(?:ko\s+(?:ng\s+)?)?(?:tulong|help)", re.I
+    ),  # need help
+    regex_engine.compile(
+        r"\bipagbawal\s+(?:ang\s+)?(?:sarili|ako)", re.I
+    ),  # self-exclusion (ban myself)
     # Taglish hybrid responsible gaming
-    regex_engine.compile(r"\badik\s+(?:na\s+)?(?:ako\s+)?sa\s+gambling", re.I),  # Taglish: addicted to gambling
-    regex_engine.compile(r"\blost\s+everything\s+sa\s+casino", re.I),  # Taglish: lost everything at casino
+    regex_engine.compile(
+        r"\badik\s+(?:na\s+)?(?:ako\s+)?sa\s+gambling", re.I
+    ),  # Taglish: addicted to gambling
+    regex_engine.compile(
+        r"\blost\s+everything\s+sa\s+casino", re.I
+    ),  # Taglish: lost everything at casino
     # R36 fix B8: Japanese responsible gaming patterns (Wynn Las Vegas clientele)
-    regex_engine.compile(r"ギャンブル\s*(?:依存|中毒|問題)"),              # gambling addiction/problem
-    regex_engine.compile(r"パチンコ\s*中毒"),                               # pachinko addiction
-    regex_engine.compile(r"賭け事?\s*(?:をやめ|をやめたい|の問題)"),        # quit gambling / gambling problem
+    regex_engine.compile(
+        r"ギャンブル\s*(?:依存|中毒|問題)"
+    ),  # gambling addiction/problem
+    regex_engine.compile(r"パチンコ\s*中毒"),  # pachinko addiction
+    regex_engine.compile(
+        r"賭け事?\s*(?:をやめ|をやめたい|の問題)"
+    ),  # quit gambling / gambling problem
     # R36 fix B8: Korean responsible gaming patterns
-    regex_engine.compile(r"도박\s*중독"),                                   # gambling addiction (도박 중독)
-    regex_engine.compile(r"도박을?\s*(?:그만|끊고|멈추)"),                  # stop gambling
-    regex_engine.compile(r"도박\s*문제"),                                   # gambling problem
+    regex_engine.compile(r"도박\s*중독"),  # gambling addiction (도박 중독)
+    regex_engine.compile(r"도박을?\s*(?:그만|끊고|멈추)"),  # stop gambling
+    regex_engine.compile(r"도박\s*문제"),  # gambling problem
 ]
 
 # ---------------------------------------------------------------------------
@@ -257,28 +348,51 @@ _RESPONSIBLE_GAMING_PATTERNS = [
 #: than to miss a genuine cry for help.
 _SELF_HARM_PATTERNS = [
     # English
-    regex_engine.compile(r"\b(?:want|going|planning)\s+to\s+(?:kill|end|hurt)\s+(?:myself|my\s+life)", re.I),
+    regex_engine.compile(
+        r"\b(?:want|going|planning)\s+to\s+(?:kill|end|hurt)\s+(?:myself|my\s+life)",
+        re.I,
+    ),
     regex_engine.compile(r"\b(?:suicide|suicidal|self[- ]?harm)\b", re.I),
     regex_engine.compile(r"\blife\s+(?:isn'?t|is\s+not)\s+worth\b", re.I),
-    regex_engine.compile(r"\b(?:don'?t|do\s+not)\s+want\s+to\s+(?:live|be\s+alive|go\s+on)\b", re.I),
+    regex_engine.compile(
+        r"\b(?:don'?t|do\s+not)\s+want\s+to\s+(?:live|be\s+alive|go\s+on)\b", re.I
+    ),
     regex_engine.compile(r"\bend\s+it\s+all\b", re.I),
-    regex_engine.compile(r"\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:living|life|going\s+on)\b", re.I),
+    regex_engine.compile(
+        r"\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:living|life|going\s+on)\b", re.I
+    ),
     regex_engine.compile(r"\bbetter\s+off\s+dead\b", re.I),
-    regex_engine.compile(r"\bcan'?t\s+(?:go\s+on|take\s+it|handle\s+it)\s+any\s*more\b", re.I),
+    regex_engine.compile(
+        r"\bcan'?t\s+(?:go\s+on|take\s+it|handle\s+it)\s+any\s*more\b", re.I
+    ),
     # Spanish
     regex_engine.compile(r"\bquiero\s+(?:morir|matarme|acabar\s+con\s+todo)\b", re.I),
     regex_engine.compile(r"\bsuicid(?:io|arme)\b", re.I),
     regex_engine.compile(r"\bno\s+(?:quiero|vale\s+la\s+pena)\s+vivir\b", re.I),
     # R77 fix: Additional Spanish crisis patterns
-    regex_engine.compile(r"\bme\s+quiero\s+morir\b", re.I),  # "me quiero morir" (prefix "me" not captured by existing pattern)
-    regex_engine.compile(r"\bacabar\s+con\s+todo\b", re.I),  # standalone "acabar con todo" without "quiero" prefix
-    regex_engine.compile(r"\bno\s+puedo\s+m[aá]s\b", re.I),  # "no puedo más" / "no puedo mas"
+    regex_engine.compile(
+        r"\bme\s+quiero\s+morir\b", re.I
+    ),  # "me quiero morir" (prefix "me" not captured by existing pattern)
+    regex_engine.compile(
+        r"\bacabar\s+con\s+todo\b", re.I
+    ),  # standalone "acabar con todo" without "quiero" prefix
+    regex_engine.compile(
+        r"\bno\s+puedo\s+m[aá]s\b", re.I
+    ),  # "no puedo más" / "no puedo mas"
     regex_engine.compile(r"\bya\s+no\s+aguanto\b", re.I),  # "ya no aguanto"
-    regex_engine.compile(r"\bno\s+quiero\s+seguir\b", re.I),  # "no quiero seguir" (don't want to go on)
-    regex_engine.compile(r"\bme\s+quiero\s+(?:matar|hacer\s+daño)\b", re.I),  # "me quiero matar/hacer daño"
-    regex_engine.compile(r"\bno\s+(?:le\s+)?veo\s+sentido\s+(?:a\s+(?:la\s+)?vida|a\s+nada)\b", re.I),  # "no le veo sentido a la vida"
+    regex_engine.compile(
+        r"\bno\s+quiero\s+seguir\b", re.I
+    ),  # "no quiero seguir" (don't want to go on)
+    regex_engine.compile(
+        r"\bme\s+quiero\s+(?:matar|hacer\s+daño)\b", re.I
+    ),  # "me quiero matar/hacer daño"
+    regex_engine.compile(
+        r"\bno\s+(?:le\s+)?veo\s+sentido\s+(?:a\s+(?:la\s+)?vida|a\s+nada)\b", re.I
+    ),  # "no le veo sentido a la vida"
     # Tagalog
-    regex_engine.compile(r"\bgusto\s+(?:ko\s+)?(?:na\s+)?(?:mag(?:pakamatay|sakit)|mamatay)\b", re.I),
+    regex_engine.compile(
+        r"\bgusto\s+(?:ko\s+)?(?:na\s+)?(?:mag(?:pakamatay|sakit)|mamatay)\b", re.I
+    ),
     # Chinese/Mandarin
     regex_engine.compile(r"(?:想死|自杀|不想活|活不下去|了结)", re.I),
 ]
@@ -290,21 +404,38 @@ _SELF_HARM_PATTERNS = [
 #: Regex patterns for detecting underage-related queries.
 #: Mohegan Sun requires guests to be 21+ for gaming and most venues.
 _AGE_VERIFICATION_PATTERNS = [
-    regex_engine.compile(r"\b(?:my|our)\s+(?:\d{1,2}[- ]?year[- ]?old|kid|child|teen|son|daughter|minor)", re.I),
+    regex_engine.compile(
+        r"\b(?:my|our)\s+(?:\d{1,2}[- ]?year[- ]?old|kid|child|teen|son|daughter|minor)",
+        re.I,
+    ),
     regex_engine.compile(r"\b(?:under\s*(?:age|21|18)|underage|too\s+young)\b", re.I),
-    regex_engine.compile(r"\bcan\s+(?:my\s+)?(?:kid|child|teen|minor)s?\s+(?:play|gamble|enter|go)", re.I),
-    regex_engine.compile(r"\b(?:minimum|legal)\s+(?:gambling|gaming|casino)\s+age\b", re.I),
-    regex_engine.compile(r"\bhow\s+old\s+(?:do\s+you\s+have\s+to\s+be|to\s+(?:gamble|play|enter))", re.I),
-    regex_engine.compile(r"\bminors?\b.*\b(?:allow|enter|visit|casino|gambl|play)", re.I),
+    regex_engine.compile(
+        r"\bcan\s+(?:my\s+)?(?:kid|child|teen|minor)s?\s+(?:play|gamble|enter|go)", re.I
+    ),
+    regex_engine.compile(
+        r"\b(?:minimum|legal)\s+(?:gambling|gaming|casino)\s+age\b", re.I
+    ),
+    regex_engine.compile(
+        r"\bhow\s+old\s+(?:do\s+you\s+have\s+to\s+be|to\s+(?:gamble|play|enter))", re.I
+    ),
+    regex_engine.compile(
+        r"\bminors?\b.*\b(?:allow|enter|visit|casino|gambl|play)", re.I
+    ),
     # Hindi age verification patterns
     regex_engine.compile(r"नाबालिग", re.I),  # minor (नाबालिग)
-    regex_engine.compile(r"(?:बच्चे?|बच्चों?)\s*(?:को\s+)?(?:कैसीनो|अंदर|खेल)", re.I),  # child entering casino
-    regex_engine.compile(r"(?:कितने?\s+(?:साल|उम्र)|न्यूनतम\s+(?:उम्र|आयु))", re.I),  # how old / minimum age
+    regex_engine.compile(
+        r"(?:बच्चे?|बच्चों?)\s*(?:को\s+)?(?:कैसीनो|अंदर|खेल)", re.I
+    ),  # child entering casino
+    regex_engine.compile(
+        r"(?:कितने?\s+(?:साल|उम्र)|न्यूनतम\s+(?:उम्र|आयु))", re.I
+    ),  # how old / minimum age
     # Tagalog age verification patterns
     regex_engine.compile(r"\bmenor\s+de\s+edad", re.I),  # minor (menor de edad)
     regex_engine.compile(r"\bhindi\s+pa\s+(?:21|dalawampu)", re.I),  # not yet 21
     regex_engine.compile(r"\bpwede\s+(?:ba\s+)?(?:ang\s+)?bata", re.I),  # can the child
-    regex_engine.compile(r"\bilang\s+taon\s+(?:ba\s+)?(?:ang\s+)?(?:kailangan|dapat)", re.I),  # how old must you be
+    regex_engine.compile(
+        r"\bilang\s+taon\s+(?:ba\s+)?(?:ang\s+)?(?:kailangan|dapat)", re.I
+    ),  # how old must you be
 ]
 
 # ---------------------------------------------------------------------------
@@ -319,15 +450,23 @@ _AGE_VERIFICATION_PATTERNS = [
 #: multilingual guest populations (parity with responsible gaming coverage).
 _BSA_AML_PATTERNS = [
     regex_engine.compile(r"\b(?:money\s+)?launder", re.I),
-    regex_engine.compile(r"\bstructur(?:e|ing)\s+(?:cash|transaction|deposit|chip)", re.I),
+    regex_engine.compile(
+        r"\bstructur(?:e|ing)\s+(?:cash|transaction|deposit|chip)", re.I
+    ),
     regex_engine.compile(r"\bavoid\s+(?:report|ctr|sar|detection|tax)", re.I),
     regex_engine.compile(r"\bcurrency\s+transaction\s+report", re.I),
     regex_engine.compile(r"\bsuspicious\s+activity\s+report", re.I),
     regex_engine.compile(r"\b(?:under|below)\s+\$?\s*10[\s,]?000\b", re.I),
     # R85 fix: Conversational CTR probing — "how much can I cash out without reporting"
-    regex_engine.compile(r"\bhow\s+much\s+(?:can|could)\s+(?:i|you|we)\s+(?:cash|withdraw|take)\b.*\b(?:without|before|no)\s+(?:report|ctr|paper)", re.I),
+    regex_engine.compile(
+        r"\bhow\s+much\s+(?:can|could)\s+(?:i|you|we)\s+(?:cash|withdraw|take)\b.*\b(?:without|before|no)\s+(?:report|ctr|paper)",
+        re.I,
+    ),
     # R85 fix: Threshold fishing — "is $10K the limit" / "what's the reporting threshold"
-    regex_engine.compile(r"\b(?:what(?:'s| is)|is)\s+(?:the\s+)?(?:report|ctr|cash)\w*\s+(?:limit|threshold|amount|cap)\b", re.I),
+    regex_engine.compile(
+        r"\b(?:what(?:'s| is)|is)\s+(?:the\s+)?(?:report|ctr|cash)\w*\s+(?:limit|threshold|amount|cap)\b",
+        re.I,
+    ),
     regex_engine.compile(r"\bsmur(?:f|fing)\b", re.I),
     regex_engine.compile(r"\bcash\s+out\s+(?:without|no)\s+(?:id|report|track)", re.I),
     regex_engine.compile(r"\bhide\s+(?:my\s+)?(?:money|cash|income|winnings)\b", re.I),
@@ -335,50 +474,86 @@ _BSA_AML_PATTERNS = [
     regex_engine.compile(r"\b(?:funds?|cash|money)\b.*\b(?:un)?traceable\b", re.I),
     # Chip walking / multiple buy-in structuring
     regex_engine.compile(r"\bchip\s+walk", re.I),
-    regex_engine.compile(r"\bmultiple\s+(?:buy[- ]?ins?|cash[- ]?ins?)\b.*\b(?:avoid|under|split)", re.I),
-    regex_engine.compile(r"\bsplit\s+(?:up\s+)?(?:my\s+)?(?:cash|chips?|buy[- ]?in)", re.I),
+    regex_engine.compile(
+        r"\bmultiple\s+(?:buy[- ]?ins?|cash[- ]?ins?)\b.*\b(?:avoid|under|split)", re.I
+    ),
+    regex_engine.compile(
+        r"\bsplit\s+(?:up\s+)?(?:my\s+)?(?:cash|chips?|buy[- ]?in)", re.I
+    ),
     # Spanish BSA/AML patterns (US casino diverse clientele)
-    regex_engine.compile(r"\blava(?:do|r)\s+(?:de\s+)?dinero", re.I),         # money laundering
-    regex_engine.compile(r"\b(?:como|quiero)\s+lavar\s+dinero", re.I),        # how to / I want to launder money
-    regex_engine.compile(r"\bevitar\s+(?:el\s+)?reporte", re.I),              # avoid report
-    regex_engine.compile(r"\b(?:ocultar|esconder)\s+(?:mi\s+)?(?:dinero|efectivo|ganancias)", re.I),  # hide money/cash/winnings
-    regex_engine.compile(r"\bestructurar?\s+(?:cash|transacci|dep[oó]sito)", re.I),  # structuring
+    regex_engine.compile(
+        r"\blava(?:do|r)\s+(?:de\s+)?dinero", re.I
+    ),  # money laundering
+    regex_engine.compile(
+        r"\b(?:como|quiero)\s+lavar\s+dinero", re.I
+    ),  # how to / I want to launder money
+    regex_engine.compile(r"\bevitar\s+(?:el\s+)?reporte", re.I),  # avoid report
+    regex_engine.compile(
+        r"\b(?:ocultar|esconder)\s+(?:mi\s+)?(?:dinero|efectivo|ganancias)", re.I
+    ),  # hide money/cash/winnings
+    regex_engine.compile(
+        r"\bestructurar?\s+(?:cash|transacci|dep[oó]sito)", re.I
+    ),  # structuring
     # Portuguese BSA/AML patterns
-    regex_engine.compile(r"\blavagem\s+de\s+dinheiro", re.I),                 # money laundering
-    regex_engine.compile(r"\b(?:esconder|ocultar)\s+(?:meu\s+)?dinheiro", re.I),  # hide my money
-    regex_engine.compile(r"\bevitar\s+(?:o\s+)?relat[oó]rio", re.I),         # avoid report
+    regex_engine.compile(r"\blavagem\s+de\s+dinheiro", re.I),  # money laundering
+    regex_engine.compile(
+        r"\b(?:esconder|ocultar)\s+(?:meu\s+)?dinheiro", re.I
+    ),  # hide my money
+    regex_engine.compile(r"\bevitar\s+(?:o\s+)?relat[oó]rio", re.I),  # avoid report
     # Mandarin BSA/AML patterns
-    regex_engine.compile(r"洗\s*钱", re.I),                                   # money laundering (洗钱)
-    regex_engine.compile(r"逃\s*税", re.I),                                   # tax evasion (逃税)
-    regex_engine.compile(r"(?:隐藏|藏)\s*(?:钱|现金)", re.I),                  # hide money/cash
+    regex_engine.compile(r"洗\s*钱", re.I),  # money laundering (洗钱)
+    regex_engine.compile(r"逃\s*税", re.I),  # tax evasion (逃税)
+    regex_engine.compile(r"(?:隐藏|藏)\s*(?:钱|现金)", re.I),  # hide money/cash
     # French BSA/AML patterns (R34 fix: parity with injection+RG coverage)
-    regex_engine.compile(r"\bblanchiment\s+(?:d[e']?\s*)?argent", re.I),      # money laundering
-    regex_engine.compile(r"\b(?:cacher|dissimuler)\s+(?:mon\s+|l'?\s*)?argent", re.I),  # hide money
-    regex_engine.compile(r"\b[eé]viter\s+(?:le\s+)?(?:rapport|signalement)", re.I),     # avoid report
+    regex_engine.compile(
+        r"\bblanchiment\s+(?:d[e']?\s*)?argent", re.I
+    ),  # money laundering
+    regex_engine.compile(
+        r"\b(?:cacher|dissimuler)\s+(?:mon\s+|l'?\s*)?argent", re.I
+    ),  # hide money
+    regex_engine.compile(
+        r"\b[eé]viter\s+(?:le\s+)?(?:rapport|signalement)", re.I
+    ),  # avoid report
     # Vietnamese BSA/AML patterns (R34 fix: parity with injection+RG coverage)
-    regex_engine.compile(r"rửa\s*tiền", re.I),                               # money laundering (rửa tiền)
-    regex_engine.compile(r"(?:giấu|che\s+giấu)\s+tiền", re.I),              # hide money
-    regex_engine.compile(r"trốn\s+thuế", re.I),                              # tax evasion (trốn thuế)
+    regex_engine.compile(r"rửa\s*tiền", re.I),  # money laundering (rửa tiền)
+    regex_engine.compile(r"(?:giấu|che\s+giấu)\s+tiền", re.I),  # hide money
+    regex_engine.compile(r"trốn\s+thuế", re.I),  # tax evasion (trốn thuế)
     # Hindi BSA/AML patterns (NJ/CT significant Indian-American clientele)
-    regex_engine.compile(r"(?:धन\s*शोधन|मनी\s*लॉन्ड्रिंग)", re.I),  # money laundering (धन शोधन)
-    regex_engine.compile(r"काल[ाे]\s*(?:धन|पैसे?)", re.I),  # black money (काला धन) — R35 fix: matra required to avoid "काल" (time) false positive
-    regex_engine.compile(r"(?:छोटे[- ]?छोटे|बांटकर)\s*(?:जमा|डिपॉज़िट|कैश)", re.I),  # structuring deposits
+    regex_engine.compile(
+        r"(?:धन\s*शोधन|मनी\s*लॉन्ड्रिंग)", re.I
+    ),  # money laundering (धन शोधन)
+    regex_engine.compile(
+        r"काल[ाे]\s*(?:धन|पैसे?)", re.I
+    ),  # black money (काला धन) — R35 fix: matra required to avoid "काल" (time) false positive
+    regex_engine.compile(
+        r"(?:छोटे[- ]?छोटे|बांटकर)\s*(?:जमा|डिपॉज़िट|कैश)", re.I
+    ),  # structuring deposits
     regex_engine.compile(r"(?:पैसे?|धन|कैश)\s*(?:छुपा|छिपा|हाइड)", re.I),  # hide money
-    regex_engine.compile(r"(?:कर\s*चोरी|टैक्स\s*(?:चोरी|से\s+बच))", re.I),  # tax evasion (कर चोरी)
+    regex_engine.compile(
+        r"(?:कर\s*चोरी|टैक्स\s*(?:चोरी|से\s+बच))", re.I
+    ),  # tax evasion (कर चोरी)
     # Tagalog BSA/AML patterns
-    regex_engine.compile(r"\b(?:paghuhugas|hugasan)\s+ng\s+pera", re.I),  # money laundering (R35 fix: "labada" is literal laundry; "paghuhugas ng pera" is standard Filipino)
+    regex_engine.compile(
+        r"\b(?:paghuhugas|hugasan)\s+ng\s+pera", re.I
+    ),  # money laundering (R35 fix: "labada" is literal laundry; "paghuhugas ng pera" is standard Filipino)
     regex_engine.compile(r"\bpaano\s+(?:mag[- ]?)?launder", re.I),  # how to launder
     regex_engine.compile(r"\bitago\s+(?:ang\s+)?(?:mga\s+)?pera", re.I),  # hide money
-    regex_engine.compile(r"\bputol[- ]?putol\s+(?:na\s+)?(?:deposit|deposito)", re.I),  # structuring deposits
-    regex_engine.compile(r"\biwasan\s+(?:ang\s+)?(?:report|ulat)", re.I),  # avoid report
+    regex_engine.compile(
+        r"\bputol[- ]?putol\s+(?:na\s+)?(?:deposit|deposito)", re.I
+    ),  # structuring deposits
+    regex_engine.compile(
+        r"\biwasan\s+(?:ang\s+)?(?:report|ulat)", re.I
+    ),  # avoid report
     # R36 fix B7: Japanese BSA/AML patterns (Wynn Las Vegas high-roller clientele)
-    regex_engine.compile(r"マネーロンダリング"),                             # money laundering
-    regex_engine.compile(r"お金を隠す"),                                     # hide money
-    regex_engine.compile(r"現金.*報告.*避ける"),                              # avoid cash report
+    regex_engine.compile(r"マネーロンダリング"),  # money laundering
+    regex_engine.compile(r"お金を隠す"),  # hide money
+    regex_engine.compile(r"現金.*報告.*避ける"),  # avoid cash report
     # R36 fix B7: Korean BSA/AML patterns
-    regex_engine.compile(r"돈세탁"),                                         # money laundering (돈세탁)
-    regex_engine.compile(r"돈을?\s*숨기"),                                   # hide money
-    regex_engine.compile(r"현금.*보고.*피하"),                                # avoid cash report
+    regex_engine.compile(r"돈세탁"),  # money laundering (돈세탁)
+    regex_engine.compile(r"돈을?\s*숨기"),  # hide money
+    regex_engine.compile(r"현금.*보고.*피하"),  # avoid cash report
+    # R86 fix: CTR threshold amount detection — prevent output disclosing $10,000
+    regex_engine.compile(r"\$\s*10[,.]?000", re.I),
 ]
 
 # ---------------------------------------------------------------------------
@@ -391,28 +566,69 @@ _BSA_AML_PATTERNS = [
 #: with the property.  This is both a privacy obligation and a liability
 #: concern (stalking, celebrity harassment, domestic disputes).
 _PATRON_PRIVACY_PATTERNS = [
-    regex_engine.compile(r"\bis\s+[\w\s]+\s+(?:a\s+)?(?:member|here|at\s+the|playing|gambling|staying)", re.I),
-    regex_engine.compile(r"\bwhere\s+is\s+(?:my\s+)?(?:husband|wife|partner|friend|boss|ex)\b", re.I),
+    regex_engine.compile(
+        r"\bis\s+[\w\s]+\s+(?:a\s+)?(?:member|here|at\s+the|playing|gambling|staying)",
+        re.I,
+    ),
+    regex_engine.compile(
+        r"\bwhere\s+is\s+(?:my\s+)?(?:husband|wife|partner|friend|boss|ex)\b", re.I
+    ),
     regex_engine.compile(r"\bhave\s+you\s+seen\s+[\w\s]+\b", re.I),
-    regex_engine.compile(r"\b(?:is|was)\s+(?:[\w]+\s+){1,3}(?:at|in|visiting)\s+(?:the\s+)?(?:casino|resort|property)", re.I),
-    regex_engine.compile(r"\b(?:celebrity|famous|star)\s+(?:here|visiting|spotted|seen)\b", re.I),
-    regex_engine.compile(r"\blook(?:ing)?\s+(?:up|for)\s+(?:a\s+)?(?:specific\s+|particular\s+)?(?:guest|patron|member|player)(?:'s|\s+(?:named|called|info|record|detail|account))\b", re.I),
-    regex_engine.compile(r"\b(?:guest|patron|member)\s+(?:list|info|information|record|status)\b", re.I),
+    regex_engine.compile(
+        r"\b(?:is|was)\s+(?:[\w]+\s+){1,3}(?:at|in|visiting)\s+(?:the\s+)?(?:casino|resort|property)",
+        re.I,
+    ),
+    regex_engine.compile(
+        r"\b(?:celebrity|famous|star)\s+(?:here|visiting|spotted|seen)\b", re.I
+    ),
+    regex_engine.compile(
+        r"\blook(?:ing)?\s+(?:up|for)\s+(?:a\s+)?(?:specific\s+|particular\s+)?(?:guest|patron|member|player)(?:'s|\s+(?:named|called|info|record|detail|account))\b",
+        re.I,
+    ),
+    regex_engine.compile(
+        r"\b(?:guest|patron|member)\s+(?:list|info|information|record|status)\b", re.I
+    ),
     # Social media / photo surveillance of guests
-    regex_engine.compile(r"\b(?:post|share|upload)\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:a\s+)?(?:guest|patron|player)", re.I),
-    regex_engine.compile(r"\btake\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:someone|a\s+(?:guest|patron|player))", re.I),
+    regex_engine.compile(
+        r"\b(?:post|share|upload)\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:a\s+)?(?:guest|patron|player)",
+        re.I,
+    ),
+    regex_engine.compile(
+        r"\btake\s+(?:a\s+)?(?:photo|pic|picture|video)\s+of\s+(?:someone|a\s+(?:guest|patron|player))",
+        re.I,
+    ),
     # Specific table/machine surveillance
-    regex_engine.compile(r"\bwho\s+(?:is|was)\s+(?:at|on|playing\s+at)\s+(?:table|machine|slot)\b", re.I),
-    regex_engine.compile(r"\b(?:track|follow|watch|stalk)\s+(?:a\s+|that\s+)?(?:guest|patron|player|person|someone)\b", re.I),
+    regex_engine.compile(
+        r"\bwho\s+(?:is|was)\s+(?:at|on|playing\s+at)\s+(?:table|machine|slot)\b", re.I
+    ),
+    regex_engine.compile(
+        r"\b(?:track|follow|watch|stalk)\s+(?:a\s+|that\s+)?(?:guest|patron|player|person|someone)\b",
+        re.I,
+    ),
     # Spanish patron privacy patterns (R35 fix: English-only was the outlier among guardrail categories)
-    regex_engine.compile(r"\bd[oó]nde\s+est[aá]\s+(?:mi\s+)?(?:esposo|esposa|pareja|amigo|amiga)\b", re.I),  # where is my husband/wife/friend
-    regex_engine.compile(r"\b(?:est[aá]|estuvo)\s+[\w\s]+\s+(?:en\s+el\s+)?casino\b", re.I),  # is/was [someone] at the casino
-    regex_engine.compile(r"\b(?:busco|buscando)\s+(?:a\s+)?(?:un\s+)?(?:hu[eé]sped|jugador|persona)\b", re.I),  # looking for a guest/player
-    regex_engine.compile(r"\bquien\s+est[aá]\s+(?:en|jugando\s+en)\s+(?:la\s+)?mesa\b", re.I),  # who is at the table
+    regex_engine.compile(
+        r"\bd[oó]nde\s+est[aá]\s+(?:mi\s+)?(?:esposo|esposa|pareja|amigo|amiga)\b", re.I
+    ),  # where is my husband/wife/friend
+    regex_engine.compile(
+        r"\b(?:est[aá]|estuvo)\s+[\w\s]+\s+(?:en\s+el\s+)?casino\b", re.I
+    ),  # is/was [someone] at the casino
+    regex_engine.compile(
+        r"\b(?:busco|buscando)\s+(?:a\s+)?(?:un\s+)?(?:hu[eé]sped|jugador|persona)\b",
+        re.I,
+    ),  # looking for a guest/player
+    regex_engine.compile(
+        r"\bquien\s+est[aá]\s+(?:en|jugando\s+en)\s+(?:la\s+)?mesa\b", re.I
+    ),  # who is at the table
     # Tagalog patron privacy patterns (R35 fix)
-    regex_engine.compile(r"\bnasaan\s+(?:ang\s+)?(?:asawa|kaibigan|kasama)\s+ko\b", re.I),  # where is my spouse/friend
-    regex_engine.compile(r"\bnandito\s+(?:ba\s+)?(?:si|ang)\s+", re.I),  # is [someone] here
-    regex_engine.compile(r"\bsino\s+(?:ang\s+)?(?:nasa|naglalaro\s+sa)\s+(?:mesa|machine)\b", re.I),  # who is at the table/machine
+    regex_engine.compile(
+        r"\bnasaan\s+(?:ang\s+)?(?:asawa|kaibigan|kasama)\s+ko\b", re.I
+    ),  # where is my spouse/friend
+    regex_engine.compile(
+        r"\bnandito\s+(?:ba\s+)?(?:si|ang)\s+", re.I
+    ),  # is [someone] here
+    regex_engine.compile(
+        r"\bsino\s+(?:ang\s+)?(?:nasa|naglalaro\s+sa)\s+(?:mesa|machine)\b", re.I
+    ),  # who is at the table/machine
 ]
 
 # ---------------------------------------------------------------------------
@@ -425,13 +641,30 @@ _PATRON_PRIVACY_PATTERNS = [
 # This table covers the most common attack vectors per Unicode confusables.
 _CONFUSABLES: dict[str, str] = {
     # Cyrillic lowercase
-    "\u0430": "a", "\u0435": "e", "\u043e": "o", "\u0440": "p",
-    "\u0441": "c", "\u0443": "y", "\u0445": "x", "\u0456": "i",
-    "\u0455": "s", "\u0458": "j", "\u04bb": "h",
+    "\u0430": "a",
+    "\u0435": "e",
+    "\u043e": "o",
+    "\u0440": "p",
+    "\u0441": "c",
+    "\u0443": "y",
+    "\u0445": "x",
+    "\u0456": "i",
+    "\u0455": "s",
+    "\u0458": "j",
+    "\u04bb": "h",
     # Cyrillic uppercase
-    "\u0410": "A", "\u0415": "E", "\u041e": "O", "\u0420": "P",
-    "\u0421": "C", "\u0422": "T", "\u0423": "Y", "\u0425": "X",
-    "\u041d": "H", "\u041c": "M", "\u0412": "B", "\u041a": "K",
+    "\u0410": "A",
+    "\u0415": "E",
+    "\u041e": "O",
+    "\u0420": "P",
+    "\u0421": "C",
+    "\u0422": "T",
+    "\u0423": "Y",
+    "\u0425": "X",
+    "\u041d": "H",
+    "\u041c": "M",
+    "\u0412": "B",
+    "\u041a": "K",
     # Greek lowercase (R33 fix: missing Greek homoglyphs bypass normalization)
     "\u03bf": "o",  # omicron
     "\u03b1": "a",  # alpha
@@ -453,19 +686,59 @@ _CONFUSABLES: dict[str, str] = {
     "\u0392": "B",  # Beta
     "\u03a7": "X",  # Chi
     # Fullwidth Latin lowercase (U+FF41-U+FF5A) — used in CJK contexts
-    "\uff41": "a", "\uff42": "b", "\uff43": "c", "\uff44": "d", "\uff45": "e",
-    "\uff46": "f", "\uff47": "g", "\uff48": "h", "\uff49": "i", "\uff4a": "j",
-    "\uff4b": "k", "\uff4c": "l", "\uff4d": "m", "\uff4e": "n", "\uff4f": "o",
-    "\uff50": "p", "\uff51": "q", "\uff52": "r", "\uff53": "s", "\uff54": "t",
-    "\uff55": "u", "\uff56": "v", "\uff57": "w", "\uff58": "x", "\uff59": "y",
+    "\uff41": "a",
+    "\uff42": "b",
+    "\uff43": "c",
+    "\uff44": "d",
+    "\uff45": "e",
+    "\uff46": "f",
+    "\uff47": "g",
+    "\uff48": "h",
+    "\uff49": "i",
+    "\uff4a": "j",
+    "\uff4b": "k",
+    "\uff4c": "l",
+    "\uff4d": "m",
+    "\uff4e": "n",
+    "\uff4f": "o",
+    "\uff50": "p",
+    "\uff51": "q",
+    "\uff52": "r",
+    "\uff53": "s",
+    "\uff54": "t",
+    "\uff55": "u",
+    "\uff56": "v",
+    "\uff57": "w",
+    "\uff58": "x",
+    "\uff59": "y",
     "\uff5a": "z",
     # R60 fix D7: Fullwidth Latin uppercase (U+FF21-U+FF3A)
     # Lowercase was covered but uppercase was missing — "ＩＧＮＯＲＥ" bypassed.
-    "\uff21": "A", "\uff22": "B", "\uff23": "C", "\uff24": "D", "\uff25": "E",
-    "\uff26": "F", "\uff27": "G", "\uff28": "H", "\uff29": "I", "\uff2a": "J",
-    "\uff2b": "K", "\uff2c": "L", "\uff2d": "M", "\uff2e": "N", "\uff2f": "O",
-    "\uff30": "P", "\uff31": "Q", "\uff32": "R", "\uff33": "S", "\uff34": "T",
-    "\uff35": "U", "\uff36": "V", "\uff37": "W", "\uff38": "X", "\uff39": "Y",
+    "\uff21": "A",
+    "\uff22": "B",
+    "\uff23": "C",
+    "\uff24": "D",
+    "\uff25": "E",
+    "\uff26": "F",
+    "\uff27": "G",
+    "\uff28": "H",
+    "\uff29": "I",
+    "\uff2a": "J",
+    "\uff2b": "K",
+    "\uff2c": "L",
+    "\uff2d": "M",
+    "\uff2e": "N",
+    "\uff2f": "O",
+    "\uff30": "P",
+    "\uff31": "Q",
+    "\uff32": "R",
+    "\uff33": "S",
+    "\uff34": "T",
+    "\uff35": "U",
+    "\uff36": "V",
+    "\uff37": "W",
+    "\uff38": "X",
+    "\uff39": "Y",
     "\uff3a": "Z",
     # R36 fix B2: IPA / Latin Extended confusables — highest-risk characters
     # that survive NFKD normalization (not decomposed to standard Latin).
@@ -490,44 +763,44 @@ _CONFUSABLES: dict[str, str] = {
     # Armenian uppercase
     "\u0531": "A",  # Armenian Ayb
     "\u0535": "E",  # Armenian Ech
-    "\u054D": "S",  # Armenian Seh
-    "\u054F": "T",  # Armenian Tiwn
+    "\u054d": "S",  # Armenian Seh
+    "\u054f": "T",  # Armenian Tiwn
     "\u0540": "H",  # Armenian Ho
-    "\u054C": "L",  # Armenian Liwn
+    "\u054c": "L",  # Armenian Liwn
     # R52 fix D7: Cherokee confusables (visual Latin lookalikes)
-    "\u13A0": "D",  # Cherokee letter a (looks like D)
-    "\u13A1": "R",  # Cherokee letter e (looks like R)
-    "\u13A2": "T",  # Cherokee letter i (looks like T)
-    "\u13AA": "A",  # Cherokee letter go (looks like A)
-    "\u13AB": "J",  # Cherokee letter gu (looks like J)
-    "\u13AC": "E",  # Cherokee letter gv (looks like E)
-    "\u13B3": "W",  # Cherokee letter la (looks like W)
-    "\u13B6": "S",  # Cherokee letter le (looks like S)
-    "\u13A9": "G",  # Cherokee letter gi (looks like G)
-    "\u13C9": "Z",  # Cherokee letter na (looks like Z)
+    "\u13a0": "D",  # Cherokee letter a (looks like D)
+    "\u13a1": "R",  # Cherokee letter e (looks like R)
+    "\u13a2": "T",  # Cherokee letter i (looks like T)
+    "\u13aa": "A",  # Cherokee letter go (looks like A)
+    "\u13ab": "J",  # Cherokee letter gu (looks like J)
+    "\u13ac": "E",  # Cherokee letter gv (looks like E)
+    "\u13b3": "W",  # Cherokee letter la (looks like W)
+    "\u13b6": "S",  # Cherokee letter le (looks like S)
+    "\u13a9": "G",  # Cherokee letter gi (looks like G)
+    "\u13c9": "Z",  # Cherokee letter na (looks like Z)
     # R52 fix D7: Mathematical/symbol confusables
     "\u2202": "d",  # partial differential (d)
     "\u2113": "l",  # script small l (l)
-    "\u212A": "K",  # Kelvin sign (K)
+    "\u212a": "K",  # Kelvin sign (K)
     "\u2126": "O",  # Ohm sign (visually similar to O)
-    "\u00B9": "1",  # superscript 1
-    "\u00B2": "2",  # superscript 2
-    "\u00B3": "3",  # superscript 3
+    "\u00b9": "1",  # superscript 1
+    "\u00b2": "2",  # superscript 2
+    "\u00b3": "3",  # superscript 3
     # Letterlike Symbols that survive NFKD (visually similar to Latin)
     "\u2118": "p",  # Weierstrass p (script capital P, visually similar to 'p')
     "\u2132": "F",  # Turned Capital F (visually similar to reversed F)
     # R69 fix D7: Georgian Mkhedruli — highest-risk Latin lookalikes.
     # Georgian script has several characters visually similar to Latin lowercase.
-    "\u10D0": "a",  # ა — Georgian ani
-    "\u10DD": "o",  # ო — Georgian oni
-    "\u10D4": "e",  # ე — Georgian eni
-    "\u10D8": "i",  # ი — Georgian ini
-    "\u10E2": "t",  # ტ — Georgian tar
-    "\u10D3": "d",  # დ — Georgian doni
-    "\u10DB": "m",  # მ — Georgian mani
-    "\u10DC": "n",  # ნ — Georgian nari
-    "\u10E1": "s",  # ს — Georgian sani
-    "\u10E0": "r",  # რ — Georgian rae
+    "\u10d0": "a",  # ა — Georgian ani
+    "\u10dd": "o",  # ო — Georgian oni
+    "\u10d4": "e",  # ე — Georgian eni
+    "\u10d8": "i",  # ი — Georgian ini
+    "\u10e2": "t",  # ტ — Georgian tar
+    "\u10d3": "d",  # დ — Georgian doni
+    "\u10db": "m",  # მ — Georgian mani
+    "\u10dc": "n",  # ნ — Georgian nari
+    "\u10e1": "s",  # ს — Georgian sani
+    "\u10e0": "r",  # რ — Georgian rae
     # NOTE: Mathematical Alphanumeric Symbols (U+1D400-U+1D7FF: Bold, Italic,
     # Script, Fraktur, Double-struck, Monospace) are NOT included here because
     # NFKD normalization decomposes ALL assigned characters in this range to
@@ -624,6 +897,7 @@ def _normalize_input(text: str) -> str:
         text = re.sub(r"(\w)(?:[^\w\s]|_)(\w)", r"\1 \2", text)
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
+
     # R64 fix D7: Re-join single-character tokens separated by spaces.
     # After punctuation-to-space, "i.g.n.o.r.e" becomes "i g n o r e".
     # These single-char tokens must be merged back to "ignore" to catch
@@ -689,7 +963,11 @@ def _check_patterns(
         if normalized != message:
             for pattern in patterns:
                 if pattern.search(normalized):
-                    log_fn("%s detected (normalized, pattern: %s)", category, pattern.pattern[:60])
+                    log_fn(
+                        "%s detected (normalized, pattern: %s)",
+                        category,
+                        pattern.pattern[:60],
+                    )
                     return True
     return False
 
@@ -719,7 +997,9 @@ def _audit_input(message: str) -> bool:
     # R36 fix B3: Block oversized input before normalization to prevent
     # CPU exhaustion via 5 O(n) Unicode passes on attacker-controlled payloads.
     if len(message) > 8192:
-        logger.warning("Input exceeds 8192 chars (%d), blocking as potential DoS", len(message))
+        logger.warning(
+            "Input exceeds 8192 chars (%d), blocking as potential DoS", len(message)
+        )
         return False
     # R51 fix (Grok MAJOR-D7-001): Simplified to use _check_patterns' built-in
     # normalization (R50 fix). Previously _audit_input did its own normalization
@@ -729,7 +1009,10 @@ def _audit_input(message: str) -> bool:
     # Post-normalization length check is still needed (NFKD can expand ligatures).
     normalized = _normalize_input(message)
     if len(normalized) > 8192:
-        logger.warning("Normalized input exceeds 8192 chars (%d), blocking as potential DoS", len(normalized))
+        logger.warning(
+            "Normalized input exceeds 8192 chars (%d), blocking as potential DoS",
+            len(normalized),
+        )
         return False
     # Latin injection patterns (raw + normalized checked by _check_patterns)
     if _check_patterns(message, _INJECTION_PATTERNS, "Prompt injection"):
@@ -741,7 +1024,9 @@ def _audit_input(message: str) -> bool:
         else:
             return False
     # Non-Latin injection patterns (Arabic, Japanese, Korean, Mandarin)
-    if _check_patterns(message, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin)"):
+    if _check_patterns(
+        message, _NON_LATIN_INJECTION_PATTERNS, "Prompt injection (non-Latin)"
+    ):
         return False
     return True
 
@@ -765,7 +1050,9 @@ audit_input = _audit_input
 
 def detect_responsible_gaming(message: str) -> bool:
     """Check if user message indicates a gambling problem or self-exclusion need."""
-    return _check_patterns(message, _RESPONSIBLE_GAMING_PATTERNS, "Responsible gaming", "info")
+    return _check_patterns(
+        message, _RESPONSIBLE_GAMING_PATTERNS, "Responsible gaming", "info"
+    )
 
 
 def detect_age_verification(message: str) -> bool:
@@ -778,12 +1065,23 @@ def detect_age_verification(message: str) -> bool:
     # R77 fix: Allergy/dietary exclusion — if the message contains allergy
     # keywords AND the match is "my kid/child/son/daughter", the intent is
     # dietary safety, not age verification. Check allergy context first.
-    _ALLERGY_KEYWORDS = ("allerg", "celiac", "gluten", "lactose", "epipen", "anaphyla", "dietary", "intoleran")
+    _ALLERGY_KEYWORDS = (
+        "allerg",
+        "celiac",
+        "gluten",
+        "lactose",
+        "epipen",
+        "anaphyla",
+        "dietary",
+        "intoleran",
+    )
     msg_lower = message.lower()
     if any(kw in msg_lower for kw in _ALLERGY_KEYWORDS):
         logger.info("Age verification skipped: allergy/dietary context detected")
         return False
-    return _check_patterns(message, _AGE_VERIFICATION_PATTERNS, "Age verification", "info")
+    return _check_patterns(
+        message, _AGE_VERIFICATION_PATTERNS, "Age verification", "info"
+    )
 
 
 def detect_bsa_aml(message: str) -> bool:
@@ -825,8 +1123,7 @@ class InjectionClassification(BaseModel):
         description="Confidence in the classification",
     )
     reason: str = Field(
-        description="Brief explanation of why this was classified as "
-        "injection or safe",
+        description="Brief explanation of why this was classified as injection or safe",
     )
 
 
@@ -916,9 +1213,7 @@ async def classify_injection_semantic(
             _classifier_consecutive_failures = 0
         return result
     except TimeoutError:
-        return await _handle_classifier_failure(
-            len(message), "Classifier timeout (5s)"
-        )
+        return await _handle_classifier_failure(len(message), "Classifier timeout (5s)")
     except Exception as exc:
         return await _handle_classifier_failure(
             len(message), f"Classifier unavailable: {str(exc)[:80]}"

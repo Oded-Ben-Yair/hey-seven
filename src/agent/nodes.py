@@ -133,7 +133,6 @@ def _get_last_human_message(messages: list) -> str:
     return ""
 
 
-
 # ---------------------------------------------------------------------------
 # LLM singleton (TTL-cached for credential rotation)
 # ---------------------------------------------------------------------------
@@ -160,9 +159,13 @@ import random as _random
 _LLM_CACHE_TTL = 3600
 _llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
 _llm_lock = asyncio.Lock()
-_complex_llm_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
+_complex_llm_cache: TTLCache = TTLCache(
+    maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300)
+)
 _complex_llm_lock = asyncio.Lock()
-_validator_cache: TTLCache = TTLCache(maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300))
+_validator_cache: TTLCache = TTLCache(
+    maxsize=1, ttl=_LLM_CACHE_TTL + _random.randint(0, 300)
+)
 _validator_lock = asyncio.Lock()
 
 
@@ -348,7 +351,10 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
     # causing the specialist to lose the grief context entirely.
     sentiment_update: dict[str, Any] = {}
     _existing_sentiment = state.get("guest_sentiment")
-    _PRIORITY_SENTIMENTS = ("grief", "celebration")  # Set by compliance_gate, never overwrite
+    _PRIORITY_SENTIMENTS = (
+        "grief",
+        "celebration",
+    )  # Set by compliance_gate, never overwrite
     if _existing_sentiment not in _PRIORITY_SENTIMENTS:
         if await is_feature_enabled(settings.CASINO_ID, "sentiment_detection_enabled"):
             sentiment = detect_sentiment(user_message)
@@ -511,7 +517,9 @@ async def retrieve_node(state: PropertyQAState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _degraded_pass_result(retry_count: int, has_grounding: bool = True) -> dict[str, Any]:
+def _degraded_pass_result(
+    retry_count: int, has_grounding: bool = True
+) -> dict[str, Any]:
     """Return degraded-pass or fail-closed result based on attempt number and grounding.
 
     R38 fix M-001: Extracted from duplicate try/except blocks in validate_node.
@@ -568,7 +576,9 @@ async def validate_node(state: PropertyQAState) -> dict[str, Any]:
         query_type=query_type,
     )
 
-    validator_llm = (await _get_validator_llm()).with_structured_output(ValidationResult)
+    validator_llm = (await _get_validator_llm()).with_structured_output(
+        ValidationResult
+    )
 
     try:
         result: ValidationResult = await validator_llm.ainvoke(prompt_text)
@@ -641,11 +651,13 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
         source_key = f"{category}:{source}"
         if source_key and source_key not in seen_sources:
             seen_sources.add(source_key)
-            sources.append({
-                "category": category,
-                "source": source,
-                "score": round(doc.get("score", 0.0), 3),
-            })
+            sources.append(
+                {
+                    "category": category,
+                    "source": source,
+                    "score": round(doc.get("score", 0.0), 3),
+                }
+            )
 
     # R82 Track 1C: Post-generation tone enforcement on last AI message.
     # Second pass after persona_envelope_node -- catches patterns that slipped
@@ -656,7 +668,10 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
             content = _normalize_content(msg.content)
             cleaned = _enforce_tone(content)
             if cleaned != content:
-                logger.info("Slop detector: cleaned %d chars from response", len(content) - len(cleaned))
+                logger.info(
+                    "Slop detector: cleaned %d chars from response",
+                    len(content) - len(cleaned),
+                )
                 cleaned_message = AIMessage(content=cleaned)
             break
 
@@ -685,18 +700,53 @@ _SLOP_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"^Oh[,!]?\s+", re.IGNORECASE), ""),
     (re.compile(r"^Ah[,!]?\s+", re.IGNORECASE), ""),
     # Sycophantic openers
-    (re.compile(r"^(?:What a (?:wonderful|great|fantastic|excellent|lovely) question[.!]?\s*)", re.IGNORECASE), ""),
-    (re.compile(r"^(?:That's a (?:wonderful|great|fantastic|excellent) question[.!]?\s*)", re.IGNORECASE), ""),
+    (
+        re.compile(
+            r"^(?:What a (?:wonderful|great|fantastic|excellent|lovely) question[.!]?\s*)",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
+    (
+        re.compile(
+            r"^(?:That's a (?:wonderful|great|fantastic|excellent) question[.!]?\s*)",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
     # "I'd be delighted/happy to help" -> simpler
-    (re.compile(r"I'd be (?:absolutely |truly |more than )?(?:delighted|happy|thrilled) to (?:help|assist)(?:\s+(?:you\s+)?(?:with that|explore that))?[.!]?", re.IGNORECASE), "I can help with that."),
+    (
+        re.compile(
+            r"I'd be (?:absolutely |truly |more than )?(?:delighted|happy|thrilled) to (?:help|assist)(?:\s+(?:you\s+)?(?:with that|explore that))?[.!]?",
+            re.IGNORECASE,
+        ),
+        "I can help with that.",
+    ),
     # "I'd love to help you explore" -> simpler
-    (re.compile(r"I'd (?:absolutely )?love to help (?:you )?explore", re.IGNORECASE), "Let me share some options about"),
+    (
+        re.compile(r"I'd (?:absolutely )?love to help (?:you )?explore", re.IGNORECASE),
+        "Let me share some options about",
+    ),
     # "Absolutely!" as sentence opener
     (re.compile(r"^Absolutely[!.]?\s+", re.IGNORECASE), ""),
     # "Of course!" as sentence opener
     (re.compile(r"^Of course[!.]?\s+", re.IGNORECASE), ""),
     # "Great question!" or "Great choice!"
-    (re.compile(r"^(?:Great|Excellent|Wonderful|Fantastic) (?:question|choice|pick)[!.]?\s*", re.IGNORECASE), ""),
+    (
+        re.compile(
+            r"^(?:Great|Excellent|Wonderful|Fantastic) (?:question|choice|pick)[!.]?\s*",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
+    # R86: Catch remaining deflection phrases
+    (
+        re.compile(
+            r"(?:contact|call|reach out to).*(?:directly|for more|for assistance)",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
 ]
 
 
@@ -756,17 +806,20 @@ async def fallback_node(state: PropertyQAState) -> dict[str, Any]:
     retry_feedback = state.get("retry_feedback", "Unknown validation failure")
     logger.warning("Fallback triggered. Reason: %s", retry_feedback)
 
-    # R76 fix: Improved fallback to be less corporate and more helpful.
-    # The old "I want to make sure I give you the most accurate information"
-    # was the single most common UX failure — guests got this redirect for
-    # follow-up questions, emotional inputs, and anything the validator rejected.
+    # R86 fix: Replaced canned deflection with domain-aware re-engagement.
+    # The old "the team at X can help — call Y" was a dead-end that killed
+    # conversation flow. New fallback keeps the guest engaged by offering
+    # domain categories to explore.
     return {
-        "messages": [AIMessage(content=(
-            f"I don't have enough specific details to answer that fully, but "
-            f"the team at {settings.PROPERTY_NAME} can help — "
-            f"call {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
-            "Is there anything else about the property I can help with?"
-        ))],
+        "messages": [
+            AIMessage(
+                content=(
+                    f"I don't have the specific details on that, but let me help. "
+                    f"What are you most interested in at {settings.PROPERTY_NAME} — "
+                    f"dining, entertainment, hotel, or something else?"
+                )
+            )
+        ],
         "sources_used": [],
         "retry_feedback": None,
         # R41 fix D1-M001: Clear before checkpoint write (same as respond_node).
@@ -827,12 +880,16 @@ def _build_greeting_categories(casino_id: str | None = None) -> dict[str, str]:
             if key in _KNOWN_CATEGORY_LABELS:
                 categories[key] = _KNOWN_CATEGORY_LABELS[key]
             else:
-                categories[key] = f"{key.replace('_', ' ').title()} — information and details"
+                categories[key] = (
+                    f"{key.replace('_', ' ').title()} — information and details"
+                )
         result = categories if categories else dict(_KNOWN_CATEGORY_LABELS)
         _greeting_cache[cache_key] = result
         return result
     except Exception:
-        logger.warning("Could not load property data for greeting categories, using defaults")
+        logger.warning(
+            "Could not load property data for greeting categories, using defaults"
+        )
         result = dict(_KNOWN_CATEGORY_LABELS)
         _greeting_cache[cache_key] = result
         return result
@@ -867,17 +924,21 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
         if domains_discussed:
             last_domain = domains_discussed[-1]
             return {
-                "messages": [AIMessage(content=(
-                    f"Glad to help! Anything else about {last_domain} "
-                    "or something different you'd like to explore?"
-                ))],
+                "messages": [
+                    AIMessage(
+                        content=(
+                            f"Glad to help! Anything else about {last_domain} "
+                            "or something different you'd like to explore?"
+                        )
+                    )
+                ],
                 "sources_used": [],
                 "retrieved_context": [],
             }
         return {
-            "messages": [AIMessage(content=(
-                "Happy to help! What else can I assist you with?"
-            ))],
+            "messages": [
+                AIMessage(content=("Happy to help! What else can I assist you with?"))
+            ],
             "sources_used": [],
             "retrieved_context": [],
         }
@@ -887,30 +948,43 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
 
     # Phase 1: Spanish greeting when language detected and feature enabled
     detected_lang = state.get("detected_language")
-    if detected_lang == "es" and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled"):
+    if detected_lang == "es" and await is_feature_enabled(
+        settings.CASINO_ID, "spanish_support_enabled"
+    ):
         from src.agent.prompts import GREETING_TEMPLATE_ES
+
         return {
-            "messages": [AIMessage(content=GREETING_TEMPLATE_ES.safe_substitute(
-                property_name=settings.PROPERTY_NAME,
-                categories=bullets,
-            ))],
+            "messages": [
+                AIMessage(
+                    content=GREETING_TEMPLATE_ES.safe_substitute(
+                        property_name=settings.PROPERTY_NAME,
+                        categories=bullets,
+                    )
+                )
+            ],
             "sources_used": [],
             "retrieved_context": [],
         }
 
     # Feature flag: AI disclosure for regulatory transparency (async API for multi-tenant)
     # R17 fix: Gemini M-002 — reuse already-fetched settings variable.
-    ai_disclosure = await is_feature_enabled(settings.CASINO_ID, "ai_disclosure_enabled")
+    ai_disclosure = await is_feature_enabled(
+        settings.CASINO_ID, "ai_disclosure_enabled"
+    )
     disclosure_line = " I'm an AI assistant, " if ai_disclosure else " "
 
     return {
-        "messages": [AIMessage(content=(
-            f"Hi! I'm **Seven**, your AI concierge for {settings.PROPERTY_NAME}."
-            f"{disclosure_line}"
-            "I'm here to help you explore everything the resort has to offer.\n\n"
-            f"I can help with:\n{bullets}\n\n"
-            "What would you like to know?"
-        ))],
+        "messages": [
+            AIMessage(
+                content=(
+                    f"Hi! I'm **Seven**, your AI concierge for {settings.PROPERTY_NAME}."
+                    f"{disclosure_line}"
+                    "I'm here to help you explore everything the resort has to offer.\n\n"
+                    f"I can help with:\n{bullets}\n\n"
+                    "What would you like to know?"
+                )
+            )
+        ],
         "sources_used": [],
         # R41 fix D1-M001: Defensive clear (greeting never follows retrieve,
         # but ensures clean checkpoint state).
@@ -923,10 +997,15 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _build_crisis_followup(user_message: str, property_name: str, property_phone: str) -> str:
+def _build_crisis_followup(
+    user_message: str, property_name: str, property_phone: str
+) -> str:
     """Turn 2+ crisis response — empathetic, shorter, acknowledges guest's words."""
     msg_lower = user_message.lower()
-    if any(kw in msg_lower for kw in ("someone here", "talk to someone", "in person", "face to face")):
+    if any(
+        kw in msg_lower
+        for kw in ("someone here", "talk to someone", "in person", "face to face")
+    ):
         return (
             f"Yes — any team member at {property_name} can connect you with support "
             f"services right now. You can also go to the front desk or call {property_phone} "
@@ -963,9 +1042,8 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
 
     # Phase 1: Detect language once for all off-topic branches
     detected_lang = state.get("detected_language")
-    _is_spanish = (
-        detected_lang == "es"
-        and await is_feature_enabled(settings.CASINO_ID, "spanish_support_enabled")
+    _is_spanish = detected_lang == "es" and await is_feature_enabled(
+        settings.CASINO_ID, "spanish_support_enabled"
     )
 
     if query_type == "bsa_aml":
@@ -1006,16 +1084,20 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
     elif query_type == "gambling_advice":
         # Feature flag: ai_disclosure_enabled adds transparency to gambling-advice responses
         # R17 fix: Gemini M-002 — reuse already-fetched settings variable.
-        ai_disclosure = await is_feature_enabled(settings.CASINO_ID, "ai_disclosure_enabled")
+        ai_disclosure = await is_feature_enabled(
+            settings.CASINO_ID, "ai_disclosure_enabled"
+        )
         # Escalation: after 3+ responsible gaming triggers in a session,
         # add a stronger message encouraging live support contact.
         rg_count = state.get("responsible_gaming_count", 0)
         if _is_spanish:
             from src.agent.prompts import get_responsible_gaming_helplines_es
+
             disclosure_suffix_es = (
                 "\n\n*Como asistente de IA, estoy obligado a dirigirte a estos "
                 "recursos profesionales en lugar de proporcionar orientación sobre el juego.*"
-                if ai_disclosure else ""
+                if ai_disclosure
+                else ""
             )
             escalation_msg = ""
             if rg_count >= 3:
@@ -1040,7 +1122,8 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
             disclosure_suffix = (
                 "\n\n*As an AI assistant, I'm required to direct you to these "
                 "professional resources rather than provide gambling guidance.*"
-                if ai_disclosure else ""
+                if ai_disclosure
+                else ""
             )
             escalation_msg = ""
             if rg_count >= 3:
@@ -1133,23 +1216,39 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         if not _is_spanish and user_message:
             _user_msg_lower = user_message.lower()
             _SPANISH_CRISIS_INDICATORS = (
-                "ayuda", "necesito", "hablar", "alguien", "por favor",
-                "estoy", "quiero", "socorro", "no puedo", "me siento",
+                "ayuda",
+                "necesito",
+                "hablar",
+                "alguien",
+                "por favor",
+                "estoy",
+                "quiero",
+                "socorro",
+                "no puedo",
+                "me siento",
             )
             if any(ind in _user_msg_lower for ind in _SPANISH_CRISIS_INDICATORS):
                 _spanish_enabled = await is_feature_enabled(
-                    settings.CASINO_ID, "spanish_support_enabled",
+                    settings.CASINO_ID,
+                    "spanish_support_enabled",
                 )
                 if _spanish_enabled:
                     _is_spanish = True
-                    logger.info("R85: Spanish detected via crisis heuristic for self_harm")
+                    logger.info(
+                        "R85: Spanish detected via crisis heuristic for self_harm"
+                    )
 
         if _is_spanish:
             from src.agent.crisis import get_crisis_followup_es, get_crisis_response_es
+
             if current_crisis_turn <= 1:
-                content = get_crisis_response_es(settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
+                content = get_crisis_response_es(
+                    settings.PROPERTY_NAME, settings.PROPERTY_PHONE
+                )
             else:
-                content = get_crisis_followup_es(user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
+                content = get_crisis_followup_es(
+                    user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE
+                )
         else:
             if current_crisis_turn <= 1:
                 content = (
@@ -1166,7 +1265,9 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                     f"at {settings.PROPERTY_PHONE}."
                 )
             else:
-                content = _build_crisis_followup(user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE)
+                content = _build_crisis_followup(
+                    user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE
+                )
         # Phase 5: Early return with structured handoff for crisis situations.
         return {
             "messages": [AIMessage(content=content)],
@@ -1186,7 +1287,10 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
         # conversational messages (those now route through ambiguous → retrieve).
         if _is_spanish:
             from src.agent.prompts import OFF_TOPIC_RESPONSE_ES
-            content = OFF_TOPIC_RESPONSE_ES.safe_substitute(property_name=settings.PROPERTY_NAME)
+
+            content = OFF_TOPIC_RESPONSE_ES.safe_substitute(
+                property_name=settings.PROPERTY_NAME
+            )
         else:
             content = (
                 "That's outside what I can help with, but I'm happy to assist with "
@@ -1207,6 +1311,7 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
 # Routing Functions (used as conditional edges)
 # ---------------------------------------------------------------------------
 
+
 def route_from_router(state: PropertyQAState) -> str:
     """Route after the router node based on query_type and confidence.
 
@@ -1226,15 +1331,23 @@ def route_from_router(state: PropertyQAState) -> str:
     if query_type == "greeting":
         return NODE_GREETING
 
-    if query_type in ("off_topic", "gambling_advice", "action_request", "age_verification", "patron_privacy", "bsa_aml"):
+    if query_type in (
+        "off_topic",
+        "gambling_advice",
+        "action_request",
+        "age_verification",
+        "patron_privacy",
+        "bsa_aml",
+    ):
         return NODE_OFF_TOPIC
 
     if confidence < 0.3:
-        logger.info("Low confidence (%.2f) — routing to retrieve instead of off_topic", confidence)
+        logger.info(
+            "Low confidence (%.2f) — routing to retrieve instead of off_topic",
+            confidence,
+        )
         return NODE_RETRIEVE
 
     # property_qa, hours_schedule, and ambiguous all route to retrieve.
     # See docstring for ambiguous rationale.
     return NODE_RETRIEVE
-
-

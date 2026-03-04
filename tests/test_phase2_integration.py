@@ -68,7 +68,9 @@ class TestWhisperGraphWiring:
 
         graph = build_graph()
         drawable = graph.get_graph()
-        whisper_targets = {e.target for e in drawable.edges if e.source == "whisper_planner"}
+        whisper_targets = {
+            e.target for e in drawable.edges if e.source == "whisper_planner"
+        }
         assert "generate" in whisper_targets
 
     def test_no_direct_retrieve_to_generate(self):
@@ -161,7 +163,11 @@ class TestHostAgentWhisperInjection:
         state = _base_state(
             messages=[HumanMessage(content="Tell me about dining")],
             retrieved_context=[
-                {"content": "Test restaurant data", "metadata": {"category": "restaurants"}, "score": 0.9},
+                {
+                    "content": "Test restaurant data",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
             ],
             whisper_plan={
                 "next_topic": "dining",
@@ -175,8 +181,14 @@ class TestHostAgentWhisperInjection:
         mock_cb.record_success = AsyncMock()
 
         with (
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
+            ),
         ):
             await host_agent(state)
 
@@ -198,7 +210,11 @@ class TestHostAgentWhisperInjection:
         state = _base_state(
             messages=[HumanMessage(content="Tell me about dining")],
             retrieved_context=[
-                {"content": "Test restaurant data", "metadata": {"category": "restaurants"}, "score": 0.9},
+                {
+                    "content": "Test restaurant data",
+                    "metadata": {"category": "restaurants"},
+                    "score": 0.9,
+                },
             ],
             whisper_plan=None,
         )
@@ -209,8 +225,14 @@ class TestHostAgentWhisperInjection:
         mock_cb.record_success = AsyncMock()
 
         with (
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
+            ),
         ):
             await host_agent(state)
 
@@ -233,12 +255,14 @@ class TestHostAgentWhisperInjection:
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
 
-        with patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb):
+        with patch(
+            "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
+        ):
             result = await host_agent(state)
 
         # Empty context triggers skip_validation early return
         assert result["skip_validation"] is True
-        assert "don't have specific information" in result["messages"][0].content
+        assert "don't have that specific info" in result["messages"][0].content
 
 
 # ---------------------------------------------------------------------------
@@ -260,9 +284,11 @@ class TestCompAgentNoProfileGate:
         from src.agent.agents.comp_agent import comp_agent
 
         mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(
-            content="The Momentum program has 5 tiers with great benefits."
-        ))
+        mock_llm.ainvoke = AsyncMock(
+            return_value=AIMessage(
+                content="The Momentum program has 5 tiers with great benefits."
+            )
+        )
         mock_cb = MagicMock()
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
@@ -271,14 +297,24 @@ class TestCompAgentNoProfileGate:
         state = _base_state(
             messages=[HumanMessage(content="What promotions do you have?")],
             retrieved_context=[
-                {"content": "Loyalty program info", "metadata": {"category": "promotions"}, "score": 0.9},
+                {
+                    "content": "Loyalty program info",
+                    "metadata": {"category": "promotions"},
+                    "score": 0.9,
+                },
             ],
             extracted_fields={},  # Empty profile -- previously would trigger canned response
         )
 
         with (
-            patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
         ):
             result = await comp_agent(state)
 
@@ -292,9 +328,9 @@ class TestCompAgentNoProfileGate:
         from src.agent.agents.comp_agent import comp_agent
 
         mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(
-            content="Here are the current promotions available."
-        ))
+        mock_llm.ainvoke = AsyncMock(
+            return_value=AIMessage(content="Here are the current promotions available.")
+        )
         mock_cb = MagicMock()
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
@@ -304,7 +340,11 @@ class TestCompAgentNoProfileGate:
         state = _base_state(
             messages=[HumanMessage(content="Any deals?")],
             retrieved_context=[
-                {"content": "Promo data", "metadata": {"category": "promotions"}, "score": 0.9},
+                {
+                    "content": "Promo data",
+                    "metadata": {"category": "promotions"},
+                    "score": 0.9,
+                },
             ],
             extracted_fields={
                 "name": "John",
@@ -319,8 +359,14 @@ class TestCompAgentNoProfileGate:
         )
 
         with (
-            patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
         ):
             result = await comp_agent(state)
 
@@ -342,7 +388,9 @@ class TestCompAgentNoProfileGate:
         mock_cb.is_open = True
         mock_cb.allow_request = AsyncMock(return_value=False)
 
-        with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
+        with patch(
+            "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
+        ):
             result = await comp_agent(state)
 
         assert result["skip_validation"] is True
@@ -363,7 +411,9 @@ class TestCompAgentNoProfileGate:
         mock_cb.is_open = False
         mock_cb.allow_request = AsyncMock(return_value=True)
 
-        with patch("src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb):
+        with patch(
+            "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
+        ):
             result = await comp_agent(state)
 
         assert result["skip_validation"] is True
@@ -577,7 +627,9 @@ class TestGraphEndpointV2:
         response = client.get("/graph")
         data = response.json()
         edges = data["edges"]
-        matching = [e for e in edges if e["from"] == "retrieve" and e["to"] == "whisper_planner"]
+        matching = [
+            e for e in edges if e["from"] == "retrieve" and e["to"] == "whisper_planner"
+        ]
         assert len(matching) == 1
 
     def test_graph_whisper_to_generate_edge(self, client):
@@ -585,7 +637,9 @@ class TestGraphEndpointV2:
         response = client.get("/graph")
         data = response.json()
         edges = data["edges"]
-        matching = [e for e in edges if e["from"] == "whisper_planner" and e["to"] == "generate"]
+        matching = [
+            e for e in edges if e["from"] == "whisper_planner" and e["to"] == "generate"
+        ]
         assert len(matching) == 1
 
     def test_graph_persona_to_respond_edge(self, client):
@@ -593,7 +647,9 @@ class TestGraphEndpointV2:
         response = client.get("/graph")
         data = response.json()
         edges = data["edges"]
-        matching = [e for e in edges if e["from"] == "persona_envelope" and e["to"] == "respond"]
+        matching = [
+            e for e in edges if e["from"] == "persona_envelope" and e["to"] == "respond"
+        ]
         assert len(matching) == 1
 
 
@@ -624,12 +680,18 @@ class TestWhisperPlannerNodeUnit:
             messages=[HumanMessage(content="We're celebrating our anniversary")],
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await whisper_planner_node(state)
 
         assert result["whisper_plan"] is not None
         assert result["whisper_plan"]["next_topic"] == "dining"
-        assert result["whisper_plan"]["conversation_note"] == "Guest mentioned anniversary"
+        assert (
+            result["whisper_plan"]["conversation_note"] == "Guest mentioned anniversary"
+        )
 
     @pytest.mark.asyncio
     async def test_returns_none_on_llm_failure(self):
@@ -645,7 +707,11 @@ class TestWhisperPlannerNodeUnit:
             messages=[HumanMessage(content="Tell me about dining")],
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await whisper_planner_node(state)
 
         assert result["whisper_plan"] is None
@@ -664,7 +730,11 @@ class TestWhisperPlannerNodeUnit:
             messages=[HumanMessage(content="Hello")],
         )
 
-        with patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm):
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
             result = await whisper_planner_node(state)
 
         assert result["whisper_plan"] is None
@@ -741,11 +811,36 @@ class TestProfileCompletenessCalculation:
 
         profile = {
             "core_identity": {
-                "name": {"value": "John", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01"},
-                "email": {"value": "john@test.com", "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01"},
-                "language": {"value": "en", "confidence": 0.95, "source": "contextual_extraction", "collected_at": "2026-01-01"},
-                "full_name": {"value": "John Doe", "confidence": 0.85, "source": "self_reported", "collected_at": "2026-01-01"},
-                "date_of_birth": {"value": "1985-06-15", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01"},
+                "name": {
+                    "value": "John",
+                    "confidence": 0.9,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "email": {
+                    "value": "john@test.com",
+                    "confidence": 0.8,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "language": {
+                    "value": "en",
+                    "confidence": 0.95,
+                    "source": "contextual_extraction",
+                    "collected_at": "2026-01-01",
+                },
+                "full_name": {
+                    "value": "John Doe",
+                    "confidence": 0.85,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "date_of_birth": {
+                    "value": "1985-06-15",
+                    "confidence": 0.7,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
             },
         }
         completeness = calculate_completeness(profile)
@@ -762,20 +857,65 @@ class TestProfileCompletenessCalculation:
         # 14.5/25 = 0.58 (just under 60%)
         profile = {
             "core_identity": {
-                "name": {"value": "John", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01"},
-                "email": {"value": "j@t.com", "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01"},
-                "language": {"value": "en", "confidence": 0.9, "source": "contextual_extraction", "collected_at": "2026-01-01"},
-                "full_name": {"value": "John D", "confidence": 0.8, "source": "self_reported", "collected_at": "2026-01-01"},
-                "date_of_birth": {"value": "1985-01-01", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01"},
+                "name": {
+                    "value": "John",
+                    "confidence": 0.9,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "email": {
+                    "value": "j@t.com",
+                    "confidence": 0.8,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "language": {
+                    "value": "en",
+                    "confidence": 0.9,
+                    "source": "contextual_extraction",
+                    "collected_at": "2026-01-01",
+                },
+                "full_name": {
+                    "value": "John D",
+                    "confidence": 0.8,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "date_of_birth": {
+                    "value": "1985-01-01",
+                    "confidence": 0.7,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
             },
             "visit_context": {
-                "planned_visit_date": {"value": "2026-03-01", "confidence": 0.9, "source": "self_reported", "collected_at": "2026-01-01"},
-                "party_size": {"value": 4, "confidence": 0.85, "source": "self_reported", "collected_at": "2026-01-01"},
-                "occasion": {"value": "bday", "confidence": 0.8, "source": "contextual_extraction", "collected_at": "2026-01-01"},
+                "planned_visit_date": {
+                    "value": "2026-03-01",
+                    "confidence": 0.9,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "party_size": {
+                    "value": 4,
+                    "confidence": 0.85,
+                    "source": "self_reported",
+                    "collected_at": "2026-01-01",
+                },
+                "occasion": {
+                    "value": "bday",
+                    "confidence": 0.8,
+                    "source": "contextual_extraction",
+                    "collected_at": "2026-01-01",
+                },
             },
             "preferences": {
                 "dining": {
-                    "dietary_restrictions": {"value": "none", "confidence": 0.7, "source": "self_reported", "collected_at": "2026-01-01"},
+                    "dietary_restrictions": {
+                        "value": "none",
+                        "confidence": 0.7,
+                        "source": "self_reported",
+                        "collected_at": "2026-01-01",
+                    },
                 },
             },
         }

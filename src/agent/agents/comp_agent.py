@@ -103,15 +103,10 @@ async def comp_agent(state: PropertyQAState) -> dict:
     """
     settings = get_settings()
 
-    fallback = Template(
-        "For the most up-to-date details on loyalty tiers, promotions, and rewards, "
-        "I'd recommend contacting $property_name player services directly at "
-        "$property_phone or visiting $property_website. They can look up your "
-        "specific tier and available offers."
-    ).safe_substitute(
-        property_name=settings.PROPERTY_NAME,
-        property_phone=settings.PROPERTY_PHONE,
-        property_website=settings.PROPERTY_WEBSITE,
+    fallback = (
+        f"I don't have your specific tier details right now. Can you tell me a bit about "
+        f"what you enjoy most at {settings.PROPERTY_NAME}? That helps me point you to the "
+        f"right rewards."
     )
 
     return await execute_specialist(

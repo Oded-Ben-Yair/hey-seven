@@ -65,7 +65,8 @@ def _make_mock_llm(
         chain = AsyncMock()
         if schema is RouterOutput:
             output = router_output or RouterOutput(
-                query_type="property_qa", confidence=0.95,
+                query_type="property_qa",
+                confidence=0.95,
             )
             chain.ainvoke = AsyncMock(return_value=output)
         elif schema is DispatchOutput:
@@ -77,24 +78,29 @@ def _make_mock_llm(
             chain.ainvoke = AsyncMock(return_value=output)
         elif schema is ValidationResult:
             output = validation_output or ValidationResult(
-                status="PASS", reason="Response meets all criteria",
+                status="PASS",
+                reason="Response meets all criteria",
             )
             chain.ainvoke = AsyncMock(return_value=output)
         elif schema is InjectionClassification:
             # Semantic injection classifier: return safe (no injection)
-            chain.ainvoke = AsyncMock(return_value=InjectionClassification(
-                is_injection=False,
-                confidence=0.05,
-                reason="Legitimate property question",
-            ))
+            chain.ainvoke = AsyncMock(
+                return_value=InjectionClassification(
+                    is_injection=False,
+                    confidence=0.05,
+                    reason="Legitimate property question",
+                )
+            )
         else:
             # WhisperPlan or other structured output
-            chain.ainvoke = AsyncMock(return_value=WhisperPlan(
-                next_topic="dining",
-                conversation_note="Guest is asking about dining options",
-                proactive_suggestion=None,
-                suggestion_confidence="0.0",
-            ))
+            chain.ainvoke = AsyncMock(
+                return_value=WhisperPlan(
+                    next_topic="dining",
+                    conversation_note="Guest is asking about dining options",
+                    proactive_suggestion=None,
+                    suggestion_confidence="0.0",
+                )
+            )
         return chain
 
     mock_llm.with_structured_output = MagicMock(side_effect=_with_structured_output)
@@ -152,13 +158,35 @@ class TestFullGraphE2E:
         mock_cb = _make_permissive_cb()
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=_make_test_retrieved_context("restaurants"),
+            ),
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "What restaurants do you have?")
@@ -170,7 +198,11 @@ class TestFullGraphE2E:
 
         # Verify the response content came from the specialist agent
         response_text = result["response"]
-        assert "Tuscany" in response_text or "Italian" in response_text or "dining" in response_text.lower()
+        assert (
+            "Tuscany" in response_text
+            or "Italian" in response_text
+            or "dining" in response_text.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_greeting_full_pipeline(self):
@@ -182,13 +214,34 @@ class TestFullGraphE2E:
         mock_cb = _make_permissive_cb()
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=[]) as mock_search,
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base", return_value=[]
+            ) as mock_search,
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "Hello!")
@@ -213,13 +266,34 @@ class TestFullGraphE2E:
         mock_cb = _make_permissive_cb()
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=[]) as mock_search,
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base", return_value=[]
+            ) as mock_search,
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "What is the capital of France?")
@@ -240,13 +314,34 @@ class TestFullGraphE2E:
         mock_cb = _make_permissive_cb()
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=[]) as mock_search,
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base", return_value=[]
+            ) as mock_search,
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "I can't stop gambling")
@@ -254,7 +349,11 @@ class TestFullGraphE2E:
         response_text = result["response"]
 
         # Response should contain helpline information
-        assert "1-800-MY-RESET" in response_text or "helpline" in response_text.lower() or "problem gambling" in response_text.lower()
+        assert (
+            "1-800-MY-RESET" in response_text
+            or "helpline" in response_text.lower()
+            or "problem gambling" in response_text.lower()
+        )
 
         # RAG retrieval should NOT be called (guardrail bypasses router+retrieve)
         mock_search.assert_not_called()
@@ -277,23 +376,49 @@ class TestFullGraphE2E:
         thread_id = "test-multi-turn-e2e"
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=_make_test_retrieved_context("restaurants"),
+            ),
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
 
             # Turn 1: Ask about restaurants
-            result1 = await chat(graph, "What restaurants do you have?", thread_id=thread_id)
+            result1 = await chat(
+                graph, "What restaurants do you have?", thread_id=thread_id
+            )
             assert result1["thread_id"] == thread_id
             assert len(result1["response"]) > 0
 
             # Turn 2: Follow-up question (same thread)
-            result2 = await chat(graph, "Do any of them serve Italian?", thread_id=thread_id)
+            result2 = await chat(
+                graph, "Do any of them serve Italian?", thread_id=thread_id
+            )
             assert result2["thread_id"] == thread_id
             assert len(result2["response"]) > 0
 
@@ -323,16 +448,22 @@ class TestFullGraphE2E:
         def _with_structured_output(schema):
             chain = AsyncMock()
             if schema is RouterOutput:
-                chain.ainvoke = AsyncMock(return_value=RouterOutput(
-                    query_type="property_qa", confidence=0.95,
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=RouterOutput(
+                        query_type="property_qa",
+                        confidence=0.95,
+                    )
+                )
             elif schema is DispatchOutput:
-                chain.ainvoke = AsyncMock(return_value=DispatchOutput(
-                    specialist="dining",
-                    confidence=0.9,
-                    reasoning="Restaurant query",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=DispatchOutput(
+                        specialist="dining",
+                        confidence=0.9,
+                        reasoning="Restaurant query",
+                    )
+                )
             elif schema is ValidationResult:
+
                 async def _validate_side_effect(prompt):
                     validate_call_count["n"] += 1
                     if validate_call_count["n"] == 1:
@@ -344,37 +475,67 @@ class TestFullGraphE2E:
                         status="PASS",
                         reason="Source attribution added, response is correct",
                     )
+
                 chain.ainvoke = AsyncMock(side_effect=_validate_side_effect)
             elif schema is InjectionClassification:
-                chain.ainvoke = AsyncMock(return_value=InjectionClassification(
-                    is_injection=False, confidence=0.05,
-                    reason="Legitimate property question",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=InjectionClassification(
+                        is_injection=False,
+                        confidence=0.05,
+                        reason="Legitimate property question",
+                    )
+                )
             else:
-                chain.ainvoke = AsyncMock(return_value=WhisperPlan(
-                    next_topic="dining",
-                    conversation_note="Guest asking about dining",
-                    proactive_suggestion=None,
-                    suggestion_confidence="0.0",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=WhisperPlan(
+                        next_topic="dining",
+                        conversation_note="Guest asking about dining",
+                        proactive_suggestion=None,
+                        suggestion_confidence="0.0",
+                    )
+                )
             return chain
 
         mock_llm = MagicMock()
         mock_llm.with_structured_output = MagicMock(side_effect=_with_structured_output)
         mock_response = MagicMock()
-        mock_response.content = "Todd English's Tuscany offers excellent Italian cuisine at Mohegan Sun."
+        mock_response.content = (
+            "Todd English's Tuscany offers excellent Italian cuisine at Mohegan Sun."
+        )
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
 
         mock_cb = _make_permissive_cb()
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=_make_test_retrieved_context("restaurants"),
+            ),
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "What Italian restaurants do you have?")
@@ -393,37 +554,50 @@ class TestFullGraphE2E:
         -> fallback path through the real compiled graph.
         The fallback_node returns a message with the property phone number.
         """
+
         def _with_structured_output(schema):
             chain = AsyncMock()
             if schema is RouterOutput:
-                chain.ainvoke = AsyncMock(return_value=RouterOutput(
-                    query_type="property_qa", confidence=0.95,
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=RouterOutput(
+                        query_type="property_qa",
+                        confidence=0.95,
+                    )
+                )
             elif schema is DispatchOutput:
-                chain.ainvoke = AsyncMock(return_value=DispatchOutput(
-                    specialist="dining",
-                    confidence=0.9,
-                    reasoning="Restaurant query",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=DispatchOutput(
+                        specialist="dining",
+                        confidence=0.9,
+                        reasoning="Restaurant query",
+                    )
+                )
             elif schema is ValidationResult:
                 # Always return RETRY — validate_node logic:
                 # retry_count=0 -> RETRY, retry_count=1 -> FAIL
-                chain.ainvoke = AsyncMock(return_value=ValidationResult(
-                    status="RETRY",
-                    reason="Response contains factual errors about menu items",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=ValidationResult(
+                        status="RETRY",
+                        reason="Response contains factual errors about menu items",
+                    )
+                )
             elif schema is InjectionClassification:
-                chain.ainvoke = AsyncMock(return_value=InjectionClassification(
-                    is_injection=False, confidence=0.05,
-                    reason="Legitimate property question",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=InjectionClassification(
+                        is_injection=False,
+                        confidence=0.05,
+                        reason="Legitimate property question",
+                    )
+                )
             else:
-                chain.ainvoke = AsyncMock(return_value=WhisperPlan(
-                    next_topic="dining",
-                    conversation_note="Guest asking about dining",
-                    proactive_suggestion=None,
-                    suggestion_confidence="0.0",
-                ))
+                chain.ainvoke = AsyncMock(
+                    return_value=WhisperPlan(
+                        next_topic="dining",
+                        conversation_note="Guest asking about dining",
+                        proactive_suggestion=None,
+                        suggestion_confidence="0.0",
+                    )
+                )
             return chain
 
         mock_llm = MagicMock()
@@ -435,21 +609,43 @@ class TestFullGraphE2E:
         mock_cb = _make_permissive_cb()
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=_make_test_retrieved_context("restaurants"),
+            ),
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "Tell me about your Italian restaurants")
 
         response_text = result["response"]
         assert len(response_text) > 0
-        # Fallback node includes the property phone number (1-888-226-7711)
-        assert "1-888-226-7711" in response_text
+        # R86: Fallback node uses domain-aware re-engagement (no phone/website)
+        assert "Mohegan Sun" in response_text or "dining" in response_text.lower()
         assert "thread_id" in result
 
     @pytest.mark.asyncio
@@ -486,19 +682,65 @@ class TestFullGraphE2E:
         # Python's "from X import Y" creates a local binding, so we must
         # patch where the reference is USED, not just where it's DEFINED.
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.dispatch._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.agents.dining_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.agents.host_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.agents.entertainment_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.agents.comp_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.agents.hotel_agent._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb_open),
-            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.dispatch._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.agents.hotel_agent._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb_open,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=_make_test_retrieved_context("restaurants"),
+            ),
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "What restaurants do you have?")
@@ -506,7 +748,10 @@ class TestFullGraphE2E:
         response_text = result["response"]
         assert len(response_text) > 0
         # CB fallback message from _base.py contains "technical difficulties"
-        assert "technical difficulties" in response_text.lower() or "contact" in response_text.lower()
+        assert (
+            "technical difficulties" in response_text.lower()
+            or "contact" in response_text.lower()
+        )
         assert "thread_id" in result
 
     @pytest.mark.asyncio
@@ -532,17 +777,41 @@ class TestFullGraphE2E:
         # Create a broken whisper LLM that raises on any structured output call
         mock_whisper_llm = MagicMock()
         whisper_chain = AsyncMock()
-        whisper_chain.ainvoke = AsyncMock(side_effect=Exception("LLM timeout — whisper planner unavailable"))
+        whisper_chain.ainvoke = AsyncMock(
+            side_effect=Exception("LLM timeout — whisper planner unavailable")
+        )
         mock_whisper_llm.with_structured_output = MagicMock(return_value=whisper_chain)
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_whisper_llm),
-            patch("src.agent.circuit_breaker._get_circuit_breaker", new_callable=AsyncMock, return_value=mock_cb),
-            patch("src.agent.nodes.search_knowledge_base", return_value=_make_test_retrieved_context("restaurants")),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_whisper_llm,
+            ),
+            patch(
+                "src.agent.circuit_breaker._get_circuit_breaker",
+                new_callable=AsyncMock,
+                return_value=mock_cb,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=_make_test_retrieved_context("restaurants"),
+            ),
             patch("src.agent.nodes.search_hours", return_value=[]),
-            patch("src.observability.langfuse_client.get_langfuse_handler", return_value=None),
+            patch(
+                "src.observability.langfuse_client.get_langfuse_handler",
+                return_value=None,
+            ),
         ):
             graph = build_graph()
             result = await chat(graph, "What Italian restaurants do you have?")
@@ -553,4 +822,8 @@ class TestFullGraphE2E:
         assert "thread_id" in result
         # The specialist agent still generates a response
         response_text = result["response"]
-        assert "Tuscany" in response_text or "Italian" in response_text or "dining" in response_text.lower()
+        assert (
+            "Tuscany" in response_text
+            or "Italian" in response_text
+            or "dining" in response_text.lower()
+        )

@@ -4,8 +4,6 @@ Functionally equivalent to v1's ``generate_node`` in ``nodes.py``.
 Handles all property questions that don't fall into a specialist domain.
 """
 
-from string import Template
-
 from src.agent.circuit_breaker import _get_circuit_breaker
 from src.agent.nodes import _get_llm
 from src.agent.prompts import CONCIERGE_SYSTEM_PROMPT
@@ -22,15 +20,9 @@ async def host_agent(state: PropertyQAState) -> dict:
     and whisper planner integration enabled.
     """
     settings = get_settings()
-    fallback = Template(
-        "I appreciate your question! Unfortunately, I don't have specific information "
-        "about that in my knowledge base. For the most accurate and up-to-date details, "
-        "I'd recommend contacting $property_name directly at $property_phone or visiting "
-        "$property_website."
-    ).safe_substitute(
-        property_name=settings.PROPERTY_NAME,
-        property_phone=settings.PROPERTY_PHONE,
-        property_website=settings.PROPERTY_WEBSITE,
+    fallback = (
+        f"I don't have that specific info right now. What else can I help you with "
+        f"at {settings.PROPERTY_NAME}?"
     )
 
     return await execute_specialist(

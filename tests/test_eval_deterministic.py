@@ -41,7 +41,14 @@ FIXTURES = {
         "router": RouterOutput(query_type="off_topic", confidence=0.92),
         "generate": None,  # off_topic node, no generate
         "validate": None,
-        "assert_contains_any": ["concierge", "best equipped", "restaurants", "outside", "help you find", "happy to assist"],
+        "assert_contains_any": [
+            "concierge",
+            "best equipped",
+            "restaurants",
+            "outside",
+            "help you find",
+            "happy to assist",
+        ],
     },
     "gambling_refusal": {
         "message": "What's the best blackjack strategy?",
@@ -115,17 +122,17 @@ FIXTURES = {
         ),
         # First validation returns RETRY, second returns PASS
         "validate": ValidationResult(status="PASS", reason="Corrected on retry"),
-        "validate_first": ValidationResult(status="RETRY", reason="Missing venue hours detail"),
+        "validate_first": ValidationResult(
+            status="RETRY", reason="Missing venue hours detail"
+        ),
         "assert_min_length": 50,
     },
     "fail_to_fallback": {
         "message": "Tell me about the spa services",
         "router": RouterOutput(query_type="property_qa", confidence=0.88),
-        "generate": (
-            "The spa at Mohegan Sun offers a wide range of treatments."
-        ),
+        "generate": ("The spa at Mohegan Sun offers a wide range of treatments."),
         "validate": ValidationResult(status="FAIL", reason="Hallucinated spa details"),
-        "assert_contains_any": ["concierge", "mohegansun.com", "1-888-226-7711"],
+        "assert_contains_any": ["mohegan sun", "dining", "entertainment", "hotel"],
     },
 }
 
@@ -162,7 +169,10 @@ class _FixtureReplayLLM:
 
             async def _validate_ainvoke(messages):
                 llm_ref._validate_call_count += 1
-                if llm_ref._validate_call_count == 1 and "validate_first" in llm_ref._fixture:
+                if (
+                    llm_ref._validate_call_count == 1
+                    and "validate_first" in llm_ref._fixture
+                ):
                     return llm_ref._fixture["validate_first"]
                 validate = llm_ref._fixture.get("validate")
                 if validate is None:
@@ -196,13 +206,21 @@ _FAKE_CONTEXT = [
     {
         "content": "Mohegan Sun features over 40 restaurants including Todd English's Tuscany, "
         "Bobby's Burger Palace, SolToro, and Ballo Italian Restaurant.",
-        "metadata": {"category": "restaurants", "item_name": "overview", "source": "mohegan_sun.json"},
+        "metadata": {
+            "category": "restaurants",
+            "item_name": "overview",
+            "source": "mohegan_sun.json",
+        },
         "score": 0.92,
     },
     {
         "content": "Mohegan Sun has two hotel towers: the Sky Tower (34 stories) and the Earth Tower, "
         "featuring luxurious rooms, suites, and access to the Elemis Spa.",
-        "metadata": {"category": "hotel", "item_name": "overview", "source": "mohegan_sun.json"},
+        "metadata": {
+            "category": "hotel",
+            "item_name": "overview",
+            "source": "mohegan_sun.json",
+        },
         "score": 0.88,
     },
 ]
@@ -214,17 +232,43 @@ async def _run_fixture(fixture_name: str):
     mock_llm = _FixtureReplayLLM(fixture)
 
     with (
-        patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-        patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+        patch(
+            "src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm
+        ),
+        patch(
+            "src.agent.nodes._get_validator_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ),
         patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
         patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
         # v2.2: specialist dispatch — mock _get_llm for all agents that may be dispatched
-        patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-        patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-        patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-        patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
+        patch(
+            "src.agent.agents.host_agent._get_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ),
+        patch(
+            "src.agent.agents.dining_agent._get_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ),
+        patch(
+            "src.agent.agents.entertainment_agent._get_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ),
+        patch(
+            "src.agent.agents.comp_agent._get_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ),
         # v2.1: whisper_planner uses _get_llm for structured output
-        patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+        patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ),
     ):
         graph = build_graph()
         result = await chat(graph, fixture["message"])
@@ -304,15 +348,43 @@ class TestDeterministicEval:
 
         # Build graph ONCE — reuse for both turns to test checkpointer continuity
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
-            patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
-            patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_greeting)),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_greeting),
+            ),
         ):
             graph = build_graph()
             result1 = await chat(graph, "Hello!", thread_id=None)
@@ -322,17 +394,47 @@ class TestDeterministicEval:
 
         # Turn 2: property question on SAME graph instance, same thread_id
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
-            patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
-            patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=_FixtureReplayLLM(fixture_qa)),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=_FixtureReplayLLM(fixture_qa),
+            ),
         ):
-            result2 = await chat(graph, "What restaurants do you have?", thread_id=thread_id)
+            result2 = await chat(
+                graph, "What restaurants do you have?", thread_id=thread_id
+            )
 
         # Thread ID preserved across turns
         assert result2["thread_id"] == thread_id
@@ -343,7 +445,9 @@ class TestDeterministicEval:
         state = await graph.aget_state(config)
         messages = state.values.get("messages", [])
         # Both turns: HumanMessage + AIMessage per turn = at least 4 messages
-        assert len(messages) >= 4, f"Expected >=4 messages in thread, got {len(messages)}"
+        assert len(messages) >= 4, (
+            f"Expected >=4 messages in thread, got {len(messages)}"
+        )
 
     # ------------------------------------------------------------------
     # Retry / fallback path tests
@@ -370,15 +474,43 @@ class TestStreamingSSE:
         mock_llm = _FixtureReplayLLM(fixture)
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
         ):
             graph = build_graph()
             events = []
@@ -407,15 +539,43 @@ class TestStreamingSSE:
         mock_llm = _FixtureReplayLLM(fixture)
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
         ):
             graph = build_graph()
             events = []
@@ -453,15 +613,43 @@ class TestStreamingSSE:
         mock_llm = _FailingLLM(fixture)
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
             patch("src.agent.nodes.search_knowledge_base", return_value=_FAKE_CONTEXT),
             patch("src.agent.nodes.search_hours", return_value=_FAKE_CONTEXT),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock, return_value=mock_llm),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=mock_llm),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.agents.comp_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=mock_llm,
+            ),
         ):
             graph = build_graph()
             events = []

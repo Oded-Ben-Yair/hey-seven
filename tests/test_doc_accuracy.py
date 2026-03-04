@@ -93,9 +93,14 @@ class TestSSEEventModels:
         )
 
         models = [
-            SSEMetadataEvent, SSETokenEvent, SSESourcesEvent,
-            SSEDoneEvent, SSEPingEvent, SSEErrorEvent,
-            SSEGraphNodeEvent, SSEReplaceEvent,
+            SSEMetadataEvent,
+            SSETokenEvent,
+            SSESourcesEvent,
+            SSEDoneEvent,
+            SSEPingEvent,
+            SSEErrorEvent,
+            SSEGraphNodeEvent,
+            SSEReplaceEvent,
         ]
         assert len(models) == 8
 
@@ -139,9 +144,14 @@ class TestErrorTaxonomy:
         from src.api.errors import ErrorCode
 
         expected = {
-            "unauthorized", "not_found", "rate_limit_exceeded", "payload_too_large",
+            "unauthorized",
+            "not_found",
+            "rate_limit_exceeded",
+            "payload_too_large",
             "unsupported_media_type",  # R63 fix D4: Content-Encoding rejection
-            "agent_unavailable", "internal_error", "validation_error",
+            "agent_unavailable",
+            "internal_error",
+            "validation_error",
             "service_degraded",
         }
         actual = {code.value for code in ErrorCode}
@@ -244,11 +254,11 @@ class TestGraphNodeCount:
             nodes = [
                 (n.id if hasattr(n, "id") else str(n))
                 for n in g.nodes
-                if (n.id if hasattr(n, "id") else str(n)) not in ("__start__", "__end__")
+                if (n.id if hasattr(n, "id") else str(n))
+                not in ("__start__", "__end__")
             ]
         assert len(nodes) == 12, (
-            f"Graph has {len(nodes)} nodes, expected 12. "
-            f"Nodes: {nodes}"
+            f"Graph has {len(nodes)} nodes, expected 12. Nodes: {nodes}"
         )
 
     def test_known_nodes_frozenset_matches_graph(self):
@@ -263,7 +273,8 @@ class TestGraphNodeCount:
             actual = {
                 (n.id if hasattr(n, "id") else str(n))
                 for n in g.nodes
-                if (n.id if hasattr(n, "id") else str(n)) not in ("__start__", "__end__")
+                if (n.id if hasattr(n, "id") else str(n))
+                not in ("__start__", "__end__")
             }
         assert _KNOWN_NODES == actual, (
             f"_KNOWN_NODES mismatch: "
@@ -286,8 +297,9 @@ class TestGuardrailPatternCount:
         # R49: 185 -> 204 (added 6 Mandarin injection + 14 self-harm + 5 Mandarin non-Latin injection patterns)
         # R77: 204 -> 211 (added 7 Spanish self-harm patterns)
         # R85: 211 -> 213 (added 2 conversational CTR probing BSA patterns)
-        assert len(patterns) == 213, (
-            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 213. "
+        # R86: 213 -> 214 (added CTR threshold amount output detection)
+        assert len(patterns) == 214, (
+            f"guardrails.py has {len(patterns)} regex_engine.compile() patterns, expected 214. "
             f"Update docs if patterns were added/removed."
         )
 
@@ -336,12 +348,13 @@ class TestGuardrailPatternCount:
         )
 
     def test_bsa_aml_pattern_count(self):
-        """BSA/AML has 49 patterns (EN + ES + PT + ZH + FR + VI + Hindi + Tagalog + JP + KO).
-        R85: 47 -> 49 (added 2 conversational CTR probing patterns)."""
+        """BSA/AML has 50 patterns (EN + ES + PT + ZH + FR + VI + Hindi + Tagalog + JP + KO).
+        R85: 47 -> 49 (added 2 conversational CTR probing patterns).
+        R86: 49 -> 50 (added CTR threshold amount output detection)."""
         from src.agent.guardrails import _BSA_AML_PATTERNS
 
-        assert len(_BSA_AML_PATTERNS) == 49, (
-            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 49."
+        assert len(_BSA_AML_PATTERNS) == 50, (
+            f"_BSA_AML_PATTERNS has {len(_BSA_AML_PATTERNS)}, expected 50."
         )
 
 
@@ -387,9 +400,12 @@ class TestDeterministicD5:
         """Project must have at least 2500 tests (enforces growth floor)."""
         import subprocess
         import sys
+
         result = subprocess.run(
             [sys.executable, "-m", "pytest", "--collect-only", "-q", "--no-header"],
-            capture_output=True, text=True, cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
             timeout=120,
         )
         # Last non-empty line is like "2580 tests collected"
@@ -427,7 +443,11 @@ class TestDeterministicD5:
             for i, line in enumerate(text.splitlines(), 1):
                 stripped = line.strip()
                 # Skip comments and docstrings
-                if stripped.startswith("#") or stripped.startswith('"') or stripped.startswith("'"):
+                if (
+                    stripped.startswith("#")
+                    or stripped.startswith('"')
+                    or stripped.startswith("'")
+                ):
                     continue
                 # Only match actual decorator usage (starts with @)
                 if stripped.startswith("@pytest.mark.xfail"):
@@ -491,15 +511,16 @@ class TestDeterministicD6:
         """CMD uses exec form (JSON array), not shell form."""
         content = self._read_dockerfile()
         # Exec form starts with CMD [
-        assert re.search(r'^CMD\s+\[', content, re.MULTILINE), (
-            "CMD not in exec form. Use CMD [\"...\"] for proper signal handling."
+        assert re.search(r"^CMD\s+\[", content, re.MULTILINE), (
+            'CMD not in exec form. Use CMD ["..."] for proper signal handling.'
         )
 
     def test_digest_pinning(self):
         """Base images use SHA-256 digest pinning (@sha256:...)."""
         content = self._read_dockerfile()
-        from_lines = re.findall(r"^FROM\s+(.+?)(?:\s+AS\s+\w+)?$", content,
-                                re.MULTILINE)
+        from_lines = re.findall(
+            r"^FROM\s+(.+?)(?:\s+AS\s+\w+)?$", content, re.MULTILINE
+        )
         for img in from_lines:
             assert "@sha256:" in img, (
                 f"Image {img!r} not digest-pinned. Use @sha256:... for immutability."
@@ -516,13 +537,17 @@ class TestDeterministicD7:
         """Total guardrail patterns must be exactly 204."""
         import inspect
         from src.agent import guardrails
+
         source = inspect.getsource(guardrails)
         patterns = re.findall(r"regex_engine\.compile\(", source)
-        assert len(patterns) == 213  # R77: 204 + 7 Spanish self-harm. R85: + 2 CTR probing
+        assert (
+            len(patterns) == 214
+        )  # R77: 204 + 7 Spanish self-harm. R85: + 2 CTR probing
 
     def test_six_guardrail_categories(self):
         """All 6 guardrail categories exist and are non-empty."""
         from src.agent import guardrails
+
         categories = {
             "injection": guardrails._INJECTION_PATTERNS,
             "responsible_gaming": guardrails._RESPONSIBLE_GAMING_PATTERNS,
@@ -537,6 +562,7 @@ class TestDeterministicD7:
     def test_confusable_entry_count_is_145(self):
         """Confusable mapping must have exactly 145 entries."""
         from src.agent.guardrails import _CONFUSABLES
+
         assert len(_CONFUSABLES) == 145, (
             f"_CONFUSABLES has {len(_CONFUSABLES)} entries, expected 145. "
             f"Update docs/adr/018-confusable-coverage.md if count changed."
@@ -546,6 +572,7 @@ class TestDeterministicD7:
         """Security guardrail patterns use regex_engine, not raw re.compile()."""
         import inspect
         from src.agent import guardrails
+
         source = inspect.getsource(guardrails)
         # _ACT_AS_BROAD_PATTERN is a casino-context exclusion helper, not a
         # security pattern — it's allowed to use re.compile() directly.
@@ -582,7 +609,11 @@ class TestDeterministicD8:
             for i, line in enumerate(text.splitlines(), 1):
                 stripped = line.strip()
                 # Skip comments and docstrings
-                if stripped.startswith("#") or stripped.startswith('"') or stripped.startswith("'"):
+                if (
+                    stripped.startswith("#")
+                    or stripped.startswith('"')
+                    or stripped.startswith("'")
+                ):
                     continue
                 # Only flag actual instantiation: threading.Lock()
                 if "threading.Lock()" in stripped:
@@ -657,9 +688,7 @@ class TestDeterministicD9:
         """At least 22 ADRs exist (excluding README.md)."""
         adr_dir = ROOT / "docs" / "adr"
         adrs = [f for f in adr_dir.glob("*.md") if f.name != "README.md"]
-        assert len(adrs) >= 22, (
-            f"Only {len(adrs)} ADRs found, minimum is 22."
-        )
+        assert len(adrs) >= 22, f"Only {len(adrs)} ADRs found, minimum is 22."
 
     def test_all_adrs_have_status(self):
         """Every ADR has a Status section."""
@@ -694,6 +723,7 @@ class TestDeterministicD9:
     def test_version_parity_config_and_env(self):
         """VERSION in config.py default matches .env.example."""
         from src.config import Settings
+
         config_ver = Settings.model_fields["VERSION"].default
         env_example = ROOT / ".env.example"
         content = env_example.read_text()
@@ -713,6 +743,7 @@ class TestBehavioralScenarioParity:
     def test_behavioral_scenario_total_count(self):
         """Total behavioral scenarios across all files is at least 50."""
         import yaml
+
         scenario_dir = ROOT / "tests" / "scenarios"
         total = 0
         for path in sorted(scenario_dir.glob("behavioral_*.yaml")):
@@ -735,6 +766,7 @@ class TestBehavioralScenarioParity:
     def test_each_dimension_has_scenarios(self):
         """Each behavioral dimension (B1-B5) has a scenario file with at least 5 scenarios."""
         import yaml
+
         expected_files = {
             "B1": "behavioral_sarcasm.yaml",
             "B2": "behavioral_implicit.yaml",
@@ -752,8 +784,6 @@ class TestBehavioralScenarioParity:
             assert count >= 5, (
                 f"{dim} ({filename}) has only {count} scenarios, minimum is 5."
             )
-
-
 
     """Verify the documented endpoint count matches code."""
 
@@ -787,13 +817,18 @@ class TestBehavioralScenarioParity:
             if hasattr(route, "endpoint") and route.path not in self._FASTAPI_BUILTIN
         }
         expected = {
-            "/chat", "/live", "/health", "/property", "/metrics",
-            "/graph", "/sms/webhook", "/cms/webhook", "/feedback",
+            "/chat",
+            "/live",
+            "/health",
+            "/property",
+            "/metrics",
+            "/graph",
+            "/sms/webhook",
+            "/cms/webhook",
+            "/feedback",
         }
         assert paths == expected, (
-            f"Endpoint mismatch: "
-            f"missing={expected - paths}, "
-            f"extra={paths - expected}"
+            f"Endpoint mismatch: missing={expected - paths}, extra={paths - expected}"
         )
 
 
@@ -807,6 +842,7 @@ class TestRE2Enforcement:
         monkeypatch.setenv("CMS_WEBHOOK_SECRET", "test-secret")
         import src.agent.regex_engine as mod
         from src.config import get_settings
+
         get_settings.cache_clear()
         original = mod.RE2_AVAILABLE
         try:
@@ -822,6 +858,7 @@ class TestRE2Enforcement:
         monkeypatch.setenv("ENVIRONMENT", "development")
         import src.agent.regex_engine as mod
         from src.config import get_settings
+
         get_settings.cache_clear()
         original = mod.RE2_AVAILABLE
         try:
@@ -838,6 +875,7 @@ class TestRE2Enforcement:
         monkeypatch.setenv("CMS_WEBHOOK_SECRET", "test-secret")
         import src.agent.regex_engine as mod
         from src.config import get_settings
+
         get_settings.cache_clear()
         original = mod.RE2_AVAILABLE
         try:
@@ -855,19 +893,25 @@ class TestVersionParity:
         """pyproject.toml version must match src/config.py VERSION."""
         import tomllib
         from pathlib import Path
+
         with open(Path(__file__).parent.parent / "pyproject.toml", "rb") as f:
             pyproject = tomllib.load(f)
         from src.config import Settings
-        assert pyproject["project"]["version"] == Settings.model_fields["VERSION"].default
+
+        assert (
+            pyproject["project"]["version"] == Settings.model_fields["VERSION"].default
+        )
 
     def test_env_example_matches_config(self):
         """VERSION in .env.example must match src/config.py."""
         from pathlib import Path
+
         env_path = Path(__file__).parent.parent / ".env.example"
         if not env_path.exists():
             pytest.skip(".env.example not found")
         content = env_path.read_text()
         from src.config import Settings
+
         version = Settings.model_fields["VERSION"].default
         assert f"VERSION={version}" in content
 
@@ -894,7 +938,9 @@ class TestGraphTopology:
                 for n in graph_data.nodes
                 if not (n.id if hasattr(n, "id") else str(n)).startswith("__")
             ]
-        assert len(real_nodes) == 12, f"Expected 12 nodes, got {len(real_nodes)}: {real_nodes}"
+        assert len(real_nodes) == 12, (
+            f"Expected 12 nodes, got {len(real_nodes)}: {real_nodes}"
+        )
 
     def test_node_names_use_constants(self):
         """All node names must come from constants.py."""

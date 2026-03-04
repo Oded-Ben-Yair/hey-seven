@@ -11,7 +11,7 @@
 
 ### BSA/AML Compliance
 - Casinos with GAGR > $1M are financial institutions under BSA
-- CTR required for cash transactions > $10,000 (file within 15 days)
+- CTR required for cash transactions above regulatory thresholds (file within 15 days)
 - SAR required for suspicious transactions ≥ $5,000
 - AI must flag suspicious patterns for human review
 - Cannot autonomously refuse service for suspected structuring
@@ -188,7 +188,7 @@
 - File SAR/CTR reports (final decision must be human)
 - Restrict or suspend player accounts
 - Send communications without required disclosures
-- Process transactions near $10,000 threshold without compliance review
+- Process transactions near regulatory thresholds without compliance review
 
 ### Audit Requirements
 - Every AI decision must maintain audit trail

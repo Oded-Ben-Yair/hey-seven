@@ -137,7 +137,11 @@ class TestE2EPipelineGreeting:
         router_llm = _make_router_llm(query_type="greeting", confidence=0.99)
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
             patch("src.agent.nodes.get_settings", return_value=mock_settings),
             patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
             patch("src.agent.graph.get_settings", return_value=mock_settings),
@@ -178,7 +182,10 @@ class TestE2EPipelineGreeting:
         messages = result.get("messages", [])
         ai_messages = [m for m in messages if isinstance(m, AIMessage)]
         assert len(ai_messages) >= 1
-        assert "Seven" in ai_messages[-1].content or "concierge" in ai_messages[-1].content.lower()
+        assert (
+            "Seven" in ai_messages[-1].content
+            or "concierge" in ai_messages[-1].content.lower()
+        )
 
 
 class TestE2EPipelineInjection:
@@ -247,7 +254,11 @@ class TestE2EPipelineOffTopic:
         router_llm = _make_router_llm(query_type="off_topic", confidence=0.90)
 
         with (
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
             patch("src.agent.nodes.get_settings", return_value=mock_settings),
             patch("src.agent.compliance_gate.get_settings", return_value=mock_settings),
             patch("src.agent.graph.get_settings", return_value=mock_settings),
@@ -293,7 +304,10 @@ class TestE2EPipelineResponsibleGaming:
 
         # Should include helpline information
         last_content = ai_messages[-1].content
-        assert "1-800-MY-RESET" in last_content or "problem gambling" in last_content.lower()
+        assert (
+            "1-800-MY-RESET" in last_content
+            or "problem gambling" in last_content.lower()
+        )
 
 
 class TestE2EPipelinePropertyQA:
@@ -340,16 +354,38 @@ class TestE2EPipelinePropertyQA:
             patch("src.agent.agents._base.get_settings", return_value=mock_settings),
             patch("src.agent.whisper_planner.get_settings", return_value=mock_settings),
             # Router LLM (used by router_node)
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
             # Validator LLM (used by validate_node)
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=validator_llm),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=validator_llm,
+            ),
             # RAG retrieval (used by retrieve_node)
-            patch("src.agent.nodes.search_knowledge_base", return_value=mock_retrieval_results),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=mock_retrieval_results,
+            ),
             # Whisper planner LLM
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=whisper_llm),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=whisper_llm,
+            ),
             # Specialist agent LLM (dining agent, since restaurant context dominates)
-            patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock, return_value=specialist_llm),
-            patch("src.agent.agents.dining_agent._get_circuit_breaker", return_value=circuit_breaker),
+            patch(
+                "src.agent.agents.dining_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=specialist_llm,
+            ),
+            patch(
+                "src.agent.agents.dining_agent._get_circuit_breaker",
+                return_value=circuit_breaker,
+            ),
         ):
             graph = build_graph()
             config = {"configurable": {"thread_id": "e2e-property-qa-1"}}
@@ -359,11 +395,15 @@ class TestE2EPipelinePropertyQA:
         # Verify: final response exists and is an AI message
         messages = result.get("messages", [])
         ai_messages = [m for m in messages if isinstance(m, AIMessage)]
-        assert len(ai_messages) >= 1, "Expected at least one AI message from full pipeline"
+        assert len(ai_messages) >= 1, (
+            "Expected at least one AI message from full pipeline"
+        )
 
         # Verify: response content comes from the specialist LLM
         last_content = ai_messages[-1].content
-        assert "Tuscany" in last_content, "Response should include specialist LLM content"
+        assert "Tuscany" in last_content, (
+            "Response should include specialist LLM content"
+        )
 
         # Verify: sources_used is populated from retrieved context
         # Wave 2: sources_used is now list[dict] with category/source/score provenance
@@ -371,7 +411,9 @@ class TestE2EPipelinePropertyQA:
         source_categories = [
             s["category"] if isinstance(s, dict) else s for s in sources
         ]
-        assert "restaurants" in source_categories, "Sources should include 'restaurants' from retrieval"
+        assert "restaurants" in source_categories, (
+            "Sources should include 'restaurants' from retrieval"
+        )
 
         # Verify: validation passed (not routed to fallback)
         assert result.get("validation_result") == "PASS"
@@ -407,13 +449,35 @@ class TestE2EPipelinePropertyQA:
             patch("src.agent.persona.get_settings", return_value=mock_settings),
             patch("src.agent.agents._base.get_settings", return_value=mock_settings),
             patch("src.agent.whisper_planner.get_settings", return_value=mock_settings),
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
-            patch("src.agent.nodes._get_validator_llm", new_callable=AsyncMock, return_value=validator_llm),
-            patch("src.agent.nodes.search_knowledge_base", return_value=mock_retrieval_results),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=whisper_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                new_callable=AsyncMock,
+                return_value=validator_llm,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=mock_retrieval_results,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=whisper_llm,
+            ),
             # Entertainment context -> entertainment agent
-            patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock, return_value=specialist_llm),
-            patch("src.agent.agents.entertainment_agent._get_circuit_breaker", return_value=circuit_breaker),
+            patch(
+                "src.agent.agents.entertainment_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=specialist_llm,
+            ),
+            patch(
+                "src.agent.agents.entertainment_agent._get_circuit_breaker",
+                return_value=circuit_breaker,
+            ),
             # Langfuse handler disabled for tests
             patch("src.agent.graph.get_langfuse_handler", return_value=None),
         ):
@@ -442,8 +506,12 @@ class TestE2EPipelinePropertyQA:
         )
 
         # Validator: RETRY on first call, PASS on second
-        first_validator_llm = _make_validator_llm(status="RETRY", reason="Missing room details")
-        second_validator_llm = _make_validator_llm(status="PASS", reason="All criteria met")
+        first_validator_llm = _make_validator_llm(
+            status="RETRY", reason="Missing room details"
+        )
+        second_validator_llm = _make_validator_llm(
+            status="PASS", reason="All criteria met"
+        )
 
         # Create a validator that returns different results on consecutive calls
         call_count = 0
@@ -470,13 +538,34 @@ class TestE2EPipelinePropertyQA:
             patch("src.agent.persona.get_settings", return_value=mock_settings),
             patch("src.agent.agents._base.get_settings", return_value=mock_settings),
             patch("src.agent.whisper_planner.get_settings", return_value=mock_settings),
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
-            patch("src.agent.nodes._get_validator_llm", side_effect=_get_validator_side_effect),
-            patch("src.agent.nodes.search_knowledge_base", return_value=mock_retrieval_results),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=whisper_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                side_effect=_get_validator_side_effect,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=mock_retrieval_results,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=whisper_llm,
+            ),
             # Hotel context -> hotel agent
-            patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock, return_value=specialist_llm),
-            patch("src.agent.agents.hotel_agent._get_circuit_breaker", return_value=circuit_breaker),
+            patch(
+                "src.agent.agents.hotel_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=specialist_llm,
+            ),
+            patch(
+                "src.agent.agents.hotel_agent._get_circuit_breaker",
+                return_value=circuit_breaker,
+            ),
         ):
             graph = build_graph()
             config = {"configurable": {"thread_id": "e2e-retry-1"}}
@@ -512,7 +601,9 @@ class TestE2EPipelinePropertyQA:
             call_count += 1
             if call_count == 1:
                 return _make_validator_llm(status="RETRY", reason="Inaccurate info")
-            return _make_validator_llm(status="FAIL", reason="Critical error in response")
+            return _make_validator_llm(
+                status="FAIL", reason="Critical error in response"
+            )
 
         mock_retrieval_results = [
             {
@@ -529,12 +620,33 @@ class TestE2EPipelinePropertyQA:
             patch("src.agent.persona.get_settings", return_value=mock_settings),
             patch("src.agent.agents._base.get_settings", return_value=mock_settings),
             patch("src.agent.whisper_planner.get_settings", return_value=mock_settings),
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
-            patch("src.agent.nodes._get_validator_llm", side_effect=_get_validator_always_fail),
-            patch("src.agent.nodes.search_knowledge_base", return_value=mock_retrieval_results),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=whisper_llm),
-            patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock, return_value=specialist_llm),
-            patch("src.agent.agents.hotel_agent._get_circuit_breaker", return_value=circuit_breaker),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
+            patch(
+                "src.agent.nodes._get_validator_llm",
+                side_effect=_get_validator_always_fail,
+            ),
+            patch(
+                "src.agent.nodes.search_knowledge_base",
+                return_value=mock_retrieval_results,
+            ),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=whisper_llm,
+            ),
+            patch(
+                "src.agent.agents.hotel_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=specialist_llm,
+            ),
+            patch(
+                "src.agent.agents.hotel_agent._get_circuit_breaker",
+                return_value=circuit_breaker,
+            ),
         ):
             graph = build_graph()
             config = {"configurable": {"thread_id": "e2e-fallback-1"}}
@@ -547,8 +659,8 @@ class TestE2EPipelinePropertyQA:
         assert len(ai_messages) >= 1
 
         last_content = ai_messages[-1].content
-        assert "555-0100" in last_content or "test.com" in last_content, (
-            "Fallback should include property contact info"
+        assert "Test Casino" in last_content or "dining" in last_content.lower(), (
+            "Fallback should include property name or domain-aware re-engagement"
         )
 
 
@@ -587,12 +699,27 @@ class TestE2EPipelineEdgeCases:
             patch("src.agent.persona.get_settings", return_value=mock_settings),
             patch("src.agent.agents._base.get_settings", return_value=mock_settings),
             patch("src.agent.whisper_planner.get_settings", return_value=mock_settings),
-            patch("src.agent.nodes._get_llm", new_callable=AsyncMock, return_value=router_llm),
+            patch(
+                "src.agent.nodes._get_llm",
+                new_callable=AsyncMock,
+                return_value=router_llm,
+            ),
             # No need to mock validator -- skip_validation=True bypasses it
             patch("src.agent.nodes.search_knowledge_base", return_value=[]),
-            patch("src.agent.whisper_planner._get_whisper_llm", new_callable=AsyncMock, return_value=whisper_llm),
-            patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock, return_value=host_llm),
-            patch("src.agent.agents.host_agent._get_circuit_breaker", return_value=circuit_breaker),
+            patch(
+                "src.agent.whisper_planner._get_whisper_llm",
+                new_callable=AsyncMock,
+                return_value=whisper_llm,
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_llm",
+                new_callable=AsyncMock,
+                return_value=host_llm,
+            ),
+            patch(
+                "src.agent.agents.host_agent._get_circuit_breaker",
+                return_value=circuit_breaker,
+            ),
         ):
             graph = build_graph()
             config = {"configurable": {"thread_id": "e2e-empty-retrieval"}}
