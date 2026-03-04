@@ -1,0 +1,71 @@
+{
+  "id": "agentic-09",
+  "name": "Mobility awareness from contextual cues",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Proactively includes accessibility information in every recommendation after the wheelchair mention. Does not suggest venues requiring stairs or long walks without noting accessibility",
+  "expected_behavioral_quality": "When a guest mentions wheelchair, mobility issues, or difficulty walking, proactively includes accessibility information in all recommendations. Does not wait to be asked about accessibility.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "My mom uses a wheelchair. What restaurants are easy to get to?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 49140,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "And can she get to the spa?",
+      "agent_response": "Yes, both of our spas are fully accessible and easy to reach by the resort elevators. Mandara Spa is open until 8:00 PM today and offers a very tranquil experience inspired by Balinese healing traditions, including massages, facials, and body wraps.\n\nIf she prefers something a bit more modern, Elemis Spa in the Earth Tower is open until 7:00 PM and is known for its premium skincare treatments and signature hot stone massage. The facilities at both locations are designed to accommodate all guests comfortably, and the relaxation lounges provide a peaceful environment away from the energy of the casino floor.\n\nIs your mom looking for a specific type of treatment, like a massage or a facial?\n\nIf she enjoys being by the water, our heated indoor pool is also accessible and open to hotel guests until 10:00 PM tonight.",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        }
+      ],
+      "elapsed_ms": 23088,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Great. She'll love that.",
+      "agent_response": "I'm so glad to hear that. A little pampering at the spa is a wonderful way to relax and recharge. \n\nSince the Elemis Spa is in the Earth Tower, you'll also be very close to the Wolf Den, which features free live music every single night. The venue is right in the center of the casino floor with no stairs required to get a great view of the stage, making it a very easy spot for her to enjoy some entertainment. The atmosphere there is always electric, and it's a great place to catch a show without needing to worry about tickets.\n\nWould you like to know more about the types of live music they typically feature there?\n\nIf you're looking for a bit of retail therapy after the spa, The Shops at Mohegan Sun are nearby and have wide, level walkways perfect for browsing before they close at 9:00 PM.",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        }
+      ],
+      "elapsed_ms": 30549,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 102778,
+  "error": null,
+  "completed": true
+}

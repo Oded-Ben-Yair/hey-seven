@@ -1,0 +1,45 @@
+{
+  "id": "coherence-03",
+  "name": "Forgetting dietary preference across domain shift",
+  "source_file": "behavioral_multiturn_coherence.yaml",
+  "category": "behavioral_multiturn_coherence",
+  "behavioral_dimension": "B7_coherence",
+  "expected_behavior": "Turn 3 dining recommendation must account for the vegetarian preference stated in turn 1, even though turn 2 was about the spa. Agent should NOT recommend the steakhouse as the primary option. The dietary extraction should persist via the state reducer",
+  "expected_behavioral_quality": "Guest mentions a dietary restriction in turn 1. After a topic shift to spa/entertainment, when dining comes up again, the dietary preference must still be applied. The extracted_fields reducer should persist this across turns.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm vegetarian. What are my dinner options?",
+      "agent_response": "For an incredible vegetarian dinner tonight, Todd English's Tuscany is my top pick because their handmade pastas and wood-fired pizzas offer a sophisticated experience that never feels like an afterthought. The wood-fired aroma hits you the moment you walk in, and their vegetable-forward dishes have a depth of flavor that guests talk about long after they leave.\n\nTuscany is located in the Casino of the Sky and opens today at 5:00 PM, serving until 10:00 PM. Since it is one of our more popular fine dining venues, I highly recommend securing a reservation, and the dress code is business casual. Prices are typically in the $$$$ range and are subject to change.\n\nAfter a relaxing meal at Tuscany, the planetarium dome in the Casino of the Sky often has incredible visual displays worth seeing. Are you looking for a quiet, romantic setting or something a bit more high-energy for your evening?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        }
+      ],
+      "elapsed_ms": 47637,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Actually tell me about the spa first",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 51588,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Ok back to dinner \u2014 where should I go?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 52716,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 213948,
+  "error": null,
+  "completed": true
+}

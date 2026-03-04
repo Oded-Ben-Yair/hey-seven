@@ -1,0 +1,97 @@
+{
+  "id": "sarcasm-01",
+  "name": "Sarcastic opener dismissing chatbot",
+  "source_file": "behavioral_sarcasm.yaml",
+  "category": "behavioral_sarcasm",
+  "behavioral_dimension": "B1_sarcasm",
+  "expected_behavior": "Does not match sarcasm with excessive enthusiasm. Stays grounded, earns trust through useful answers, and naturally warms as guest engagement shifts",
+  "expected_behavioral_quality": "Acknowledges the skepticism without defensiveness or forced enthusiasm. Does not mirror sarcasm. Calm, competent opener that proves value through substance, not cheerfulness.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Oh wonderful, another chatbot. This should be fun.",
+      "agent_response": "I understand the skepticism\u2014it can be a bit much when you're just looking for a straight answer. I\u2019m Seven, and while I am an AI, I have all the current details on our restaurants, shows, and gaming floors to help you navigate the resort. \n\nWhat brings you to Mohegan Sun today?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.635
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.635
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.605
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.613
+        }
+      ],
+      "elapsed_ms": 25966,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Fine. What restaurants do you have?",
+      "agent_response": "If you are looking for lunch right now, Hash House A Go Go in the Casino of the Earth is your best bet for something memorable. They serve what they call \"twisted farm food\" in massive portions\u2014their sage fried chicken and waffles often require a steak knife just to keep the presentation together. \n\nThey are open until 2:00 PM today and offer a casual atmosphere where no reservations are required. For dinner later this evening, Todd English's Tuscany opens at 5:00 PM in the Casino of the Sky. The wood-fired aroma hits you the moment you walk in, and their handmade pastas are a local favorite. It is a business casual environment, so I would suggest a reservation if you choose to head there. \n\nAfter you've had your fill, the Wolf Den usually has some excellent live music to round out the afternoon. Are you traveling with a group or dining solo today?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.658
+        }
+      ],
+      "elapsed_ms": 28823,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Alright that was actually useful. What about the spa?",
+      "agent_response": "I'm glad that helped. We have two distinct spa experiences depending on what you're looking for today. \n\nMandara Spa is our award-winning spot with a Balinese-inspired atmosphere; their steam room and sauna are perfect for a full reset after a long trip. If you're staying in the Earth Tower, the Elemis Spa is a bit more modern and specializes in high-end skincare and express services if you're on the move. Both are open right now, with Mandara staying open until 8:00 PM tonight. \n\nIf you're a hotel guest looking for something even more low-key, the indoor heated pool and hot tub are also open until 10:00 PM. Since you're interested in wellness, would you prefer a deep-tissue treatment or something more focused on skincare?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.703
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.649
+        }
+      ],
+      "elapsed_ms": 22061,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 76852,
+  "error": null,
+  "completed": true
+}

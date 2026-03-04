@@ -1,0 +1,92 @@
+{
+  "id": "overall-01",
+  "name": "Perfect multi-turn guest journey",
+  "source_file": "behavioral_overall_quality.yaml",
+  "category": "behavioral_overall_quality",
+  "behavioral_dimension": "B10_overall",
+  "expected_behavior": "B1: No sarcasm to detect. B2: Reads anniversary and Italian preference as implicit signals. B3: Gathers couple info naturally. B4: Cross-domain suggestion (dinner->show or spa). B5: Warm without over-enthusiasm. B6: Substance-based warmth. B7: Name, occasion, preferences persist across all 5 turns. All dimensions working together",
+  "expected_behavioral_quality": "An ideal 5-turn guest journey covering greeting, dining recommendation with preference extraction, cross-domain suggestion, personalized follow-up, and warm sign-off. Tests whether all behavioral dimensions integrate into a coherent experience.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hi, I'm David. We're here for our anniversary weekend.",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 51194,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We'd love a nice dinner tonight. She loves Italian.",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 47568,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What about after dinner?",
+      "agent_response": "David, After your dinner at Tuscany, the Birdcage Bar in the Casino of the Sky is a fantastic choice for a more intimate anniversary nightcap. It's a sophisticated lounge with craft cocktails that stays open until 2:00 AM, so you can really take your time and enjoy each other's company.\n\nIf you're looking for live entertainment, the Wolf Den in the Casino of the Earth always has a great energy with nightly live music, and the intimate setting makes you feel like the performance is just for you. Since it's your anniversary, you might also consider a visit to the Mandara Spa tomorrow morning to keep the celebration going with a relaxing couples' treatment. Please keep in mind that performance schedules and lounge hours can occasionally change, so it's always good to check the monitors on the casino floor once you arrive. \n\nDo you prefer a spot where you can talk quietly, or are you looking for a more high-energy atmosphere tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        }
+      ],
+      "elapsed_ms": 47596,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "The spa sounds nice for tomorrow morning",
+      "agent_response": "David, You're going to love the Mandara Spa for an anniversary morning\u2014it has a tranquil energy inspired by Balinese healing traditions that feels worlds away from the casino floor. They open at 9:00 AM, and the relaxation lounge is a wonderful spot to just sit and be together before your treatment starts.\n\nIf you want something specifically geared toward couples, the Elemis Spa at the Earth Tower is also fantastic and offers premium skincare treatments. To make this milestone even more special, I'd love to see about getting an upgrade for your stay while you're here. Please keep in mind that treatments and hours can change, so it's best to confirm the latest schedule when you're ready to head down.\n\nAfter you've both hit the reset button, a casual lunch at the Bean and Vine Terrace is a great way to keep that relaxed vibe going. Do you think you'd prefer a full-body massage or something more focused like a signature facial?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.632
+        }
+      ],
+      "elapsed_ms": 39654,
+      "error": null
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Thanks, you've been really helpful",
+      "agent_response": "Glad to help! Anything else about entertainment or something different you'd like to explore?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 186016,
+  "error": null,
+  "completed": true
+}

@@ -1,0 +1,50 @@
+{
+  "id": "implicit-09",
+  "name": "VIP entitlement through indirect language",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Treats spending claim as VIP signal. Provides elevated recommendations and references comp/host team for personalized offers without questioning the guest's status",
+  "expected_behavioral_quality": "Recognizes phrases like 'I spend a lot here' as implicit VIP status claims that require elevated service tone. Does not ask for proof or membership number. Treats the claim as valid and responds with VIP-appropriate warmth.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I spend a lot of money here every month",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 49062,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What's the best you can do for dinner tonight?",
+      "agent_response": "For a guest of your standing, Todd English\u2019s Tuscany is the definitive choice for tonight. The wood-fired aroma from the open kitchen greets you the moment you arrive, setting the stage for a sophisticated evening featuring handmade pastas and their signature salt-crusted branzino. \n\nTuscany opens at 5:00 PM tonight and serves until 10:00 PM. It is a business casual environment with a price range of approximately $$$$, and I strongly recommend a reservation to secure a prime table. Given your frequent visits, you may want to check if your Momentum status provides any priority seating or if you'd like to apply your points toward what is arguably the most refined Italian meal on the property.\n\nWould you prefer a table near the waterfall for the ambiance, or closer to the open kitchen to watch the chefs in action?\n\nAfter dinner, the Wolf Den usually has some excellent live music if you're looking to keep the evening going.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.64
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        }
+      ],
+      "elapsed_ms": 24732,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can you check on any comp availability?",
+      "agent_response": "I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.\n\nFor reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.\n\nIs there any information I can help you with?",
+      "sources": [],
+      "elapsed_ms": 6182,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 79977,
+  "error": null,
+  "completed": true
+}

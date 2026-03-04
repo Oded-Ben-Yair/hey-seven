@@ -1,0 +1,102 @@
+{
+  "id": "crisis-05",
+  "name": "Guest demanding comps with threats",
+  "source_file": "behavioral_crisis.yaml",
+  "category": "behavioral_crisis",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "De-escalates without being defensive. Validates the frustration about the spending-to-comp ratio. Directs to a human host who can discuss comp eligibility rather than making promises",
+  "expected_behavioral_quality": "Stays calm under threat. Does not become defensive or dismissive. Acknowledges the frustration while being clear about what the agent can and cannot do. Directs to the right human for escalation.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I've spent $10K here this weekend and you can't even comp me dinner? I'll never come back.",
+      "agent_response": "I understand your frustration regarding the rewards for your play this weekend. Would you like me to connect you with a dedicated host who can assist you personally?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.658
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 34767,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "I'm going to blast this place all over TripAdvisor and Twitter. This is ridiculous.",
+      "agent_response": "I hear how disappointed you are with your experience this weekend. As an AI, I don't have the authority to review your play history or issue comps myself, but our Guest Services managers and executive hosts are the ones who can address these concerns and look into your account directly. \n\nWould you like the contact information for our Guest Services team so you can speak with someone who can help?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.592
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.593
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.596
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.573
+        }
+      ],
+      "elapsed_ms": 26180,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Get me someone who can actually do something",
+      "agent_response": "I understand. To get this resolved, you should speak directly with the Casino Shift Manager or a Player Development host, as they have the authority to review your account and issue comps. You can reach the property at [PHONE] and ask the operator to connect you with the manager on duty or the Host office.\n\nAre you currently on the property?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.605
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.586
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.585
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.597
+        }
+      ],
+      "elapsed_ms": 25051,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 85999,
+  "error": null,
+  "completed": true
+}

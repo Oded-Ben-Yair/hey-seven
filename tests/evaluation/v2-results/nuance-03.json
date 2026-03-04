@@ -1,0 +1,92 @@
+{
+  "id": "nuance-03",
+  "name": "Honeymoon celebration energy matching",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Celebrates the honeymoon with genuine enthusiasm. Recommends romantic dining and couples experiences. Maintains elevated celebratory tone throughout without being performative",
+  "expected_behavioral_quality": "Matches the celebration energy authentically. Congratulates the couple genuinely. Recommends romantic and special experiences without being generic. Treats this as a milestone occasion deserving elevated suggestions.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We just got married! Honeymoon trip!",
+      "agent_response": "Congratulations on your marriage and thank you for choosing to celebrate your honeymoon here!\n\nFor a memorable dinner, I recommend Todd English's Tuscany for its romantic setting near the Taughannick Falls. You might also consider spending an afternoon at Mandara Spa, which offers a range of relaxing treatments inspired by Balinese traditions. If you'd like to end the evening with a craft cocktail in a more sophisticated atmosphere, Novelle is our premier ultra lounge. \n\nAre you looking for high-energy entertainment during your visit or a more relaxed pace?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.603
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.59
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.6
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.591
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.586
+        }
+      ],
+      "elapsed_ms": 30237,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What's the most romantic dinner option?",
+      "agent_response": "For a honeymoon dinner that feels truly elevated, Michael Jordan\u2019s Steak House is my top recommendation. The atmosphere is sophisticated and elegant, offering a refined backdrop where you can toast to your new life together over USDA Prime steaks and fresh seafood. \n\nThey open at 5:00 PM today and have a business casual dress code, so it is a wonderful excuse to dress up for your first evening here",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 51885,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And something special we can do together tomorrow?",
+      "agent_response": "A spa session at Elemis Spa would be a beautiful way to spend your first full day as a married couple. The hot stone massage is a guest favorite for unwinding and finding some calm after the whirlwind of a wedding. Tomorrow evening, novelle also opens for the weekend, offering a sophisticated lounge environment with craft cocktails and DJ entertainment that feels very celebratory!\n\nDo you think you would enjoy a relaxing spa treatment together or something more upbeat like the lounge atmosphere?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.616
+        }
+      ],
+      "elapsed_ms": 55883,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 138006,
+  "error": null,
+  "completed": true
+}

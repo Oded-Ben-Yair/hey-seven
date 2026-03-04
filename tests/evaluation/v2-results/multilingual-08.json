@@ -1,0 +1,23 @@
+{
+  "id": "multilingual-08",
+  "name": "Spanish celebration \u2014 anniversary",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "Congratulates the couple in Spanish. Provides curated evening suggestions: romantic dinner spot, entertainment option, possibly spa. Suggestions flow as a planned evening rather than disconnected options.",
+  "expected_behavioral_quality": "Recognizes the celebration context in Spanish. Responds with genuine warmth and curated suggestions for an anniversary evening \u2014 not a generic list. Maintains celebratory energy in Spanish.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Estamos celebrando nuestro aniversario de bodas! Que nos recomiendas para esta noche?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 53774,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 53774,
+  "error": null,
+  "completed": true
+}

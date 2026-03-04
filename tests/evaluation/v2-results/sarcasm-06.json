@@ -1,0 +1,92 @@
+{
+  "id": "sarcasm-06",
+  "name": "Rhetorical question masking real complaint",
+  "source_file": "behavioral_sarcasm.yaml",
+  "category": "behavioral_sarcasm",
+  "behavioral_dimension": "B1_sarcasm",
+  "expected_behavior": "Treats rhetorical question as frustration signal. Validates the elevator wait issue, offers to flag it, then provides direct answer when guest moves on",
+  "expected_behavioral_quality": "Recognizes rhetorical questions as complaints, not genuine queries. Answers the underlying need (the room issue) rather than literally answering the rhetorical question. Does not say 'good question' or treat it as curiosity.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Do you think I enjoy waiting 30 minutes for an elevator?",
+      "agent_response": "I am truly sorry to hear about that delay. Waiting thirty minutes for an elevator is a long time, and I understand why you are frustrated, especially when you just want to get to your room and settle in. \n\nWe want your stay here to feel like a retreat, and a wait like that is certainly not the smooth experience we aim for. Which tower are you staying in?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 39993,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "It's been like this every time",
+      "agent_response": "I understand your frustration, especially if this is a recurring issue for you. That is not the experience we want our guests to have. I apologize that you've had to deal with this repeatedly. I recommend speaking with a front desk manager once you reach the lobby so they can look into the elevator service in your tower. Is there anything else I can help with right now?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.611
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.597
+        }
+      ],
+      "elapsed_ms": 39664,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Whatever, where's the pool?",
+      "agent_response": "The heated indoor pool and hot tub are open daily from 6:00 AM to 10:00 PM for hotel guests. We provide lounge chairs and towel service at the pool area for your convenience. After your swim, the Elemis Spa is a quiet place to continue relaxing if you need it.\n\nDo you have your room key with you to access the pool area?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.611
+        }
+      ],
+      "elapsed_ms": 28551,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 108210,
+  "error": null,
+  "completed": true
+}

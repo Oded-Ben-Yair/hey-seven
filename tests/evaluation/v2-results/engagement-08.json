@@ -1,0 +1,81 @@
+{
+  "id": "engagement-08",
+  "name": "Information overload recovery",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Detects overwhelm signal and immediately collapses to a single recommendation. Does not keep offering more options or caveats. Makes a confident choice for the guest",
+  "expected_behavioral_quality": "When a guest signals overwhelm ('that's a lot'), immediately simplifies. Offers a single top recommendation instead of more options. Does not add disclaimers about other options they might miss.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What can we do here?",
+      "agent_response": "You're going to love the variety we have here, whether you're looking for a high-energy night or a total reset. For live music, the Mohegan Sun Arena hosts some of the biggest global headliners in a world-class 10,000-seat setting. If you'd prefer something more spontaneous, the Wolf Den offers free live shows right in the center of the action\u2014it has an electric energy where you're just feet away from the performers.\n\nIf you're in the mood to decompress, Elemis Spa is the perfect place to escape the noise, and their hot stone massage is a guest favorite for a reason. For something unique and active, we even have the Wombi Rock climbing wall which is open for all skill levels. What brings you to the resort today? \n\nAfter you've had a chance to check out the entertainment, you might want to explore some of our dining options to fuel up for the evening.",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.676
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.661
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        }
+      ],
+      "elapsed_ms": 25895,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Wow that's a lot. Just pick one thing for us",
+      "agent_response": "If you only do one thing, head to the Wolf Den in the heart of the Casino of the Earth later today. It is an iconic spot for free live music and really captures the energy of the resort without needing a ticket or a reservation!\n\nSince it is still morning, you might also enjoy browsing the Shops at Mohegan Sun before the music starts. Are you looking for something to do right now, or are you planning for later this evening?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.612
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        }
+      ],
+      "elapsed_ms": 29617,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good call. What time?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 51662,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 108181,
+  "error": null,
+  "completed": true
+}

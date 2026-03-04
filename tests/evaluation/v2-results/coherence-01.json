@@ -1,0 +1,72 @@
+{
+  "id": "coherence-01",
+  "name": "Re-asking guest name after it was already given",
+  "source_file": "behavioral_multiturn_coherence.yaml",
+  "category": "behavioral_multiturn_coherence",
+  "behavioral_dimension": "B7_coherence",
+  "expected_behavior": "Sarah's name captured in turn 1 and used naturally in later turns without re-asking. By turn 3, 'Sarah' should appear in the response as a natural address. Agent never asks 'What's your name?' or 'And who am I speaking with?'",
+  "expected_behavioral_quality": "Guest introduces themselves in turn 1. Agent must NOT ask for name in any subsequent turn. Name should appear naturally in later responses (sign-offs, confirmations) without being re-asked.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hi, I'm Sarah. What restaurants do you have?",
+      "agent_response": "Welcome to Mohegan Sun, Sarah. I am Seven, an AI dining specialist here to help you navigate our culinary scene.\n\nFor right now, Hash House A Go Go is the standout choice for a late morning meal. Located in the Casino of the Earth, they serve what they call \"twisted farm food\" and the portions are truly legendary \u2014 their famous giant pancakes are often larger than the plates they are served on. They are open daily from 8:00 AM until 2:00 PM with a casual dress code and no reservations required, making it a perfect spot for a relaxed, hearty brunch.\n\nSince you will be near the center of the action in the Casino of the Earth, you might enjoy catching some of the live music performances that often happen at the Wolf Den later today.\n\nAre you looking for a quick bite or more of a sit-down dining experience?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        }
+      ],
+      "elapsed_ms": 48089,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What about the spa?",
+      "agent_response": "Sarah, the spas here are the ultimate way to recharge. Mandara Spa is our award-winning, full-service retreat that draws from Balinese healing traditions\u2014their relaxation lounge, steam room, and sauna are exactly what you need to escape the energy of the casino floor for a while. They are open today until 8:00 PM.\n\nIf you are looking for something more modern or focused on premium skincare, the Elemis Spa in the Earth Tower offers incredible express services and couples experiences until 7:00 PM. After a day on the move, a hot stone massage at Mandara is truly legendary. \n\nSince you were asking about dining earlier, a massage followed by a nice dinner is a great way to spend your Wednesday. \n\nAre you looking for a full day of pampering or just a quick treatment between other activities?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.687
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        }
+      ],
+      "elapsed_ms": 30229,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can you recommend something fun tonight?",
+      "agent_response": "Sarah, you are going to love the energy at the Wolf Den tonight. It has this intimate vibe where you're right there with the performer\u2014it is electric. \n\nSince it's Wednesday, the Wolf Den is your best bet for a great time because they host free live music nightly, typically starting at 8:00 PM. There are no tickets required and the shows are complimentary, so you can just head over to the center of the Casino of the Earth and grab a seat. If you're looking for something more high-energy later in the week, Avalon Nightclub and novelle really pick up starting Thursday and Friday. \n\nSince you were asking about the spa earlier, a relaxing afternoon treatment followed by a live show at the Den makes for a perfect Wednesday.\n\nDo you prefer a specific genre of music, or are you happy to discover something new?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.687
+        }
+      ],
+      "elapsed_ms": 24875,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 103194,
+  "error": null,
+  "completed": true
+}
