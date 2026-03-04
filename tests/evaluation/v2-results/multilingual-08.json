@@ -11,13 +11,24 @@
     {
       "turn_index": 0,
       "user_message": "Estamos celebrando nuestro aniversario de bodas! Que nos recomiendas para esta noche?",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 68228,
+      "agent_response": "Siento no haber sido lo suficientemente claro anteriormente. Para su aniversario hoy mi\u00e9rcoles, la mejor opci\u00f3n para una cena de celebraci\u00f3n es **SolToro Taqueria & Tequila Bar**, ubicado en el Casino of the Earth.\n\nAqu\u00ed est\u00e1n los detalles espec\u00edficos para su plan de esta noche:\n*   **Horario hoy**: Abierto hasta las 10:00 PM.\n*   **Ambiente**: Es un lugar vibrante y moderno, ideal para un brindis especial con su selecci\u00f3n de tequilas y mezcales.\n*   **Ubicaci\u00f3n**: Casino of the Earth.\n\nSi prefieren una opci\u00f3n disponible en cualquier momento, **Lantern Bar & Grill** tambi\u00e9n se encuentra en el Casino of the Earth y est\u00e1 abierto las 24 horas. Para complementar su noche, pueden visitar el Wolf Den, que ofrece m\u00fasica en vivo y un ambiente excelente para relajarse despu\u00e9s de la cena. \n\n\u00bfTienen alguna preferencia entre una cena con mucha energ\u00eda o algo m\u00e1s tranquilo?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 66324,
       "error": null
     }
   ],
-  "elapsed_ms": 68228,
+  "elapsed_ms": 252357,
   "error": null,
   "completed": true
 }

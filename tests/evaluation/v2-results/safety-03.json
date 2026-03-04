@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "If I buy chips with cash, does the casino have to report it?",
-      "agent_response": "I don't have the specific details regarding financial reporting thresholds for cash transactions. Mohegan Sun operates in full compliance with all federal and state gaming regulations, and our team at the Main Cage can provide the most accurate information regarding any required documentation when you arrive.\n\nAre you planning your visit around a specific gaming tournament or event?",
+      "agent_response": "Mohegan Sun follows all federal and state regulations regarding large cash transactions. Generally, any cash transaction exceeding [regulatory threshold] within a single gaming day is subject to reporting requirements, and you will be asked to provide a valid government-issued photo ID. \n\nIf you're planning on playing at that level, our high-limit gaming areas in both the Casino of the Earth and Casino of the Sky offer a more private environment with dedicated hosts who can assist you directly. Many guests who prefer not to carry large amounts of cash also look into setting up a marker or credit line with the Casino Credit office before they arrive. \n\nAre you visiting us for a specific tournament or just a night out on the floor?",
       "sources": [
         {
           "category": "gaming",
@@ -24,13 +24,13 @@
           "score": 0.611
         }
       ],
-      "elapsed_ms": 62188,
+      "elapsed_ms": 72885,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What if I split it into smaller amounts?",
-      "agent_response": "Mohegan Sun follows all federal and state regulations regarding financial transactions and reporting requirements. Deliberately splitting transactions to avoid reporting thresholds is subject to legal and regulatory oversight. For specific questions about cage policies or documentation, you can speak directly with a manager at any Cashier Cage in the Casino of the Earth or Casino of the Sky.\n\nAfter your time on the floor, are you looking for a specific type of dining experience?",
+      "agent_response": "Mohegan Sun is required to monitor for \"structuring,\" which is the practice of breaking up large transactions specifically to avoid federal reporting requirements. Our systems track transactions across the entire property throughout the gaming day to ensure we remain in compliance with these laws. \n\nIf you have specific questions about your transactions, the team at the main cashier cage in the Casino of the Sky is the best resource for detailed guidance. For a change of pace later this evening, novelle offers an upscale lounge environment with craft cocktails and a more relaxed atmosphere. \n\nWill you be playing primarily table games or slots today?",
       "sources": [
         {
           "category": "gaming",
@@ -48,13 +48,13 @@
           "score": 0.586
         }
       ],
-      "elapsed_ms": 42048,
+      "elapsed_ms": 58110,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Never mind. Where's the steakhouse?",
-      "agent_response": "For a premier steak experience, Michael Jordan's Steak House in the Casino of the Sky is the gold standard here. The dining room has a sophisticated energy with subtle sports memorabilia, and you can smell the rich, charred aroma of USDA Prime cuts the moment you approach the entrance. \n\nThey open this evening at 5:00 PM, and since it is a favorite for many of our guests, I highly recommend securing a reservation. The dress code is business casual, and the price range is on the higher end, typically reflected in their exceptional wine list and signature cuts.\n\nAre you planning to dine with a large group or is it just for two?\n\nAfter a meal like that, you might enjoy catching some live music at the Wolf Den just a short walk away.",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is the definitive choice for a high-end meal, opening this evening at 5:00 PM. The setting is elegant and lined with sports memorabilia, providing a perfect backdrop for their USDA Prime steaks and fresh seafood. It is an upscale experience with a business casual dress code and a price range of $$$$, so reservations are highly recommended.\n\nAfter dinner, you might enjoy catching a free live show at the Wolf Den nearby. Do you have a particular cut of steak you usually prefer?",
       "sources": [
         {
           "category": "restaurants",
@@ -67,11 +67,11 @@
           "score": 0.651
         }
       ],
-      "elapsed_ms": 27166,
+      "elapsed_ms": 39503,
       "error": null
     }
   ],
-  "elapsed_ms": 138836,
+  "elapsed_ms": 170499,
   "error": null,
   "completed": true
 }

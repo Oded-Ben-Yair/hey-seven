@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "I'm vegetarian. What are my dinner options?",
-      "agent_response": "For a vegetarian dinner tonight, Todd English's Tuscany is an exceptional choice where the aroma of wood-fired dough and fresh herbs greets you at the door. Their chefs craft incredible handmade pastas and artisanal pizzas that make meat an afterthought. They open at 5:00 PM today with a business casual dress code, and because it is one of our most popular spots, I recommend a reservation for a table near the open kitchen to watch the action. Expect pricing in the $$$$ range. \n\nIf you're looking for something quicker or more casual, Mohegan Sun Caputo Trattoria is open now and offers a relaxed atmosphere with delicious vegetable-based pastas and brick-oven pizzas.\n\nHow many people will be joining you for dinner tonight?\n\nAfter you finish your meal, you might enjoy catching some live music at the Wolf Den just a short walk away.",
+      "agent_response": "For a vegetarian dinner tonight, Todd English's Tuscany is the standout choice for its sophisticated take on Italian classics. The handmade pastas have a delicate texture that pairs beautifully with their fresh, seasonal sauces, and the wood-fired pizzas offer that perfect charred crust.\n\nThe restaurant is located in the Casino of the Sky and opens at 5:00 PM today. It is a business casual environment with a price range of $$$$, and I suggest a reservation to ensure you get a table near the open kitchen where you can watch the chefs at work. If you prefer a more laid-back setting or want to eat before 5:00 PM, Caputo Trattoria in the Casino of the Earth offers fantastic vegetarian pizzas and pasta dishes in a casual atmosphere.\n\nHow many guests will be joining you for dinner?\n\nOnce you have finished your meal, the Wolf Den often has great live performances to round out your evening!",
       "sources": [
         {
           "category": "restaurants",
@@ -19,13 +19,13 @@
           "score": 0.673
         }
       ],
-      "elapsed_ms": 30252,
+      "elapsed_ms": 53423,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Actually tell me about the spa first",
-      "agent_response": "You've come to the right place for a reset. Mohegan Sun offers two distinct spa experiences, and since it's just past 1 PM, you have plenty of time to indulge this afternoon.\n\nMandara Spa is our full-service sanctuary inspired by Balinese healing traditions. It's open until 8 PM tonight, and I highly recommend spending some time in their tranquil relaxation lounge or the steam room before your treatment to really let the stress melt away. If you're looking for something more focused on modern skincare, the Elemis Spa in the Earth Tower is open until 7 PM. They specialize in premium Elemis treatments and even offer express services if you're looking for a quick pick-me-up between activities.\n\nAre you looking for a full-body massage or more of a facial and skincare focus today?\n\nAfter a relaxing session at the spa, you might find that the live music at the Wolf Den tonight is the perfect way to keep that good energy going.",
+      "agent_response": "If you are looking for a deep reset after your travels, Mandara Spa is my top recommendation. It is an award-winning space that uses Balinese healing traditions, and their relaxation lounge is the perfect place to disconnect for an hour or two. They are open until 8:00 PM tonight, so you have plenty of time to fit in a massage or a facial before your vegetarian dinner. \n\nFor something more focused on premium skincare, the Elemis Spa in the Earth Tower is excellent and stays open until 7:00 PM today. They offer modern treatments and express services if you are looking for a quicker refresh before heading out for the evening. \n\nAre you interested in a specific type of treatment, like a deep-tissue massage or a rejuvenating facial? \n\nAfter you have had some time to unwind, the Wolf Den usually has great live music starting in the evening to keep the energy going!",
       "sources": [
         {
           "category": "amenities",
@@ -43,19 +43,25 @@
           "score": 0.633
         }
       ],
-      "elapsed_ms": 28193,
+      "elapsed_ms": 38551,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Ok back to dinner \u2014 where should I go?",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 59202,
+      "agent_response": "SolToro Taqueria & Tequila Bar in the Casino of the Earth is my top pick for a vibrant vegetarian dinner tonight. The air there is filled with the scent of fresh lime and roasted chilies, and their kitchen produces some of the most authentic vegetarian tacos and fresh, table-side guacamole on the property.\n\nThey are open until 10:00 PM today, and because the atmosphere is so lively and casual, you do not need a reservation. It is a mid-range option ($$) that really leans into bold, fresh flavors. If you prefer something lighter, Sushi Palace in the Casino of the Sky is also open until 10:00 PM and offers a variety of fresh vegetable rolls and Japanese specialties.\n\nAre you looking for a quiet, intimate meal or something with a bit more energy?\n\nAfter your meal, you might enjoy catching a performance at the Wolf Den, which features live music right in the heart of the action.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.657
+        }
+      ],
+      "elapsed_ms": 45987,
       "error": null
     }
   ],
-  "elapsed_ms": 117648,
+  "elapsed_ms": 137962,
   "error": null,
   "completed": true
 }

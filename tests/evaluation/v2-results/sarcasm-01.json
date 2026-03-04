@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Oh wonderful, another chatbot. This should be fun.",
-      "agent_response": "Fair point\u2014I'm an AI, so I'll skip the standard scripts. I can give you direct information on everything from restaurant hours to what's playing at the Wolf Den to help you navigate the property. \n\nWhat brings you to Mohegan Sun today?",
+      "agent_response": "I understand the skepticism. While I am an AI, I have the property's full schedule and layout ready to help you save some time today. What brings you to Mohegan Sun?",
       "sources": [
         {
           "category": "faq",
@@ -39,21 +39,32 @@
           "score": 0.613
         }
       ],
-      "elapsed_ms": 29639,
+      "elapsed_ms": 32535,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Fine. What restaurants do you have?",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 57988,
+      "agent_response": "If you're looking for something memorable tonight, Todd English's Tuscany is a fantastic choice and opens at 5:00 PM. The wood-fired aroma from the open kitchen hits you immediately, and their handmade pastas have a velvety texture that guests rave about. It's located in the Casino of the Sky with a business casual dress code and a price range of about $$$$. Since it's one of our most popular spots, I'd suggest securing a reservation if you can. \n\nIf you're hungry right now, Lantern Bar & Grill in the Casino of the Earth is open 24 hours for a casual burger or steak. Are you looking for a full sit-down dinner or something a bit quicker? After your meal, the Wolf Den has free live music every night right in the center of the Casino of the Earth.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.658
+        }
+      ],
+      "elapsed_ms": 57428,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Alright that was actually useful. What about the spa?",
-      "agent_response": "You have two distinct ways to unwind here, depending on the vibe you're looking for. Mandara Spa is our full-service sanctuary where the treatments are inspired by Balinese healing traditions, and their relaxation lounge is the perfect place to disappear for a few hours before it closes at 8:00 PM tonight.\n\nIf you're staying in the Earth Tower or just want something a bit more modern, the Elemis Spa is fantastic for premium skincare treatments and is open until 7:00 PM. Their express services are a great choice if you want to feel refreshed without missing too much time on the floor. \n\nSince schedules and pricing can vary, it's always worth a quick check with them before you head over. After a spa session, many guests find the live music at the Wolf Den is a great way to keep that relaxed energy going.\n\nAre you looking for a full afternoon of pampering or just a quick reset?",
+      "agent_response": "I am glad I could help. Since it is mid-afternoon, both of our spas are open for a few more hours if you are looking to reset today.\n\nThe Mandara Spa is a full-service sanctuary inspired by Balinese healing traditions, featuring a tranquil relaxation lounge, steam room, and sauna that are perfect for decompressing. If you are staying in the Earth Tower or just need a quicker refresh, the Elemis Spa offers premium skincare and express services designed for guests on the go. Both locations offer a variety of massages and facials, though Mandara stays open until 8:00 PM while Elemis closes at 7:00 PM.\n\nDo you have a specific treatment in mind, like a deep tissue massage or a signature facial?\n\nOnce you are feeling refreshed, you might want to head over to the Wolf Den in the heart of the Casino of the Earth\u2014the live music starts every night and the energy there is a great way to transition into the evening.",
       "sources": [
         {
           "category": "amenities",
@@ -76,11 +87,11 @@
           "score": 0.649
         }
       ],
-      "elapsed_ms": 25198,
+      "elapsed_ms": 33069,
       "error": null
     }
   ],
-  "elapsed_ms": 112827,
+  "elapsed_ms": 123033,
   "error": null,
   "completed": true
 }

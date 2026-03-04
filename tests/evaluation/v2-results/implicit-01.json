@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We drove 4 hours to get here. What should we do first?",
-      "agent_response": "That is a long stretch on the road, so I would suggest starting with something low-key to help you unwind. A quiet lunch at Todd English's Tuscany is a great choice; the dining room is right by the Taughannick Falls, which makes for a peaceful backdrop while you recharge.\n\nIf you would rather head straight to relaxation, the Mandara Spa is open and offers a perfect environment to decompress after four hours in the car. Are you planning to stay overnight with us, or are you just visiting for the day?",
+      "agent_response": "Welcome to Mohegan Sun. After a four-hour drive, I'd suggest starting with something low-key to help you decompress.\n\nIf you are hungry, Todd English's Tuscany near the Sky Tower lobby offers a relaxed atmosphere with a view of the Taughannick Falls\u2014it is a guest favorite for a quiet meal where you can truly unwind. If you would rather just relax physically, the Mandara Spa is excellent for a treatment to work out any tension from the road.\n\nOnce you have had a chance to rest, you might enjoy a gentle stroll through The Shops at Mohegan Sun later this evening.\n\nAre you staying with us in the Sky Tower or the Earth Tower tonight?",
       "sources": [
         {
           "category": "faq",
@@ -24,27 +24,49 @@
           "score": 0.64
         }
       ],
-      "elapsed_ms": 36942,
+      "elapsed_ms": 51822,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Yeah we're pretty tired but hungry",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 49562,
+      "agent_response": "After that long drive, **Caputo Trattoria** in the Casino of the Earth is the perfect spot to settle in without any fuss. \n\nIt is a casual Italian eatery where the aroma of brick-oven pizza and slow-simmered sauces creates a very welcoming environment for tired travelers. They are open now until 10:00 PM, and since no reservations are required, you can walk right in for a comforting bowl of pasta or a hot calzone. The vibe is relaxed, prices are mid-range ($$), and it is a great place to simply sit back and refuel.\n\nOnce you have had a chance to eat, you might find that a quiet evening or a visit to the Mandara Spa tomorrow morning is exactly what you need to fully recharge.\n\nDo you have a preference for a specific type of cuisine, or does a hearty Italian meal sound right?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        }
+      ],
+      "elapsed_ms": 46422,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about after dinner?",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 55389,
+      "agent_response": "Since you have had a long day on the road, I'd suggest keeping it low-key tonight at the **Birdcage Bar** in the Casino of the Sky.\n\nIt is an upscale cocktail lounge that offers a sophisticated atmosphere and a great selection of craft cocktails, making it the perfect spot for a relaxed nightcap before heading to bed. It is open until 2:00 AM tonight, so you can take your time with dinner and not feel rushed. \n\nFor tomorrow morning, you might want to consider a session at the **Mandara Spa** to fully recover from that four-hour drive. Their signature treatments are designed to help you reset and get into vacation mode.\n\nWould you like me to look up the opening hours for the spa so you can plan a relaxing start to your day?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.652
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        }
+      ],
+      "elapsed_ms": 76141,
       "error": null
     }
   ],
-  "elapsed_ms": 141894,
+  "elapsed_ms": 174386,
   "error": null,
   "completed": true
 }

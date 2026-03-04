@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Where should we go for dinner tonight?",
-      "agent_response": "Welcome to Mohegan Sun. For your dinner tonight, SolToro Taqueria & Tequila Bar is my top pick for a lively, flavorful experience. The atmosphere is vibrant and colorful, providing the perfect backdrop for their authentic tacos and one of the best tequila selections on the property. They are open today until 10:00 PM and fall into a mid-range price category, and you won't need a reservation to get a table. After dinner, you might enjoy a stroll through the Casino of the Earth to see the spectacular decor and architecture. Are you celebrating anything special during your visit?",
+      "agent_response": "For tonight, SolToro Taqueria & Tequila Bar is a fantastic choice\u2014the aroma of fresh-pressed tortillas and charred peppers fills the air as soon as you step into their vibrant space in the Casino of the Earth.\n\nIt is a lively, modern Mexican spot known for authentic street tacos, fresh ceviche, and a massive selection of tequilas and mezcals. Since it is Wednesday, they are open from 11:30 AM until 10:00 PM. The vibe is casual and energetic, making it a great place to unwind after a day on the floor, and you do not need a reservation to get a table.\n\nHow many people will be joining you for dinner tonight?\n\nAfter you finish your meal, you might enjoy catching a free live show at the Wolf Den, which is just a short walk away within the Casino of the Earth.",
       "sources": [
         {
           "category": "restaurants",
@@ -24,27 +24,27 @@
           "score": 0.647
         }
       ],
-      "elapsed_ms": 29960,
+      "elapsed_ms": 66538,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "The steakhouse sounds good. What time?",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "agent_response": "",
       "sources": [],
-      "elapsed_ms": 39706,
-      "error": null
+      "elapsed_ms": 90002,
+      "error": ""
     },
     {
       "turn_index": 2,
       "user_message": "Great, we'll do that",
-      "agent_response": "Glad to help with dining. If you're interested, I also know the entertainment scene well \u2014 or ask me about anything else at Mohegan Sun.",
+      "agent_response": "Glad I could help. The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. What sounds good?",
       "sources": [],
-      "elapsed_ms": 3,
+      "elapsed_ms": 6,
       "error": null
     }
   ],
-  "elapsed_ms": 69670,
+  "elapsed_ms": 440580,
   "error": null,
   "completed": true
 }

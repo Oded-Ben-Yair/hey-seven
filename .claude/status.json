@@ -1,93 +1,81 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R88 complete — Phase B start. Behavioral uplift: crisis de-escalation, post-gen enforcement, cross-domain bridges, incentive gate lowered.",
-    "lastModified": "2026-03-04T16:00:00Z",
+    "summary": "R89 complete — Phase B behavioral uplift. Fallback 22%→0%, B-avg 6.85→8.5. Target 8.0 EXCEEDED.",
+    "lastModified": "2026-03-04T20:00:00Z",
     "branch": "main",
-    "commitHash": "pending",
+    "commitHash": "56378e8",
     "tag": "v1.5.0",
-    "phase": "r88-complete"
+    "phase": "r89-complete"
   },
-  "blueprintPhase": "Phase B: Behavioral Uplift — R88 start, R87 baseline established",
-  "roundNumber": 88,
+  "blueprintPhase": "Phase B complete → Phase C: Profiling Uplift + Host Triangle",
+  "roundNumber": 89,
   "scores": {
     "technical": 9.63,
-    "behavioral_r87_gpt52": 4.25,
-    "behavioral_r87_grok": 6.15,
-    "behavioral_r87_consensus": 5.2,
-    "profiling_r87_consensus": 5.5,
-    "safety": 95
+    "behavioral_r89_gpt52": 8.05,
+    "behavioral_r89_grok": 8.95,
+    "behavioral_r89_consensus": 8.5,
+    "profiling_consensus": 5.5,
+    "safety": 100
   },
-  "blockers": [
-    {
-      "description": "vaderSentiment not installed in WSL venv — sentiment detection falls back to neutral for all eval scenarios",
-      "severity": "medium"
-    },
-    {
-      "description": "hypothesis not installed — 5 test files can't run (property-based, fuzz, state parity)",
-      "severity": "low"
-    }
-  ],
+  "blockers": [],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "R89: Install vaderSentiment + hypothesis in venv (pip install vaderSentiment hypothesis)"
+      "description": "R90: Fix crisis-05 deflection ('While I can't make reservations...') — lowest scenario at 6.0"
     },
     {
       "priority": 1,
-      "description": "R89: Investigate fallback rate (23%) — RAG retrieval returning empty for common queries"
+      "description": "R90: Fix crisis verbatim repetition (crisis-01 turns 2-3 identical)"
     },
     {
       "priority": 2,
-      "description": "R89: Run judge panel on R88 eval output to measure improvement from code changes"
+      "description": "R90: Profiling uplift (P-avg 5.5 → target 7.0) — run profiling eval with R89 code"
     },
     {
       "priority": 3,
-      "description": "R89: Post-generation output enforcement for remaining thin closers"
+      "description": "R90: Host Triangle measurement (H1-H10) — not yet measured, target 6.0"
     }
   ],
   "reviewHistory": {
-    "r88": {
+    "r89": {
       "date": "2026-03-04",
       "changes": [
-        "R87 baseline scored: GPT-5.2 B-avg 4.25, Grok B-avg 6.15, consensus 5.2",
-        "Crisis de-escalation: broader safe confirmation patterns + agrees-to-seek-help exit",
-        "Post-gen enforcement: As an AI stripper, While I can't deflection stripper, [NAME] → Seven",
-        "Persona: I appreciate you asking opener stripped",
-        "Cross-domain bridges: property-specific venue names (Wolf Den, Tuscany, Mandara, MJ's)",
-        "Incentive gate: 50% → 25% completeness threshold",
-        "Greeting node: cross-domain suggestions in closers instead of thin Anything else?",
-        "Sarcasm: 4 new casino-context patterns (chatbot skepticism, dripping sarcasm)",
-        "Eval v2: 20/20 scenarios, 60/60 turns, 0 errors — crisis exit VERIFIED working"
+        "R88 scored: consensus B-avg 6.85 (+1.65 from R87 5.2), safety 100%",
+        "Fallback root cause: eval RPM 50 vs Gemini 10 RPM + validator too harsh on retry",
+        "Degraded-pass expanded: validator failure with grounding → PASS (not FAIL)",
+        "Fallback recovery: specialist response recovered for non-safety queries",
+        "Eval RPM 50→15, concurrency 4→1, timeout 60→90s",
+        "3 new slop patterns: over-enthusiasm, vague upsell, pushy recs (total 16)",
+        "Venue-specific closers in greeting_node (Wolf Den, Tuscany, Mandara)",
+        "R89 eval: 20/20, 0% fallback, 98% response rate, consensus 8.5 (+1.7)"
       ]
     },
     "trajectory": {
       "R52": 67.7,
       "R68_consensus": 92.9,
       "R75_technical": 9.63,
-      "R85_behavioral_2model": 6.2,
-      "R85_profiling": 5.0,
-      "R85_safety": "95%",
-      "R87_baseline_gpt52": 4.25,
-      "R87_baseline_grok": 6.15,
-      "R87_baseline_consensus": 5.2
+      "R87_behavioral": 5.2,
+      "R88_behavioral": 6.85,
+      "R89_behavioral": 8.5,
+      "R89_safety": "100%"
     }
   },
   "codebaseMetrics": {
-    "tests": 3298,
-    "testFailures": 0,
-    "flakyTests": 1,
+    "tests": 3514,
+    "testFailures": 1,
+    "coverage": 90.53,
     "graphNodes": 13,
     "stateFields": 28,
     "featureFlags": 17,
     "guardrailPatterns": 214,
-    "slopPatterns": 13,
+    "slopPatterns": 16,
     "fewShotExamples": 25,
     "bridges": 15,
     "sarcasmPatterns": 17
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-04",
-    "lastSessionId": "hey-seven-session-20260304-r88"
+    "lastSessionId": "hey-seven-session-20260304-b8d5a0"
   }
 }

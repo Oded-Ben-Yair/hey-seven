@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "I've spent $10K here this weekend and you can't even comp me dinner? I'll never come back.",
-      "agent_response": "I understand your frustration regarding dining recognition for your play this weekend, and I recommend speaking with a host who can review your account activity for potential comps. Would you like me to connect you with a dedicated host who can assist you personally?",
+      "agent_response": "I understand your frustration regarding the recognition of your play and the lack of a dining comp. A host can review your Momentum account and your recent activity to determine eligibility for rewards based on your spend. Would you like me to connect you with a dedicated host who can assist you personally?",
       "sources": [
         {
           "category": "gaming",
@@ -29,13 +29,13 @@
           "score": 0.646
         }
       ],
-      "elapsed_ms": 31360,
+      "elapsed_ms": 55220,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "I'm going to blast this place all over TripAdvisor and Twitter. This is ridiculous.",
-      "agent_response": "I hear your frustration, and I completely understand why you are upset. You have every right to share your experience. \n\nIf you are willing to give our team a chance to review this before you leave, a Casino Operations manager at the Player's Club desk would be the best person to speak with directly. Would you like me to point you to the closest desk?",
+      "agent_response": "I understand your frustration. To address this immediately and have your play reviewed by someone who can issue comps, please speak with a Casino Host or the Shift Manager on duty. You can reach them at [PHONE] or by visiting any Player's Club booth on the casino floor.",
       "sources": [
         {
           "category": "faq",
@@ -63,40 +63,19 @@
           "score": 0.573
         }
       ],
-      "elapsed_ms": 58782,
+      "elapsed_ms": 43100,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Get me someone who can actually do something",
-      "agent_response": "I hear you. To speak with someone who can review your account and address your concerns about comps, please head to any Momentum desk and ask for a Casino Host or the Casino Operations manager. They are available 24/7 to handle these requests in person and have the authority to look into your play for you.\n\nWould you like directions to the closest desk?",
-      "sources": [
-        {
-          "category": "promotions",
-          "source": "mohegan_sun.json",
-          "score": 0.605
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.586
-        },
-        {
-          "category": "hotel",
-          "source": "mohegan_sun.json",
-          "score": 0.585
-        },
-        {
-          "category": "property",
-          "source": "mohegan_sun.json",
-          "score": 0.597
-        }
-      ],
-      "elapsed_ms": 37009,
+      "agent_response": "I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.\n\nFor reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.\n\nIs there any information I can help you with?",
+      "sources": [],
+      "elapsed_ms": 9686,
       "error": null
     }
   ],
-  "elapsed_ms": 134583,
+  "elapsed_ms": 296056,
   "error": null,
   "completed": true
 }

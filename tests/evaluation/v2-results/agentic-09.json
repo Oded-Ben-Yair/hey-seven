@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "My mom uses a wheelchair. What restaurants are easy to get to?",
-      "agent_response": "Most of our dining venues are designed with accessibility in mind, but Frank Pepe's Pizzeria Napoletana in the Casino of the Earth is particularly easy to navigate and offers a warm, bustling atmosphere. You will smell the distinctive charred aroma of the coal-fired ovens long before you arrive, which is the signature of their legendary New Haven-style thin-crust pizza. Their white clam pie is a local icon, providing a perfect balance of garlic and fresh seafood, or you can opt for a classic tomato pie. They are open today until 10:00 PM with a casual dress code and no reservations required ($$).\n\nAfter your meal, the Wolf Den is located very close by in the center of the Casino of the Earth and offers free live music in an open, accessible setting.\n\nHow many guests will be joining you and your mother for your meal?",
+      "agent_response": "All of our dining venues at Mohegan Sun are wheelchair accessible, but for a truly comfortable experience with plenty of space to navigate, I'd suggest Frank Pepe\u2019s Pizzeria Napoletana. It is a legendary Connecticut institution located in the Casino of the Earth where you can smell the smoky charred crust of their coal-fired pizzas from the concourse.\n\nThey are open until 10:00 PM tonight and offer a casual atmosphere with wide aisles between tables that make it very easy for guests in wheelchairs to settle in. They are famous for their white clam pie, though their classic tomato pie is a pure, simple masterpiece. They don't take reservations, so you can just head over whenever you are ready.\n\nAre you planning to dine with just your mother, or will you have a larger group joining you?\n\nIf you are looking for something to do after your meal, the Wolf Den is nearby in the center of the Casino of the Earth and often features live music in an open lounge setting.",
       "sources": [
         {
           "category": "restaurants",
@@ -19,13 +19,13 @@
           "score": 0.638
         }
       ],
-      "elapsed_ms": 50505,
+      "elapsed_ms": 65578,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "And can she get to the spa?",
-      "agent_response": "Yes, she can get to our spas quite easily as both locations are fully accessible and designed to accommodate guests in wheelchairs.\n\nMandara Spa is our full-service, award-winning facility that uses Balinese healing traditions in their massages and body wraps. It features a beautiful relaxation lounge that is perfect for unwinding and is open until 8:00 PM tonight. If she is looking for a more modern experience or perhaps an express service, Elemis Spa in the Earth Tower is another great option open until 7:00 PM. Both spas offer a calm atmosphere that serves as a perfect reset after a day of exploring the resort.\n\nFor late shows or long spa afternoons, staying at the resort means you can head back to your room easily instead of making the drive home. Does she have a preference for a specific type of treatment, like a massage or a facial?",
+      "agent_response": "She will find both of our spa locations very accommodating as the resort is designed for easy navigation. Mandara Spa is our signature full-service destination and it is open until 8:00 PM tonight. It features a stunning relaxation lounge where she can soak in the atmosphere before a Balinese-inspired massage or facial.\n\nIf she is staying in or near the Earth Tower, the Elemis Spa is a fantastic, modern option open until 7:00 PM. They specialize in premium skincare and even offer express services if she isn't looking for a long appointment. Both locations provide a wonderful escape, but Mandara's atmosphere is particularly legendary for its tranquility.\n\nDoes she have a preference for a specific type of treatment, like a massage or a facial?\n\nIf you are looking for entertainment afterward, the Wolf Den in the Casino of the Earth is level with the casino floor and very easy to access for live music.",
       "sources": [
         {
           "category": "amenities",
@@ -38,13 +38,13 @@
           "score": 0.643
         }
       ],
-      "elapsed_ms": 50354,
+      "elapsed_ms": 56109,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Great. She'll love that.",
-      "agent_response": "I'm happy to hear that\u2014it's a great way to spend an afternoon! If she enjoys browsing, The Shops at Mohegan Sun are all on one level with wide walkways, making it very easy to move between the different boutiques and galleries. Most stores are open until 9:00 PM tonight.\n\nFor later in the evening, the Mohegan Sun Arena is right nearby and offers excellent accessible seating options for any of our live shows. Is this her first time visiting us, or has she been here before?",
+      "agent_response": "I'm so glad to hear that. She's going to find the Mandara Spa incredibly relaxing. Since she'll be feeling refreshed, the Wolf Den in the center of the Casino of the Earth is a perfect next stop for tonight. It\u2019s an open venue right on the floor with no stairs, so it\u2019s very easy to navigate in a wheelchair. There is live music there",
       "sources": [
         {
           "category": "entertainment",
@@ -67,11 +67,11 @@
           "score": 0.602
         }
       ],
-      "elapsed_ms": 39115,
+      "elapsed_ms": 64651,
       "error": null
     }
   ],
-  "elapsed_ms": 139975,
+  "elapsed_ms": 190358,
   "error": null,
   "completed": true
 }

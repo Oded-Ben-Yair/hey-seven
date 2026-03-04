@@ -11,15 +11,21 @@
     {
       "turn_index": 0,
       "user_message": "What restaurants do you have?",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 62207,
+      "agent_response": "I'm Seven, your dining specialist here at Mohegan Sun. For this afternoon, I'd suggest **Sushi Palace** in the Casino of the Sky. The chefs there prepare fresh sashimi and specialty rolls with incredible precision, and the extensive sake menu offers a perfect pairing for a refined mid-week meal [5]. They are open until 10:00 PM today and offer a comfortable,",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.67
+        }
+      ],
+      "elapsed_ms": 70783,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Tell me more about the steakhouse",
-      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is the place to go for a serious cut of USDA Prime beef in an elegant, memorabilia-filled setting. It opens at 5:00 PM today, and since it is an upscale spot with a business casual dress code, I highly recommend securing a reservation.\n\nAfter a steak dinner, the Wolf Den in the Casino of the Earth is just a short walk away for free live music. \n\nAre you planning a dinner for a special occasion?",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is the choice for an upscale evening, opening today at 5:00 PM. The aroma of seared USDA Prime beef fills the elegant dining room, which also features fresh seafood and an impressive wine selection [1]. It's a business casual environment with prices in the $$$$ range, and I'd suggest making a reservation to secure your table [1][4].\n\nHow many people are in your party?\n\nAfter dinner, the Wolf Den in the Casino of the Earth usually has great live music to keep the energy up.",
       "sources": [
         {
           "category": "restaurants",
@@ -37,19 +43,19 @@
           "score": 0.639
         }
       ],
-      "elapsed_ms": 27041,
+      "elapsed_ms": 32708,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Sounds good, thanks",
-      "agent_response": "Glad to help with dining. If you're interested, I also know the entertainment scene well \u2014 or ask me about anything else at Mohegan Sun.",
+      "agent_response": "Glad I could help. The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. What sounds good?",
       "sources": [],
       "elapsed_ms": 2,
       "error": null
     }
   ],
-  "elapsed_ms": 89251,
+  "elapsed_ms": 103494,
   "error": null,
   "completed": true
 }
