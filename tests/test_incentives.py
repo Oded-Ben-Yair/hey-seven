@@ -138,9 +138,10 @@ class TestGetApplicableIncentives:
         assert "anniversary" in triggers
 
     def test_no_triggers_empty_fields(self):
+        """R88: Lowered gate to 25%, so 0.20 is below threshold."""
         engine = IncentiveEngine("mohegan_sun")
         result = engine.get_applicable_incentives(
-            profile_completeness=0.3,
+            profile_completeness=0.20,
             extracted_fields={},
         )
         assert result == []
@@ -374,7 +375,7 @@ class TestGetIncentivePromptSection:
         get_settings.cache_clear()
         result, approval = get_incentive_prompt_section(
             casino_id="mohegan_sun",
-            profile_completeness=0.3,
+            profile_completeness=0.20,  # R88: Below 25% threshold
             extracted_fields={},
         )
         assert result == ""
@@ -462,7 +463,18 @@ class TestImmutability:
 class TestR78LowerThresholdTriggers:
     """R78 fix: lower threshold and occasion-based incentive triggers."""
 
-    def test_completeness_50_fires_at_half(self):
+    def test_completeness_50_fires_at_threshold(self):
+        """R88: Lowered threshold from 50% to 25%. 30% should fire."""
+        engine = IncentiveEngine("mohegan_sun")
+        applicable = engine.get_applicable_incentives(
+            profile_completeness=0.30,
+            extracted_fields={},
+        )
+        triggers = {r.trigger_field for r in applicable}
+        assert "profile_completeness_50" in triggers
+
+    def test_completeness_50_fires_at_old_half(self):
+        """Old 55% threshold should still fire (above 25%)."""
         engine = IncentiveEngine("mohegan_sun")
         applicable = engine.get_applicable_incentives(
             profile_completeness=0.55,
@@ -472,9 +484,10 @@ class TestR78LowerThresholdTriggers:
         assert "profile_completeness_50" in triggers
 
     def test_completeness_50_does_not_fire_below(self):
+        """R88: Below 25% threshold should not fire."""
         engine = IncentiveEngine("mohegan_sun")
         applicable = engine.get_applicable_incentives(
-            profile_completeness=0.40,
+            profile_completeness=0.20,
             extracted_fields={},
         )
         triggers = {r.trigger_field for r in applicable}

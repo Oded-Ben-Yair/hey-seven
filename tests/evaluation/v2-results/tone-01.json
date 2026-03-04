@@ -11,21 +11,15 @@
     {
       "turn_index": 0,
       "user_message": "What restaurants do you have?",
-      "agent_response": "Welcome to Mohegan Sun. I'm [NAME], and I'd be happy to guide you through our dining scene.\n\nFor right now, Hash House A Go Go in the Casino of the Earth is my top pick; it's a farm-to-table comfort spot known for massive, creative portions like their famous Sage Fried Chicken and Waffles. They are open until 2:00 PM today and offer a casual, high-energy atmosphere that's perfect for a late breakfast or lunch.\n\nBeyond that, we have a wide variety of flavors to explore:\n*   **Sushi Palace**: Opening at noon in the Casino of the Sky, offering fresh sashimi and an extensive sake menu.\n*   **Ballo Italian Restaurant**: A sophisticated choice for housemade pasta and risottos, opening for dinner at 5:00 PM.\n*   **Lantern Bar & Grill**: Our reliable 24-hour spot in the Casino of the Earth for American classics like steaks and burgers.\n*   **Johnny Rockets**: A retro 1950s diner for burgers and shakes, open now until 11:00 PM.\n\nPrices and hours can vary, so it's a good idea to confirm details as you plan your day. After you've enjoyed a meal, you might want to stop by the Wolf Den for some live music.\n\nAre you looking for a quick bite or a more relaxed, sit-down meal?",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.67
-        }
-      ],
-      "elapsed_ms": 34818,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 62207,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Tell me more about the steakhouse",
-      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is our premier destination for USDA Prime steaks and an atmosphere that balances elegance with sports history. You shouldn't miss the garlic bread with Gorgonzola fondue\u2014it's a decadent way to start before moving on to their perfectly charred Delmonico. They open this evening at 5:00 PM with a business casual dress code, and because it's a popular spot, I highly recommend a reservation. \n\nPrices generally fall in the $$$$ range, and hours or pricing may vary, so it is best to confirm details with the property. Are you planning to dine with a large group or is it a more intimate party?\n\nAfter a hearty steak dinner, catching a show at the Mohegan Sun Arena is a fantastic way to spend the rest of your evening.",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is the place to go for a serious cut of USDA Prime beef in an elegant, memorabilia-filled setting. It opens at 5:00 PM today, and since it is an upscale spot with a business casual dress code, I highly recommend securing a reservation.\n\nAfter a steak dinner, the Wolf Den in the Casino of the Earth is just a short walk away for free live music. \n\nAre you planning a dinner for a special occasion?",
       "sources": [
         {
           "category": "restaurants",
@@ -43,19 +37,19 @@
           "score": 0.639
         }
       ],
-      "elapsed_ms": 29130,
+      "elapsed_ms": 27041,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Sounds good, thanks",
-      "agent_response": "Glad to help! Anything else about dining or something different you'd like to explore?",
+      "agent_response": "Glad to help with dining. If you're interested, I also know the entertainment scene well \u2014 or ask me about anything else at Mohegan Sun.",
       "sources": [],
       "elapsed_ms": 2,
       "error": null
     }
   ],
-  "elapsed_ms": 63951,
+  "elapsed_ms": 89251,
   "error": null,
   "completed": true
 }

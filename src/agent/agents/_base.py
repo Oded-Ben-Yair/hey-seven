@@ -219,66 +219,69 @@ _ALL_GUEST_DOMAINS = frozenset(
 # prompt when the guest has discussed domain A and domain B is available.
 # Format: {(from_domain, to_domain): "bridge text"}
 CROSS_DOMAIN_BRIDGES: dict[tuple[str, str], str] = {
+    # R88: Updated with property-specific venue names for Mohegan Sun.
+    # Generic bridges like "the spa is nice" scored B4=3-4 in judge panel.
+    # Concrete venue references improve specificity and trust.
     (
         "dining",
         "entertainment",
-    ): "Since you're having dinner, there may be shows later tonight worth checking out.",
+    ): "After dinner, the Wolf Den has free live music every night — it's right in the Casino of the Earth and the energy is always good.",
     (
         "dining",
         "spa",
-    ): "After dinner, the spa is a nice way to wind down — open until late.",
+    ): "After dinner, the Mandara Spa is open until 8 PM if you want to fully unwind — their relaxation lounge alone is worth the visit.",
     (
         "dining",
         "hotel",
-    ): "If you're making an evening of it, room availability tends to be best when booked ahead.",
+    ): "If you're making an evening of it, the Sky Tower rooms have great views and you're steps from everything.",
     (
         "entertainment",
         "dining",
-    ): "If you're seeing a show, grabbing dinner beforehand works well — most restaurants are a short walk from the venues.",
+    ): "Before the show, Todd English's Tuscany is a short walk from the Wolf Den and their wood-fired dishes pair well with a night out.",
     (
         "entertainment",
         "hotel",
-    ): "For late shows, staying on-site saves the drive — check room availability if interested.",
+    ): "For late shows, staying at the resort means you can walk back to your room instead of the drive home.",
     (
         "entertainment",
         "spa",
-    ): "After a high-energy show, the spa offers a good contrast to wind down.",
+    ): "After a high-energy show, the Elemis Spa in the Earth Tower is a great contrast — their express treatments are perfect for winding down.",
     (
         "hotel",
         "dining",
-    ): "As a guest, you're steps from every restaurant — no need to rush anywhere.",
+    ): "As a hotel guest, you're steps from every restaurant — SolToro for casual Mexican, Tuscany for Italian, or MJ's for steaks.",
     (
         "hotel",
         "spa",
-    ): "Hotel guests get easy access to the spa — worth looking into during your stay.",
+    ): "Hotel guests can easily walk to the Mandara Spa — it's a Balinese-inspired retreat that feels worlds away from the casino floor.",
     (
         "hotel",
         "entertainment",
-    ): "Staying over means you can catch late shows without worrying about the drive home.",
+    ): "Staying over means you can catch the Wolf Den shows at 8 PM without worrying about the drive home.",
     (
         "spa",
         "dining",
-    ): "After a spa session, a quiet dinner is a natural next step — several restaurants are nearby.",
+    ): "After a spa session, Caputo Trattoria is a low-key spot for comfort food, or Tuscany if you want something more refined.",
     (
         "spa",
         "hotel",
-    ): "If you're planning a full spa day, combining it with an overnight stay makes it a real retreat.",
+    ): "If you're planning a full spa day, combining it with an overnight stay in the Sky Tower makes it a real retreat.",
     (
         "comp",
         "dining",
-    ): "Depending on your tier, dining credits may apply at select restaurants — worth checking.",
+    ): "Depending on your Momentum tier, dining credits may apply at select restaurants like Tuscany or SolToro — worth checking at the desk.",
     (
         "comp",
         "entertainment",
-    ): "Higher loyalty tiers sometimes include priority ticket access for shows.",
+    ): "Higher Momentum tiers sometimes include priority access for Arena shows and VIP seating at the Wolf Den.",
     (
         "comp",
         "spa",
-    ): "Some reward tiers include spa credits — check with the Momentum desk for your specific benefits.",
+    ): "Some Momentum tiers include spa credits at Mandara or Elemis — check with the Momentum desk for your specific benefits.",
     (
         "gaming",
         "dining",
-    ): "When you're ready for a break from the floor, there are quick options like Bobby's and sit-down spots like Tao nearby.",
+    ): "When you're ready for a break from the floor, Bobby's Burger Palace is quick, or Michael Jordan's Steak House for something special.",
 }
 
 

@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Oh wonderful, another chatbot. This should be fun.",
-      "agent_response": "I understand the skepticism\u2014it can be a bit much when you're just looking for a straight answer. I\u2019m Seven, and while I am an AI, I have all the current details on our restaurants, shows, and gaming floors to help you navigate the resort. \n\nWhat brings you to Mohegan Sun today?",
+      "agent_response": "Fair point\u2014I'm an AI, so I'll skip the standard scripts. I can give you direct information on everything from restaurant hours to what's playing at the Wolf Den to help you navigate the property. \n\nWhat brings you to Mohegan Sun today?",
       "sources": [
         {
           "category": "faq",
@@ -39,32 +39,21 @@
           "score": 0.613
         }
       ],
-      "elapsed_ms": 25966,
+      "elapsed_ms": 29639,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Fine. What restaurants do you have?",
-      "agent_response": "If you are looking for lunch right now, Hash House A Go Go in the Casino of the Earth is your best bet for something memorable. They serve what they call \"twisted farm food\" in massive portions\u2014their sage fried chicken and waffles often require a steak knife just to keep the presentation together. \n\nThey are open until 2:00 PM today and offer a casual atmosphere where no reservations are required. For dinner later this evening, Todd English's Tuscany opens at 5:00 PM in the Casino of the Sky. The wood-fired aroma hits you the moment you walk in, and their handmade pastas are a local favorite. It is a business casual environment, so I would suggest a reservation if you choose to head there. \n\nAfter you've had your fill, the Wolf Den usually has some excellent live music to round out the afternoon. Are you traveling with a group or dining solo today?",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.672
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.658
-        }
-      ],
-      "elapsed_ms": 28823,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 57988,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Alright that was actually useful. What about the spa?",
-      "agent_response": "I'm glad that helped. We have two distinct spa experiences depending on what you're looking for today. \n\nMandara Spa is our award-winning spot with a Balinese-inspired atmosphere; their steam room and sauna are perfect for a full reset after a long trip. If you're staying in the Earth Tower, the Elemis Spa is a bit more modern and specializes in high-end skincare and express services if you're on the move. Both are open right now, with Mandara staying open until 8:00 PM tonight. \n\nIf you're a hotel guest looking for something even more low-key, the indoor heated pool and hot tub are also open until 10:00 PM. Since you're interested in wellness, would you prefer a deep-tissue treatment or something more focused on skincare?",
+      "agent_response": "You have two distinct ways to unwind here, depending on the vibe you're looking for. Mandara Spa is our full-service sanctuary where the treatments are inspired by Balinese healing traditions, and their relaxation lounge is the perfect place to disappear for a few hours before it closes at 8:00 PM tonight.\n\nIf you're staying in the Earth Tower or just want something a bit more modern, the Elemis Spa is fantastic for premium skincare treatments and is open until 7:00 PM. Their express services are a great choice if you want to feel refreshed without missing too much time on the floor. \n\nSince schedules and pricing can vary, it's always worth a quick check with them before you head over. After a spa session, many guests find the live music at the Wolf Den is a great way to keep that relaxed energy going.\n\nAre you looking for a full afternoon of pampering or just a quick reset?",
       "sources": [
         {
           "category": "amenities",
@@ -87,11 +76,11 @@
           "score": 0.649
         }
       ],
-      "elapsed_ms": 22061,
+      "elapsed_ms": 25198,
       "error": null
     }
   ],
-  "elapsed_ms": 76852,
+  "elapsed_ms": 112827,
   "error": null,
   "completed": true
 }

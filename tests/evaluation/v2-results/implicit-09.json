@@ -11,15 +11,41 @@
     {
       "turn_index": 0,
       "user_message": "I spend a lot of money here every month",
-      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
-      "sources": [],
-      "elapsed_ms": 49062,
+      "agent_response": "Regular monthly play at Mohegan Sun is tracked through the Momentum program, where you earn Tier Credits and Momentum Points on slots, table games, and poker. Your tier status is determined by the number of Tier Credits earned: Ignite (2,500 TC), Leap (10,000 TC), Ascend (25,000 TC), or Soar (invitation only).\n\nHigher tiers like Ascend and Soar include benefits such as a dedicated host, priority restaurant seating, and enhanced earn rates on points. Since I do not have access to your personal account data, I recommend checking your current Tier Credit balance at any Momentum Desk, through the Mohegan Sun app, or on the website to see which specific benefits you have earned.\n\nDepending on your tier, you may also be eligible for dining credits at restaurants like Tuscany or priority access for shows at the Arena.\n\nTo help me provide more specific information about the rewards you value most, may I ask your name?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.611
+        }
+      ],
+      "elapsed_ms": 53858,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What's the best you can do for dinner tonight?",
-      "agent_response": "For a guest of your standing, Todd English\u2019s Tuscany is the definitive choice for tonight. The wood-fired aroma from the open kitchen greets you the moment you arrive, setting the stage for a sophisticated evening featuring handmade pastas and their signature salt-crusted branzino. \n\nTuscany opens at 5:00 PM tonight and serves until 10:00 PM. It is a business casual environment with a price range of approximately $$$$, and I strongly recommend a reservation to secure a prime table. Given your frequent visits, you may want to check if your Momentum status provides any priority seating or if you'd like to apply your points toward what is arguably the most refined Italian meal on the property.\n\nWould you prefer a table near the waterfall for the ambiance, or closer to the open kitchen to watch the chefs in action?\n\nAfter dinner, the Wolf Den usually has some excellent live music if you're looking to keep the evening going.",
+      "agent_response": "For a dinner that matches the level of a regular guest like yourself, Todd English's Tuscany is the standout choice for tonight. The wood-fired aroma from the open kitchen creates a warm, sophisticated atmosphere that is perfect for a mid-week escape. It opens at 5:00 PM and offers a refined business casual setting where the handmade pastas and wood-fired specialties really take center stage. \n\nDepending on your Momentum tier, dining credits may apply here, so it is worth checking at the desk or on the app before you sit down. Prices are in the $$$$ range and hours can vary, so I highly recommend making a reservation since this is one of our most sought-after tables. After your meal, you might enjoy heading over to the Wolf Den, as they often have fantastic live music to cap off the night. \n\nAre you looking for a quiet table for two, or will you be dining with a larger group?",
       "sources": [
         {
           "category": "restaurants",
@@ -32,7 +58,7 @@
           "score": 0.636
         }
       ],
-      "elapsed_ms": 24732,
+      "elapsed_ms": 33226,
       "error": null
     },
     {
@@ -40,11 +66,11 @@
       "user_message": "Can you check on any comp availability?",
       "agent_response": "I appreciate you asking! While I can't make reservations, bookings, or take any actions on your behalf, I can provide all the information you need to do so yourself.\n\nFor reservations and bookings, please contact Mohegan Sun directly at 1-888-226-7711 or visit mohegansun.com.\n\nIs there any information I can help you with?",
       "sources": [],
-      "elapsed_ms": 6182,
+      "elapsed_ms": 8594,
       "error": null
     }
   ],
-  "elapsed_ms": 79977,
+  "elapsed_ms": 95680,
   "error": null,
   "completed": true
 }

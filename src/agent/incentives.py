@@ -373,11 +373,13 @@ class IncentiveEngine:
         if trigger == "profile_completeness_75":
             return profile_completeness >= 0.75
 
-        # R78 fix: Lower threshold for early incentive engagement.
-        # Most conversations never reach 75% completeness, so a 50% tier
-        # ensures guests with moderate engagement still receive offers.
+        # R88: Lowered from 50% to 25% for early incentive engagement.
+        # Most 3-turn conversations never reach 50% completeness, so a 25%
+        # threshold ensures guests with even partial profile data receive
+        # offers. A guest who mentions their name and party size (~20-30%
+        # completeness) should be eligible for tier-appropriate incentives.
         if trigger == "profile_completeness_50":
-            return profile_completeness >= 0.50
+            return profile_completeness >= 0.25
 
         if trigger == "anniversary":
             if extracted_fields.get("anniversary"):

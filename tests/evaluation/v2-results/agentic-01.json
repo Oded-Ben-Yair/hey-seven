@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Where should we go for dinner tonight?",
-      "agent_response": "For a Wednesday evening, SolToro Taqueria & Tequila Bar is the perfect spot for a vibrant and flavorful dinner. You will find yourself surrounded by colorful decor and a lively energy that pairs perfectly with their authentic street tacos and hand-shaken margaritas. \n\nThey are located in the Casino of the Earth and are open today until 10:00 PM. It is a casual spot with a mid-range price point, and since reservations are not required, you can walk right in whenever you are ready for a seat. Please keep in mind that hours and prices may vary, so it is a good idea to confirm those details when you arrive at the property.\n\nAre you looking for a high-energy atmosphere or something a bit more relaxed tonight?\n\nAfter dinner, the Wolf Den in the center of the Casino of the Earth often has live performances that are worth checking out.",
+      "agent_response": "Welcome to Mohegan Sun. For your dinner tonight, SolToro Taqueria & Tequila Bar is my top pick for a lively, flavorful experience. The atmosphere is vibrant and colorful, providing the perfect backdrop for their authentic tacos and one of the best tequila selections on the property. They are open today until 10:00 PM and fall into a mid-range price category, and you won't need a reservation to get a table. After dinner, you might enjoy a stroll through the Casino of the Earth to see the spectacular decor and architecture. Are you celebrating anything special during your visit?",
       "sources": [
         {
           "category": "restaurants",
@@ -24,43 +24,27 @@
           "score": 0.647
         }
       ],
-      "elapsed_ms": 48624,
+      "elapsed_ms": 29960,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "The steakhouse sounds good. What time?",
-      "agent_response": "Michael Jordan's Steak House opens at 5:00 PM tonight and serves until 10:00 PM. It is an elegant spot in the Casino of the Sky where the aroma of searing USDA Prime steaks fills the room the moment you arrive. \n\nSince it is an upscale venue, they recommend business casual attire and reservations are highly encouraged to ensure you get a table. Please keep in mind that hours and pricing can vary, so it is a good idea to confirm those details when you arrive.\n\nAre you celebrating a special occasion or just looking for a great steak?\n\nAfter a rich meal there, you might enjoy catching a comedy show at Comix Roadhouse, which often has performances starting later in the evening.",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.678
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.662
-        },
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.624
-        }
-      ],
-      "elapsed_ms": 37094,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 39706,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Great, we'll do that",
-      "agent_response": "Glad to help! Anything else about dining or something different you'd like to explore?",
+      "agent_response": "Glad to help with dining. If you're interested, I also know the entertainment scene well \u2014 or ask me about anything else at Mohegan Sun.",
       "sources": [],
       "elapsed_ms": 3,
       "error": null
     }
   ],
-  "elapsed_ms": 85722,
+  "elapsed_ms": 69670,
   "error": null,
   "completed": true
 }

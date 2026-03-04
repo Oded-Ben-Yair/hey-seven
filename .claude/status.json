@@ -1,89 +1,93 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R86 complete — Phase A Foundation. Eval v2 system built, BSA/AML CTR safety fix, canned deflection eliminated from all fallbacks.",
-    "lastModified": "2026-03-04T08:30:00Z",
+    "summary": "R88 complete — Phase B start. Behavioral uplift: crisis de-escalation, post-gen enforcement, cross-domain bridges, incentive gate lowered.",
+    "lastModified": "2026-03-04T16:00:00Z",
     "branch": "main",
-    "commitHash": "a85e687",
+    "commitHash": "pending",
     "tag": "v1.5.0",
-    "phase": "r86-complete"
+    "phase": "r88-complete"
   },
-  "blueprintPhase": "Phase A: Foundation (2/2 sessions complete)",
-  "roundNumber": 86,
+  "blueprintPhase": "Phase B: Behavioral Uplift — R88 start, R87 baseline established",
+  "roundNumber": 88,
   "scores": {
     "technical": 9.63,
-    "behavioral": 6.2,
-    "profiling": 5.0,
-    "hostTriangle": null,
+    "behavioral_r87_gpt52": 4.25,
+    "behavioral_r87_grok": 6.15,
+    "behavioral_r87_consensus": 5.2,
+    "profiling_r87_consensus": 5.5,
     "safety": 95
   },
-  "blockers": [],
+  "blockers": [
+    {
+      "description": "vaderSentiment not installed in WSL venv — sentiment detection falls back to neutral for all eval scenarios",
+      "severity": "medium"
+    },
+    {
+      "description": "hypothesis not installed — 5 test files can't run (property-based, fuzz, state parity)",
+      "severity": "low"
+    }
+  ],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "R87: Pre-extraction node (src/agent/pre_extract.py) — fix one-turn profiling lag"
+      "description": "R89: Install vaderSentiment + hypothesis in venv (pip install vaderSentiment hypothesis)"
     },
     {
       "priority": 1,
-      "description": "R87: Handoff SSE emission — emit handoff event when handoff_request is set"
+      "description": "R89: Investigate fallback rate (23%) — RAG retrieval returning empty for common queries"
     },
     {
       "priority": 2,
-      "description": "R87: Wire incentive approval path + lower completeness gate 50%→25%"
+      "description": "R89: Run judge panel on R88 eval output to measure improvement from code changes"
     },
     {
       "priority": 3,
-      "description": "R87: Run eval v2 baseline (20 scenarios with gemini-2.5-flash)"
+      "description": "R89: Post-generation output enforcement for remaining thin closers"
     }
   ],
   "reviewHistory": {
-    "r86": {
+    "r88": {
       "date": "2026-03-04",
       "changes": [
-        "Eval v2 system: tests/evaluation/v2/ (runner, storage, rate_limiter, schemas, cli)",
-        "BSA/AML CTR threshold removed from knowledge-base",
-        "CTR amount detection pattern added to guardrails (215 total)",
-        "CTR amount redaction in persona.py _validate_output()",
-        "Fallback_node replaced with domain-aware re-engagement",
-        "All 5 specialist fallbacks replaced (no more phone/website deflection)",
-        "Deflection slop pattern added",
-        "7 test files updated for new fallback wording",
-        "/hey-seven-session skill created"
-      ],
-      "teamUsed": {
-        "name": "r86-sprint",
-        "teammates": [
-          "eval-builder",
-          "safety-fixer"
-        ],
-        "lead": "team-lead"
-      }
+        "R87 baseline scored: GPT-5.2 B-avg 4.25, Grok B-avg 6.15, consensus 5.2",
+        "Crisis de-escalation: broader safe confirmation patterns + agrees-to-seek-help exit",
+        "Post-gen enforcement: As an AI stripper, While I can't deflection stripper, [NAME] → Seven",
+        "Persona: I appreciate you asking opener stripped",
+        "Cross-domain bridges: property-specific venue names (Wolf Den, Tuscany, Mandara, MJ's)",
+        "Incentive gate: 50% → 25% completeness threshold",
+        "Greeting node: cross-domain suggestions in closers instead of thin Anything else?",
+        "Sarcasm: 4 new casino-context patterns (chatbot skepticism, dripping sarcasm)",
+        "Eval v2: 20/20 scenarios, 60/60 turns, 0 errors — crisis exit VERIFIED working"
+      ]
     },
     "trajectory": {
       "R52": 67.7,
       "R68_consensus": 92.9,
       "R75_technical": 9.63,
-      "R82_behavioral_2model": 4.7,
-      "R84_behavioral_2model": 6.0,
-      "R84_profiling": 2.0,
-      "R84_safety": "42%",
       "R85_behavioral_2model": 6.2,
       "R85_profiling": 5.0,
-      "R85_safety": "95%"
+      "R85_safety": "95%",
+      "R87_baseline_gpt52": 4.25,
+      "R87_baseline_grok": 6.15,
+      "R87_baseline_consensus": 5.2
     }
   },
   "codebaseMetrics": {
-    "tests": 3494,
+    "tests": 3298,
     "testFailures": 0,
+    "flakyTests": 1,
+    "graphNodes": 13,
     "stateFields": 28,
     "featureFlags": 17,
-    "guardrailPatterns": 215,
-    "slopPatterns": 10,
+    "guardrailPatterns": 214,
+    "slopPatterns": 13,
     "fewShotExamples": 25,
-    "commits_this_session": 1
+    "bridges": 15,
+    "sarcasmPatterns": 17
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-04",
-    "lastSessionId": "hey-seven-session-20260304-d53003"
+    "lastSessionId": "hey-seven-session-20260304-r88"
   }
 }

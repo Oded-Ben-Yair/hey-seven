@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hi, I'm Sarah. What restaurants do you have?",
-      "agent_response": "Welcome to Mohegan Sun, Sarah. I am Seven, an AI dining specialist here to help you navigate our culinary scene.\n\nFor right now, Hash House A Go Go is the standout choice for a late morning meal. Located in the Casino of the Earth, they serve what they call \"twisted farm food\" and the portions are truly legendary \u2014 their famous giant pancakes are often larger than the plates they are served on. They are open daily from 8:00 AM until 2:00 PM with a casual dress code and no reservations required, making it a perfect spot for a relaxed, hearty brunch.\n\nSince you will be near the center of the action in the Casino of the Earth, you might enjoy catching some of the live music performances that often happen at the Wolf Den later today.\n\nAre you looking for a quick bite or more of a sit-down dining experience?",
+      "agent_response": "Welcome, Sarah. For a vibrant lunch or dinner today, I highly recommend SolToro Taqueria & Tequila Bar located in the Casino of the Earth. The atmosphere is electric and colorful, and their fresh ceviche paired with an authentic mezcal is a perfect way to settle into the resort. They are open until 10:00 PM today with mid-range pricing, and you generally do not need a reservation for their casual setting.\n\nSince it is just after 1:00 PM, you could also catch the final hour of service at Hash House A Go Go if you are craving massive portions of farm-to-table comfort food before they close at 2:00 PM. If you find yourself looking for a meal in the middle of the night, the Lantern Bar & Grill is a reliable choice as it remains open 24 hours a day for American classics. Please keep in mind that hours and prices can vary, so it is always a good idea to confirm those details once you are on the property.\n\nAfter you have had a chance to eat, the Wolf Den in the Casino of the Earth often has great live music that makes for a perfect post-dinner stop.\n\nWhat kind of flavors are you usually drawn to when you dine out?",
       "sources": [
         {
           "category": "restaurants",
@@ -19,13 +19,13 @@
           "score": 0.655
         }
       ],
-      "elapsed_ms": 48089,
+      "elapsed_ms": 48384,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What about the spa?",
-      "agent_response": "Sarah, the spas here are the ultimate way to recharge. Mandara Spa is our award-winning, full-service retreat that draws from Balinese healing traditions\u2014their relaxation lounge, steam room, and sauna are exactly what you need to escape the energy of the casino floor for a while. They are open today until 8:00 PM.\n\nIf you are looking for something more modern or focused on premium skincare, the Elemis Spa in the Earth Tower offers incredible express services and couples experiences until 7:00 PM. After a day on the move, a hot stone massage at Mandara is truly legendary. \n\nSince you were asking about dining earlier, a massage followed by a nice dinner is a great way to spend your Wednesday. \n\nAre you looking for a full day of pampering or just a quick treatment between other activities?",
+      "agent_response": "You'll find we have two distinct ways to unwind here, Sarah. Mandara Spa is our award-winning full-service sanctuary that draws on Balinese healing traditions. It is open until 8:00 PM today and includes a steam room, sauna, and a beautiful relaxation lounge that's perfect for a deep reset. \n\nIf you are looking for something more modern or perhaps an express service, the Elemis Spa in the Earth Tower is open until 7:00 PM and specializes in premium skincare and couples experiences. Both are excellent, though I find the Mandara's hot stone massage is legendary if you really want to decompress. For hotel guests, we also have a heated indoor pool and hot tub open until 10:00 PM tonight if you just want a quick soak.\n\nKeep in mind that treatment availability and pricing can change, so it's always best to confirm those details when you arrive at the spa. After a relaxing afternoon, you might enjoy heading over to the Wolf Den in the Casino of the Earth for some live music\u2014the energy there is fantastic and the shows are free.\n\nDo you prefer a full-body treatment or something more focused, like a facial?",
       "sources": [
         {
           "category": "amenities",
@@ -48,13 +48,13 @@
           "score": 0.645
         }
       ],
-      "elapsed_ms": 30229,
+      "elapsed_ms": 38407,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Can you recommend something fun tonight?",
-      "agent_response": "Sarah, you are going to love the energy at the Wolf Den tonight. It has this intimate vibe where you're right there with the performer\u2014it is electric. \n\nSince it's Wednesday, the Wolf Den is your best bet for a great time because they host free live music nightly, typically starting at 8:00 PM. There are no tickets required and the shows are complimentary, so you can just head over to the center of the Casino of the Earth and grab a seat. If you're looking for something more high-energy later in the week, Avalon Nightclub and novelle really pick up starting Thursday and Friday. \n\nSince you were asking about the spa earlier, a relaxing afternoon treatment followed by a live show at the Den makes for a perfect Wednesday.\n\nDo you prefer a specific genre of music, or are you happy to discover something new?",
+      "agent_response": "Sarah, for tonight, the Wolf Den in the Casino of the Earth is your best bet for a high-energy evening. They host free nightly live music, typically starting at 8:00 PM or 9:00 PM, and the intimate setting makes you feel like you're right there with the band.\n\nSince seating for these complimentary shows is first-come, first-served, I suggest arriving a little early to grab a spot. The atmosphere there is truly electric once the music starts, and it's a great way to experience the heart of the resort's entertainment without needing a ticket. If you're looking for a more laid-back vibe before the show, you could stop by the Mandara Spa earlier in the afternoon for a quick reset. \n\nSchedule and availability can change, so it's a good idea to confirm the performance time once you're on the floor.\n\nDo you have a particular style of music you enjoy most?",
       "sources": [
         {
           "category": "entertainment",
@@ -62,11 +62,11 @@
           "score": 0.687
         }
       ],
-      "elapsed_ms": 24875,
+      "elapsed_ms": 27850,
       "error": null
     }
   ],
-  "elapsed_ms": 103194,
+  "elapsed_ms": 114642,
   "error": null,
   "completed": true
 }

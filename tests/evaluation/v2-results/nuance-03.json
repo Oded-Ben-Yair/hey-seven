@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We just got married! Honeymoon trip!",
-      "agent_response": "Congratulations on your marriage and thank you for choosing to celebrate your honeymoon here!\n\nFor a memorable dinner, I recommend Todd English's Tuscany for its romantic setting near the Taughannick Falls. You might also consider spending an afternoon at Mandara Spa, which offers a range of relaxing treatments inspired by Balinese traditions. If you'd like to end the evening with a craft cocktail in a more sophisticated atmosphere, Novelle is our premier ultra lounge. \n\nAre you looking for high-energy entertainment during your visit or a more relaxed pace?",
+      "agent_response": "Congratulations on your wedding! For a memorable honeymoon dinner, Todd English\u2019s Tuscany is a top choice, especially if you request a table near the Taughannic Falls. If you're looking to unwind after the big day, the Mandara Spa offers Balinese-inspired treatments and is open until 8:00 PM tonight. Are you looking for high-energy entertainment or more of a quiet, relaxing getaway?",
       "sources": [
         {
           "category": "hotel",
@@ -39,13 +39,13 @@
           "score": 0.586
         }
       ],
-      "elapsed_ms": 30237,
+      "elapsed_ms": 34656,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What's the most romantic dinner option?",
-      "agent_response": "For a honeymoon dinner that feels truly elevated, Michael Jordan\u2019s Steak House is my top recommendation. The atmosphere is sophisticated and elegant, offering a refined backdrop where you can toast to your new life together over USDA Prime steaks and fresh seafood. \n\nThey open at 5:00 PM today and have a business casual dress code, so it is a wonderful excuse to dress up for your first evening here",
+      "agent_response": "For a truly elevated honeymoon dinner tonight, Michael Jordan's Steak House is the most romantic destination currently open. The dining room has a sophisticated, low-lit ambiance that pairs perfectly with their signature USDA Prime steaks and an impressive wine selection for your first toast as a married couple. \n\nIt opens at 5:00 PM and stays open until 10:00 PM, with a business casual dress code and a price range of $$$$. Since it is a favorite for special occasions, I highly recommend securing a reservation to ensure you get a prime spot. After your meal, you might enjoy a stroll through the Casino of the Sky to see the stunning Taughannic Falls. \n\nDo you usually prefer starting with fresh seafood or heading straight for the steak?",
       "sources": [
         {
           "category": "entertainment",
@@ -58,13 +58,13 @@
           "score": 0.639
         }
       ],
-      "elapsed_ms": 51885,
+      "elapsed_ms": 29390,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "And something special we can do together tomorrow?",
-      "agent_response": "A spa session at Elemis Spa would be a beautiful way to spend your first full day as a married couple. The hot stone massage is a guest favorite for unwinding and finding some calm after the whirlwind of a wedding. Tomorrow evening, novelle also opens for the weekend, offering a sophisticated lounge environment with craft cocktails and DJ entertainment that feels very celebratory!\n\nDo you think you would enjoy a relaxing spa treatment together or something more upbeat like the lounge atmosphere?",
+      "agent_response": "Since tomorrow is Thursday, you have the perfect opportunity to visit novelle, our upscale ultra lounge that opens for the weekend tomorrow evening. It has a very sophisticated atmosphere with craft cocktails and DJ entertainment, which feels quite exclusive for a honeymoon celebration! If you are looking for relaxation earlier in the day, the Mandara Spa is a fantastic choice for a couple's reset. Their Elemis hot stone massage is legendary for helping you truly unwind after all the wedding festivities. \n\nAfter a late night at novelle, it is always a relief to know your hotel room is just a short walk away instead of having to drive. Would you prefer a relaxing morning at the spa or an upbeat evening at the lounge?",
       "sources": [
         {
           "category": "entertainment",
@@ -82,11 +82,11 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 55883,
+      "elapsed_ms": 70409,
       "error": null
     }
   ],
-  "elapsed_ms": 138006,
+  "elapsed_ms": 134457,
   "error": null,
   "completed": true
 }

@@ -109,14 +109,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
             len(messages),
         )
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "turn_limit",
-                "query_type": "off_topic",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "turn_limit",
+                    "query_type": "off_topic",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {"query_type": "off_topic", "router_confidence": 1.0}
 
@@ -124,14 +126,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     user_message = _get_last_human_message(messages)
     if not user_message:
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "empty_message",
-                "query_type": "greeting",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "empty_message",
+                    "query_type": "greeting",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {"query_type": "greeting", "router_confidence": 1.0}
 
@@ -140,14 +144,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # all other detect_* functions in the guardrail suite.
     if detect_prompt_injection(user_message):
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "prompt_injection",
-                "query_type": "off_topic",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "prompt_injection",
+                    "query_type": "off_topic",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {"query_type": "off_topic", "router_confidence": 1.0}
 
@@ -161,14 +167,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 rg_count,
             )
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "responsible_gaming",
-                "query_type": "gambling_advice",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "responsible_gaming",
+                    "query_type": "gambling_advice",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {
             "query_type": "gambling_advice",
@@ -179,28 +187,32 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # 5. Age verification
     if detect_age_verification(user_message):
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "age_verification",
-                "query_type": "age_verification",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "age_verification",
+                    "query_type": "age_verification",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {"query_type": "age_verification", "router_confidence": 1.0}
 
     # 6. BSA/AML
     if detect_bsa_aml(user_message):
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "bsa_aml",
-                "query_type": "bsa_aml",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "bsa_aml",
+                    "query_type": "bsa_aml",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {"query_type": "bsa_aml", "router_confidence": 1.0}
 
@@ -212,50 +224,124 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # R75 fix P0: Moved from position 7.4 to position 7 (before patron privacy).
     if state.get("crisis_active", False):
         _SAFE_CONFIRMATIONS = (
-            "i'm ok", "i'm okay", "im ok", "im okay",
-            "i'm fine", "im fine", "i'm better", "im better",
-            "i'm feeling better", "im feeling better",
-            "i'm alright", "im alright", "i'm good", "im good",
-            "thanks for checking", "i appreciate it",
-            "i'll be okay", "ill be okay",
+            "i'm ok",
+            "i'm okay",
+            "im ok",
+            "im okay",
+            "i'm fine",
+            "im fine",
+            "i'm better",
+            "im better",
+            "i'm feeling better",
+            "im feeling better",
+            "i'm alright",
+            "im alright",
+            "i'm good",
+            "im good",
+            "thanks for checking",
+            "i appreciate it",
+            "i'll be okay",
+            "ill be okay",
+            # R88: Broader de-escalation signals
+            "doing better",
+            "feeling better",
+            "i think i'm",
+            "i'll call",
+            "ill call",
+            "i'll reach out",
+            "ill reach out",
+            "you're right",
+            "youre right",
+            "maybe you're right",
+            "i'll talk to",
+            "ill talk to",
+            "going to call",
+            "thank you",
+            "thanks",
         )
         msg_lower = user_message.lower()
-        _has_safe_confirmation = any(phrase in msg_lower for phrase in _SAFE_CONFIRMATIONS)
+        _has_safe_confirmation = any(
+            phrase in msg_lower for phrase in _SAFE_CONFIRMATIONS
+        )
         _is_property_question = any(
             kw in msg_lower
-            for kw in ("restaurant", "steakhouse", "buffet", "spa", "pool",
-                        "show", "arena", "room", "hotel", "check", "hours",
-                        "parking", "directions", "shuttle", "wifi")
+            for kw in (
+                "restaurant",
+                "steakhouse",
+                "buffet",
+                "spa",
+                "pool",
+                "show",
+                "arena",
+                "room",
+                "hotel",
+                "check",
+                "hours",
+                "parking",
+                "directions",
+                "shuttle",
+                "wifi",
+                # R88: Additional property question signals
+                "dinner",
+                "eat",
+                "food",
+                "drink",
+                "bar",
+                "entertainment",
+                "music",
+                "shop",
+            )
         )
-        if _has_safe_confirmation and _is_property_question:
+        # R88: Also allow transition when guest explicitly agrees to seek help
+        # (e.g., "I'll call them" or "maybe you're right") — this is a POSITIVE
+        # outcome, not a reason to keep repeating crisis resources.
+        _agrees_to_seek_help = any(
+            phrase in msg_lower
+            for phrase in (
+                "i'll call",
+                "ill call",
+                "going to call",
+                "i'll reach out",
+                "ill reach out",
+                "i'll talk to",
+                "ill talk to",
+            )
+        )
+        if (_has_safe_confirmation and _is_property_question) or _agrees_to_seek_help:
             logger.info(
                 "Crisis context: guest confirmed safe AND asked property question — allowing transition"
             )
         else:
-            logger.info("Crisis context active — maintaining crisis response for follow-up")
             logger.info(
-                json.dumps({
-                    "audit_event": "guardrail_triggered",
-                    "category": "crisis_persistence",
-                    "query_type": "self_harm",
-                    "timestamp": time.time(),
-                    "action": "blocked",
-                    "severity": "INFO",
-                })
+                "Crisis context active — maintaining crisis response for follow-up"
+            )
+            logger.info(
+                json.dumps(
+                    {
+                        "audit_event": "guardrail_triggered",
+                        "category": "crisis_persistence",
+                        "query_type": "self_harm",
+                        "timestamp": time.time(),
+                        "action": "blocked",
+                        "severity": "INFO",
+                    }
+                )
             )
             return {"query_type": "self_harm", "router_confidence": 1.0}
 
     # 7.5 Patron privacy — runs AFTER crisis_active check (R75 fix P0).
     if detect_patron_privacy(user_message):
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "patron_privacy",
-                "query_type": "patron_privacy",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "patron_privacy",
+                    "query_type": "patron_privacy",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         return {"query_type": "patron_privacy", "router_confidence": 1.0}
 
@@ -266,29 +352,54 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # Without this, grief routes through property_qa → specialist dispatch where
     # the agent ignores the emotional context entirely ("explore our rewards!").
     _GRIEF_KEYWORDS = (
-        "passed away", "passed on", "passed two", "passed last",
-        "died", "funeral", "in memory of", "in memory",
-        "rest in peace", "rip", "memorial",
-        "lost my mother", "lost my father", "lost my mom", "lost my dad",
-        "lost my wife", "lost my husband", "lost my brother", "lost my sister",
-        "lost my son", "lost my daughter", "lost my friend",
-        "my mom passed", "my dad passed", "my mother passed", "my father passed",
-        "my wife passed", "my husband passed",
-        "she passed", "he passed",
-        "who passed", "who died",
-        "her favorite", "his favorite",  # "This was her favorite casino"
+        "passed away",
+        "passed on",
+        "passed two",
+        "passed last",
+        "died",
+        "funeral",
+        "in memory of",
+        "in memory",
+        "rest in peace",
+        "rip",
+        "memorial",
+        "lost my mother",
+        "lost my father",
+        "lost my mom",
+        "lost my dad",
+        "lost my wife",
+        "lost my husband",
+        "lost my brother",
+        "lost my sister",
+        "lost my son",
+        "lost my daughter",
+        "lost my friend",
+        "my mom passed",
+        "my dad passed",
+        "my mother passed",
+        "my father passed",
+        "my wife passed",
+        "my husband passed",
+        "she passed",
+        "he passed",
+        "who passed",
+        "who died",
+        "her favorite",
+        "his favorite",  # "This was her favorite casino"
     )
     msg_lower = user_message.lower()
     if any(kw in msg_lower for kw in _GRIEF_KEYWORDS):
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "grief_detection",
-                "query_type": None,
-                "timestamp": time.time(),
-                "action": "annotate",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "grief_detection",
+                    "query_type": None,
+                    "timestamp": time.time(),
+                    "action": "annotate",
+                    "severity": "INFO",
+                }
+            )
         )
         # Don't block — let the message through to the router, but set
         # guest_sentiment so the specialist agent injects grief tone guidance.
@@ -305,22 +416,39 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # still gives a generic response. The explicit sentiment annotation
     # triggers the celebration tone guide in execute_specialist.
     _CELEBRATION_KEYWORDS = (
-        "jackpot", "won big", "hit big", "big win", "huge win",
-        "just won", "just hit", "celebrating", "celebration",
-        "anniversary", "birthday", "honeymoon", "engaged", "engagement",
-        "promotion", "graduated", "retire", "retirement",
-        "bachelor", "bachelorette",
+        "jackpot",
+        "won big",
+        "hit big",
+        "big win",
+        "huge win",
+        "just won",
+        "just hit",
+        "celebrating",
+        "celebration",
+        "anniversary",
+        "birthday",
+        "honeymoon",
+        "engaged",
+        "engagement",
+        "promotion",
+        "graduated",
+        "retire",
+        "retirement",
+        "bachelor",
+        "bachelorette",
     )
     if any(kw in msg_lower for kw in _CELEBRATION_KEYWORDS):
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "celebration_detection",
-                "query_type": None,
-                "timestamp": time.time(),
-                "action": "annotate",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "celebration_detection",
+                    "query_type": None,
+                    "timestamp": time.time(),
+                    "action": "annotate",
+                    "severity": "INFO",
+                }
+            )
         )
         return {
             "query_type": None,
@@ -337,42 +465,56 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     if crisis_level == "immediate":
         logger.warning("CRISIS IMMEDIATE detected — routing to crisis response")
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "crisis_immediate",
-                "query_type": "self_harm",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "CRITICAL",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "crisis_immediate",
+                    "query_type": "self_harm",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "CRITICAL",
+                }
+            )
         )
-        return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
+        return {
+            "query_type": "self_harm",
+            "router_confidence": 1.0,
+            "crisis_active": True,
+        }
     if crisis_level == "urgent":
         logger.warning("CRISIS URGENT detected — routing to crisis response")
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "crisis_urgent",
-                "query_type": "self_harm",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "WARNING",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "crisis_urgent",
+                    "query_type": "self_harm",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "WARNING",
+                }
+            )
         )
-        return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
+        return {
+            "query_type": "self_harm",
+            "router_confidence": 1.0,
+            "crisis_active": True,
+        }
     if crisis_level == "concern":
         # Concern level: route to gambling_advice path which includes
         # responsible gaming helplines. Gentler than full crisis response.
         logger.info("Crisis concern detected — routing to responsible gaming")
         logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "crisis_concern",
-                "query_type": "gambling_advice",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "crisis_concern",
+                    "query_type": "gambling_advice",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
         )
         rg_count = state.get("responsible_gaming_count", 0) + 1
         return {
@@ -384,18 +526,26 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # 7.8 Self-harm / crisis detection — legacy binary detector (R49).
     # Kept as fallback: catches patterns that the graduated system may miss.
     if detect_self_harm(user_message):
-        logger.warning("Self-harm/crisis language detected — routing to crisis response")
-        logger.info(
-            json.dumps({
-                "audit_event": "guardrail_triggered",
-                "category": "self_harm",
-                "query_type": "self_harm",
-                "timestamp": time.time(),
-                "action": "blocked",
-                "severity": "INFO",
-            })
+        logger.warning(
+            "Self-harm/crisis language detected — routing to crisis response"
         )
-        return {"query_type": "self_harm", "router_confidence": 1.0, "crisis_active": True}
+        logger.info(
+            json.dumps(
+                {
+                    "audit_event": "guardrail_triggered",
+                    "category": "self_harm",
+                    "query_type": "self_harm",
+                    "timestamp": time.time(),
+                    "action": "blocked",
+                    "severity": "INFO",
+                }
+            )
+        )
+        return {
+            "query_type": "self_harm",
+            "router_confidence": 1.0,
+            "crisis_active": True,
+        }
 
     # 7.9 Confirmation/acknowledgment detection — R77 fix for fallback rate.
     # Short confirmations ("great", "sounds good", "we'll do that") should NOT
@@ -403,32 +553,64 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
     # irrelevant context -> validator rejects -> fallback. Instead, route to
     # greeting node which handles with a simple acknowledgment.
     _CONFIRMATION_PATTERNS = (
-        "great", "perfect", "thanks", "thank you", "sounds good",
-        "sounds great", "awesome", "cool", "ok", "okay", "sure",
-        "will do", "we'll do that", "let's do that", "got it",
-        "good to know", "noted", "appreciate it", "that works",
-        "that's great", "that's perfect", "wonderful", "excellent",
-        "nice", "sweet", "bet", "for sure", "alright",
+        "great",
+        "perfect",
+        "thanks",
+        "thank you",
+        "sounds good",
+        "sounds great",
+        "awesome",
+        "cool",
+        "ok",
+        "okay",
+        "sure",
+        "will do",
+        "we'll do that",
+        "let's do that",
+        "got it",
+        "good to know",
+        "noted",
+        "appreciate it",
+        "that works",
+        "that's great",
+        "that's perfect",
+        "wonderful",
+        "excellent",
+        "nice",
+        "sweet",
+        "bet",
+        "for sure",
+        "alright",
     )
     # Only match if the ENTIRE message is a short confirmation (< 8 words).
     # Longer messages like "Great, now what about dinner?" have real questions.
     if len(user_message.split()) < 8:
         msg_stripped = msg_lower.strip().rstrip("!.?,;:")
         if msg_stripped in _CONFIRMATION_PATTERNS or any(
-            msg_stripped.startswith(p) for p in (
-                "thanks ", "thanks,", "thank you", "great ", "great,",
-                "perfect ", "perfect,", "sounds ", "sounds,",
+            msg_stripped.startswith(p)
+            for p in (
+                "thanks ",
+                "thanks,",
+                "thank you",
+                "great ",
+                "great,",
+                "perfect ",
+                "perfect,",
+                "sounds ",
+                "sounds,",
             )
         ):
             logger.info(
-                json.dumps({
-                    "audit_event": "guardrail_triggered",
-                    "category": "confirmation_detection",
-                    "query_type": "greeting",
-                    "timestamp": time.time(),
-                    "action": "shortcut",
-                    "severity": "INFO",
-                })
+                json.dumps(
+                    {
+                        "audit_event": "guardrail_triggered",
+                        "category": "confirmation_detection",
+                        "query_type": "greeting",
+                        "timestamp": time.time(),
+                        "action": "shortcut",
+                        "severity": "INFO",
+                    }
+                )
             )
             return {"query_type": "greeting", "router_confidence": 1.0}
 
@@ -450,14 +632,16 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 semantic_result.reason[:100],
             )
             logger.info(
-                json.dumps({
-                    "audit_event": "guardrail_triggered",
-                    "category": "semantic_injection",
-                    "query_type": "off_topic",
-                    "timestamp": time.time(),
-                    "action": "blocked",
-                    "severity": "INFO",
-                })
+                json.dumps(
+                    {
+                        "audit_event": "guardrail_triggered",
+                        "category": "semantic_injection",
+                        "query_type": "off_topic",
+                        "timestamp": time.time(),
+                        "action": "blocked",
+                        "severity": "INFO",
+                    }
+                )
             )
             return {
                 "query_type": "off_topic",

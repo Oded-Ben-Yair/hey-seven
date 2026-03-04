@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hola, necesito informacion sobre los restaurantes",
-      "agent_response": "Bienvenido a Mohegan Sun. Contamos con m\u00e1s de 40 opciones gastron\u00f3micas, pero te sugiero dos que destacan por su calidad en este momento del d\u00eda.\n\nSi buscas algo ahora mismo, **Hash House A Go Go** es una excelente elecci\u00f3n; son famosos por sus porciones generosas de comida casera creativa y est\u00e1n abiertos actualmente hasta las 2:00 PM. Por otro lado, si prefieres algo m\u00e1s refinado para el almuerzo, **Bobby Flay's Bar Americain** abre en unos minutos, a las 11:30 AM, y es muy reconocido por sus sabores regionales estadounidenses y su ambiente sofisticado.\n\nDespu\u00e9s de comer, podr\u00edas dar un paseo por las tiendas en The Shops at Mohegan Sun, que est\u00e1n convenientemente ubicadas cerca de ambos restaurantes.\n\n\u00bfBuscas una comida r\u00e1pida o planeas una cena especial para m\u00e1s tarde?",
+      "agent_response": "Contamos con m\u00e1s de 40 opciones gastron\u00f3micas en el resort, pero para hoy mi\u00e9rcoles te sugiero dos de nuestras propuestas m\u00e1s destacadas.\n\nSi buscas sabores intensos en un ambiente animado, **SolToro** en el Casino of the Earth es una excelente opci\u00f3n para disfrutar de cocina mexicana aut\u00e9ntica y una gran selecci\u00f3n de tequilas. Para una experiencia de autor, te recomiendo **Bar Americain de Bobby Flay**, donde encontrar\u00e1s platos cl\u00e1sicos americanos con un toque sofisticado; ambos est\u00e1n abiertos ahora mismo para el almuerzo y la cena.\n\n\u00bfTienes alg\u00fan tipo de cocina en particular en mente o prefieres algo r\u00e1pido antes de ir al casino?",
       "sources": [
         {
           "category": "restaurants",
@@ -19,11 +19,11 @@
           "score": 0.674
         }
       ],
-      "elapsed_ms": 30937,
+      "elapsed_ms": 52185,
       "error": null
     }
   ],
-  "elapsed_ms": 30937,
+  "elapsed_ms": 52185,
   "error": null,
   "completed": true
 }

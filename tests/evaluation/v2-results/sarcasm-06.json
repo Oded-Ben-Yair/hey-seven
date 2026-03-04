@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Do you think I enjoy waiting 30 minutes for an elevator?",
-      "agent_response": "I am truly sorry to hear about that delay. Waiting thirty minutes for an elevator is a long time, and I understand why you are frustrated, especially when you just want to get to your room and settle in. \n\nWe want your stay here to feel like a retreat, and a wait like that is certainly not the smooth experience we aim for. Which tower are you staying in?",
+      "agent_response": "I completely understand how frustrating that is. Waiting 30 minutes for an elevator is absolutely unacceptable when you are just trying to get to your room or enjoy the resort. \n\nSince I am an AI concierge, I cannot physically dispatch our engineering team, but our 24-hour front desk needs to know about this right away so they can look into the delay. If you are near a house phone or in your room, I highly recommend calling down so they can address the wait times. \n\nAre you currently stuck waiting on a specific floor in the Earth or Sky Tower?",
       "sources": [
         {
           "category": "hotel",
@@ -29,13 +29,13 @@
           "score": 0.639
         }
       ],
-      "elapsed_ms": 39993,
+      "elapsed_ms": 56077,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "It's been like this every time",
-      "agent_response": "I understand your frustration, especially if this is a recurring issue for you. That is not the experience we want our guests to have. I apologize that you've had to deal with this repeatedly. I recommend speaking with a front desk manager once you reach the lobby so they can look into the elevator service in your tower. Is there anything else I can help with right now?",
+      "agent_response": "I hear you, and that is certainly not the experience we want for our guests. When delays become a pattern like this, it usually points to a specific maintenance issue or an extreme peak in traffic that our team needs to address immediately.\n\nThe best way to get this resolved right now is to speak with a Guest Service Manager at the front desk so they can look into the status of the elevators in your tower. If you are a Momentum member, you can also reach out to a host who can assist with your stay.\n\nAre you staying in the Sky Tower or the Earth Tower?",
       "sources": [
         {
           "category": "entertainment",
@@ -53,13 +53,13 @@
           "score": 0.597
         }
       ],
-      "elapsed_ms": 39664,
+      "elapsed_ms": 45287,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Whatever, where's the pool?",
-      "agent_response": "The heated indoor pool and hot tub are open daily from 6:00 AM to 10:00 PM for hotel guests. We provide lounge chairs and towel service at the pool area for your convenience. After your swim, the Elemis Spa is a quiet place to continue relaxing if you need it.\n\nDo you have your room key with you to access the pool area?",
+      "agent_response": "I hear you\u2014getting to the pool for a swim is a much better way to spend your time. Our heated indoor pool and hot tub are open right now and stay available until 10:00 PM for all hotel guests. \n\nWe provide poolside lounge chairs and towel service, so you can head straight there to relax and leave the elevator stress behind. If you really want to decompress, the Mandara Spa or Elemis Spa are perfect for a reset\u2014their treatments are legendary. \n\nDo you need directions to the pool area from your current tower?",
       "sources": [
         {
           "category": "faq",
@@ -82,11 +82,11 @@
           "score": 0.611
         }
       ],
-      "elapsed_ms": 28551,
+      "elapsed_ms": 27910,
       "error": null
     }
   ],
-  "elapsed_ms": 108210,
+  "elapsed_ms": 129276,
   "error": null,
   "completed": true
 }

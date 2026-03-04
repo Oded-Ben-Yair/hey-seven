@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We drove 4 hours to get here. What should we do first?",
-      "agent_response": "Four hours is a long stretch on the road\u2014welcome to Mohegan Sun. Since you've been traveling, I recommend starting with a relaxing lunch at Todd English's Tuscany, where you can sit by the indoor waterfall and decompress. If you'd rather jump straight into relaxation, the Mandara Spa is nearby and offers excellent treatments to help you recharge after the drive.\n\nLater this evening, you might enjoy a low-key live show at the Wolf Den, which has a great atmosphere without requiring much more than a comfortable seat. Are you planning to check into your room right away?",
+      "agent_response": "That is a long stretch on the road, so I would suggest starting with something low-key to help you unwind. A quiet lunch at Todd English's Tuscany is a great choice; the dining room is right by the Taughannick Falls, which makes for a peaceful backdrop while you recharge.\n\nIf you would rather head straight to relaxation, the Mandara Spa is open and offers a perfect environment to decompress after four hours in the car. Are you planning to stay overnight with us, or are you just visiting for the day?",
       "sources": [
         {
           "category": "faq",
@@ -24,49 +24,27 @@
           "score": 0.64
         }
       ],
-      "elapsed_ms": 54025,
+      "elapsed_ms": 36942,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Yeah we're pretty tired but hungry",
-      "agent_response": "Since you're looking for something satisfying but low-effort after that drive, Caputo Trattoria in the Casino of the Earth is an excellent choice. \n\nIt opens at 11:00 AM and serves classic Italian comfort food like brick-oven pizzas, calzones, and hearty pasta dishes in a relaxed, casual setting. It\u2019s perfect for a weary traveler because the service is quick and you don't need a reservation. The price range is moderate, making it an easy spot to just sit back and refuel without any fuss.\n\nAfter you've had a chance to eat, you might find a quiet stroll through the Shops at Mohegan Sun is a nice way to stretch your legs before you head up to your room to rest. How many people are in your party?",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.66
-        }
-      ],
-      "elapsed_ms": 24920,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 49562,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about after dinner?",
-      "agent_response": "After dinner, the Wolf Den is an excellent place to spend your evening. It offers free live performances every night in an intimate setting, which is ideal when you want to be entertained without the hassle of tickets or large arena crowds. \n\nThe energy in there is fantastic, and since it is a Wednesday, you can usually find a comfortable seat to enjoy the music and unwind from your drive.",
-      "sources": [
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.681
-        },
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.65
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.637
-        }
-      ],
-      "elapsed_ms": 30561,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 55389,
       "error": null
     }
   ],
-  "elapsed_ms": 109507,
+  "elapsed_ms": 141894,
   "error": null,
   "completed": true
 }

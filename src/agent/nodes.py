@@ -712,6 +712,24 @@ _SLOP_PATTERNS: list[tuple[re.Pattern, str]] = [
         ),
         "",
     ),
+    # R88: "As an AI" disclaimers — strip authority-disclaiming phrases
+    (
+        re.compile(
+            r"As an AI,?\s+I (?:don't|do not|cannot|can't) have (?:the )?(?:authority|ability|access)\b[^.]*\.\s*",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
+    # R88: "While I can't make reservations/bookings" deflection
+    (
+        re.compile(
+            r"While I (?:can't|cannot|am unable to) (?:make|handle|process) (?:reservations|bookings|transactions)[^.]*\.\s*",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
+    # R88: "[NAME]" placeholder leaked by LLM — replace with "Seven"
+    (re.compile(r"\[NAME\]", re.IGNORECASE), "Seven"),
 ]
 
 
@@ -886,14 +904,35 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
         # This is a mid-conversation acknowledgment routed here by compliance_gate 7.9.
         # Return a brief, contextual follow-up that maintains conversation flow.
         domains_discussed = state.get("domains_discussed", [])
-        if domains_discussed:
-            last_domain = domains_discussed[-1]
+        # R88: More helpful closers with cross-domain suggestions.
+        # Instead of a thin "Anything else?", suggest a related domain
+        # the guest hasn't explored yet.
+        _ALL_DOMAINS = {"dining", "entertainment", "spa", "hotel", "gaming"}
+        explored = set(domains_discussed) if domains_discussed else set()
+        unexplored = sorted(_ALL_DOMAINS - explored)
+        if domains_discussed and unexplored:
+            suggestion = unexplored[0]
             return {
                 "messages": [
                     AIMessage(
                         content=(
-                            f"Glad to help! Anything else about {last_domain} "
-                            "or something different you'd like to explore?"
+                            f"Glad to help with {domains_discussed[-1]}. "
+                            f"If you're interested, I also know the {suggestion} scene "
+                            f"well — or ask me about anything else at "
+                            f"{settings.PROPERTY_NAME}."
+                        )
+                    )
+                ],
+                "sources_used": [],
+                "retrieved_context": [],
+            }
+        if domains_discussed:
+            return {
+                "messages": [
+                    AIMessage(
+                        content=(
+                            f"Glad to help! Let me know if anything else comes "
+                            f"to mind about {settings.PROPERTY_NAME}."
                         )
                     )
                 ],
@@ -902,7 +941,12 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
             }
         return {
             "messages": [
-                AIMessage(content=("Happy to help! What else can I assist you with?"))
+                AIMessage(
+                    content=(
+                        f"Happy to help! I can tell you about dining, entertainment, "
+                        f"the spa, hotel, or anything else at {settings.PROPERTY_NAME}."
+                    )
+                )
             ],
             "sources_used": [],
             "retrieved_context": [],

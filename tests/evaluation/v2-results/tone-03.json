@@ -13,13 +13,13 @@
       "user_message": "What's there to do tonight?",
       "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
       "sources": [],
-      "elapsed_ms": 51867,
+      "elapsed_ms": 60469,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Tell me about the spa",
-      "agent_response": "Mandara Spa is inspired by Balinese healing traditions and features a relaxation lounge, steam room, and sauna to help you fully disconnect. If you prefer something more modern, the Elemis Spa in the Earth Tower specializes in premium skincare and offers express services for guests on the move. Both are open tonight, with Mandara closing at 8:00 PM and Elemis at 7:00 PM. \n\nMohegan Sun also has a heated indoor pool and hot tub available to hotel guests until 10:00 PM. Are you looking for a full-body treatment or something more focused on skincare?\n\nIf you're feeling refreshed after your session, the Wolf Den usually has great live music starting later in the evening.",
+      "agent_response": "Mohegan Sun offers two primary spa locations. Mandara Spa is a Balinese-inspired retreat featuring a relaxation lounge and steam room open until 8:00 PM, while the Elemis Spa in the Earth Tower specializes in modern skincare and express services until 7:00 PM. Since it is currently mid-afternoon, both are open for several more hours if you are looking for a reset today.\n\nAfter a treatment, Todd English's Tuscany is a short walk from Mandara Spa and offers a great atmosphere for a quiet dinner. Are you looking for a specific type of service like a massage or a facial?",
       "sources": [
         {
           "category": "amenities",
@@ -42,37 +42,21 @@
           "score": 0.639
         }
       ],
-      "elapsed_ms": 46702,
+      "elapsed_ms": 27670,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about restaurants?",
-      "agent_response": "Hash House A Go Go is the best pick for right now, famous for their massive \"twisted farm food\" portions and casual vibe. They are open until 2:00 PM in the Casino of the Earth and don't require reservations. How many people are in your party? \n\nAfter lunch, catching a free live performance at the Wolf Den is a great way to spend the afternoon.",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.67
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.663
-        },
-        {
-          "category": "promotions",
-          "source": "mohegan_sun.json",
-          "score": 0.655
-        }
-      ],
-      "elapsed_ms": 28519,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 54806,
       "error": null
     },
     {
       "turn_index": 3,
       "user_message": "Any shows tonight?",
-      "agent_response": "The Wolf Den hosts a free live show tonight at 8:00 PM, and Lantern Bar & Grill is open 24 hours for a post-show meal. Are you interested in a particular genre of music?",
+      "agent_response": "The Wolf Den features a free live show tonight at 8:00 PM or 9:00 PM, and Lantern Bar & Grill is open 24 hours for a meal afterward. Are you looking for a high-energy night or something more relaxed?",
       "sources": [
         {
           "category": "entertainment",
@@ -85,13 +69,13 @@
           "score": 0.669
         }
       ],
-      "elapsed_ms": 37880,
+      "elapsed_ms": 38783,
       "error": null
     },
     {
       "turn_index": 4,
       "user_message": "What time does the pool close?",
-      "agent_response": "The heated indoor pool and hot tub are open until 10:00 PM tonight for hotel guests. Are you planning to grab a late dinner at one of our 24-hour restaurants after your swim?",
+      "agent_response": "The heated indoor pool and hot tub are open until 10:00 PM for all hotel guests. If you are looking for a total reset, the Mandara Spa is just a short walk away and stays open until 8:00 PM. Are you staying in the Sky or Earth Tower?",
       "sources": [
         {
           "category": "faq",
@@ -109,11 +93,11 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 30235,
+      "elapsed_ms": 36233,
       "error": null
     }
   ],
-  "elapsed_ms": 200326,
+  "elapsed_ms": 217963,
   "error": null,
   "completed": true
 }

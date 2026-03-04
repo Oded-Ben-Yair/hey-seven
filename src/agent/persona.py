@@ -190,6 +190,8 @@ _PERFORMATIVE_OPENER_PATTERNS: list[re.Pattern] = [
     re.compile(r"^Of course[!,]\s*", re.IGNORECASE),
     # "Sure thing!" at start
     re.compile(r"^Sure thing[!,]\s*", re.IGNORECASE),
+    # R88: "I appreciate you asking!" (patronizing)
+    re.compile(r"^I appreciate you asking[!.]\s*", re.IGNORECASE),
 ]
 
 

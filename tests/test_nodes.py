@@ -1990,7 +1990,7 @@ class TestGreetingNodeAcknowledgment:
         result = await greeting_node(state)
         content = result["messages"][0].content
         assert "Seven" not in content  # No full greeting
-        assert len(content) < 100  # Brief response
+        assert len(content) < 150  # R88: Brief but more helpful response
 
     async def test_ack_with_domain_context(self):
         """Acknowledgment references last discussed domain."""

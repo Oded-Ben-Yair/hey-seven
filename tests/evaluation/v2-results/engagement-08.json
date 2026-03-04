@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "What can we do here?",
-      "agent_response": "You're going to love the variety we have here, whether you're looking for a high-energy night or a total reset. For live music, the Mohegan Sun Arena hosts some of the biggest global headliners in a world-class 10,000-seat setting. If you'd prefer something more spontaneous, the Wolf Den offers free live shows right in the center of the action\u2014it has an electric energy where you're just feet away from the performers.\n\nIf you're in the mood to decompress, Elemis Spa is the perfect place to escape the noise, and their hot stone massage is a guest favorite for a reason. For something unique and active, we even have the Wombi Rock climbing wall which is open for all skill levels. What brings you to the resort today? \n\nAfter you've had a chance to check out the entertainment, you might want to explore some of our dining options to fuel up for the evening.",
+      "agent_response": "You're going to love the energy here today! The Wolf Den features live music tonight in an intimate setting where you're right there with the performers, and it's a great way to experience the heart of the property without needing a ticket. \n\nIf you'd rather unwind, the Elemis Spa is the perfect retreat for a signature treatment like their legendary hot stone massage, which is a fantastic way to reset. For those feeling adventurous, we also have the Wombi Rock indoor climbing wall located near Kids Quest that is suitable for all skill levels. \n\nAfter you've explored a bit, you might enjoy a meal at Todd English's Tuscany, which is just a short walk from the Wolf Den and perfect for a pre-show dinner. What kind of experience are you looking for today \u2014 something high-energy or more of a relaxing escape?",
       "sources": [
         {
           "category": "faq",
@@ -29,13 +29,13 @@
           "score": 0.664
         }
       ],
-      "elapsed_ms": 25895,
+      "elapsed_ms": 55662,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Wow that's a lot. Just pick one thing for us",
-      "agent_response": "If you only do one thing, head to the Wolf Den in the heart of the Casino of the Earth later today. It is an iconic spot for free live music and really captures the energy of the resort without needing a ticket or a reservation!\n\nSince it is still morning, you might also enjoy browsing the Shops at Mohegan Sun before the music starts. Are you looking for something to do right now, or are you planning for later this evening?",
+      "agent_response": "Go to Todd English's Tuscany. It's a guest favorite for its wood-fired Mediterranean menu, and the atmosphere right by the 40-foot waterfall is unique to the property. \n\nAfter dinner, the Wolf Den is just a short walk away if you want to catch a free live show. Are you here with a group or is it just the two of you?",
       "sources": [
         {
           "category": "faq",
@@ -63,7 +63,7 @@
           "score": 0.629
         }
       ],
-      "elapsed_ms": 29617,
+      "elapsed_ms": 39680,
       "error": null
     },
     {
@@ -71,11 +71,11 @@
       "user_message": "Good call. What time?",
       "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
       "sources": [],
-      "elapsed_ms": 51662,
+      "elapsed_ms": 60463,
       "error": null
     }
   ],
-  "elapsed_ms": 108181,
+  "elapsed_ms": 155806,
   "error": null,
   "completed": true
 }

@@ -15,7 +15,12 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_sentiment", "detect_sarcasm_context", "detect_sentiment_augmented", "SentimentOutput"]
+__all__ = [
+    "detect_sentiment",
+    "detect_sarcasm_context",
+    "detect_sentiment_augmented",
+    "SentimentOutput",
+]
 
 # Casino-domain positive phrases that VADER may misclassify
 _CASINO_POSITIVE_OVERRIDES: set[str] = {
@@ -65,6 +70,14 @@ _SARCASM_PATTERNS: list[str] = [
     # "Whatever" / "If you say so" / "Sure whatever" — passive resignation
     r"(?i)\b(?:sure\s+)?whatever\b(?:\s*[.,!]?\s*$)",
     r"(?i)\bif\s+you\s+say\s+so\b",
+    # R88: Casino-context sarcasm patterns
+    # "Oh wonderful, another chatbot" / "This should be fun" — chatbot skepticism
+    r"(?i)\b(?:oh\s+)?wonderful[,!]?\s+another\b",
+    r"(?i)\bthis\s+should\s+be\s+(?:fun|interesting|great)\b",
+    # "Wow, really helpful" / "How helpful" — dripping sarcasm
+    r"(?i)\b(?:wow[,!]?\s+)?(?:really|how|so)\s+helpful\b",
+    # "That's exactly what I needed" — sarcastic when frustrated
+    r"(?i)\bthat'?s?\s+exactly\s+what\s+I\s+(?:needed|wanted)\b",
 ]
 
 
@@ -152,10 +165,29 @@ def detect_sentiment(text: str) -> str:
 
 # Positive-leaning words that appear in sarcastic messages
 _SARCASM_POSITIVE_SIGNALS: set[str] = {
-    "great", "wonderful", "fantastic", "perfect", "lovely", "amazing",
-    "awesome", "brilliant", "excellent", "beautiful", "helpful", "useful",
-    "impressive", "nice", "good", "love", "enjoy", "fun", "terrific",
-    "outstanding", "marvelous", "superb", "delightful",
+    "great",
+    "wonderful",
+    "fantastic",
+    "perfect",
+    "lovely",
+    "amazing",
+    "awesome",
+    "brilliant",
+    "excellent",
+    "beautiful",
+    "helpful",
+    "useful",
+    "impressive",
+    "nice",
+    "good",
+    "love",
+    "enjoy",
+    "fun",
+    "terrific",
+    "outstanding",
+    "marvelous",
+    "superb",
+    "delightful",
 }
 
 
@@ -194,8 +226,7 @@ def detect_sarcasm_context(
 
         # Need at least 1 recent negative/frustrated message for contrast
         negative_count = sum(
-            1 for s in recent_sentiments[:3]
-            if s in ("frustrated", "negative")
+            1 for s in recent_sentiments[:3] if s in ("frustrated", "negative")
         )
         if negative_count == 0:
             return False
@@ -253,7 +284,9 @@ class SentimentOutput(BaseModel):
     sentiment: Literal["positive", "negative", "neutral", "frustrated"] = Field(
         description="The detected sentiment of the guest message"
     )
-    confidence: float = Field(ge=0.0, le=1.0, description="Confidence in classification")
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Confidence in classification"
+    )
 
 
 async def detect_sentiment_augmented(
@@ -310,5 +343,7 @@ async def detect_sentiment_augmented(
         )
         return result.sentiment
     except Exception:
-        logger.debug("LLM sentiment augmentation failed, using VADER result", exc_info=True)
+        logger.debug(
+            "LLM sentiment augmentation failed, using VADER result", exc_info=True
+        )
         return vader_result
