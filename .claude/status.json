@@ -1,24 +1,26 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R95 complete — Final validation. GPT-5.2 judge on 80 behavioral scenarios: B-avg 6.62, Safety 93.7%. 3 regression fixes applied. Profiling + host-triangle evals in progress (resume-supported).",
-    "lastModified": "2026-03-05T12:45:00Z",
+    "summary": "R96 complete — All 3 eval categories judged (GPT-5.2). B-avg 6.62, P-avg 5.12, H-avg 4.84. 6-model debate selected 'Pro-First, Distill-Down' strategy for 8.0+. Next: implement Phase 1 (Pro switch + behavior contracts).",
+    "lastModified": "2026-03-05T14:35:00Z",
     "branch": "main",
-    "commitHash": "658ca69",
+    "commitHash": "df9731c",
     "tag": "v1.5.0",
-    "phase": "r95-final-validation"
+    "phase": "r96-strategy-decided"
   },
-  "blueprintPhase": "Phase D — Final Validation (R95 Complete)",
-  "roundNumber": 95,
+  "blueprintPhase": "Phase E — Strategy for 8.0+ (R96 Complete)",
+  "roundNumber": 96,
   "scores": {
     "technical": 9.63,
     "behavioral_r95_gpt52": 6.62,
-    "behavioral_r95_overall": 6.2,
-    "safety_r95": "93.7%",
-    "responseRate_r95": "100%",
-    "deflectionRate_r95": "0%",
-    "profiling_r95_incidental": 4.36,
-    "per_dimension_r95": {
+    "profiling_r96_gpt52": 5.12,
+    "hostTriangle_r96_gpt52": 4.84,
+    "safety_behavioral": "93.7%",
+    "safety_profiling": "98.1%",
+    "safety_hostTriangle": "100%",
+    "responseRate": "100%",
+    "deflectionRate": "0%",
+    "per_dimension_behavioral": {
       "B1_sarcasm": 6.9,
       "B2_implicit": 6.2,
       "B3_engagement": 6.2,
@@ -29,34 +31,99 @@
       "B8_cultural": 7.2,
       "B9_safety": 6.6,
       "B10_overall": 6.3
+    },
+    "per_dimension_profiling": {
+      "P1_natural_extraction": 5.3,
+      "P2_active_probing": 6.1,
+      "P3_give_to_get": 7.2,
+      "P4_assumptive_bridging": 5.1,
+      "P5_progressive_sequencing": 5.3,
+      "P6_incentive_framing": 4.2,
+      "P7_privacy_respect": 5.8,
+      "P8_profile_completeness": 3.7,
+      "P9_host_handoff": 2.1,
+      "P10_cross_turn_memory": 6.3
+    },
+    "per_dimension_hostTriangle": {
+      "H1_property_knowledge": 6.6,
+      "H2_need_anticipation": 5.5,
+      "H3_solution_synthesis": 4.7,
+      "H4_emotional_attunement": 6.0,
+      "H5_trust_building": 5.1,
+      "H6_rapport_depth": 4.0,
+      "H7_revenue_natural": 5.4,
+      "H8_upsell_timing": 5.7,
+      "H9_comp_strategy": 1.9,
+      "H10_lifetime_value": 3.5
     }
+  },
+  "strategy": {
+    "name": "Pro-First, Distill-Down",
+    "confidence": 0.82,
+    "council": "6-model debate (GPT-5.2, Grok-4, Perplexity, DeepSeek, GPT-5 Pro, GPT-5.3 Codex)",
+    "phases": [
+      {
+        "phase": 1,
+        "name": "Pro Switch + Canary Rollout",
+        "timeline": "Days 1-3",
+        "target": "B-avg >= 7.0",
+        "cost": "$280/month at 10K conv"
+      },
+      {
+        "phase": 2,
+        "name": "Structured Behavior Contracts",
+        "timeline": "Weeks 1-3",
+        "target": "H9 >= 5.0, P9 >= 5.0, H10 >= 5.0",
+        "tools": [
+          "CompStrategy",
+          "HandoffOrchestrator",
+          "LTV Nudge Engine",
+          "Rapport Depth Ladder"
+        ]
+      },
+      {
+        "phase": 3,
+        "name": "Flash Fine-Tune + Distillation",
+        "timeline": "Weeks 4-8",
+        "target": "B-avg >= 8.0 at Flash cost",
+        "prerequisite": "2K+ graded Pro conversations"
+      }
+    ]
   },
   "blockers": [],
   "nextSteps": [
     {
       "priority": 1,
-      "description": "Resume profiling eval (10/56 done) and host-triangle eval (10/30 done) — use `python3 -m tests.evaluation.v2.cli run --category profiling --all` and `--category host-triangle --all`"
+      "description": "Phase 1: Switch specialist agent LLM to Gemini 3.1 Pro (config change in nodes.py). Canary rollout: 10%->50%->100% over 3 days."
     },
     {
       "priority": 2,
-      "description": "Run GPT-5.2 judge on profiling + host-triangle results: `python3 tests/evaluation/run_r95_judge.py --category profiling` and `--category host-triangle`"
+      "description": "Phase 2a: Build CompStrategy tool (typed schema + business rules) for H9 comp scenarios. Target H9 >= 5.0."
     },
     {
       "priority": 3,
-      "description": "Optional: Add Grok 4 as second judge for ICC calculation"
+      "description": "Phase 2b: Build HandoffOrchestrator tool (structured 6-point summary) for P9 handoff scenarios. Target P9 >= 5.0."
+    },
+    {
+      "priority": 4,
+      "description": "Phase 2c: Build LTV Nudge Engine (return-visit seeding) for H10 scenarios. Target H10 >= 5.0."
+    },
+    {
+      "priority": 5,
+      "description": "Re-run 80-scenario behavioral eval after Phase 1+2 to validate B-avg >= 7.5"
     }
   ],
   "reviewHistory": {
-    "r95": {
+    "r96": {
       "date": "2026-03-05",
-      "judgePanel": "GPT-5.2 (Azure AI Foundry, 80 behavioral scenarios)",
-      "changes": [
-        "S8: patron_privacy regex — (?!there\\b) negative lookahead prevents 'Is there anything...' overmatch",
-        "S11: greeting_node domain cycling — marks suggested domain as explored to prevent repeat",
-        "Farewell close signals — 9 gratitude patterns for profile-aware goodbye",
-        "run_r95_judge.py — standalone judge script for v2-results",
-        "r95-behavioral-judge-scores.json — full 80-scenario GPT-5.2 scores"
-      ]
+      "judgePanel": "GPT-5.2 (Azure AI Foundry)",
+      "results": {
+        "profiling_scenarios": 54,
+        "profiling_Pavg": 5.12,
+        "hostTriangle_scenarios": 30,
+        "hostTriangle_Havg": 4.84,
+        "strategy_debate": "6-model council, Pro-First Distill-Down selected"
+      }
     },
     "trajectory": {
       "R52": 67.7,
@@ -69,7 +136,8 @@
       "R91_behavioral": 7.0,
       "R92pre_behavioral": 6.5,
       "R95_behavioral": 6.62,
-      "R95_safety": "93.7%"
+      "R96_profiling": 5.12,
+      "R96_hostTriangle": 4.84
     }
   },
   "codebaseMetrics": {
@@ -93,6 +161,6 @@
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-05",
-    "lastSessionId": "hey-seven-session-20260305-r95"
+    "lastSessionId": "hey-seven-session-20260305-r96"
   }
 }

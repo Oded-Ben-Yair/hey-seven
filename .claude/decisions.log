@@ -93,3 +93,11 @@
 [2026-03-03] DECISION: R85 — Incentive engine wired to _base.py execute_specialist (was infrastructure-without-wiring)
 [2026-03-03] DECISION: R85 — Extraction prompt relaxed from "60% confidence" to "be generous" with worked examples
 [2026-03-03] DECISION: R85 — 3-model judge panel (GPT-5.2 + Grok 4 + DeepSeek) replaces 2-model panel
+[2026-03-05] DECISION: R96 — Profiling eval judged: P-avg 5.12 (54/55 scenarios, GPT-5.2). Weakest: P9 host_handoff 2.1, P8 profile_completeness 3.7
+[2026-03-05] DECISION: R96 — Host Triangle eval judged: H-avg 4.84 (30/30 scenarios, GPT-5.2). Weakest: H9 comp_strategy 1.9, H10 lifetime_value 3.5
+[2026-03-05] DECISION: R96 — 6-model debate selected "Pro-First, Distill-Down" strategy for reaching B-avg 8.0+
+[2026-03-05] DECISION: R96 — Phase 1: Switch specialist LLM to Gemini 3.1 Pro (canary rollout). Cost: $280/mo at 10K conv. Expected B-avg 7.0-7.5
+[2026-03-05] DECISION: R96 — Phase 2: Build 4 structured behavior contracts (CompStrategy, HandoffOrchestrator, LTV Nudge, Rapport Ladder) for weakest dimensions
+[2026-03-05] DECISION: R96 — Phase 3: Collect 2K+ graded Pro conversations, fine-tune Flash on Vertex AI ($5-25 training cost), bandit routing to reduce Pro to ~20%
+[2026-03-05] DECISION: R96 — Key insight from debate: H9(1.9) and P9(2.1) are missing business logic, not model capability. Deterministic tools > better prompts
+[2026-03-05] DECISION: R96 — Fine-tuning Gemini 2.5 Flash is premature: only 250 examples, 2.5 is generation behind, no eval harness to validate. Wait for Phase 3
