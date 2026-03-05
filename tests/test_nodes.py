@@ -498,15 +498,16 @@ class TestOffTopicNode:
         content = result["messages"][0].content
         assert "1-800-MY-RESET" in content
 
-    async def test_action_request_neutral_gives_helpful_redirect(self):
-        """Neutral action request gives helpful redirect with contact info."""
+    async def test_action_request_neutral_takes_ownership(self):
+        """R91: Neutral action request uses host-authority framing, not deflection."""
         from src.agent.nodes import off_topic_node
 
         state = _state(query_type="action_request")
         result = await off_topic_node(state)
         content = result["messages"][0].content
-        assert "reservations" in content.lower() or "help" in content.lower()
-        assert "Mohegan Sun" in content  # Property name from settings
+        # Host authority: facilitates, doesn't refuse
+        assert "set up" in content.lower() or "help" in content.lower()
+        assert "can't" not in content.lower()  # No deflection language
 
     async def test_action_request_frustrated_offers_host_connection(self):
         """Frustrated action request acknowledges frustration and offers host team."""

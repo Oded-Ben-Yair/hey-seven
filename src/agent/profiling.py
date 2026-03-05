@@ -47,7 +47,8 @@ class ConfidenceField(BaseModel):
 
     value: Any = Field(description="The extracted value")
     confidence: float = Field(
-        ge=0.0, le=1.0,
+        ge=0.0,
+        le=1.0,
         description="Confidence in the extraction (0.0-1.0)",
     )
     source: Literal["explicit", "inferred", "corrected"] = Field(
@@ -69,21 +70,51 @@ class ProfileExtractionOutput(BaseModel):
     """
 
     guest_name: str | None = Field(default=None, description="Guest name if stated")
-    party_size: str | None = Field(default=None, description="Number in party if stated")
-    party_composition: str | None = Field(default=None, description="Adults, kids, ages if mentioned")
-    visit_purpose: str | None = Field(default=None, description="Business, leisure, celebration if stated")
-    visit_duration: str | None = Field(default=None, description="Number of nights/days if stated")
-    dining_preferences: str | None = Field(default=None, description="Cuisine type, dietary if stated")
-    dietary_restrictions: str | None = Field(default=None, description="Allergies, restrictions if stated")
-    gaming_preferences: str | None = Field(default=None, description="Game type, stakes if stated")
-    entertainment_interests: str | None = Field(default=None, description="Shows, music, events if stated")
-    spa_interests: str | None = Field(default=None, description="Treatments, services if stated")
-    occasion: str | None = Field(default=None, description="Birthday, anniversary if stated")
-    occasion_details: str | None = Field(default=None, description="Occasion specifics if stated")
-    home_market: str | None = Field(default=None, description="Where guest is from if stated")
-    budget_signal: str | None = Field(default=None, description="Budget level signals if stated")
-    loyalty_tier: str | None = Field(default=None, description="Loyalty program tier if stated")
-    visit_frequency: str | None = Field(default=None, description="How often they visit if stated")
+    party_size: str | None = Field(
+        default=None, description="Number in party if stated"
+    )
+    party_composition: str | None = Field(
+        default=None, description="Adults, kids, ages if mentioned"
+    )
+    visit_purpose: str | None = Field(
+        default=None, description="Business, leisure, celebration if stated"
+    )
+    visit_duration: str | None = Field(
+        default=None, description="Number of nights/days if stated"
+    )
+    dining_preferences: str | None = Field(
+        default=None, description="Cuisine type, dietary if stated"
+    )
+    dietary_restrictions: str | None = Field(
+        default=None, description="Allergies, restrictions if stated"
+    )
+    gaming_preferences: str | None = Field(
+        default=None, description="Game type, stakes if stated"
+    )
+    entertainment_interests: str | None = Field(
+        default=None, description="Shows, music, events if stated"
+    )
+    spa_interests: str | None = Field(
+        default=None, description="Treatments, services if stated"
+    )
+    occasion: str | None = Field(
+        default=None, description="Birthday, anniversary if stated"
+    )
+    occasion_details: str | None = Field(
+        default=None, description="Occasion specifics if stated"
+    )
+    home_market: str | None = Field(
+        default=None, description="Where guest is from if stated"
+    )
+    budget_signal: str | None = Field(
+        default=None, description="Budget level signals if stated"
+    )
+    loyalty_tier: str | None = Field(
+        default=None, description="Loyalty program tier if stated"
+    )
+    visit_frequency: str | None = Field(
+        default=None, description="How often they visit if stated"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -132,17 +163,17 @@ PROFILING_TECHNIQUE_PROMPTS: dict[str, str] = {
 # Keys use the STORED field names (after _FIELD_NAME_MAP mapping),
 # not the ProfileExtractionOutput field names.
 _PROFILE_WEIGHTS: dict[str, float] = {
-    "name": 0.15,              # mapped from guest_name
+    "name": 0.15,  # mapped from guest_name
     "party_size": 0.12,
     "visit_purpose": 0.10,
-    "preferences": 0.10,       # mapped from dining_preferences
+    "preferences": 0.10,  # mapped from dining_preferences
     "occasion": 0.10,
     "visit_duration": 0.06,
     "party_composition": 0.06,
-    "dietary": 0.06,           # mapped from dietary_restrictions
-    "gaming": 0.05,            # mapped from gaming_preferences
-    "entertainment": 0.05,     # mapped from entertainment_interests
-    "spa": 0.04,               # mapped from spa_interests
+    "dietary": 0.06,  # mapped from dietary_restrictions
+    "gaming": 0.05,  # mapped from gaming_preferences
+    "entertainment": 0.05,  # mapped from entertainment_interests
+    "spa": 0.04,  # mapped from spa_interests
     "occasion_details": 0.03,
     "home_market": 0.03,
     "budget_signal": 0.02,
@@ -215,8 +246,15 @@ def _determine_profiling_phase(
         return "preference"
 
     # Relationship: occasion, companion info, visit frequency
-    relationship_fields = ("occasion", "companion_names", "visit_frequency", "loyalty_tier")
-    has_relationship = sum(1 for f in relationship_fields if extracted_fields.get(f)) >= 1
+    relationship_fields = (
+        "occasion",
+        "companion_names",
+        "visit_frequency",
+        "loyalty_tier",
+    )
+    has_relationship = (
+        sum(1 for f in relationship_fields if extracted_fields.get(f)) >= 1
+    )
 
     if not has_relationship:
         return "relationship"
@@ -244,8 +282,9 @@ Extract ALL guest profile information from the conversation.
 
 ## Instructions
 Extract as much as you can. Be generous — it's better to capture something
-than to miss it.
+than to miss it. Even one-word mentions count.
 
+### Direct mentions (extract immediately):
 - "I'm Sarah" → guest_name: "Sarah"
 - "party of 4" / "4 of us" / "me and 3 friends" → party_size: "4"
 - "birthday" / "anniversary" / "celebrating" → occasion: the occasion
@@ -253,10 +292,21 @@ than to miss it.
 - "checking in Friday for 2 nights" → visit_duration: "2 nights"
 - "I love seafood" / "something Italian" → dining_preferences: the preference
 - "been coming here 10 years" / "Gold member" → loyalty_tier or visit_frequency
+
+### Indirect signals (also extract):
+- "the kids want the pool" → party_composition: "family with children"
+- "my wife and I" → party_size: "2", party_composition: "couple"
+- "we're here for the weekend" → visit_duration: "weekend"
+- "I need something quick" → dining_preferences: "quick/casual"
+- "we come every month" → visit_frequency: "monthly"
+- "I'm a slots person" → gaming_preferences: "slots"
+- "just looking for something chill" → entertainment_interests: "relaxed"
+
+### Do NOT extract:
 - "tired from driving" / "long day" → budget_signal: null (not budget-related)
+- Information already in the current profile (unless the guest corrects it)
 
 Return null ONLY when the field truly has no information in this exchange.
-Do NOT re-extract information already in the current profile unless corrected.
 """
 
 
@@ -318,7 +368,9 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
         # Build extraction prompt
         import json
 
-        current_profile_str = json.dumps(extracted_fields, indent=2) if extracted_fields else "{}"
+        current_profile_str = (
+            json.dumps(extracted_fields, indent=2) if extracted_fields else "{}"
+        )
         prompt_text = _EXTRACTION_PROMPT.format(
             user_message=user_message,
             ai_response=ai_response or "(no AI response yet)",
@@ -330,7 +382,9 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
 
         llm = await _get_whisper_llm()
         extraction_llm = llm.with_structured_output(ProfileExtractionOutput)
-        extraction_result: ProfileExtractionOutput = await extraction_llm.ainvoke(prompt_text)
+        extraction_result: ProfileExtractionOutput = await extraction_llm.ainvoke(
+            prompt_text
+        )
 
         # Merge non-None fields into extracted_fields.
         # R76 fix: ProfileExtractionOutput is now flat (str | None fields)
@@ -444,7 +498,10 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
 
     except Exception:
         # Fail-silent: any error returns empty state update
-        logger.warning("profiling_enrichment_node failed, continuing without profiling", exc_info=True)
+        logger.warning(
+            "profiling_enrichment_node failed, continuing without profiling",
+            exc_info=True,
+        )
         extracted_fields = state.get("extracted_fields") or {}
         completeness = _calculate_profile_completeness_weighted(extracted_fields)
         phase = _determine_profiling_phase(extracted_fields, completeness)

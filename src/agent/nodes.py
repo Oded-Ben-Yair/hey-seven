@@ -1329,7 +1329,8 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
             )
     elif query_type == "action_request":
         # R90: Context-aware response — frustrated guests get host escalation,
-        # neutral booking requests get helpful redirect.
+        # neutral booking requests get host-authority framing.
+        # R91: Turn-aware — repeated action_requests escalate to handoff.
         _msg_lower = (user_message or "").lower()
         _is_frustrated = any(
             kw in _msg_lower
@@ -1347,6 +1348,46 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 "upset",
             )
         )
+
+        # R91: Detect repeated action_request — if previous AI response was
+        # also an action_request redirect, escalate to handoff.
+        _is_repeat = False
+        _prev_messages = state.get("messages", [])
+        _ACTION_MARKERS = ("host team", "reservations team", "equipo de anfitriones")
+        for _prev_msg in reversed(_prev_messages):
+            if isinstance(_prev_msg, AIMessage):
+                _prev_content = _normalize_content(_prev_msg.content).lower()
+                if any(m in _prev_content for m in _ACTION_MARKERS):
+                    _is_repeat = True
+                break  # Only check the most recent AI message
+
+        if _is_repeat:
+            # R91: Repeated request — escalate with handoff
+            from src.agent.handoff import build_handoff_request
+
+            if _is_spanish:
+                content = (
+                    "Escucha, quiero asegurarme de que esto se resuelva. "
+                    "Voy a conectarte directamente con nuestro equipo de "
+                    "anfitriones para que se encarguen de esto personalmente."
+                )
+            else:
+                content = (
+                    "I hear you — let me connect you directly with our host "
+                    "team so they can take care of this for you."
+                )
+            return {
+                "messages": [AIMessage(content=content)],
+                "sources_used": [],
+                "retrieved_context": [],
+                "handoff_request": build_handoff_request(
+                    department="host_services",
+                    reason="Guest repeated action request — escalating to host team",
+                    extracted_fields=state.get("extracted_fields"),
+                    urgency="medium",
+                ).model_dump(),
+            }
+
         if _is_spanish:
             if _is_frustrated:
                 content = (
@@ -1361,12 +1402,12 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 )
             else:
                 content = (
-                    "Me encantaría ayudarte con eso. Aunque no puedo hacer "
-                    "reservaciones directamente, puedo darte toda la información "
-                    "que necesitas.\n\n"
-                    f"Para reservaciones, puedes contactar a {settings.PROPERTY_NAME} "
-                    f"al {settings.PROPERTY_PHONE} o visitar {settings.PROPERTY_WEBSITE}.\n\n"
-                    "¿Hay algo más sobre la propiedad en lo que pueda ayudarte?"
+                    "Permíteme ayudarte a organizar eso. Te doy los detalles y "
+                    "nuestro equipo de reservaciones puede confirmarlo todo.\n\n"
+                    f"Puedes comunicarte con el equipo de reservaciones de {settings.PROPERTY_NAME} "
+                    f"al {settings.PROPERTY_PHONE}, o si prefieres, puedo conectarte "
+                    "con un anfitrión que se encargue personalmente.\n\n"
+                    "¿Qué información necesitas para tu visita?"
                 )
         else:
             if _is_frustrated:
@@ -1382,11 +1423,14 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 )
             else:
                 content = (
-                    "I'd love to help with that. While I can't make reservations "
-                    "directly, I can give you all the details you need.\n\n"
-                    f"For reservations and bookings, you can reach {settings.PROPERTY_NAME} "
-                    f"at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
-                    "Is there anything else about the property I can help you with?"
+                    "Let me help you get that set up. I'll pull together the "
+                    "details you need.\n\n"
+                    f"For the booking itself, our reservations team at "
+                    f"{settings.PROPERTY_PHONE} can lock it in right away, "
+                    "or I can connect you with a host who handles this "
+                    "personally.\n\n"
+                    "What are you looking to book — dining, a room, or "
+                    "something else?"
                 )
     elif query_type == "self_harm":
         # R50 fix (Grok CRITICAL-D1-001): Self-harm crisis response with 988 Lifeline.

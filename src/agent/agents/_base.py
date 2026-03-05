@@ -269,15 +269,15 @@ CROSS_DOMAIN_BRIDGES: dict[tuple[str, str], str] = {
     (
         "comp",
         "dining",
-    ): "Depending on your Momentum tier, dining credits may apply at select restaurants like Tuscany or SolToro — worth checking at the desk.",
+    ): "With your play history, you might be closer to the next tier than you think — dining credits at Tuscany and SolToro open up at each level.",
     (
         "comp",
         "entertainment",
-    ): "Higher Momentum tiers sometimes include priority access for Arena shows and VIP seating at the Wolf Den.",
+    ): "Each Momentum tier unlocks more — priority Arena access and VIP Wolf Den seating are closer than you might think.",
     (
         "comp",
         "spa",
-    ): "Some Momentum tiers include spa credits at Mandara or Elemis — check with the Momentum desk for your specific benefits.",
+    ): "Spa credits at Mandara and Elemis open up as you move through tiers — you might already qualify based on your visits.",
     (
         "gaming",
         "dining",
@@ -450,6 +450,56 @@ def _build_behavioral_prompt_sections(
             "free activities (Wolf Den, pool), and casual dining (buffet). "
             "Do NOT suggest premium/expensive options first. Maintain this filter "
             "throughout the conversation."
+        )
+
+    # R91: Tier curiosity — aspirational framing for loyalty/tier questions
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "tier",
+            "momentum",
+            "rewards",
+            "loyalty",
+            "points",
+            "upgrade",
+            "benefits",
+            "perks",
+        )
+    ):
+        sections.append(
+            "## Tier Advancement (Aspirational)\n"
+            "The guest is curious about tiers/rewards. Frame tier info ASPIRATIONALLY, not as brochure:\n"
+            "- 'You're already earning toward your next tier just by being here.'\n"
+            "- 'At [X] credits you hit [Tier], which opens up [specific benefit].'\n"
+            "- 'How often do you visit? I can give you a sense of where you might be.'\n"
+            "NEVER just list tiers like a brochure. Connect their current behavior to what they unlock next."
+        )
+
+    # R91: Loss/security ownership — host takes action, never deflects
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "lost my",
+            "stolen",
+            "theft",
+            "stole",
+            "missing",
+            "left my",
+            "someone took",
+        )
+    ) and not any(
+        # Exclude grief/gambling contexts (already handled by their own guides)
+        kw in user_msg_lower
+        for kw in ("passed away", "passed on", "lost all", "lost everything")
+    ):
+        sections.append(
+            "## Loss/Security Response\n"
+            "The guest is reporting a lost or stolen item. Take OWNERSHIP:\n"
+            "- 'I'll flag this for our security team right away.'\n"
+            "- Ask WHEN and WHERE it happened so you can pass along details.\n"
+            "- Provide the security desk location and phone number.\n"
+            "- NEVER say 'I can't report this' or 'you'll need to contact security yourself'.\n"
+            "- Frame yourself as the facilitator: 'Let me get this to the right people.'"
         )
 
     # R74 B3: Cross-domain engagement variation via extracted helper.
@@ -884,13 +934,18 @@ async def execute_specialist(
         "- Follow-up on previous topic → build on context, don't restart\n"
         '- "Too many options" or frustration → ONE definitive pick with '
         "confidence\n\n"
-        "## Natural Follow-Up\n"
-        "End every response with ONE natural follow-up question that flows from "
-        "the conversation and helps you serve the guest better. Never condition "
-        "service on the answer.\n"
-        'Examples: "Are you celebrating anything special tonight?" / '
-        '"How many in your party?" / "Do you prefer something high-energy or '
-        'relaxed?"\n\n'
+        "## Natural Follow-Up (Give-to-Get)\n"
+        "End every response with ONE natural follow-up question. Before asking, "
+        "offer a relevant detail or recommendation first — this is the 'give' "
+        "that earns the 'get'. Never ask bare questions without offering something.\n\n"
+        "Pattern: [answer] + [useful detail] + [question that benefits the guest]\n\n"
+        "Examples:\n"
+        "- \"Bobby's Steakhouse is our most popular spot for celebrations — will "
+        'it be just the two of you?"\n'
+        '- "The Wolf Den has a great acoustic show tonight — are you more into '
+        'live music or comedy?"\n'
+        '- "Our spa opens at 9 AM and the morning slots are the quietest — would '
+        'that work for your schedule?"\n\n'
         "## Cross-Domain Awareness\n"
         "After answering, suggest ONE related activity from a different domain "
         "when natural:\n"

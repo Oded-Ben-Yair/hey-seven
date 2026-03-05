@@ -37,7 +37,6 @@ RESPONSIBLE_GAMING_HELPLINES_DEFAULT = (
 )
 
 
-
 def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
     """Return responsible gaming helplines for the specified property.
 
@@ -57,6 +56,7 @@ def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
     if casino_id:
         try:
             from src.casino.config import get_casino_profile
+
             profile = get_casino_profile(casino_id)
             regulations = profile.get("regulations", {})
             state_helpline = regulations.get("state_helpline", "")
@@ -65,9 +65,13 @@ def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
             if state_helpline or rg_helpline:
                 # R68 fix D10: 1-800-GAMBLER is the primary NCPG helpline
                 # (post-2022 rebrand). 1-800-MY-RESET is the alternate line.
-                lines = ["- National Problem Gambling Helpline: 1-800-GAMBLER (1-800-426-2537)"]
+                lines = [
+                    "- National Problem Gambling Helpline: 1-800-GAMBLER (1-800-426-2537)"
+                ]
                 if rg_helpline:
-                    lines.append(f"- {state_code} Problem Gambling Helpline: {rg_helpline}")
+                    lines.append(
+                        f"- {state_code} Problem Gambling Helpline: {rg_helpline}"
+                    )
                 if state_helpline:
                     lines.append(f"- {state_code} State Helpline: {state_helpline}")
                 # R36 fix B9: Surface self-exclusion duration options when defined
@@ -86,6 +90,7 @@ def get_responsible_gaming_helplines(casino_id: str | None = None) -> str:
                 exc_info=True,
             )
     return RESPONSIBLE_GAMING_HELPLINES_DEFAULT
+
 
 # ---------------------------------------------------------------------------
 # 1. CONCIERGE_SYSTEM_PROMPT
@@ -433,18 +438,12 @@ def get_responsible_gaming_helplines_es(casino_id: str | None = None) -> str:
                     "1-800-GAMBLER (1-800-426-2537) — servicio en español disponible"
                 ]
                 if rg_helpline:
-                    lines.append(
-                        f"- Línea de Ayuda de {state_code}: {rg_helpline}"
-                    )
+                    lines.append(f"- Línea de Ayuda de {state_code}: {rg_helpline}")
                 if state_helpline:
-                    lines.append(
-                        f"- Línea Estatal de {state_code}: {state_helpline}"
-                    )
+                    lines.append(f"- Línea Estatal de {state_code}: {state_helpline}")
                 self_exclusion_opts = regulations.get("self_exclusion_options")
                 if self_exclusion_opts:
-                    lines.append(
-                        f"- Opciones de Autoexclusión: {self_exclusion_opts}"
-                    )
+                    lines.append(f"- Opciones de Autoexclusión: {self_exclusion_opts}")
                 return "\n".join(lines)
         except Exception:
             logger.warning(
@@ -723,10 +722,11 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
         # Sarcasm
         (
             "Oh great, another loyalty program where I need to spend a million dollars to get a free coffee.",
-            "The Momentum program starts at Core tier — free to join, and you earn "
-            "points on slots, tables, and dining. Points can be redeemed for free play, "
-            "dining, and hotel. The first tier upgrade is at 2,500 tier credits. Would "
-            "you like specifics on what each tier includes?",
+            "I hear the skepticism — but Momentum actually starts paying back fast. "
+            "You're earning tier credits on slots, tables, and dining from day one. "
+            "At 2,500 credits you hit Star, which opens up dining credits and priority "
+            "seating. How often do you play? I can give you a sense of how quickly "
+            "you'd get there.",
         ),
         # Grief
         (
@@ -739,11 +739,11 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
         # Implicit signal (loyalty)
         (
             "Been coming here every weekend for 3 years. What do I get for that?",
-            "Three years of weekly visits — you've likely accumulated significant tier "
-            "credits. Your current tier determines your benefits: earn rate bonuses, "
-            "priority access, dining credits, and at higher tiers, a dedicated host. "
-            "Check your tier at any Momentum desk or on the app to see exactly where "
-            "you stand.",
+            "Three years of weekly visits — that kind of consistency puts you in "
+            "serious tier territory. You're likely close to or already at a tier "
+            "that includes dining credits, priority reservations, and VIP event "
+            "invitations. How about I walk you through what opens up at the next "
+            "level? You might be surprised how close you are.",
         ),
         # Celebration
         (
@@ -915,11 +915,15 @@ def get_persona_style(branding: dict) -> str:
     exclamation_limit = branding.get("exclamation_limit", 1)
 
     tone_guide = _TONE_GUIDES.get(tone, _TONE_GUIDES["warm_professional"])
-    formality_guide = _FORMALITY_GUIDES.get(formality, _FORMALITY_GUIDES["casual_respectful"])
-    emoji_guide = "Emoji are welcome when they add warmth." if emoji_allowed else "Never use emoji in responses."
-    exclamation_guide = (
-        f"Use at most {exclamation_limit} exclamation mark(s) per response to keep enthusiasm genuine."
+    formality_guide = _FORMALITY_GUIDES.get(
+        formality, _FORMALITY_GUIDES["casual_respectful"]
     )
+    emoji_guide = (
+        "Emoji are welcome when they add warmth."
+        if emoji_allowed
+        else "Never use emoji in responses."
+    )
+    exclamation_guide = f"Use at most {exclamation_limit} exclamation mark(s) per response to keep enthusiasm genuine."
 
     return PERSONA_STYLE_TEMPLATE.safe_substitute(
         persona_name=persona_name,
@@ -1021,17 +1025,11 @@ HEART_ESCALATION_LANGUAGE: dict[str, str] = {
         "Walk me through what happened so I can make sure I fully understand "
         "the situation."
     ),
-    "empathize": (
-        "I completely understand how frustrating that must be."
-    ),
-    "apologize": (
-        "I'm truly sorry you've had this experience."
-    ),
+    "empathize": ("I completely understand how frustrating that must be."),
+    "apologize": ("I'm truly sorry you've had this experience."),
     "resolve": (
         "Here's what I can do for you right now -- which option would feel "
         "most meaningful to you?"
     ),
-    "thank": (
-        "Thank you for giving us the opportunity to make this right."
-    ),
+    "thank": ("Thank you for giving us the opportunity to make this right."),
 }
