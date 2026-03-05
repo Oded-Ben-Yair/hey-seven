@@ -780,6 +780,14 @@ _SLOP_PATTERNS: list[tuple[re.Pattern, str]] = [
         re.compile(r"I (?:highly )?recommend\b", re.IGNORECASE),
         "I'd suggest",
     ),
+    # R90: "I appreciate you asking/sharing/reaching out!" mid-response slop
+    (
+        re.compile(
+            r"I appreciate you (?:asking|sharing|reaching out)[!.]\s*",
+            re.IGNORECASE,
+        ),
+        "",
+    ),
 ]
 
 
@@ -1118,9 +1126,19 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
 
 
 def _build_crisis_followup(
-    user_message: str, property_name: str, property_phone: str
+    user_message: str,
+    property_name: str,
+    property_phone: str,
+    crisis_turn_count: int = 2,
 ) -> str:
-    """Turn 2+ crisis response — empathetic, shorter, acknowledges guest's words."""
+    """Turn 2+ crisis response — empathetic, shorter, acknowledges guest's words.
+
+    Args:
+        user_message: The guest's current message (used for on-site help detection).
+        property_name: Display name of the casino property.
+        property_phone: Contact phone for the property.
+        crisis_turn_count: Current crisis turn (2 = first followup, 3+ = variation).
+    """
     msg_lower = user_message.lower()
     if any(
         kw in msg_lower
@@ -1132,6 +1150,14 @@ def _build_crisis_followup(
             "and ask to speak with someone from guest services.\n\n"
             "The **988 Lifeline** (call or text 988) is also always available if you'd "
             "like to talk to a trained counselor."
+        )
+    # R90: Turn 3+ variation to avoid verbatim repetition across crisis turns.
+    if crisis_turn_count >= 3:
+        return (
+            "I'm still here. You don't have to go through this alone. "
+            "Would it help to talk to someone in person? Any team member "
+            "can connect you right now.\n\n"
+            "The **988 Lifeline** (call or text 988) remains available 24/7."
         )
     return (
         "I hear you, and what you're going through is real. You don't have to "
@@ -1302,24 +1328,66 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 "Is there anything else I can help you with?"
             )
     elif query_type == "action_request":
+        # R90: Context-aware response — frustrated guests get host escalation,
+        # neutral booking requests get helpful redirect.
+        _msg_lower = (user_message or "").lower()
+        _is_frustrated = any(
+            kw in _msg_lower
+            for kw in (
+                "spent",
+                "can't even",
+                "deserve",
+                "ridiculous",
+                "unacceptable",
+                "demand",
+                "comp me",
+                "terrible",
+                "worst",
+                "angry",
+                "upset",
+            )
+        )
         if _is_spanish:
-            content = (
-                "Agradezco que preguntes. Aunque no puedo hacer reservaciones, reservas, "
-                "o tomar acciones en tu nombre, puedo darte toda la información "
-                "que necesitas para hacerlo tú mismo.\n\n"
-                f"Para reservaciones, por favor contacta a {settings.PROPERTY_NAME} "
-                f"directamente al {settings.PROPERTY_PHONE} o visita {settings.PROPERTY_WEBSITE}.\n\n"
-                "¿Hay alguna información en la que pueda ayudarte?"
-            )
+            if _is_frustrated:
+                content = (
+                    "Entiendo completamente tu frustración. Tu lealtad a "
+                    f"{settings.PROPERTY_NAME} es importante, y quiero asegurarme "
+                    "de que recibas la mejor atención.\n\n"
+                    "Permíteme conectarte con nuestro equipo de anfitriones — ellos "
+                    "tienen la autoridad para revisar tu historial de juego y "
+                    "hablar sobre lo que podemos hacer por ti.\n\n"
+                    "Mientras tanto, ¿hay algo más sobre la propiedad en lo que "
+                    "pueda ayudarte?"
+                )
+            else:
+                content = (
+                    "Me encantaría ayudarte con eso. Aunque no puedo hacer "
+                    "reservaciones directamente, puedo darte toda la información "
+                    "que necesitas.\n\n"
+                    f"Para reservaciones, puedes contactar a {settings.PROPERTY_NAME} "
+                    f"al {settings.PROPERTY_PHONE} o visitar {settings.PROPERTY_WEBSITE}.\n\n"
+                    "¿Hay algo más sobre la propiedad en lo que pueda ayudarte?"
+                )
         else:
-            content = (
-                "I appreciate you asking! While I can't make reservations, bookings, "
-                "or take any actions on your behalf, I can provide all the information "
-                "you need to do so yourself.\n\n"
-                f"For reservations and bookings, please contact {settings.PROPERTY_NAME} "
-                f"directly at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
-                "Is there any information I can help you with?"
-            )
+            if _is_frustrated:
+                content = (
+                    "I completely understand your frustration. Your loyalty to "
+                    f"{settings.PROPERTY_NAME} matters, and I want to make sure "
+                    "you're taken care of.\n\n"
+                    "Let me connect you with our host team — they have the "
+                    "authority to review your play history and discuss what we "
+                    "can do for you.\n\n"
+                    "In the meantime, is there anything else about the property "
+                    "I can help you with?"
+                )
+            else:
+                content = (
+                    "I'd love to help with that. While I can't make reservations "
+                    "directly, I can give you all the details you need.\n\n"
+                    f"For reservations and bookings, you can reach {settings.PROPERTY_NAME} "
+                    f"at {settings.PROPERTY_PHONE} or visit {settings.PROPERTY_WEBSITE}.\n\n"
+                    "Is there anything else about the property I can help you with?"
+                )
     elif query_type == "self_harm":
         # R50 fix (Grok CRITICAL-D1-001): Self-harm crisis response with 988 Lifeline.
         # R81 fix: Turn-aware crisis responses — turn 1 gives full resources,
@@ -1367,7 +1435,10 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 )
             else:
                 content = get_crisis_followup_es(
-                    user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE
+                    user_message,
+                    settings.PROPERTY_NAME,
+                    settings.PROPERTY_PHONE,
+                    crisis_turn_count=current_crisis_turn,
                 )
         else:
             if current_crisis_turn <= 1:
@@ -1386,7 +1457,10 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                 )
             else:
                 content = _build_crisis_followup(
-                    user_message, settings.PROPERTY_NAME, settings.PROPERTY_PHONE
+                    user_message,
+                    settings.PROPERTY_NAME,
+                    settings.PROPERTY_PHONE,
+                    crisis_turn_count=current_crisis_turn,
                 )
         # Phase 5: Early return with structured handoff for crisis situations.
         return {

@@ -12,6 +12,7 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 5. **NO mock data**: All demos use real casino domain data from knowledge-base/
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
+8. **NO MOCK TESTING**: All tests must use live real LLM API calls. No mock LLMs, no fake responses, no assumptions about model behavior. Tests that can't call the real API should be skipped, not mocked.
 
 ## Current State (Updated 2026-03-03)
 

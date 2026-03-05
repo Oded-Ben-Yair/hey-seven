@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hola, necesito informacion sobre los restaurantes",
-      "agent_response": "Bienvenido a Mohegan Sun. Contamos con m\u00e1s de 40 opciones gastron\u00f3micas que van desde cenas de autor hasta alternativas r\u00e1pidas y casuales.\n\nPara esta tarde, te sugiero el Bar Americain de Bobby Flay en el Casino of the Earth si buscas una experiencia sofisticada con sabores americanos cl\u00e1sicos. Si prefieres un ambiente m\u00e1s vibrante y relajado, SolToro Taqueria es una excelente opci\u00f3n para disfrutar de cocina mexicana aut\u00e9ntica y una gran selecci\u00f3n de tequilas.\n\nTen en cuenta que Hash House A Go Go cierra a las 2:00 PM, por lo que ya no est\u00e1 disponible hoy. Despu\u00e9s de tu comida, quiz\u00e1s te interese visitar el Wolf Den, donde solemos tener presentaciones musicales en vivo. \u00bfPrefieres una cena formal con reservaci\u00f3n o algo m\u00e1s espont\u00e1neo para continuar tu visita?",
+      "agent_response": "Mohegan Sun cuenta con m\u00e1s de 40 restaurantes que abarcan desde opciones r\u00e1pidas hasta cenas de alta cocina. Para ayudarte a decidir, te sugiero dos de nuestras opciones m\u00e1s destacadas que est\u00e1n abiertas ahora mismo:\n\n*   **Bobby Flay's Bar Americain**: Es una excelente opci\u00f3n si buscas una cena sofisticada con sabores americanos audaces y mariscos frescos. Se recomienda reservar para asegurar tu mesa esta noche.\n*   **SolToro**: Ubicado en el Casino of the Earth, es ideal para un ambiente m\u00e1s vibrante y casual con aut\u00e9ntica comida mexicana y una extensa carta de tequilas.\n\n\u00bfBuscas algo formal para celebrar una ocasi\u00f3n especial o prefieres una opci\u00f3n m\u00e1s r\u00e1pida y relajada? Despu\u00e9s de cenar, podr\u00edas pasar por el Wolf Den para disfrutar de m\u00fasica en vivo.",
       "sources": [
         {
           "category": "restaurants",
@@ -19,11 +19,11 @@
           "score": 0.674
         }
       ],
-      "elapsed_ms": 42128,
+      "elapsed_ms": 33517,
       "error": null
     }
   ],
-  "elapsed_ms": 42128,
+  "elapsed_ms": 34721,
   "error": null,
   "completed": true
 }

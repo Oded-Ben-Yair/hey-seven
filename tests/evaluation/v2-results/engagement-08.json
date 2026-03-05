@@ -11,20 +11,46 @@
     {
       "turn_index": 0,
       "user_message": "What can we do here?",
-      "agent_response": "Welcome to Mohegan Sun. Since it's Wednesday afternoon, you have several ways to spend your time. The Wolf Den is a favorite local spot located right in the center of the casino floor, offering free live music every night in a very intimate setting. If you're looking for something more high-profile, the Mohegan Sun Arena is one of the top-ranked venues in the country and hosts major concerts and comedy tours throughout the week.\n\nFor a slower pace, you might enjoy a treatment at Mandara Spa or the Elemis Spa to recharge. Before you head to a show or the spa, Todd English's Tuscany is nearby and serves incredible wood-fired dishes that really set the tone for the night.\n\nAre you looking for a high-energy experience or something more relaxed?",
-      "sources": [],
-      "elapsed_ms": 79924,
+      "agent_response": "Welcome to Mohegan Sun\u2014I am Seven, and I would be happy to help you find the right way to spend your time. Tonight is a great evening to visit the Wolf Den for live music, as it has an electric energy since the stage is right in the center of the casino floor. If you are looking for something more active, the Wombi Rock indoor climbing wall offers a unique challenge for all skill levels. To balance out the excitement, you might also consider a signature hot stone massage at the spa tomorrow to truly unwind. \n\nWhat brings you to the resort today?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.676
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.661
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        }
+      ],
+      "elapsed_ms": 34150,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Wow that's a lot. Just pick one thing for us",
-      "agent_response": "You should head to the Wolf Den. It's a free live music venue right in the center of the Casino of the Sky where you can enjoy a show without needing a ticket. It's the best way to soak in the resort's energy while you're here!\n\nFor a meal afterward, Todd English's Tuscany is just a short walk away and is a guest favorite for its wood-fired dishes.\n\nAre you visiting as a couple or with a larger group?",
+      "agent_response": "I'd suggest heading to the Wolf Den in the Casino of the Earth. It is the heart of the resort and features free live music in a unique setting surrounded by the energy of the gaming floor.\n\nAre you planning to have dinner before you head over there?",
       "sources": [
         {
           "category": "faq",
           "source": "mohegan_sun.json",
-          "score": 0.613
+          "score": 0.626
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.634
         },
         {
           "category": "promotions",
@@ -32,29 +58,35 @@
           "score": 0.612
         },
         {
-          "category": "hotel",
+          "category": "property",
           "source": "mohegan_sun.json",
-          "score": 0.609
-        },
-        {
-          "category": "gaming",
-          "source": "mohegan_sun.json",
-          "score": 0.606
+          "score": 0.629
         }
       ],
-      "elapsed_ms": 78316,
+      "elapsed_ms": 24844,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Good call. What time?",
-      "agent_response": "The show at the Wolf Den typically starts at 8:00 PM on Wednesday nights. Since it's a free venue with no tickets required, I recommend arriving at least an hour early to grab a seat, as it tends to fill up quickly. You're going to love the energy there\u2014it's right in the middle of the Casino of the Sky, so you're never far from the action.\n\nKeep in mind that schedules can sometimes change, so it's always a good idea to check the digital displays around the property when you arrive.\n\nAre you planning to grab dinner before the music starts?",
-      "sources": [],
-      "elapsed_ms": 89730,
+      "agent_response": "The showtimes for our live performances can vary, so the best way to get the exact timing for tonight is to check the digital displays or visit the Box Office once you arrive. Since the casino is open 24 hours a day, you can enjoy the energy of the floor and the various lounge areas whenever you are ready.\n\nAre you looking for a high-energy experience or something a bit",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.609
+        }
+      ],
+      "elapsed_ms": 71881,
       "error": null
     }
   ],
-  "elapsed_ms": 247970,
+  "elapsed_ms": 130876,
   "error": null,
   "completed": true
 }

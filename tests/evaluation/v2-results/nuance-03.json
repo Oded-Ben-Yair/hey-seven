@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We just got married! Honeymoon trip!",
-      "agent_response": "Congratulations on your wedding! It is an honor to have you spend your honeymoon with us at Mohegan Sun. \n\nTo help make your trip special, I'd suggest booking some downtime at the Mandara Spa, which features a tranquil relaxation lounge and wonderful treatments inspired by Balinese traditions. For the evening, novelle is an upscale ultra-lounge perfect for craft cocktails and a sophisticated night out together.\n\nWill it just be the two of you for this trip, or are you meeting up with a larger party to celebrate?",
+      "agent_response": "Congratulations on your marriage and welcome to Mohegan Sun. It is an honor to have you celebrating such a special milestone with us.\n\nFor a memorable honeymoon dinner, I'd suggest Todd English's Tuscany; the atmosphere near the indoor waterfall is wonderful for a romantic evening. If you're looking to unwind after the wedding festivities, the Mandara Spa offers Balinese-inspired treatments and is open until 8:00 PM tonight.\n\nWould you prefer a high-energy evening with some live music, or are you looking for a more quiet, intimate stay?",
       "sources": [
         {
           "category": "hotel",
@@ -39,21 +39,32 @@
           "score": 0.586
         }
       ],
-      "elapsed_ms": 60869,
+      "elapsed_ms": 27030,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What's the most romantic dinner option?",
-      "agent_response": "Congratulations on your wedding! For a romantic honeymoon dinner tonight, Michael Jordan's Steak House in the Casino of the Sky is the most sophisticated choice. \n\nThe atmosphere is elegant and quiet enough for a private celebration, featuring warm lighting and an impressive collection of sports memorabilia that adds a touch of class to the room. Their menu is centered around USDA Prime steaks and fresh seafood, paired with an extensive wine list that is perfect for a celebratory toast. They are open tonight from 5:00 PM to 10:00 PM and follow a business casual dress code, so I highly recommend securing a reservation. \n\nAfter dinner, you might enjoy heading over to the Wolf Den in the Casino of the Earth, which offers free live music every night and provides a great energy to cap off your evening. \n\nDo you have a preference for a",
-      "sources": [],
-      "elapsed_ms": 86969,
+      "agent_response": "For an unforgettable honeymoon dinner tonight, Michael Jordan's Steak House in the Casino of the Sky is the most elegant choice for a romantic celebration. The rich aroma of seared prime beef and the sophisticated, warm lighting create a perfect atmosphere for a toast to your new life together. \n\nAs our premier steakhouse, they specialize in USDA Prime cuts and fresh seafood, complemented by an extensive wine list",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 52715,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "And something special we can do together tomorrow?",
-      "agent_response": "It is our upscale ultra-lounge that begins its weekly schedule on Thursdays, offering a sophisticated setting with craft cocktails and DJ entertainment that is perfect for a romantic honeymoon toast.\n\nFor a more intimate experience tomorrow, you should also check the schedule for the Cabaret Theatre. It features comfortable cabaret-style seating with cocktail service and often hosts",
+      "agent_response": "Since tomorrow is Thursday, novelle opens for the weekend. It is an upscale ultra lounge with a sophisticated atmosphere and DJ entertainment, which is an excellent way to celebrate your first trip as a married couple.\n\nIf you would rather focus on relaxation, the Elemis Spa is a legendary reset; their hot stone massage is a wonderful way to let go of any lingering wedding stress together.\n\nAre you looking to keep the celebration high-energy, or would a relaxing spa afternoon be more your speed?\n\nIf you decide on the spa, the resort also offers seasonal hotel packages that can bundle your stay with dining credits to make your honeymoon dining even more seamless.",
       "sources": [
         {
           "category": "entertainment",
@@ -71,11 +82,11 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 70857,
+      "elapsed_ms": 66191,
       "error": null
     }
   ],
-  "elapsed_ms": 218697,
+  "elapsed_ms": 145937,
   "error": null,
   "completed": true
 }

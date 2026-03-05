@@ -1,0 +1,87 @@
+{
+  "id": "p2-01",
+  "name": "Agent asks about party size after dinner question",
+  "source_file": "profiling_p2_active_probing.yaml",
+  "category": "profiling_p2_active_probing",
+  "behavioral_dimension": "P2_active_probing",
+  "expected_behavior": "First response includes a dinner recommendation AND a natural follow-up question about party size. The question feels like part of the service, not an information harvest",
+  "expected_behavioral_quality": "After answering a dinner question, naturally asks how many guests will be dining. The question flows from the recommendation context ('Should I look into a table for how many?') rather than a standalone interrogation ('How many people?').",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What's a good dinner spot tonight?",
+      "agent_response": "Since it is Wednesday evening, SolToro Taqueria & Tequila Bar in the Casino of the Earth is a fantastic choice. The scent of charred peppers and fresh lime hits you as soon as you walk in, and the atmosphere is always energetic without being overwhelming. \n\nThey are open until 10:00 PM tonight, fall into a moderate price range, and offer a casual setting where reservations aren't required. I'd suggest trying their authentic tacos or fresh ceviche paired with something from their extensive tequila and mezcal list. After your meal, you might enjoy walking over to the Wolf Den to see who is performing on stage tonight. \n\nAre you looking for a high-energy spot like SolToro, or were you hoping for a quieter corner to relax?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        }
+      ],
+      "elapsed_ms": 29043,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Just the two of us",
+      "agent_response": "For a more intimate evening for two, Michael Jordan's Steak House in the Casino of the Sky is open until 10:00 PM tonight. It offers a sophisticated setting and prime steaks, which is a bit quieter than the livelier spots on the floor [4]. \n\nPrices and availability may vary, so it is often best to head there soon to secure a table. After dinner, you could stop by the nearby novelle lounge for a cocktail. \n\nAre you celebrating a special occasion tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.604
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.6
+        }
+      ],
+      "elapsed_ms": 46029,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That sounds great, thanks",
+      "agent_response": "You're very welcome. If you head to Michael Jordan's, the garlic bread with blue cheese fondue is a favorite for many of our guests. Since you'll be in the Casino of the Sky, you're also just a short walk from the Arena if you're catching a show later.\n\nMay I ask your name so I can better assist you during your stay?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.64
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        }
+      ],
+      "elapsed_ms": 23506,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 99883,
+  "error": null,
+  "completed": true
+}

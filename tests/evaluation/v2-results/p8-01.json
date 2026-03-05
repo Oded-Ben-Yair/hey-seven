@@ -1,0 +1,66 @@
+{
+  "id": "p8-01",
+  "name": "3-turn conversation achieving 60% Phase 1 completion",
+  "source_file": "profiling_p8_p9_p10_completeness.yaml",
+  "category": "profiling_p8_p9_p10_completeness",
+  "behavioral_dimension": "P8_profile_completeness",
+  "expected_behavior": "By turn 3, profile contains: name (James), party size (2 \u2014 couple), occasion (weekend getaway), dining preference (romantic). At least 60% of Phase 1 captured through natural conversation. The guest volunteered most of this without being asked",
+  "expected_behavioral_quality": "In just 3 turns, the agent captures at least 3 of 5 Phase 1 foundation fields (name, party size, occasion, visit type, contact preference). Achieved through natural conversation flow, not rapid-fire questioning. The guest should not feel like they're filling out a form.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hey I'm James, here with my wife for a weekend getaway",
+      "agent_response": "Welcome to Mohegan Sun, James. It's a pleasure to have you and your wife here for your weekend getaway.\n\nSince you're visiting as a couple, I'd suggest a dinner at Todd English's Tuscany; the atmosphere is perfect for a night out, and the terrace seating by the waterfall is a guest favorite. If you're looking for something more relaxed during the day, the Mandara Spa offers a great retreat from the energy of the gaming floors.\n\nDo you already have the dates set for your visit?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        }
+      ],
+      "elapsed_ms": 53464,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Looking for a romantic dinner tonight",
+      "agent_response": "James, for a romantic evening tonight, nothing beats the candlelit ambiance at Todd English's Tuscany. \n\nThe wood-fired aroma hits you the moment you walk in, and the setting right next to the property's indoor waterfall creates a backdrop that is hard to match anywhere else. It is widely considered our most romantic spot, specializing in rustic Italian cuisine like handmade pastas and salt-crusted branzino",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        }
+      ],
+      "elapsed_ms": 53152,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect, that's exactly what we needed",
+      "agent_response": "Glad I could help. The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. What sounds good?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 106618,
+  "error": null,
+  "completed": true
+}

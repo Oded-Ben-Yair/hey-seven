@@ -1,0 +1,87 @@
+{
+  "id": "h6-01",
+  "name": "Guest had a bad dining experience",
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H6_loss_recovery",
+  "expected_behavior": "Apologizes specifically for the wait time, acknowledges the price-point expectation. Offers a concrete alternative for tonight with a strong recommendation. Suggests mentioning the issue to the Momentum Desk for potential follow-up. Turns the complaint into a chance to demonstrate that the property cares",
+  "expected_behavioral_quality": "Takes full ownership of the negative experience. Does not make excuses or deflect. Offers a specific alternative for immediate recovery and a path to formal follow-up. The guest should leave the conversation feeling heard and confident that their next experience will be different.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We waited 45 minutes for our food at Tuscany last night. Totally unacceptable",
+      "agent_response": "I understand that can be extremely frustrating, and I am so sorry your meal at Tuscany took that long last night. Waiting 45 minutes for your food is certainly not the standard we strive for, especially at one of our premier restaurants. \n\nAs an AI dining concierge, I am not able to  to report this, but I highly encourage you to speak with our main guest services desk so they can document your experience and look into it for you. \n\nIf you are willing to give our dining another try tonight, I would love to recommend a venue with a seamless, relaxed experience to make up for yesterday. Or, if you prefer to just unwind and put the frustration behind you, catching some live music over at the Wolf Den is always a great way to reset. What kind of evening are you hoping to have tonight?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.62
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        }
+      ],
+      "elapsed_ms": 59123,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We almost walked out. It's not what you expect at that price point",
+      "agent_response": "You are absolutely right. When you pay for a premium experience, the service should completely match that price point, and I do not blame you for almost walking out. \n\nWhile my main focus as your hotel concierge is on our accommodations, I really want to ensure the rest of your time at Mohegan Sun turns around. Are you staying over with us in one of the towers tonight so you can at least retreat to a comfortable room?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        }
+      ],
+      "elapsed_ms": 58356,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "So what would you suggest for tonight instead?",
+      "agent_response": "For a more consistent experience tonight, I'd suggest **Lantern Bar & Grill** in the Casino of the Earth. It is open 24 hours and serves reliable American favorites like steaks, burgers, and salads in a casual atmosphere where the service pace is generally very steady.\n\nIf you would rather move away from a formal sit-down dinner entirely, the **Wolf Den** usually has live music on Wednesday",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        }
+      ],
+      "elapsed_ms": 63840,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 181320,
+  "error": null,
+  "completed": true
+}

@@ -11,33 +11,76 @@
     {
       "turn_index": 0,
       "user_message": "Hi, I'm David. We're here for our anniversary weekend.",
-      "agent_response": "Welcome, David. Happy anniversary! It\u2019s a pleasure to have you both here for your weekend celebration. \n\nFor a special dinner, Todd English\u2019s Tuscany is a guest favorite for anniversaries because of the unique setting near the Taughannick Falls. Since it is a milestone stay, let me see about upgrading your experience here at Mohegan Sun to make it even more memorable. Are you",
-      "sources": [],
-      "elapsed_ms": 78659,
+      "agent_response": "Welcome to Mohegan Sun, David. Happy anniversary to you both! It's a pleasure to have you celebrating such a special milestone with us. \n\nFor a celebratory dinner, Todd English\u2019s Tuscany is a guest favorite, especially with the views of our indoor waterfall. Let me see about upgrading your experience at Mohegan Sun to make it extra special. Will it be just the two of you for dinner this weekend?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 28755,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "We'd love a nice dinner tonight. She loves Italian.",
-      "agent_response": "For an anniversary dinner, nothing beats the candlelit ambiance at Todd English's Tuscany \u2014 it's easily our most romantic setting. The wood-fired aroma hits you the moment you walk in, and the menu features incredible handmade pastas and classic Italian dishes that feel truly celebratory. They open at 5:00 PM tonight and have a business casual dress code, with reservations being highly recommended for an occasion like yours. Prices and hours may vary, so I suggest confirming details directly with the property when you are ready. \n\nSince you're celebrating your anniversary, I'd love to see about upgrading your experience here at Mohegan Sun to make it even more memorable! After your meal, you might enjoy walking over to the Wolf Den to catch some live music together. \n\nDo you have a specific time in mind for your dinner this evening?",
-      "sources": [],
-      "elapsed_ms": 59929,
+      "agent_response": "David, Todd English's Tuscany is the premier choice for your anniversary dinner tonight, especially since she loves Italian. The wood-fired aroma from the open kitchen creates an inviting atmosphere, and the handmade pastas are a standout feature that guests rarely forget. \n\nIt is located in the Casino of the Sky and stays open until 10:00 PM this evening. For a special celebration, the business casual setting and the views near the waterfall make it our most romantic spot. Prices are in the $$$$ range and I'd suggest a reservation to ensure you have a table. \n\nWhat time were you hoping to sit down for dinner? After your meal, the Wolf Den usually has great live music to keep the anniversary celebration going.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.679
+        }
+      ],
+      "elapsed_ms": 30653,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about after dinner?",
-      "agent_response": "For a sophisticated anniversary toast after your meal, the Birdcage Bar in the Casino of the Sky is an excellent choice. It\u2019s an upscale lounge known for craft cocktails and a smart casual atmosphere that feels very special for a night like tonight. If you're in the mood for something with more energy, the Wolf Den offers an intimate vibe where you're right in the middle of the performance. \n\nThanks for chatting with me, David\u2014I've added $5 bonus tier points to your account to help make your weekend even better. For tomorrow morning, you might consider a reset at Elemis Spa, as their hot stone massage is a legendary way to keep the anniversary relaxation going. \n\nDo you prefer a spot with a live performer or somewhere a bit more relaxed for a conversation?",
-      "sources": [],
-      "elapsed_ms": 59481,
+      "agent_response": "David, for a Wednesday evening anniversary, the Birdcage Bar in the Casino of the Sky is a fantastic spot for a post-dinner cocktail. It has an upscale, smart-casual vibe that feels a bit more intimate for a couple celebrating a milestone.\n\nIf you are looking for some live music, the Wolf Den in the heart of the Casino of the Earth is always a great choice. It has an electric energy where you're right there with the performers, and the best part is that the shows are free, so you can just walk up and enjoy the music together.\n\nTo keep the celebration going tomorrow, would you like to hear about some relaxing couple's treatments at our Mandara Spa?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        }
+      ],
+      "elapsed_ms": 24819,
       "error": null
     },
     {
       "turn_index": 3,
       "user_message": "The spa sounds nice for tomorrow morning",
-      "agent_response": "For your anniversary weekend, Elemis Spa at the Earth Tower is the perfect reset\u2014their hot stone massage is legendary. They offer premium skincare and specific couples experiences that would be a wonderful way to spend your first morning together as a celebrated couple. Both Elemis and Mandara Spa open at 9:00 AM daily, but I suggest checking in early to see what signature treatments are available for your preferred time. \n\nPrices and hours are subject to change, so confirming with the spa directly is always a good idea. Since this is such a special occasion, let me see about upgrading your experience at Mohegan Sun to make your anniversary even more memorable. \n\nOnce you\u2019re both feeling refreshed, would you like a recommendation for a nice lunch spot to keep the celebration going?",
+      "agent_response": "That is a wonderful way to start your first full day of anniversary celebrations. Mandara Spa is the perfect reset \u2014 their Balinese-inspired treatments are legendary, and I highly recommend spending some time in their tranquil relaxation lounge before your session. \n\nIf you're looking for something tailored for two, the Elemis Spa at the Earth Tower specifically offers premium couples experiences and opens at 9:00 AM. Please keep in mind that spa prices and availability may change, so confirming with the spa staff directly is always best. Also, as a thank you for chatting with me, here are $5 bonus tier points to use during your stay!\n\nAfter your treatments, would you like to know about the heated indoor pool or hot tub available to you as hotel guests?",
       "sources": [],
-      "elapsed_ms": 54958,
+      "elapsed_ms": 53033,
       "error": null
     },
     {
@@ -49,7 +92,7 @@
       "error": null
     }
   ],
-  "elapsed_ms": 253031,
+  "elapsed_ms": 137265,
   "error": null,
   "completed": true
 }

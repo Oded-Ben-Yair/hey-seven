@@ -11,21 +11,21 @@
     {
       "turn_index": 0,
       "user_message": "Hi, I'm Sarah. What restaurants do you have?",
-      "agent_response": "Welcome to Mohegan Sun, Sarah. If you are looking for something flavorful right now, SolToro Taqueria & Tequila Bar in the Casino of the Earth is a fantastic choice. \n\nThe atmosphere is vibrant and the scent of charred peppers and fresh citrus from their ceviche really sets the mood for a great meal. They are open until 10:00 PM tonight, the dress code is casual, and you generally don't need a reservation to grab a table. It is a mid-range spot perfect for sharing a few tacos and exploring their extensive tequila list.\n\nWe have a wide variety of other options depending on your mood, including the 24-hour Lantern Bar & Grill for American classics and Johnny Rockets if you are craving a retro diner shake. If you are planning for later in the week, Ballo Italian Restaurant serves incredible housemade pasta starting tomorrow evening.\n\nAre you looking for a quick bite to get back to the floor, or a more relaxed sit-down dinner?\n\nAfter you've had your fill, the Wolf Den usually has great live music right in the heart of the Casino of the Earth.",
+      "agent_response": "Welcome to Mohegan Sun, Sarah. For tonight, SolToro Taqueria & Tequila Bar in the Casino of the Earth is a standout choice for authentic Mexican cuisine in a high-energy setting. \n\nThe air is often filled with the scent of fresh-pressed tortillas, and their extensive tequila and mezcal list is quite impressive for anyone looking to sample something new. They are open until 10:00 PM this evening with a casual dress code, and you generally won't need a reservation to get a table.\n\nAfter you finish your meal, you might enjoy walking over to the Wolf Den nearby, which features free live music every night and has a great atmosphere.\n\nAre you looking for a full sit-down dinner or something a bit quicker?",
       "sources": [
         {
           "category": "restaurants",
           "source": "mohegan_sun.json",
-          "score": 0.652
+          "score": 0.655
         }
       ],
-      "elapsed_ms": 85209,
+      "elapsed_ms": 48694,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What about the spa?",
-      "agent_response": "Sarah, if you are looking to unwind, Mandara Spa is an incredible choice that draws on Balinese healing traditions for a truly deep sense of calm. They have a full range of massages and facials, and you can spend time in their steam room or sauna to really settle in. They are open until 8:00 PM tonight, so there is still time to fit in a session before the evening's activities.\n\nFor a more modern approach, the Elemis Spa in the Earth Tower focuses on premium skincare and also offers express services if you want to get back to the action quickly. If you are a hotel guest, our heated indoor pool and hot tub are also open until 10:00 PM for a relaxing soak. After a spa session, catching a show at the Wolf Den is a great way to transition into a fun night.\n\nAre you looking for a long, deep-tissue massage or something more focused on skincare?",
+      "agent_response": "Sarah, Since it is 6:34 PM, you still have a little time this evening, though both of our spas will be closing within the next hour or so.\n\nMandara Spa is open until 8:00 PM and is a full-service sanctuary inspired by Balinese healing traditions. It is a fantastic place to find some peace in their relaxation lounge or steam room. For a more modern feel, Elemis Spa in the Earth Tower is open until 7:00 PM, and their hot stone massage is legendary for melting away stress. If you are a hotel guest and just want a warm soak tonight, the heated indoor pool and hot tub are available until 10:00 PM.\n\nI can certainly give you more details on their signature treatments if you are planning a visit for tomorrow morning. Do you usually prefer a deep tissue massage or more of a rejuvenating facial?",
       "sources": [
         {
           "category": "amenities",
@@ -48,13 +48,13 @@
           "score": 0.645
         }
       ],
-      "elapsed_ms": 51479,
+      "elapsed_ms": 33069,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Can you recommend something fun tonight?",
-      "agent_response": "Sarah, Tonight, the Wolf Den is the place to be for a great time. It is our intimate, free live music venue right in the heart of the Casino of the Earth, with performances usually starting around 8:00 PM. There is something really special about the energy there\u2014it is small enough that you feel like you are part of the show, and since it is complimentary, you can just drop in whenever you like.\n\nSince you mentioned being in a good mood, the live music at the Den is the perfect way to keep that momentum going through the evening. Before the music kicks off, I would recommend grabbing a quick dinner at SolToro since it is right nearby and has a great upbeat atmosphere to start your night. \n\nDo you usually look for a specific genre of music, or do you just enjoy a good live performance?",
+      "agent_response": "Sarah, you should definitely head over to the Wolf Den tonight. It has this electric, intimate energy where you're right there with the performers, and since the shows are complimentary, it's the perfect way to spend a Wednesday evening. \n\nThe performance typically starts around 8:00 PM, and since seating is first-come, first-served, it's a good idea to head that way soon to find a spot. For a Wednesday, it\u2019s a great chance to catch a national touring act or a high-energy tribute band without needing a ticket.\n\nIf you find yourself hungry after the show, the Lantern Bar & Grill is open 24 hours for a late-night burger or snack. Are you coming with a group or is it just you tonight?",
       "sources": [
         {
           "category": "entertainment",
@@ -62,11 +62,11 @@
           "score": 0.687
         }
       ],
-      "elapsed_ms": 45248,
+      "elapsed_ms": 26952,
       "error": null
     }
   ],
-  "elapsed_ms": 181938,
+  "elapsed_ms": 108716,
   "error": null,
   "completed": true
 }

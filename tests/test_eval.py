@@ -30,9 +30,17 @@ class TestEval:
         assert any(
             w in lower
             for w in [
-                "don't have", "not sure", "don't know", "no specific",
-                "contact", "concierge", "best equipped", "not related",
-                "outside", "help you find", "happy to assist",
+                "don't have",
+                "not sure",
+                "don't know",
+                "no specific",
+                "contact",
+                "concierge",
+                "best equipped",
+                "not related",
+                "outside",
+                "help you find",
+                "happy to assist",
             ]
         )
 
@@ -48,7 +56,15 @@ class TestEval:
         lower = result["response"].lower()
         assert any(
             w in lower
-            for w in ["can't", "cannot", "not able", "information", "contact"]
+            for w in [
+                "can't",
+                "cannot",
+                "not able",
+                "information",
+                "contact",
+                "connect",
+                "host team",
+            ]
         )
 
     async def test_property_mention(self, graph):

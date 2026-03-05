@@ -2,11 +2,17 @@
 """Click CLI for eval v2.
 
 Usage:
-    # Run subset (default 20 scenarios, resumes automatically):
+    # Run behavioral subset (default 20 scenarios, resumes automatically):
     GOOGLE_API_KEY=<key> python -m tests.evaluation.v2.cli run
 
-    # Run all scenarios:
-    GOOGLE_API_KEY=<key> python -m tests.evaluation.v2.cli run --all
+    # Run profiling scenarios:
+    GOOGLE_API_KEY=<key> python -m tests.evaluation.v2.cli run --category profiling
+
+    # Run host triangle scenarios:
+    GOOGLE_API_KEY=<key> python -m tests.evaluation.v2.cli run --category host-triangle
+
+    # Run all scenarios across all categories:
+    GOOGLE_API_KEY=<key> python -m tests.evaluation.v2.cli run --category all --all
 
     # Rerun only failed scenarios:
     GOOGLE_API_KEY=<key> python -m tests.evaluation.v2.cli rerun-failed
@@ -45,6 +51,12 @@ def cli() -> None:
     help="Run subset (20) or all scenarios.",
 )
 @click.option(
+    "--category",
+    default="behavioral",
+    type=click.Choice(["behavioral", "profiling", "host-triangle", "all"]),
+    help="Scenario category to evaluate (default: behavioral).",
+)
+@click.option(
     "--concurrency",
     default=1,
     type=int,
@@ -70,6 +82,7 @@ def cli() -> None:
 )
 def run(
     subset_only: bool,
+    category: str,
     concurrency: int,
     rpm: int,
     output_dir: str,
@@ -81,6 +94,7 @@ def run(
     asyncio.run(
         run_eval(
             subset_only=subset_only,
+            category=category,
             concurrency=concurrency,
             rpm=rpm,
             output_dir=output_dir,
@@ -90,6 +104,12 @@ def run(
 
 
 @cli.command("rerun-failed")
+@click.option(
+    "--category",
+    default="behavioral",
+    type=click.Choice(["behavioral", "profiling", "host-triangle", "all"]),
+    help="Scenario category to evaluate (default: behavioral).",
+)
 @click.option(
     "--concurrency",
     default=1,
@@ -114,6 +134,7 @@ def run(
     help="Timeout per turn in seconds.",
 )
 def rerun_failed(
+    category: str,
     concurrency: int,
     rpm: int,
     output_dir: str,
@@ -125,6 +146,7 @@ def rerun_failed(
     asyncio.run(
         run_eval(
             subset_only=True,
+            category=category,
             concurrency=concurrency,
             rpm=rpm,
             output_dir=output_dir,

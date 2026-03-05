@@ -28,7 +28,12 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_crisis_level", "CrisisLevel", "get_crisis_response_es", "get_crisis_followup_es"]
+__all__ = [
+    "detect_crisis_level",
+    "CrisisLevel",
+    "get_crisis_response_es",
+    "get_crisis_followup_es",
+]
 
 CrisisLevel = Literal["none", "concern", "urgent", "immediate"]
 
@@ -39,38 +44,94 @@ CrisisLevel = Literal["none", "concern", "urgent", "immediate"]
 # IMMEDIATE: Active crisis — requires stopping all other conversation
 _IMMEDIATE_PATTERNS: list[re.Pattern] = [
     # Active suicidal ideation
-    re.compile(r"(?i)\b(?:going to|gonna|want to|I'?m going to)\s+(?:kill|end|hurt)\s+(?:myself|my life)", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:end(?:ing)?\s+(?:it|my life|things)|take my (?:own )?life)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:don'?t\s+want\s+to\s+(?:live|be\s+alive|exist)|rather\s+(?:be\s+dead|die))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:no\s+reason\s+to\s+(?:live|go\s+on)|nothing\s+left\s+to\s+live\s+for)\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:going to|gonna|want to|I'?m going to)\s+(?:kill|end|hurt)\s+(?:myself|my life)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:end(?:ing)?\s+(?:it|my life|things)|take my (?:own )?life)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:don'?t\s+want\s+to\s+(?:live|be\s+alive|exist)|rather\s+(?:be\s+dead|die))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:no\s+reason\s+to\s+(?:live|go\s+on)|nothing\s+left\s+to\s+live\s+for)\b",
+        re.IGNORECASE,
+    ),
     # Immediate danger
-    re.compile(r"(?i)\b(?:I'?m\s+(?:on|at)\s+(?:the|a)\s+(?:bridge|ledge|roof|edge))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:saying\s+goodbye|this\s+is\s+goodbye|writing\s+my\s+note)\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:I'?m\s+(?:on|at)\s+(?:the|a)\s+(?:bridge|ledge|roof|edge))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:saying\s+goodbye|this\s+is\s+goodbye|writing\s+my\s+note)\b",
+        re.IGNORECASE,
+    ),
     # R77 fix: Spanish immediate crisis patterns
-    re.compile(r"(?i)\b(?:me\s+)?(?:voy|quiero)\s+a?\s*(?:matar(?:me)?|quitar(?:me)?\s+la\s+vida)", re.IGNORECASE),
-    re.compile(r"(?i)\bno\s+quiero\s+(?:vivir|seguir\s+(?:viviendo|aquí))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:mejor\s+(?:muerto|muerta)|(?:me\s+)?(?:quiero|voy\s+a)\s+morir)\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:me\s+)?(?:voy|quiero)\s+a?\s*(?:matar(?:me)?|quitar(?:me)?\s+la\s+vida)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\bno\s+quiero\s+(?:vivir|seguir\s+(?:viviendo|aquí))\b", re.IGNORECASE
+    ),
+    re.compile(
+        r"(?i)\b(?:mejor\s+(?:muerto|muerta)|(?:me\s+)?(?:quiero|voy\s+a)\s+morir)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"(?i)\bacabar\s+con\s+todo\b", re.IGNORECASE),
 ]
 
 # URGENT: Strong distress — requires direct resource provision
 _URGENT_PATTERNS: list[re.Pattern] = [
     # Financial desperation linked to gambling
-    re.compile(r"(?i)\b(?:can'?t\s+face\s+my\s+(?:wife|husband|family|partner|kids))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:lost\s+everything|ruined\s+(?:my|our)\s+(?:life|lives|marriage|family))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:no\s+money\s+(?:for|to)\s+(?:get\s+home|hotel|flight|rent|food))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:stranded|stuck\s+here|can'?t\s+(?:get\s+home|afford\s+(?:to\s+leave|a\s+cab)))\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:can'?t\s+face\s+my\s+(?:wife|husband|family|partner|kids))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:lost\s+everything|ruined\s+(?:my|our)\s+(?:life|lives|marriage|family))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:no\s+money\s+(?:for|to)\s+(?:get\s+home|hotel|flight|rent|food))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:stranded|stuck\s+here|can'?t\s+(?:get\s+home|afford\s+(?:to\s+leave|a\s+cab)))\b",
+        re.IGNORECASE,
+    ),
     # Self-harm references (non-immediate)
-    re.compile(r"(?i)\b(?:hurt(?:ing)?\s+myself|self[- ]harm|cutting|harm\s+myself)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:don'?t\s+(?:care|see\s+the\s+point)\s+anymore)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:what'?s\s+the\s+point|give\s+up|given\s+up)\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:hurt(?:ing)?\s+myself|self[- ]harm|cutting|harm\s+myself)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:don'?t\s+(?:care|see\s+the\s+point)\s+anymore)\b", re.IGNORECASE
+    ),
+    re.compile(
+        r"(?i)\b(?:what'?s\s+the\s+point|give\s+up|given\s+up)\b", re.IGNORECASE
+    ),
     # Substance abuse crisis
-    re.compile(r"(?i)\b(?:too\s+drunk\s+to|can'?t\s+(?:stand|walk|see|think)\s+straight)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:blacked?\s+out|passed?\s+out|need\s+(?:medical|an?\s+ambulance))\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:too\s+drunk\s+to|can'?t\s+(?:stand|walk|see|think)\s+straight)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:blacked?\s+out|passed?\s+out|need\s+(?:medical|an?\s+ambulance))\b",
+        re.IGNORECASE,
+    ),
     # R77 fix: Spanish urgent crisis patterns
     re.compile(r"(?i)\b(?:no\s+puedo\s+m[aá]s|ya\s+no\s+aguanto)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:perd[ií]\s+todo|arruiné\s+(?:mi|nuestra)\s+(?:vida|familia|matrimonio))\b", re.IGNORECASE),
-    re.compile(r"(?i)\bno\s+tengo\s+(?:dinero|plata)\s+(?:para|ni\s+para)\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:perd[ií]\s+todo|arruiné\s+(?:mi|nuestra)\s+(?:vida|familia|matrimonio))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\bno\s+tengo\s+(?:dinero|plata)\s+(?:para|ni\s+para)\b", re.IGNORECASE
+    ),
     re.compile(r"(?i)\b(?:hacerme|me\s+hago)\s+daño\b", re.IGNORECASE),
     re.compile(r"(?i)\bno\s+(?:le\s+)?veo\s+sentido\b", re.IGNORECASE),
 ]
@@ -78,22 +139,57 @@ _URGENT_PATTERNS: list[re.Pattern] = [
 # CONCERN: Mild distress — empathy + gentle resource mention
 _CONCERN_PATTERNS: list[re.Pattern] = [
     # Chasing losses (problem gambling indicator)
-    re.compile(r"(?i)\b(?:just\s+need\s+one\s+more\s+(?:win|hand|spin|bet))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:win\s+it\s+(?:all\s+)?back|make\s+it\s+back|double\s+(?:down|or\s+nothing))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:lend\s+me|borrow|loan\s+me|(?:need|get|give\s+me)\s+(?:a\s+)?(?:marker|credit|advance))\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:just\s+need\s+one\s+more\s+(?:win|hand|spin|bet))\b", re.IGNORECASE
+    ),
+    re.compile(
+        r"(?i)\b(?:win\s+it\s+(?:all\s+)?back|make\s+it\s+back|double\s+(?:down|or\s+nothing))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:lend\s+me|borrow|loan\s+me|(?:need|get|give\s+me)\s+(?:a\s+)?(?:marker|credit|advance))\b",
+        re.IGNORECASE,
+    ),
     # Extended session indicators
-    re.compile(r"(?i)\b(?:been\s+(?:here|playing|at\s+(?:the\s+)?(?:table|slots?))\s+(?:all\s+(?:day|night)|for\s+\d+\s+hours?))\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:been\s+(?:here|playing|at\s+(?:the\s+)?(?:table|slots?))\s+(?:all\s+(?:day|night)|for\s+\d+\s+hours?))\b",
+        re.IGNORECASE,
+    ),
     # General distress about gambling
-    re.compile(r"(?i)\b(?:can'?t\s+stop|keep\s+(?:losing|going\s+back)|problem\s+(?:with\s+)?gambl)", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:addicted|addiction|gambling\s+problem|out\s+of\s+control)\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:can'?t\s+stop|keep\s+(?:losing|going\s+back)|problem\s+(?:with\s+)?gambl)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:addicted|addiction|gambling\s+problem|out\s+of\s+control)\b",
+        re.IGNORECASE,
+    ),
     # Financial stress (non-desperate)
-    re.compile(r"(?i)\b(?:spent\s+(?:too\s+much|more\s+than|all\s+my)|over\s+budget|maxed\s+out)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:shouldn'?t\s+(?:have\s+)?(?:bet|gambled|played)\s+(?:that\s+much|so\s+much))\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:spent\s+(?:too\s+much|more\s+than|all\s+my)|over\s+budget|maxed\s+out)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:shouldn'?t\s+(?:have\s+)?(?:bet|gambled|played)\s+(?:that\s+much|so\s+much))\b",
+        re.IGNORECASE,
+    ),
     # R77 fix: Spanish concern patterns
-    re.compile(r"(?i)\b(?:necesito\s+(?:recuperar|ganar)\s+(?:lo\s+que\s+)?perd[ií]|recuperar\s+mi\s+dinero)\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:llevo\s+(?:todo\s+el\s+d[ií]a|toda\s+la\s+noche|horas?)\s+(?:aqu[ií]|jugando))\b", re.IGNORECASE),
-    re.compile(r"(?i)\b(?:gast[eé]\s+(?:demasiado|todo|m[aá]s\s+de\s+lo\s+que))\b", re.IGNORECASE),
-    re.compile(r"(?i)\bno\s+(?:puedo|deber[ií]a)\s+(?:parar|dejar)\s+de\s+jugar\b", re.IGNORECASE),
+    re.compile(
+        r"(?i)\b(?:necesito\s+(?:recuperar|ganar)\s+(?:lo\s+que\s+)?perd[ií]|recuperar\s+mi\s+dinero)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:llevo\s+(?:todo\s+el\s+d[ií]a|toda\s+la\s+noche|horas?)\s+(?:aqu[ií]|jugando))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\b(?:gast[eé]\s+(?:demasiado|todo|m[aá]s\s+de\s+lo\s+que))\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?i)\bno\s+(?:puedo|deber[ií]a)\s+(?:parar|dejar)\s+de\s+jugar\b",
+        re.IGNORECASE,
+    ),
 ]
 
 
@@ -179,22 +275,36 @@ def get_crisis_response_es(property_name: str, property_phone: str) -> str:
     )
 
 
-def get_crisis_followup_es(user_message: str, property_name: str, property_phone: str) -> str:
+def get_crisis_followup_es(
+    user_message: str,
+    property_name: str,
+    property_phone: str,
+    crisis_turn_count: int = 2,
+) -> str:
     """Turn 2+ Spanish crisis response — empathetic, shorter, acknowledges guest's words.
 
     Args:
         user_message: The guest's current message (used for on-site help detection).
         property_name: Display name of the casino property.
         property_phone: Contact phone for the property.
+        crisis_turn_count: Current crisis turn (2 = first followup, 3+ = variation).
 
     Returns:
         Spanish crisis followup response with key resource reminder.
     """
     msg_lower = user_message.lower()
-    if any(kw in msg_lower for kw in (
-        "alguien aquí", "hablar con alguien", "en persona", "cara a cara",
-        "someone here", "talk to someone", "in person",
-    )):
+    if any(
+        kw in msg_lower
+        for kw in (
+            "alguien aquí",
+            "hablar con alguien",
+            "en persona",
+            "cara a cara",
+            "someone here",
+            "talk to someone",
+            "in person",
+        )
+    ):
         return (
             f"Sí — cualquier miembro del equipo de {property_name} puede conectarte "
             f"con servicios de apoyo ahora mismo. También puedes ir a la recepción "
@@ -202,6 +312,15 @@ def get_crisis_followup_es(user_message: str, property_name: str, property_phone
             "al huésped.\n\n"
             "La **Línea 988** (llama o envía texto al 988, presiona 2 para español) "
             "también está siempre disponible si deseas hablar con un consejero capacitado."
+        )
+    # R90: Turn 3+ variation to avoid verbatim repetition across crisis turns.
+    if crisis_turn_count >= 3:
+        return (
+            "Sigo aquí. No tienes que pasar por esto solo/a. "
+            "¿Te ayudaría hablar con alguien en persona? Cualquier miembro "
+            "del equipo puede conectarte ahora mismo.\n\n"
+            "La **Línea 988** (llama o envía texto al 988, presiona 2 para español) "
+            "sigue disponible las 24 horas."
         )
     return (
         "Te escucho, y lo que estás pasando es real. No tienes que "

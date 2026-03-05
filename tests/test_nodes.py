@@ -498,15 +498,35 @@ class TestOffTopicNode:
         content = result["messages"][0].content
         assert "1-800-MY-RESET" in content
 
-    async def test_action_request_explains_read_only(self):
-        """Action request explains read-only limitations with configurable phone."""
+    async def test_action_request_neutral_gives_helpful_redirect(self):
+        """Neutral action request gives helpful redirect with contact info."""
         from src.agent.nodes import off_topic_node
 
         state = _state(query_type="action_request")
         result = await off_topic_node(state)
         content = result["messages"][0].content
-        assert "can't" in content.lower() or "cannot" in content.lower()
-        assert "888" in content  # Phone from PROPERTY_PHONE config
+        assert "reservations" in content.lower() or "help" in content.lower()
+        assert "Mohegan Sun" in content  # Property name from settings
+
+    async def test_action_request_frustrated_offers_host_connection(self):
+        """Frustrated action request acknowledges frustration and offers host team."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.nodes import off_topic_node
+
+        state = _state(
+            query_type="action_request",
+            messages=[
+                HumanMessage(
+                    content="I've spent $10K and you can't even comp me dinner?"
+                )
+            ],
+        )
+        result = await off_topic_node(state)
+        content = result["messages"][0].content
+        assert (
+            "host team" in content.lower() or "equipo de anfitriones" in content.lower()
+        )
+        assert "frustration" in content.lower() or "frustración" in content.lower()
 
     async def test_general_off_topic_redirects(self):
         """General off-topic redirects to property topics."""

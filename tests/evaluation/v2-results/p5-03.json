@@ -1,0 +1,63 @@
+{
+  "id": "p5-03",
+  "name": "Agent advances to Phase 2 after Phase 1 complete",
+  "source_file": "profiling_p5_progressive_sequence.yaml",
+  "category": "profiling_p5_progressive_sequence",
+  "behavioral_dimension": "P5_progressive_sequencing",
+  "expected_behavior": "Phase 1 is complete by turn 1 (name, occasion, party size). Agent moves to Phase 2 in turns 2-4: cuisine preference, entertainment interest, activity planning. The progression feels natural because the foundation was established first",
+  "expected_behavioral_quality": "After capturing foundation info (name, party size, occasion), the agent naturally shifts to preference questions (cuisine type, entertainment interests, gaming style). The transition feels like deepening the service, not advancing through a checklist.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hi, I'm Karen. Here with my husband for our anniversary, party of 2.",
+      "agent_response": "Happy anniversary, Karen! It is such a pleasure to have you both here to celebrate your special milestone.\n\nFor a truly memorable anniversary dinner, Tuscany is the standout choice for a romantic evening. The wood-fired aroma hits you the moment you walk in, and the candlelit ambiance creates a private, sophisticated atmosphere that is perfect for a party of two. They are currently open and serving their signature Northern Italian dishes, though I do recommend a reservation for such a special occasion as it is a guest favorite. The dress code is generally business casual, fitting for a refined night out.\n\nAre you both in the mood for Italian, or do you usually prefer a classic steakhouse for your celebrations?\n\nAfter your meal, you might consider visiting Novelle, our upscale lounge, for a craft cocktail in a sophisticated atmosphere to toast to your years together.",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        }
+      ],
+      "elapsed_ms": 33841,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We're open to anything really",
+      "agent_response": "Michael Jordan's Steak House is a premier choice if you're looking for a classic anniversary dinner, Karen. It offers a sophisticated atmosphere and excellent service that suits a celebration perfectly. To help make this occasion even more special, I\u2019d like to see about arranging an upgrade for your experience here at Mohegan Sun.\n\nIf you\u2019re interested in something besides dining, the Mandara Spa offers a relaxing escape for couples looking to unwind during their stay.\n\nHow many nights are you planning to stay with us for this visit?",
+      "sources": [],
+      "elapsed_ms": 48808,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "We've never tried Asian food at a casino before",
+      "agent_response": "Sushi Palace is the perfect choice for your anniversary tonight, as it is open daily until 10:00 PM and offers some of the freshest Japanese cuisine on the property. The atmosphere is relaxed yet refined, and watching the chefs work with such precision at the sushi bar adds a wonderful sensory layer to the meal. Since you are in the Casino of the Sky, you'll find it very convenient, and the price range typically falls into the $$$ category. Happy anniversary, Karen\u2014I will see about upgrading your experience here at Mohegan Sun to ensure this stay is extra special.\n\nIf you are looking for a bit of excitement after your meal, you might enjoy the live music at the Wolf Den, which often has great performances in the heart of the casino.\n\nAre you looking for a traditional sushi experience with rolls and sashimi, or do you prefer a variety of hot Japanese specialties?",
+      "sources": [],
+      "elapsed_ms": 53831,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "That sounds amazing. And maybe something after?",
+      "agent_response": "You're going to love the atmosphere at the Wolf Den tonight. It has an intimate energy where you're right there with the performer, and since it is located in the center of the Casino of the Earth, the live music creates an electric backdrop for your evening. There are no tickets required, so it is a perfect, low-pressure way to keep the celebration going after your meal.\n\nFor something a bit more relaxing to balance out the excitement, Elemis Spa is the perfect reset for the morning after your anniversary dinner. Their hot stone massage is legendary and would be a wonderful way for both of you to unwind together. To make your anniversary stay even more memorable, I will look into available incentives like a $5 bonus in tier points to use toward your activities here. \n\nDo you prefer high-energy live music, or are you looking for a more quiet and lounge-style environment for your post-dinner drinks?",
+      "sources": [],
+      "elapsed_ms": 61819,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 198300,
+  "error": null,
+  "completed": true
+}

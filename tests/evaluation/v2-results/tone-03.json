@@ -11,15 +11,15 @@
     {
       "turn_index": 0,
       "user_message": "What's there to do tonight?",
-      "agent_response": "You've arrived at a perfect time to explore the property. Tonight the Wolf Den is the place to be for live music, as they have free performances nightly right in the heart of the casino floor. It's a fantastic spot to soak in the energy of a live show in an intimate setting where you're right there with the performers. \n\nIf you'd prefer to start your evening",
+      "agent_response": "Since it's Wednesday evening, the Wolf Den is the perfect spot to catch free live music in an intimate setting right in the heart of the Casino of the Earth. The energy there is electric because you're so close to the performers, and it's a great way to experience the property's nightlife without needing a ticket. If you'd prefer to start your evening with a bit of relaxation",
       "sources": [],
-      "elapsed_ms": 63255,
+      "elapsed_ms": 60381,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Tell me about the spa",
-      "agent_response": "Mohegan Sun features two distinct experiences to help you unwind. Mandara Spa draws from Balinese traditions for its massages and body wraps, and it stays open until 8:00 PM tonight [1]. For something a bit more modern, the Elemis Spa in the Earth Tower offers premium skincare and couples' treatments until 7:00 PM [2]. \n\nJust keep in mind that schedules and prices can change, so it's best to confirm availability with the spa directly. After you've had a chance to recharge, the Wolf Den always has free live music to lift your energy for the rest of the night. Would you prefer a full-body treatment or something more focused like a facial?",
+      "agent_response": "We have two distinct options for your relaxation. Mandara Spa is a full-service retreat inspired by Balinese traditions and features a steam room and sauna, while Elemis Spa in the Earth Tower offers a modern experience with premium skincare and express services. \n\nSince it is currently 6:52 PM, Elemis Spa is closing for the evening, but Mandara Spa remains open until 8:00 PM if you need a quick reset. The heated indoor pool and hot tub are also available to hotel guests until 10:00 PM. Are you looking for a full massage or a quicker skincare treatment?\n\nAfter your spa visit, you might enjoy a relaxed dinner at Todd English's Tuscany to keep the calm energy going.",
       "sources": [
         {
           "category": "amenities",
@@ -42,13 +42,13 @@
           "score": 0.639
         }
       ],
-      "elapsed_ms": 47636,
+      "elapsed_ms": 46691,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about restaurants?",
-      "agent_response": "The savory aroma of grilled steaks usually draws people into Lantern Bar & Grill, which is a perfect choice tonight since it's open 24 hours. It\u2019s a casual spot in the Casino of the Earth where you can get anything from a juicy burger to a full dinner without needing a reservation [1]. Prices are mid-range, though it's always a good idea to confirm the latest menu pricing once you arrive. Since you were interested in the spa earlier, this relaxed atmosphere is a great way to keep that low-key vibe going before heading to the Wolf Den for a show. Are you in the mood for a hearty steak dinner or something lighter?",
+      "agent_response": "Lantern Bar & Grill in the Casino of the Earth is your best option tonight since it stays open 24 hours for American classics like steaks and burgers. It is a casual spot with moderate pricing and no reservations are required, making it easy to drop in whenever you're hungry. The atmosphere is laid-back, perfect for a mid-week dinner or a late-night bite after the spa.",
       "sources": [
         {
           "category": "restaurants",
@@ -66,13 +66,13 @@
           "score": 0.655
         }
       ],
-      "elapsed_ms": 33260,
+      "elapsed_ms": 60085,
       "error": null
     },
     {
       "turn_index": 3,
       "user_message": "Any shows tonight?",
-      "agent_response": "The Wolf Den has an electric free show tonight at 8:00 PM, though you'll want to confirm the exact time when you arrive [1]. Since it's located right near the 24-hour Lantern Bar & Grill, do you prefer to grab a bite before or after the performance?",
+      "agent_response": "The Wolf Den has a free live show at 8:00 PM tonight with no tickets required. Do you prefer high-energy bands or a more relaxed musical vibe?",
       "sources": [
         {
           "category": "entertainment",
@@ -85,13 +85,13 @@
           "score": 0.669
         }
       ],
-      "elapsed_ms": 36791,
+      "elapsed_ms": 36306,
       "error": null
     },
     {
       "turn_index": 4,
       "user_message": "What time does the pool close?",
-      "agent_response": "The heated indoor pool and hot tub are open until 10:00 PM tonight for hotel guests [1, 2]. Would you like to hear about the relaxation treatments at Mandara Spa to complete your wellness evening?",
+      "agent_response": "The heated indoor pool and hot tub are open to hotel guests until 10:00 PM tonight. Would you like a recommendation for a late-night bite after your swim?",
       "sources": [
         {
           "category": "faq",
@@ -109,11 +109,11 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 50328,
+      "elapsed_ms": 30172,
       "error": null
     }
   ],
-  "elapsed_ms": 235299,
+  "elapsed_ms": 237656,
   "error": null,
   "completed": true
 }

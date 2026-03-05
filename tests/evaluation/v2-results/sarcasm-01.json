@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Oh wonderful, another chatbot. This should be fun.",
-      "agent_response": "I understand the skepticism. While I am an AI, I have the property's full schedule and layout ready to help you save some time today. What brings you to Mohegan Sun?",
+      "agent_response": "I understand that interacting with a chatbot can be frustrating. I\u2019m an AI, but I can provide direct information about Mohegan Sun's restaurants, shows, and amenities to help you get settled. \n\nAre you visiting for a specific event tonight, or just exploring the property?",
       "sources": [
         {
           "category": "faq",
@@ -39,13 +39,13 @@
           "score": 0.613
         }
       ],
-      "elapsed_ms": 32535,
+      "elapsed_ms": 24838,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Fine. What restaurants do you have?",
-      "agent_response": "If you're looking for something memorable tonight, Todd English's Tuscany is a fantastic choice and opens at 5:00 PM. The wood-fired aroma from the open kitchen hits you immediately, and their handmade pastas have a velvety texture that guests rave about. It's located in the Casino of the Sky with a business casual dress code and a price range of about $$$$. Since it's one of our most popular spots, I'd suggest securing a reservation if you can. \n\nIf you're hungry right now, Lantern Bar & Grill in the Casino of the Earth is open 24 hours for a casual burger or steak. Are you looking for a full sit-down dinner or something a bit quicker? After your meal, the Wolf Den has free live music every night right in the center of the Casino of the Earth.",
+      "agent_response": "Since it's a Wednesday evening, Todd English's Tuscany is my top recommendation for a sit-down meal. The wood-fired aroma hits you the moment you walk into the Casino of the Sky, and their handmade pastas have a texture you just can't find elsewhere.\n\nThey are open until 10:00 PM tonight with a business casual dress code, and reservations are usually a good idea if you want a table with a view of the open kitchen. If you are looking for something more low-key or late-night, Lantern Bar & Grill in the Casino of the Earth is open 24 hours for burgers, steaks, and salads in a casual setting.\n\nAfter dinner, the Wolf Den in the Casino of the Earth usually has live music with a great energy that's worth checking out.\n\nAre you looking for a full sit-down dinner or just a quick bite before heading to the floor?",
       "sources": [
         {
           "category": "restaurants",
@@ -58,13 +58,13 @@
           "score": 0.658
         }
       ],
-      "elapsed_ms": 57428,
+      "elapsed_ms": 38303,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Alright that was actually useful. What about the spa?",
-      "agent_response": "I am glad I could help. Since it is mid-afternoon, both of our spas are open for a few more hours if you are looking to reset today.\n\nThe Mandara Spa is a full-service sanctuary inspired by Balinese healing traditions, featuring a tranquil relaxation lounge, steam room, and sauna that are perfect for decompressing. If you are staying in the Earth Tower or just need a quicker refresh, the Elemis Spa offers premium skincare and express services designed for guests on the go. Both locations offer a variety of massages and facials, though Mandara stays open until 8:00 PM while Elemis closes at 7:00 PM.\n\nDo you have a specific treatment in mind, like a deep tissue massage or a signature facial?\n\nOnce you are feeling refreshed, you might want to head over to the Wolf Den in the heart of the Casino of the Earth\u2014the live music starts every night and the energy there is a great way to transition into the evening.",
+      "agent_response": "I am glad I could help. Since it is nearly 7:00 PM, Mandara Spa in the Sky Tower is your best bet for a visit tonight as they stay open until 8:00 PM. It is a full-service spa with a focus on Balinese healing traditions, and the steam room and sauna are excellent for unwinding. Elemis Spa at Earth Tower is a more modern, skincare-focused option, but they close at 7:00 PM tonight.\n\nIf you simply want to soak, the heated indoor pool and hot tub are open until 10:00 PM for hotel guests. \n\nDo you prefer a full treatment like a massage, or are you just looking for a quiet place to relax for an hour?\n\nAfter you have recharged, you might enjoy the live music at the Wolf Den for a bit of atmosphere before the night ends.",
       "sources": [
         {
           "category": "amenities",
@@ -87,11 +87,11 @@
           "score": 0.649
         }
       ],
-      "elapsed_ms": 33069,
+      "elapsed_ms": 30456,
       "error": null
     }
   ],
-  "elapsed_ms": 123033,
+  "elapsed_ms": 93598,
   "error": null,
   "completed": true
 }

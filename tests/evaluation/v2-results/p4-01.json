@@ -1,0 +1,87 @@
+{
+  "id": "p4-01",
+  "name": "Party of 4 assumption about kids \u2014 correct",
+  "source_file": "profiling_p4_assumptive_bridge.yaml",
+  "category": "profiling_p4_assumptive_bridge",
+  "behavioral_dimension": "P4_assumptive_bridging",
+  "expected_behavior": "Assumption about kids is offered softly and confirmed by the guest. Agent smoothly pivots to family-friendly recommendations. The assumption felt natural, not presumptuous",
+  "expected_behavioral_quality": "Makes a contextual inference that a party of 4 might include children and gently tests it with kid-friendly options. The assumption is offered as a soft suggestion ('If any of your group are younger, they might enjoy...') rather than a hard presumption ('Your kids will love...').",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Need a restaurant for 4 tonight",
+      "agent_response": "For tonight, SolToro Taqueria & Tequila Bar is a fantastic choice for a group of four looking for a lively and social atmosphere. The aroma of freshly pressed tortillas and sizzling carne asada fills the space, and their housemade guacamole has a bright, citrusy finish that's perfect for sharing. They are open until 10:00 PM tonight in the Casino of the Earth, the price range is moderate, and no reservations are required. \n\nAfter your meal, the Wolf Den often has live music that makes for a great follow-up to a fun dinner. Are you celebrating anything special tonight?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.686
+        }
+      ],
+      "elapsed_ms": 35805,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah actually the kids would love that",
+      "agent_response": "I should clarify that the Wolf Den is a 21-and-over venue because it is located directly on the casino floor. For family-friendly excitement tonight, your kids will love Cyber Quest, which is our signature arcade filled with the latest video games and attractions. It has a fantastic energy and is a great spot for the whole family to play together. \n\nIf you need some supervised entertainment for the younger ones while you explore the resort, Kids Quest is also available for children ages 6 weeks to 12 years. How old are the kids in your party?",
+      "sources": [
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        }
+      ],
+      "elapsed_ms": 60877,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "How old do they need to be for the arcade?",
+      "agent_response": "Cyber Quest is open to guests of all ages, making it a great spot for your whole family to enjoy some friendly competition together tonight. For the supervised experience at Kids Quest, the age range is 6 weeks to 12 years old. Both are designed to be high-energy and engaging, so your group of four should find plenty to do in that area.\n\nAre the kids more into classic arcade games or the latest high-tech attractions?\n\nIf the kids still have some energy to burn after the arcade, the Wombi Rock climbing wall is right nearby and offers a fun challenge for all skill levels.",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.709
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.702
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        }
+      ],
+      "elapsed_ms": 51322,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 148005,
+  "error": null,
+  "completed": true
+}

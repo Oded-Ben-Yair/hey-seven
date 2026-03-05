@@ -1,0 +1,66 @@
+{
+  "id": "p2-04",
+  "name": "Agent avoids re-asking known information",
+  "source_file": "profiling_p2_active_probing.yaml",
+  "category": "profiling_p2_active_probing",
+  "behavioral_dimension": "P2_active_probing",
+  "expected_behavior": "Uses all three pieces of info (name, party size, occasion) from turn 1 throughout. Never re-asks any of them. Recommendations are shaped by the 50th birthday milestone and party of 4",
+  "expected_behavioral_quality": "When the guest has already provided information (name, party size, occasion), the agent does NOT ask for it again. If the guest said 'party of 4 for a birthday' in turn 1, the agent never asks 'how many?' or 'celebrating anything?' in later turns.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hi, I'm Rachel. Party of 4, it's my husband's 50th birthday.",
+      "agent_response": "Happy 50th birthday to your husband, Rachel! For a milestone like this, SolToro Taqueria & Tequila Bar in the Casino of the Earth is a wonderful choice for a party of four. \n\nThe atmosphere there is vibrant and festive, filled with the aroma of fresh lime and grilled meats, making it an ideal spot for a celebratory meal. Their menu features a modern take",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 66097,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What restaurant do you recommend?",
+      "agent_response": "For a milestone 50th birthday, Michael Jordan's Steak House in the Casino of the Sky is the gold standard. The atmosphere is sophisticated and elegant, and the scent of searing USDA Prime steaks from the broiler is unmistakable the moment you arrive. It is an impressive setting for a party of four to enjoy prime cuts and fresh seafood with an extensive wine list to toast the occasion. \n\nSince you are celebrating a birthday, Mohegan Sun would love to treat you to a $25 dining credit to use at any of our restaurants. Michael Jordan's is open until 10:00 PM tonight, and business casual dress is recommended for this upscale experience. Reservations are highly recommended here to ensure you get a prime table for the celebration. After a celebratory dinner, you might enjoy catching some free live music at the Wolf Den in the Casino of the Earth. \n\nDoes your husband have a favorite style of cuisine, or are you set on a classic steakhouse dinner?",
+      "sources": [],
+      "elapsed_ms": 58268,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And after dinner?",
+      "agent_response": "Rachel, Since it is Wednesday night, the Wolf Den in the Casino of the Earth is a perfect next stop after dinner. It has this intimate energy where you are right there with the performer \u2014 it's electric, and the live music there is a great way to keep the celebration going for a party of four.\n\nIf you are looking for a more sophisticated setting to toast his 50th birthday, the Birdcage Bar in the Casino of the Sky is open until 2:00 AM and serves incredible craft cocktails in an upscale atmosphere. After the night's festivities, a morning visit to the Elemis Spa might be just the thing to reset; their hot stone massage is legendary and would be a relaxing way to start his first day as a 50-year-old.\n\nDoes your husband prefer a high-energy live music environment or a more relaxed lounge for a late-night drink?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.674
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.652
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        }
+      ],
+      "elapsed_ms": 30695,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 155061,
+  "error": null,
+  "completed": true
+}

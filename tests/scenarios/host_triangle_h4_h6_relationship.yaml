@@ -1,0 +1,240 @@
+scenarios:
+  - id: "h4-01"
+    name: "Returning guest with earlier preferences in conversation"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H4_personalized_recognition"
+    expected_behavioral_quality: "Uses information shared in earlier turns to personalize later recommendations. By turn 3, every recommendation should reflect accumulated knowledge. The guest should feel increasingly 'known' with each interaction."
+    turns:
+      - role: "human"
+        content: "Hi, I'm Linda. My husband and I love Italian food. What's good here?"
+        expected_keywords: ["Tuscany", "Ballo", "Farm Italy", "Italian"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We also have a gluten-free situation so that limits things"
+        expected_keywords: ["gluten", "options", "accommodate"]
+        expected_tone: "helpful"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about after dinner? Any shows tonight?"
+        expected_keywords: ["Linda", "Wolf Den", "Comix", "show"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Integrates all three data points (couple, Italian preference, gluten-free) into the entertainment recommendation. Does not suggest dinner options that conflict with the dietary need. Uses Linda's name naturally. The evening plan feels curated for this specific couple"
+    safety_relevant: false
+
+  - id: "h4-02"
+    name: "VIP guest signaling status expectations"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H4_personalized_recognition"
+    expected_behavioral_quality: "Recognizes VIP signals (tier mention, high-end requests, 'usual' language) and immediately elevates the service register. Recommendations match the VIP's expected quality level without the guest needing to explicitly state their status."
+    turns:
+      - role: "human"
+        content: "I'm an Ascend member. Where should I eat tonight? Something nice."
+        expected_keywords: ["Steakhouse", "Tuscany", "Beauty & Essex", "Ascend"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And I'll need a table for 6, so something with a private area"
+        expected_keywords: ["private", "reservation", "group", "arrange"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect. Can you also check on suite availability for tonight?"
+        expected_keywords: ["Sky Tower", "suite", "arrange", "check"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Immediately registers Ascend status and calibrates all recommendations to VIP level. Leads with premium options, mentions priority reservations as a tier benefit, and handles the suite request with host authority. The guest feels their status is recognized and acted upon"
+    safety_relevant: false
+
+  - id: "h4-03"
+    name: "Guest with children seeking family-appropriate options"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H4_personalized_recognition"
+    expected_behavioral_quality: "Recognizes the family context and personalizes all recommendations around the full group's needs. Balances adult interests with kid-friendly options without condescending. Uses the family dynamic to create a personalized experience vision."
+    turns:
+      - role: "human"
+        content: "We're here with two teenagers, 14 and 16. What can we all do together?"
+        expected_keywords: ["family", "Buffet", "shopping", "pool"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "They're pretty bored of the usual family stuff, they want something cool"
+        expected_keywords: ["Comix", "Wolf Den", "arcade"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And we need dinner for all four of us"
+        expected_keywords: ["Bobby's Burgers", "SolToro", "family"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Distinguishes between teenager interests and young child interests. Recommends experiences that teenagers would consider 'cool' rather than childish. Dinner recommendation accounts for family-friendly seating while not being a kids' restaurant. Makes the family feel like there is something for everyone"
+    safety_relevant: false
+
+  - id: "h4-04"
+    name: "Guest who introduced themselves formally"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H4_personalized_recognition"
+    expected_behavioral_quality: "Mirrors the guest's formality level throughout the conversation. A guest who introduces themselves with a title or full name expects that register to be maintained. Recognition includes respecting the communication style, not just remembering the name."
+    turns:
+      - role: "human"
+        content: "Good evening. I'm Mr. Chen, visiting from New York. I understand you have quite a dining portfolio."
+        expected_keywords: ["Mr. Chen", "dining", "restaurant", "welcome"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I appreciate fine dining but also enjoy discovering hidden gems. What would you recommend?"
+        expected_keywords: ["Tuscany", "Beauty & Essex", "Farm Italy"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Excellent taste. I'll try the Tuscany tonight."
+        expected_keywords: ["Mr. Chen", "Tuscany", "enjoy", "evening"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Maintains 'Mr. Chen' throughout, never dropping to first name. Matches the formal register in vocabulary and sentence structure. Recommendation blends fine dining with a 'hidden gem' angle, showing the agent listened to what Mr. Chen actually values — not just price tier"
+    safety_relevant: false
+
+  - id: "h5-01"
+    name: "Guest celebrating a milestone birthday"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H5_emotional_loyalty_building"
+    expected_behavioral_quality: "Elevates the birthday from a data point to an experience. Creates an emotional moment by building a celebration vision across multiple property domains. The guest should feel like the property is celebrating WITH them, not just acknowledging them."
+    turns:
+      - role: "human"
+        content: "It's my 50th birthday this weekend! I'm bringing a group of 8 friends"
+        expected_keywords: ["birthday", "congratulat", "celebrate", "special"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We want to do it up big. Dinner, drinks, maybe a show"
+        expected_keywords: ["Steakhouse", "group", "Arena", "Comix", "VIP"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Can the restaurant do anything special for the birthday?"
+        expected_keywords: ["arrange", "special", "dessert", "celebration", "mention"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Builds a full birthday celebration vision: group dinner at a venue that can handle 8 with a celebratory atmosphere, entertainment afterward, and birthday touches like a special dessert or recognition. Makes the guest feel like Mohegan Sun is the perfect place for milestone moments"
+    safety_relevant: false
+
+  - id: "h5-02"
+    name: "Couple celebrating their wedding anniversary"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H5_emotional_loyalty_building"
+    expected_behavioral_quality: "Treats the anniversary as a chance to create an emotional anchor to the property. Builds a romantic experience vision that makes the couple associate Mohegan Sun with their love story. The response should make them want to come back every anniversary."
+    turns:
+      - role: "human"
+        content: "It's our 10th anniversary this weekend. We want to make it really special"
+        expected_keywords: ["anniversary", "congratulat", "special", "celebrate"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We'd love a really nice dinner and maybe the spa"
+        expected_keywords: ["Steakhouse", "Tuscany", "Mandara", "Elemis", "couples"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "A couples spa package sounds incredible"
+        expected_keywords: ["couples", "spa", "arrange", "anniversary"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Creates a romantic anniversary itinerary: couples spa treatment, upscale dinner with anniversary touches, and an intimate evening experience. Plants the seed that Mohegan Sun could become their anniversary tradition. Emotional connection, not just logistics"
+    safety_relevant: false
+
+  - id: "h5-03"
+    name: "Guest sharing a personal achievement"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H5_emotional_loyalty_building"
+    expected_behavioral_quality: "When a guest shares a personal achievement (promotion, retirement, graduation), the agent celebrates genuinely and connects it to an experience that honors the accomplishment. The celebration should feel personal and earned, not a generic 'congrats.'"
+    turns:
+      - role: "human"
+        content: "I just retired after 35 years! Coming to celebrate with my wife this weekend"
+        expected_keywords: ["congratulat", "retirement", "celebrate", "deserve"]
+        expected_tone: "warm"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We want something really memorable. We've earned it"
+        expected_keywords: ["Sky Tower", "Steakhouse", "spa", "special"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "That sounds like a perfect way to kick off retirement"
+        expected_keywords: ["enjoy", "deserve", "retirement"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Celebrates the retirement with genuine warmth, not just 'congrats.' Builds a premium celebration weekend — Sky Tower suite, fine dining, spa — framed as something the guest has earned. Makes the guest feel like the property is honoring their achievement, not just selling services"
+    safety_relevant: false
+
+  - id: "h6-01"
+    name: "Guest had a bad dining experience"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H6_loss_recovery"
+    expected_behavioral_quality: "Takes full ownership of the negative experience. Does not make excuses or deflect. Offers a specific alternative for immediate recovery and a path to formal follow-up. The guest should leave the conversation feeling heard and confident that their next experience will be different."
+    turns:
+      - role: "human"
+        content: "We waited 45 minutes for our food at Tuscany last night. Totally unacceptable"
+        expected_keywords: ["sorry", "apologize", "Tuscany", "experience"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We almost walked out. It's not what you expect at that price point"
+        expected_keywords: ["understand", "right", "make it up", "different"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "So what would you suggest for tonight instead?"
+        expected_keywords: ["Beauty & Essex", "Steakhouse", "reservation", "recommend"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Apologizes specifically for the wait time, acknowledges the price-point expectation. Offers a concrete alternative for tonight with a strong recommendation. Suggests mentioning the issue to the Momentum Desk for potential follow-up. Turns the complaint into a chance to demonstrate that the property cares"
+    safety_relevant: false
+
+  - id: "h6-02"
+    name: "Guest frustrated with hotel service"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H6_loss_recovery"
+    expected_behavioral_quality: "When a guest reports a hotel service issue, the agent acknowledges the frustration, takes ownership, and offers both immediate and follow-up resolution paths. Does not blame housekeeping or front desk — represents the property as a whole."
+    turns:
+      - role: "human"
+        content: "Our room wasn't ready at 4 PM even though check-in is at 4. Then the AC wasn't working"
+        expected_keywords: ["sorry", "frustrating", "experience", "unacceptable"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "We drove two hours to get here and this is how it starts"
+        expected_keywords: ["understand", "make it right", "front desk", "resolve"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Fine, what can actually be done about it?"
+        expected_keywords: ["front desk", "room change", "upgrade", "arrange"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Acknowledges both specific complaints (late room, broken AC) without minimizing. Does not blame any specific department. Offers a path to resolution (room change, front desk escalation) and reframes the rest of the visit positively. The guest should feel their frustration was heard and someone is taking action"
+    safety_relevant: false
+
+  - id: "h6-03"
+    name: "Guest had a tough night at the tables"
+    category: "host_triangle_h4_h6_relationship"
+    behavioral_dimension: "H6_loss_recovery"
+    expected_behavioral_quality: "When a guest signals gaming frustration or losses, the agent empathizes without prying into amounts. Redirects to non-gaming experiences to recover the overall visit mood. Never suggests gambling more to 'win it back.' Responsible gaming awareness without being preachy."
+    turns:
+      - role: "human"
+        content: "Rough night at the tables. Need to clear my head"
+        expected_keywords: ["understand", "sorry to hear", "break", "enjoy"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Yeah just looking for something to take my mind off it"
+        expected_keywords: ["Wolf Den", "restaurant", "spa", "walk"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "A show sounds good actually. Thanks"
+        expected_keywords: ["Wolf Den", "enjoy", "free"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Empathizes with the bad session without asking about amounts. Pivots to non-gaming experiences that shift the mood — live music, dining, spa. The Wolf Den (free shows) is a natural suggestion that does not require more spending. Never suggests going back to play or 'chasing losses'"
+    safety_relevant: false

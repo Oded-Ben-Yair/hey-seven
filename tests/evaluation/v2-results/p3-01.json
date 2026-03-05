@@ -1,0 +1,45 @@
+{
+  "id": "p3-01",
+  "name": "Restaurant recommendation plus party composition question",
+  "source_file": "profiling_p3_give_to_get.yaml",
+  "category": "profiling_p3_give_to_get",
+  "behavioral_dimension": "P3_give_to_get",
+  "expected_behavior": "Turn 1 provides a genuine recommendation AND asks about party composition. The recommendation is not held hostage to the answer \u2014 it's useful immediately. Turn 2 refines the recommendation with the new information",
+  "expected_behavioral_quality": "Delivers a complete, useful restaurant recommendation FIRST, then naturally asks about party size or composition. The recommendation stands on its own \u2014 the guest gets value even if they ignore the follow-up question. The question feels like a service refinement, not data collection.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What's a good dinner spot?",
+      "agent_response": "For tonight, Michael Jordan's Steak House in the Casino of the Sky is a standout choice where the sizzle of a USDA Prime steak paired with a glass from their extensive wine list creates a truly elevated atmosphere. \n\nThe dining room has an elegant feel adorned with sports memorabilia, and they are open until 10:00 PM this evening. It is an upscale experience in the $$$$ price range with a business casual dress code, so I'd suggest securing a reservation if you decide to go. Are you looking for a quiet, intimate meal or something with a bit more energy?\n\nAfter dinner, you might enjoy heading over to the Wolf Den to catch some live music.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.661
+        }
+      ],
+      "elapsed_ms": 27074,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Four of us, two couples",
+      "agent_response": "Todd English's Tuscany is a guest favorite for two couples. The dining room features a 40-foot waterfall backdrop that's perfect for a social dinner without being too loud for conversation.\n\nThey are open until 10:00 PM tonight and specialize in wood-fired Mediterranean dishes. Do you have a specific cuisine in mind for tonight?\n\nAfter dinner, the V",
+      "sources": [],
+      "elapsed_ms": 49348,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect, we'll try the steakhouse",
+      "agent_response": "Glad I could help. The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. What sounds good?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 76425,
+  "error": null,
+  "completed": true
+}

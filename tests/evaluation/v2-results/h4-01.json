@@ -1,0 +1,45 @@
+{
+  "id": "h4-01",
+  "name": "Returning guest with earlier preferences in conversation",
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H4_personalized_recognition",
+  "expected_behavior": "Integrates all three data points (couple, Italian preference, gluten-free) into the entertainment recommendation. Does not suggest dinner options that conflict with the dietary need. Uses Linda's name naturally. The evening plan feels curated for this specific couple",
+  "expected_behavioral_quality": "Uses information shared in earlier turns to personalize later recommendations. By turn 3, every recommendation should reflect accumulated knowledge. The guest should feel increasingly 'known' with each interaction.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hi, I'm Linda. My husband and I love Italian food. What's good here?",
+      "agent_response": "Welcome, Linda. Since you and your husband are Italian food enthusiasts, Todd English's Tuscany in the Casino of the Sky is my top recommendation for you tonight.\n\nThe warm, Tuscan-inspired decor and the sight of chefs working in the open kitchen create an inviting atmosphere that's perfect for a couple's dinner. Their handmade pastas are exceptional, but many guests rave about the wood-fired pizzas which have a distinct, smoky char that really sets them apart. They are open tonight until 10:00 PM and have a business casual dress code. Since it is a popular spot, I'd suggest checking for a reservation to ensure you get a great table.\n\nIf you are looking for a more relaxed setting, Mohegan Sun Caputo Trattoria in the Casino of the Earth is also open until 10:00 PM and serves excellent brick-oven pizzas and traditional pasta dishes in a casual environment. Please keep in mind that hours and prices can vary, so it is a good idea to confirm directly with the property.\n\nAre you celebrating a special occasion this evening?\n\nAfter your meal, you might enjoy catching some free live music at the Wolf Den, which is located right in the heart of the Casino of the Earth.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.689
+        }
+      ],
+      "elapsed_ms": 45734,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We also have a gluten-free situation so that limits things",
+      "agent_response": "Linda, having a gluten-free requirement shouldn't hold you back from a great Italian meal. I recommend heading to Caputo Trattoria in the Casino of the Earth. \n\nThe aroma of fresh garlic and simmering marinara greets you the moment you arrive at this cozy spot. While the menu features classic brick-oven pizzas and pasta, our chefs are excellent at accommodating dietary needs\u2014simply let your server",
+      "sources": [],
+      "elapsed_ms": 67845,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What about after dinner? Any shows tonight?",
+      "agent_response": "Since it's Wednesday, the Wolf Den is the perfect spot for you and your husband to spend the evening. They host free live music starting at 8:00 PM right in the heart of the Casino of the Earth, featuring everything from national touring acts to impressive tribute bands. \n\nIt has an electric, intimate energy where you're right there with the performers, and since there is no cover charge, it's a fantastic value for a night out. I recommend heading over soon to secure a spot since the 350 seats can fill up quickly. Please keep in mind that performers and times are subject to change, so you can confirm tonight's specific lineup at the venue entrance. \n\nDo you and your husband prefer high-energy shows or something a bit more mellow? \n\nIf you have some downtime tomorrow, a signature treatment at the Elemis Spa is a legendary way to reset after a busy day.",
+      "sources": [],
+      "elapsed_ms": 51666,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 165245,
+  "error": null,
+  "completed": true
+}

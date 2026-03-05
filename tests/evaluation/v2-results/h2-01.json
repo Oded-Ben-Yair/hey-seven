@@ -1,0 +1,97 @@
+{
+  "id": "h2-01",
+  "name": "Lapsed guest signals they stopped coming",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H2_reactivation_win_back",
+  "expected_behavior": "Welcomes the guest back without making the absence feel awkward. Asks what brought them back (not why they left). Highlights what has changed or is new since their last visit \u2014 new restaurants, new entertainment, new loyalty perks. Creates urgency around what they have been missing",
+  "expected_behavioral_quality": "When a guest says they stopped visiting, the agent investigates the reason without being pushy. Acknowledges the gap, discovers what changed, and creates a specific reason to return based on what has changed at the property or what the guest now values.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I used to come here all the time but haven't been in like two years",
+      "agent_response": "Welcome back to the property. Two years is a long time to be away, and we are glad to have you back with us. \n\nWhile much of the resort will feel familiar, you might enjoy visiting novelle if you haven't seen it yet. It is an upscale lounge that offers a sophisticated atmosphere for craft cocktails and a bit of nightlife without the intensity of a full club. If you're looking for a meal, Todd English's Tuscany remains a guest favorite for its consistent quality and the view of the Taughannick Falls. \n\nWhat was your favorite spot to visit when you were coming here regularly?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.652
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.62
+        }
+      ],
+      "elapsed_ms": 34104,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Just got busy with work, lost the habit I guess",
+      "agent_response": "Work can certainly take over, so it's good you're taking some time for yourself now.\n\nSince you\u2019ve been busy, you might appreciate the Mandara Spa for a bit of downtime. It's a full-service spa inspired by Balinese traditions and is open until 8:00 PM daily. If you're looking for a quiet dinner tonight, Michael Jordan\u2019s Steak House remains an excellent, reliable choice for a high-quality meal in a more relaxed setting.\n\nAre you staying overnight with us this time, or just visiting for the evening?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.567
+        }
+      ],
+      "elapsed_ms": 26331,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What's actually new since I was last here?",
+      "agent_response": "The Earth Tower and its Elemis Spa are likely the biggest changes you'll notice. It has a more modern, tranquil atmosphere compared to the Sky Tower and is a great spot if you're looking for a quieter stay.\n\nYou should also check out novelle, an upscale lounge and gaming space that offers a sophisticated setting for craft cocktails and small plates. It's a nice middle ground between the high energy of the casino floor and a traditional sit-down dinner. \n\nAre you looking for a more relaxed trip this time, or are you looking to be where the action is?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.658
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        }
+      ],
+      "elapsed_ms": 47475,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 107911,
+  "error": null,
+  "completed": true
+}

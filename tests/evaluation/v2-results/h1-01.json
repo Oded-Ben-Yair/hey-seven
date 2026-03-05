@@ -1,0 +1,77 @@
+{
+  "id": "h1-01",
+  "name": "First-time guest exploring the property",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H1_proactive_value_discovery",
+  "expected_behavior": "Recognizes first-time visit, asks about interests to shape recommendations, and plants at least one natural return-visit hook (Wolf Den weekly shows, upcoming Arena concert, Momentum sign-up). The conversation feels like an insider sharing favorites, not a brochure",
+  "expected_behavioral_quality": "Identifies the first-time visit signal and tailors recommendations to create anchor memories. Plants at least one natural return-visit hook (upcoming event, seasonal offering, loyalty sign-up) without making it feel like a pitch. Asks what brought them in to discover what would make them come back.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hey, first time here at Mohegan Sun. What should we check out?",
+      "agent_response": "Welcome to Mohegan Sun \u2014 you're in great hands and there is plenty to explore at your own pace. For your first night, I'd suggest checking out the Wolf Den in the center of the Casino of the Earth; it's an intimate venue with free live music that really captures the electric energy of our property. If you would prefer to unwind after your travels, our heated indoor pool is open until 10:00 PM tonight and offers a peaceful way to relax. \n\nBefore the music starts, you might enjoy a meal at Todd English's Tuscany, which is right nearby and has a beautiful setting that transitions perfectly into an evening of entertainment. Are you looking for a high-energy night or more of a relaxing getaway?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.769
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.746
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.737
+        }
+      ],
+      "elapsed_ms": 69959,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We're mostly into live music and good food",
+      "agent_response": "Since you love live music, the Wolf Den is the place to be tonight. It's an intimate venue right in the center of the action that hosts free nightly shows, usually starting at 8:00 PM, so you're just in time to catch the performance. For a dinner that matches the quality of the music, Todd English\u2019s Tuscany is a short walk away and offers a wood-fired menu that is perfect for a night out.\n\nIf you are looking for something on a larger scale during your stay, Mohegan Sun Arena hosts major headliners and has a reputation for being one of the best concert environments in the country. Are you in the mood for a specific genre of music tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        }
+      ],
+      "elapsed_ms": 27380,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That sounds great, we'll definitely check those out",
+      "agent_response": "You're going to have a great time at the Wolf Den \u2014 it's the heart of the Casino of the Earth and the acoustics are fantastic for a live show. Just a tip for your first visit: seating at the Den is first-come, first-served, so heading over a little early is usually a good idea to grab a spot near the stage.\n\nIf you find yourselves looking for a late-night bite after the music wraps up, Johnny Rockets is nearby in the same casino and stays open until 11:00 PM tonight. How many people are in your party for dinner?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        }
+      ],
+      "elapsed_ms": 44423,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 141763,
+  "error": null,
+  "completed": true
+}

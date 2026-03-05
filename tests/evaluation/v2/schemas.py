@@ -32,6 +32,54 @@ SUBSET_IDS: set[str] = {
     "safety-03",
 }
 
+# R90: Profiling subset — 1-2 representative scenarios per P-dimension.
+PROFILING_SUBSET_IDS: set[str] = {
+    "p1-01",
+    "p1-03",
+    "p2-01",
+    "p2-04",
+    "p3-01",
+    "p3-04",
+    "p4-01",
+    "p4-05",
+    "p5-01",
+    "p5-03",
+    "p6-01",
+    "p7-01",
+    "p8-01",
+    "p9-01",
+    "p10-01",
+    "p10-03",
+}
+
+# R90: Host Triangle subset — 1 representative scenario per H-dimension.
+HOST_TRIANGLE_SUBSET_IDS: set[str] = {
+    "h1-01",
+    "h2-01",
+    "h3-01",
+    "h4-01",
+    "h5-01",
+    "h6-01",
+    "h7-01",
+    "h8-01",
+    "h9-01",
+    "h10-01",
+}
+
+# R90: Category → glob pattern for scenario file loading.
+_CATEGORY_GLOBS: dict[str, str] = {
+    "behavioral": "behavioral_*.yaml",
+    "profiling": "profiling_*.yaml",
+    "host-triangle": "host_triangle_*.yaml",
+}
+
+# R90: Category → subset IDs for --subset mode.
+_CATEGORY_SUBSETS: dict[str, set[str]] = {
+    "behavioral": SUBSET_IDS,
+    "profiling": PROFILING_SUBSET_IDS,
+    "host-triangle": HOST_TRIANGLE_SUBSET_IDS,
+}
+
 SCENARIOS_DIR = Path(__file__).resolve().parent.parent.parent / "scenarios"
 
 
@@ -73,21 +121,33 @@ class ScenarioResult:
         return d
 
 
-def load_scenarios(subset_only: bool = True) -> list[dict[str, Any]]:
-    """Load behavioral scenarios from YAML files.
+def load_scenarios(
+    subset_only: bool = True,
+    category: str = "behavioral",
+) -> list[dict[str, Any]]:
+    """Load scenarios from YAML files filtered by category.
 
     Args:
-        subset_only: If True, only load scenarios in SUBSET_IDS.
+        subset_only: If True, only load scenarios in the category's subset IDs.
+        category: Scenario category — ``"behavioral"`` (default), ``"profiling"``,
+            ``"host-triangle"``, or ``"all"`` (loads every ``*.yaml``).
 
     Returns:
         List of scenario dicts with ``_source_file`` injected.
     """
+    if category == "all":
+        glob_pattern = "*.yaml"
+        subset_ids: set[str] = set()  # unused — all mode ignores subset
+    else:
+        glob_pattern = _CATEGORY_GLOBS.get(category, "behavioral_*.yaml")
+        subset_ids = _CATEGORY_SUBSETS.get(category, SUBSET_IDS)
+
     scenarios: list[dict[str, Any]] = []
-    for f in sorted(SCENARIOS_DIR.glob("behavioral_*.yaml")):
+    for f in sorted(SCENARIOS_DIR.glob(glob_pattern)):
         with open(f) as fh:
             data = yaml.safe_load(fh)
         for s in data.get("scenarios", []):
-            if subset_only and s["id"] not in SUBSET_IDS:
+            if category != "all" and subset_only and s["id"] not in subset_ids:
                 continue
             s["_source_file"] = f.name
             scenarios.append(s)

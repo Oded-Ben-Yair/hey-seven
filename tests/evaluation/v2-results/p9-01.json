@@ -1,0 +1,39 @@
+{
+  "id": "p9-01",
+  "name": "Host handoff summary with structured profile",
+  "source_file": "profiling_p8_p9_p10_completeness.yaml",
+  "category": "profiling_p8_p9_p10_completeness",
+  "behavioral_dimension": "P9_handoff_quality",
+  "expected_behavior": "When handoff is requested, the agent provides a structured profile summary: Guest name (Victor Chen), tier (Soar), occasion (60th birthday), party size (9), dietary needs (vegetarian wife), accessibility (father with walker), request (private dining room). This summary is immediately useful to a human host",
+  "expected_behavioral_quality": "When the conversation reaches a point where a human host should take over, the agent provides a structured summary of everything learned. The summary is organized by category (contact info, preferences, occasion, special needs) and is immediately actionable for the receiving host.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm Victor Chen, Soar tier. Here for my 60th birthday with 8 family members.",
+      "agent_response": "Welcome back, Mr. Chen. Happy 60th birthday to you. It is a pleasure to have a Soar member celebrating such a significant milestone with us.\n\nFor a group of nine, Ballo Italian Restaurant in the Casino of the Sky is an excellent choice for its atmosphere and ability to accommodate larger parties comfortably. Since it is your birthday, Mohegan Sun would like to offer you a $25 dining credit to use at any of our restaurants during your stay!\n\nWhen are you and your family planning to arrive?",
+      "sources": [],
+      "elapsed_ms": 52135,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "My wife is vegetarian and my father uses a walker. We need a private dining room.",
+      "agent_response": "For a landmark 60th birthday, **Michael Jordan's Steak House** in the Casino of the Sky is the premier choice for your family. \n\nThe dining room is spacious and easily accessible for your father's walker, and while the USDA Prime steaks are the highlight, the kitchen excels at fresh seafood and premium vegetable sides that provide wonderful options for your wife. This upscale venue offers an",
+      "sources": [],
+      "elapsed_ms": 63012,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can you connect me with my dedicated host?",
+      "agent_response": "I'd love to help with that. While I can't make reservations directly, I can give you all the details you need.\n\nFor reservations and bookings, you can reach Mohegan Sun at 1-888-226-7711 or visit mohegansun.com.\n\nIs there anything else about the property I can help you with?",
+      "sources": [],
+      "elapsed_ms": 4887,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 124053,
+  "error": null,
+  "completed": true
+}

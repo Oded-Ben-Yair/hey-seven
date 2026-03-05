@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We drove 4 hours to get here. What should we do first?",
-      "agent_response": "Welcome to Mohegan Sun. After a four-hour drive, I'd suggest starting with something low-key to help you decompress.\n\nIf you are hungry, Todd English's Tuscany near the Sky Tower lobby offers a relaxed atmosphere with a view of the Taughannick Falls\u2014it is a guest favorite for a quiet meal where you can truly unwind. If you would rather just relax physically, the Mandara Spa is excellent for a treatment to work out any tension from the road.\n\nOnce you have had a chance to rest, you might enjoy a gentle stroll through The Shops at Mohegan Sun later this evening.\n\nAre you staying with us in the Sky Tower or the Earth Tower tonight?",
+      "agent_response": "Welcome to Mohegan Sun. After a four-hour drive, I'd suggest heading to Todd English\u2019s Tuscany for a relaxed dinner by the Taughannick Falls; the sound of the 55-foot indoor waterfall is a great way to unwind after being on the road.\n\nSince it is just after 6:30 PM, you'll have plenty of time for a leisurely meal before considering a quiet stroll through The Shops at Mohegan Sun, which are open until 9:00 PM tonight. Are you checking into the Sky Tower or the Earth Tower?",
       "sources": [
         {
           "category": "faq",
@@ -24,13 +24,13 @@
           "score": 0.64
         }
       ],
-      "elapsed_ms": 51822,
+      "elapsed_ms": 29683,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Yeah we're pretty tired but hungry",
-      "agent_response": "After that long drive, **Caputo Trattoria** in the Casino of the Earth is the perfect spot to settle in without any fuss. \n\nIt is a casual Italian eatery where the aroma of brick-oven pizza and slow-simmered sauces creates a very welcoming environment for tired travelers. They are open now until 10:00 PM, and since no reservations are required, you can walk right in for a comforting bowl of pasta or a hot calzone. The vibe is relaxed, prices are mid-range ($$), and it is a great place to simply sit back and refuel.\n\nOnce you have had a chance to eat, you might find that a quiet evening or a visit to the Mandara Spa tomorrow morning is exactly what you need to fully recharge.\n\nDo you have a preference for a specific type of cuisine, or does a hearty Italian meal sound right?",
+      "agent_response": "For a relaxing meal after that long drive, Caputo Trattoria is your best bet\u2014it's located in the Casino of the Earth and serves comforting Italian dishes like brick-oven pizzas and hearty pasta. \n\nThe atmosphere is casual and welcoming, so you can settle in without any fuss or the need for a reservation. They are open until 10:00 PM tonight, and most entrees fall into the moderate price range. Once you've finished dinner, a quiet visit to the Mandara Spa tomorrow morning might be the perfect way to fully recover from your travels. \n\nHow many people are in your party tonight?",
       "sources": [
         {
           "category": "restaurants",
@@ -38,35 +38,19 @@
           "score": 0.66
         }
       ],
-      "elapsed_ms": 46422,
+      "elapsed_ms": 24423,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about after dinner?",
-      "agent_response": "Since you have had a long day on the road, I'd suggest keeping it low-key tonight at the **Birdcage Bar** in the Casino of the Sky.\n\nIt is an upscale cocktail lounge that offers a sophisticated atmosphere and a great selection of craft cocktails, making it the perfect spot for a relaxed nightcap before heading to bed. It is open until 2:00 AM tonight, so you can take your time with dinner and not feel rushed. \n\nFor tomorrow morning, you might want to consider a session at the **Mandara Spa** to fully recover from that four-hour drive. Their signature treatments are designed to help you reset and get into vacation mode.\n\nWould you like me to look up the opening hours for the spa so you can plan a relaxing start to your day?",
-      "sources": [
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.652
-        },
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.65
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.637
-        }
-      ],
-      "elapsed_ms": 76141,
+      "agent_response": "After dinner, the Birdcage Bar in the Casino of the Sky is a perfect spot to wind down with a craft cocktail in a sophisticated, smart-casual setting. It is a much more relaxed environment than the main gaming floors, allowing you to just sit and enjoy the atmosphere without much exertion. \n\nIf you're looking to truly recover from that four-hour drive, I'd suggest visiting the Elemis Spa tomorrow morning\u2014their hot stone massage is legendary for resetting your body after a long trip. The spa offers a variety of signature treatments specifically designed to help guests decompress. Does a quiet nightcap sound like the right speed for you tonight?",
+      "sources": [],
+      "elapsed_ms": 46967,
       "error": null
     }
   ],
-  "elapsed_ms": 174386,
+  "elapsed_ms": 101074,
   "error": null,
   "completed": true
 }

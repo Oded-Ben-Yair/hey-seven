@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "I'm vegetarian. What are my dinner options?",
-      "agent_response": "For a vegetarian dinner tonight, Todd English's Tuscany is the standout choice for its sophisticated take on Italian classics. The handmade pastas have a delicate texture that pairs beautifully with their fresh, seasonal sauces, and the wood-fired pizzas offer that perfect charred crust.\n\nThe restaurant is located in the Casino of the Sky and opens at 5:00 PM today. It is a business casual environment with a price range of $$$$, and I suggest a reservation to ensure you get a table near the open kitchen where you can watch the chefs at work. If you prefer a more laid-back setting or want to eat before 5:00 PM, Caputo Trattoria in the Casino of the Earth offers fantastic vegetarian pizzas and pasta dishes in a casual atmosphere.\n\nHow many guests will be joining you for dinner?\n\nOnce you have finished your meal, the Wolf Den often has great live performances to round out your evening!",
+      "agent_response": "For a refined vegetarian dinner tonight, Todd English's Tuscany is a standout choice where the vegetable-forward dishes truly shine. The wood-fired aroma hits you the moment you walk in, and their handmade pastas and artisanal pizzas offer rich, complex flavors that make for a sophisticated meal in a warm, Tuscan-inspired setting. \n\nThey are located in the Casino of the Sky and are open tonight until 10:00 PM. The dress code is business casual, and because it is one of our premier venues, reservations are highly recommended for this $$$$ experience. If you are looking for something more casual, Mohegan Sun Caputo Trattoria in the Casino of the Earth serves excellent brick-oven pizzas and classic pasta dishes in a relaxed environment until 10:00 PM. \n\nPlease keep in mind that hours and prices may vary, so it is always a good idea to confirm with the venue directly. After dinner, you might enjoy catching some live music at the Wolf Den, which is right in the heart of the Casino of the Earth. \n\nHow many people will be in your party this evening?",
       "sources": [
         {
           "category": "restaurants",
@@ -19,13 +19,13 @@
           "score": 0.673
         }
       ],
-      "elapsed_ms": 53423,
+      "elapsed_ms": 27602,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Actually tell me about the spa first",
-      "agent_response": "If you are looking for a deep reset after your travels, Mandara Spa is my top recommendation. It is an award-winning space that uses Balinese healing traditions, and their relaxation lounge is the perfect place to disconnect for an hour or two. They are open until 8:00 PM tonight, so you have plenty of time to fit in a massage or a facial before your vegetarian dinner. \n\nFor something more focused on premium skincare, the Elemis Spa in the Earth Tower is excellent and stays open until 7:00 PM today. They offer modern treatments and express services if you are looking for a quicker refresh before heading out for the evening. \n\nAre you interested in a specific type of treatment, like a deep-tissue massage or a rejuvenating facial? \n\nAfter you have had some time to unwind, the Wolf Den usually has great live music starting in the evening to keep the energy going!",
+      "agent_response": "If you are looking to unwind before dinner, you have two excellent options right here on the property. Mandara Spa is a full-service sanctuary that draws on Balinese healing traditions, featuring a tranquil relaxation lounge and steam rooms that are perfect for a complete reset. They are open until 8:00 PM tonight, which gives you some time if you head over soon.\n\nFor something more focused on premium skincare and modern treatments, the Elemis Spa at Earth Tower is a great choice. They offer signature couples experiences and express services if you are on a tighter schedule, though they do close at 7:00 PM this evening. \n\nSince it is currently 6:36 PM, Mandara Spa might be your best bet for a relaxing evening session before they close. Please note that hours and treatment availability are subject to change, so it is always a good idea to confirm with the spa directly. After you have had some time to recharge, the live music at the Wolf Den is a great way to transition into the evening.\n\nAre you looking for a specific type of treatment, like a massage or a facial?",
       "sources": [
         {
           "category": "amenities",
@@ -43,25 +43,19 @@
           "score": 0.633
         }
       ],
-      "elapsed_ms": 38551,
+      "elapsed_ms": 28245,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Ok back to dinner \u2014 where should I go?",
-      "agent_response": "SolToro Taqueria & Tequila Bar in the Casino of the Earth is my top pick for a vibrant vegetarian dinner tonight. The air there is filled with the scent of fresh lime and roasted chilies, and their kitchen produces some of the most authentic vegetarian tacos and fresh, table-side guacamole on the property.\n\nThey are open until 10:00 PM today, and because the atmosphere is so lively and casual, you do not need a reservation. It is a mid-range option ($$) that really leans into bold, fresh flavors. If you prefer something lighter, Sushi Palace in the Casino of the Sky is also open until 10:00 PM and offers a variety of fresh vegetable rolls and Japanese specialties.\n\nAre you looking for a quiet, intimate meal or something with a bit more energy?\n\nAfter your meal, you might enjoy catching a performance at the Wolf Den, which features live music right in the heart of the action.",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.657
-        }
-      ],
-      "elapsed_ms": 45987,
+      "agent_response": "For tonight, SolToro Taqueria & Tequila Bar is an excellent choice \u2014 their modern Mexican menu features authentic tacos and fresh flavors that work beautifully for a vegetarian meal. The atmosphere is high-energy with colorful decor, making it a great spot to transition from a relaxing spa session into a fun evening.\n\nThey are located in the Casino of the Earth and are open until 1",
+      "sources": [],
+      "elapsed_ms": 57410,
       "error": null
     }
   ],
-  "elapsed_ms": 137962,
+  "elapsed_ms": 113258,
   "error": null,
   "completed": true
 }

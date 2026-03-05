@@ -1,0 +1,240 @@
+scenarios:
+  - id: "h1-01"
+    name: "First-time guest exploring the property"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H1_proactive_value_discovery"
+    expected_behavioral_quality: "Identifies the first-time visit signal and tailors recommendations to create anchor memories. Plants at least one natural return-visit hook (upcoming event, seasonal offering, loyalty sign-up) without making it feel like a pitch. Asks what brought them in to discover what would make them come back."
+    turns:
+      - role: "human"
+        content: "Hey, first time here at Mohegan Sun. What should we check out?"
+        expected_keywords: ["Wolf Den", "restaurant", "casino"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We're mostly into live music and good food"
+        expected_keywords: ["Wolf Den", "Arena", "Tuscany", "Steakhouse"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That sounds great, we'll definitely check those out"
+        expected_keywords: ["enjoy", "welcome", "back"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Recognizes first-time visit, asks about interests to shape recommendations, and plants at least one natural return-visit hook (Wolf Den weekly shows, upcoming Arena concert, Momentum sign-up). The conversation feels like an insider sharing favorites, not a brochure"
+    safety_relevant: false
+
+  - id: "h1-02"
+    name: "Guest comparing Mohegan Sun to competitor"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H1_proactive_value_discovery"
+    expected_behavioral_quality: "When a guest compares to a competitor (Foxwoods, MGM), the agent highlights Mohegan Sun's unique differentiators without disparaging the competitor. Discovers what the guest values most and positions Mohegan Sun as the better fit for those specific preferences."
+    turns:
+      - role: "human"
+        content: "We usually go to Foxwoods. What's different about Mohegan Sun?"
+        expected_keywords: ["Mohegan Sun", "unique", "dining", "entertainment"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We're big foodies and love trying new spots"
+        expected_keywords: ["restaurant", "Beauty & Essex", "Farm Italy", "Tuscany"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Those sound amazing. Maybe we'll make the switch"
+        expected_keywords: ["welcome", "Momentum"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Highlights Mohegan Sun's dining portfolio as a competitive advantage without badmouthing Foxwoods. Discovers the guest's foodie identity and uses it to position the property. Creates a switching reason tied to the guest's stated values"
+    safety_relevant: false
+
+  - id: "h1-03"
+    name: "Guest with a specific interest looking for depth"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H1_proactive_value_discovery"
+    expected_behavioral_quality: "When a guest signals deep interest in one domain (poker, spa, comedy), the agent demonstrates deep knowledge of that domain and connects it to related experiences. Discovers what level of engagement the guest wants and builds a personalized visit plan."
+    turns:
+      - role: "human"
+        content: "I'm really into poker. What's the poker scene like here?"
+        expected_keywords: ["poker", "table", "tournament"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Any tournaments coming up? I play pretty seriously"
+        expected_keywords: ["tournament", "schedule", "poker"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Nice. What else is good for a poker weekend?"
+        expected_keywords: ["Steakhouse", "Wolf Den", "hotel"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Demonstrates deep poker knowledge, treats the guest as a serious player, and builds a full weekend vision around the poker interest. Cross-sells dining and entertainment as part of a poker trip, not as disconnected amenities"
+    safety_relevant: false
+
+  - id: "h1-04"
+    name: "Couple exploring for a weekend getaway"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H1_proactive_value_discovery"
+    expected_behavioral_quality: "Identifies the couple dynamic and weekend getaway context. Discovers what kind of experience they want (relaxation, adventure, romance) and builds a multi-activity itinerary that creates emotional anchors for return visits."
+    turns:
+      - role: "human"
+        content: "My girlfriend and I are thinking about a weekend at Mohegan Sun. What's it like?"
+        expected_keywords: ["couple", "weekend", "spa", "dining", "entertainment"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We want a mix of relaxation and fun. Not just gambling"
+        expected_keywords: ["Elemis Spa", "Mandara", "Wolf Den", "restaurant"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "That sounds like a perfect weekend, thanks"
+        expected_keywords: ["enjoy", "Sky Tower", "weekend"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Builds a full couples weekend itinerary covering spa, dining, entertainment, and hotel. Creates a vision that makes the property feel like a destination, not just a casino. Plants seeds for future visits by mentioning seasonal events or upcoming shows"
+    safety_relevant: false
+
+  - id: "h2-01"
+    name: "Lapsed guest signals they stopped coming"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H2_reactivation_win_back"
+    expected_behavioral_quality: "When a guest says they stopped visiting, the agent investigates the reason without being pushy. Acknowledges the gap, discovers what changed, and creates a specific reason to return based on what has changed at the property or what the guest now values."
+    turns:
+      - role: "human"
+        content: "I used to come here all the time but haven't been in like two years"
+        expected_keywords: ["welcome back", "missed", "new", "changed"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Just got busy with work, lost the habit I guess"
+        expected_keywords: ["new", "restaurant", "changed", "worth"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's actually new since I was last here?"
+        expected_keywords: ["Beauty & Essex", "Farm Italy", "new", "opened"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Welcomes the guest back without making the absence feel awkward. Asks what brought them back (not why they left). Highlights what has changed or is new since their last visit — new restaurants, new entertainment, new loyalty perks. Creates urgency around what they have been missing"
+    safety_relevant: false
+
+  - id: "h2-02"
+    name: "Guest references a bad past experience"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H2_reactivation_win_back"
+    expected_behavioral_quality: "When a guest references a negative experience, the agent acknowledges it specifically, investigates without being defensive, and reframes the next visit as a fresh start. Does not minimize the complaint or rush past it."
+    turns:
+      - role: "human"
+        content: "Last time I was here the service at the steakhouse was awful. Took forever to get seated"
+        expected_keywords: ["sorry", "apologize", "experience", "Steakhouse"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Yeah it kind of ruined the whole evening honestly"
+        expected_keywords: ["understand", "make it right", "different"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "So what would you actually recommend instead?"
+        expected_keywords: ["Tuscany", "Beauty & Essex", "reservation"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Takes the complaint seriously without being defensive. Apologizes specifically for the wait time. Offers a concrete alternative for this visit and suggests mentioning the issue to the Momentum Desk for follow-up. Turns the complaint into a chance to demonstrate that things are different now"
+    safety_relevant: false
+
+  - id: "h2-03"
+    name: "Guest mentions they switched to competitor"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H2_reactivation_win_back"
+    expected_behavioral_quality: "When a guest says they have been going to a competitor instead, the agent does not disparage the competitor. Instead, discovers what drew them away and highlights what Mohegan Sun offers in that area. Creates a 'come back and see' moment around genuine improvements."
+    turns:
+      - role: "human"
+        content: "I've been going to Foxwoods mostly. They opened some cool new restaurants"
+        expected_keywords: ["Mohegan Sun", "restaurant", "new"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah their Gordon Ramsay place is really good"
+        expected_keywords: ["dining", "Beauty & Essex", "Farm Italy", "celebrity"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Hmm those do sound worth trying"
+        expected_keywords: ["welcome", "visit"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Does not badmouth Foxwoods or Gordon Ramsay. Instead, highlights Mohegan Sun's own new dining portfolio (Beauty & Essex, The Farm Italy, The Shed) as reasons to come back. Creates competitive differentiation through quality, not criticism"
+    safety_relevant: false
+
+  - id: "h3-01"
+    name: "Frequent visitor unaware of tier benefits"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H3_pipeline_advancement"
+    expected_behavioral_quality: "When a guest reveals frequent visit patterns, the agent connects that behavior to tier advancement opportunities. Makes tier progression feel like insider knowledge being shared, not a sales pitch. Explains specific benefits that match the guest's interests."
+    turns:
+      - role: "human"
+        content: "I'm here pretty much every weekend. Love the blackjack tables"
+        expected_keywords: ["regular", "Momentum", "tier"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah I've got the card but I never really pay attention to it"
+        expected_keywords: ["tier", "credits", "benefits", "upgrade"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Really? What kind of perks are we talking?"
+        expected_keywords: ["Leap", "Ascend", "priority", "host", "valet"]
+        expected_tone: "enthusiastic"
+        expected_empathy_level: "low"
+    expected_behavior: "Connects the guest's weekly visit pattern to tier advancement potential. Explains specific benefits that match their blackjack interest (table game earning rates, priority seating). Makes checking tier status feel like discovering hidden money, not filling out a loyalty form"
+    safety_relevant: false
+
+  - id: "h3-02"
+    name: "Guest mentions tier at competitor property"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H3_pipeline_advancement"
+    expected_behavioral_quality: "When a guest mentions tier status at a competitor, the agent recognizes the status signal and positions Mohegan Sun's Momentum tiers as comparable or better for their play level. Does not dismiss the competitor tier but creates curiosity about Momentum benefits."
+    turns:
+      - role: "human"
+        content: "I'm Diamond at Caesars. What do you have here that's comparable?"
+        expected_keywords: ["Momentum", "tier", "Leap", "Ascend"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How fast can I move up? I play mostly table games"
+        expected_keywords: ["tier credits", "table", "semi-annual", "earn"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Alright, I'll sign up at the Momentum Desk"
+        expected_keywords: ["welcome", "Momentum Desk", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Translates the Caesars Diamond status into Momentum-equivalent context. Explains how table game play earns tier credits and what tier would match their current status. Makes signing up feel like a strategic move for a serious player, not a marketing exercise"
+    safety_relevant: false
+
+  - id: "h3-03"
+    name: "Guest spending patterns suggest tier-up readiness"
+    category: "host_triangle_h1_h3_development"
+    behavioral_dimension: "H3_pipeline_advancement"
+    expected_behavioral_quality: "When a guest describes play patterns that suggest they are close to the next tier threshold, the agent recognizes the signal and proactively mentions the advancement opportunity. Frames tier progression as something the guest has already earned through their play."
+    turns:
+      - role: "human"
+        content: "I've been coming here twice a month, usually play slots for a few hours each time"
+        expected_keywords: ["regular", "Momentum", "tier"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I'm at Ignite level right now I think"
+        expected_keywords: ["Leap", "tier credits", "close", "upgrade"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's the difference between Ignite and Leap?"
+        expected_keywords: ["priority", "pre-sale", "entertainment", "earning rate", "room"]
+        expected_tone: "informative"
+        expected_empathy_level: "low"
+    expected_behavior: "Calculates that twice-monthly slot play likely puts the guest near the Ignite-to-Leap threshold (2,500 to 10,000 tier credits). Explains the specific Leap benefits that match their interests. Makes the tier-up feel like a natural next step they are already close to achieving"
+    safety_relevant: false

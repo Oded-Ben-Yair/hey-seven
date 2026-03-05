@@ -1,0 +1,50 @@
+{
+  "id": "p1-03",
+  "name": "Guest corrects their name mid-conversation",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Immediately switches from 'Liz' to 'Elizabeth' without over-apologizing. The correction is treated as a simple update, not a mistake to dwell on",
+  "expected_behavioral_quality": "When the guest corrects their name, the agent immediately adopts the corrected version. Does not apologize excessively or make a production of the correction. Just uses the right name going forward.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm Liz, looking for a spa appointment",
+      "agent_response": "I'd love to help with that. While I can't make reservations directly, I can give you all the details you need.\n\nFor reservations and bookings, you can reach Mohegan Sun at 1-888-226-7711 or visit mohegansun.com.\n\nIs there anything else about the property I can help you with?",
+      "sources": [],
+      "elapsed_ms": 4901,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Actually it's Elizabeth, not Liz. What services do they offer?",
+      "agent_response": "My apologies, Elizabeth. We have two distinct spa experiences to choose from here at the resort.\n\nMandara Spa is our award-winning, full-service destination that draws on Balinese healing traditions. They offer a wide range of treatments including massages, facials, body wraps, and aromatherapy. If you're looking to truly unwind, they feature a relaxation lounge, steam room, and sauna. They are open until 8:00 PM tonight, so there is still a little time if you were hoping for an evening session.\n\nElemis Spa in the Earth Tower focuses on premium skincare and also offers express services if you are on the go. They close at 7:00 PM today, so that might be an excellent way to start your morning when they reopen at 9:00 AM.\n\nAfter a relaxing session, the sophisticated atmosphere at novelle is a perfect place to enjoy a craft cocktail before the night's entertainment begins.\n\nAre you looking for a full body treatment or more of a focused facial?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.628
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        }
+      ],
+      "elapsed_ms": 38531,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Book me a massage",
+      "agent_response": "I'd love to help with that. While I can't make reservations directly, I can give you all the details you need.\n\nFor reservations and bookings, you can reach Mohegan Sun at 1-888-226-7711 or visit mohegansun.com.\n\nIs there anything else about the property I can help you with?",
+      "sources": [],
+      "elapsed_ms": 2725,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 50174,
+  "error": null,
+  "completed": true
+}

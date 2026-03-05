@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Where should we go for dinner tonight?",
-      "agent_response": "For tonight, SolToro Taqueria & Tequila Bar is a fantastic choice\u2014the aroma of fresh-pressed tortillas and charred peppers fills the air as soon as you step into their vibrant space in the Casino of the Earth.\n\nIt is a lively, modern Mexican spot known for authentic street tacos, fresh ceviche, and a massive selection of tequilas and mezcals. Since it is Wednesday, they are open from 11:30 AM until 10:00 PM. The vibe is casual and energetic, making it a great place to unwind after a day on the floor, and you do not need a reservation to get a table.\n\nHow many people will be joining you for dinner tonight?\n\nAfter you finish your meal, you might enjoy catching a free live show at the Wolf Den, which is just a short walk away within the Casino of the Earth.",
+      "agent_response": "For your dinner this evening, SolToro Taqueria & Tequila Bar is my top pick. The scent of charred peppers and fresh lime hits you the moment you step inside this vibrant spot in the Casino of the Earth. Their authentic tacos and house-made ceviche are perfect for a midweek meal, and they boast an impressive selection of tequila if you are in the mood for a signature margarita.\n\nThey are open until 10:00 PM tonight with a casual dress code, and you usually do not need a reservation to grab a table. Prices generally fall in the mid-range ($$).\n\nHow many people will be joining you for dinner?\n\nAfter you finish your meal, you might enjoy catching some live music over at the Wolf Den just a short walk away.",
       "sources": [
         {
           "category": "restaurants",
@@ -24,27 +24,43 @@
           "score": 0.647
         }
       ],
-      "elapsed_ms": 66538,
+      "elapsed_ms": 28474,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "The steakhouse sounds good. What time?",
-      "agent_response": "",
-      "sources": [],
-      "elapsed_ms": 90002,
-      "error": ""
+      "agent_response": "Michael Jordan's Steak House is open tonight from 5:00 PM until 10:00 PM. The space in the Casino of the Sky is elegant and refined, known for serving incredible USDA Prime steaks and fresh seafood in an atmosphere filled with iconic sports memorabilia.\n\nSince it is one of our premier fine-dining venues ($$$$), they recommend business casual attire and highly suggest making a reservation to ensure you get a table.\n\nAre you celebrating a special occasion tonight?\n\nIf you have some time after dinner, the shops at the Crystal Mall are nearby for some evening browsing.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.678
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        }
+      ],
+      "elapsed_ms": 27292,
+      "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Great, we'll do that",
       "agent_response": "Glad I could help. The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. What sounds good?",
       "sources": [],
-      "elapsed_ms": 6,
+      "elapsed_ms": 2,
       "error": null
     }
   ],
-  "elapsed_ms": 440580,
+  "elapsed_ms": 55769,
   "error": null,
   "completed": true
 }

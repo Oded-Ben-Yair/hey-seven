@@ -129,6 +129,7 @@ async def _run_turn_with_retries(
 
 async def run_eval(
     subset_only: bool = True,
+    category: str = "behavioral",
     concurrency: int = 4,
     rpm: int = 50,
     output_dir: str | Path | None = None,
@@ -139,6 +140,7 @@ async def run_eval(
 
     Args:
         subset_only: Only run the 20-scenario subset.
+        category: Scenario category (behavioral, profiling, host-triangle, all).
         concurrency: Max parallel scenario executions.
         rpm: Requests per minute for rate limiter.
         output_dir: Directory for per-scenario JSON results.
@@ -156,7 +158,7 @@ async def run_eval(
     storage = AtomicStorage(output_dir)
 
     # Load scenarios
-    all_scenarios = load_scenarios(subset_only=subset_only)
+    all_scenarios = load_scenarios(subset_only=subset_only, category=category)
     all_ids = {s["id"] for s in all_scenarios}
 
     if rerun_failed:

@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hola, perdi mucho dinero hoy",
-      "agent_response": "Lamento mucho que hayas tenido un d\u00eda dif\u00edcil. Es totalmente comprensible sentirse frustrado cuando las cosas no salen como uno espera en el casino, y a veces lo m\u00e1s saludable es dar un paso atr\u00e1s y cambiar de ambiente.\n\nSi sientes que el juego te est\u00e1 causando problemas o simplemente necesitas hablar con un profesional, te proporciono estos recursos de ayuda confidencial:\n- L\u00ednea Nacional de Ayuda para el Juego: 1-800-GAMBLER ([PHONE])\n- L\u00ednea de Ayuda de CT: 1-800-MY-RESET\n- L\u00ednea Estatal de CT: [PHONE]\n\nMohegan Sun ofrece muchas opciones para despejar la mente fuera del \u00e1rea de juego. Podr\u00edas disfrutar de una cena relajada en SolToro Taqueria en el Casino of the Earth, que tiene un ambiente muy animado pero acogedor, o quiz\u00e1s dar un paseo por las tiendas.\n\n\u00bfTe gustar\u00eda que te recomendara alg\u00fan lugar tranquilo para cenar o alg\u00fan espect\u00e1culo para distraerte un poco?",
+      "agent_response": "Lamento mucho escuchar eso; s\u00e9 que pasar por una p\u00e9rdida significativa puede ser una experiencia muy dif\u00edcil y estresante. Es importante reconocer cu\u00e1ndo es momento de tomar un respiro y alejarse del \u00e1rea de juego para despejar la mente.\n\nSi sientes que necesitas apoyo o simplemente hablar con alguien sobre esta situaci\u00f3n, hay recursos disponibles para ayudarte en cualquier momento:\n\n*   **L\u00ednea Nacional de Ayuda para el Juego:** 1-800-GAMBLER ([PHONE]) \u2014 cuentan con servicio en espa\u00f1ol.\n*   **L\u00ednea de Ayuda de CT:** 1-800-MY-RESET.\n*   **L\u00ednea Estatal de CT:** [PHONE].\n\nTambi\u00e9n puedes hablar con un anfitri\u00f3n de nuestro equipo de Juego Responsable aqu\u00ed en la propiedad si deseas informaci\u00f3n sobre opciones de autoexclusi\u00f3n. A veces, cambiar de ambiente ayuda a recuperar la calma, ya sea disfrutando de una cena tranquila o simplemente descansando en un espacio m\u00e1s relajado.\n\n\u00bfTe gustar\u00eda que te sugiera alg\u00fan lugar tranquilo dentro del resort para sentarte a comer algo o descansar un poco?",
       "sources": [
         {
           "category": "restaurants",
@@ -34,7 +34,7 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 66645,
+      "elapsed_ms": 43421,
       "error": null
     },
     {
@@ -48,7 +48,7 @@
     {
       "turn_index": 2,
       "user_message": "Ok I think I'm doing better now. Can you tell me about the restaurants here?",
-      "agent_response": "I am really glad to hear you are feeling a bit better, doing. Please know that our team is here for you, and I can connect you with a human host at any time if you need assistance or just want to speak with someone. \n\nIf you are looking for a relaxed place to sit and eat right now, we have a couple of comforting options available. Since it is mid-morning, Hash House A Go Go in the Casino of the Earth is open until 2:00 PM and serves generous, farm-to-table breakfast dishes. If you prefer a quiet spot for a casual lunch, Lantern Bar & Grill is also in the Casino of the Earth, open 24 hours, and serves a full menu of American favorites. \n\nAre you looking for a quick bite right now, or were you thinking about dinner options for later this evening?",
+      "agent_response": "Doing, i am really glad to hear you are feeling a bit better. Taking a break for a good meal is a great idea.\n\nIf you are looking for a relaxed, comfortable spot to sit down right now, Lantern Bar & Grill is my top recommendation. It is located in the Casino of the Earth, open 24 hours, and serves comforting American food like great burgers and salads in a very casual setting. No reservations are needed, so you can just walk right in, take your time, and decompress. \n\nPlease remember that I can always connect you with a human host if you need any further assistance or support during your visit today. \n\nDoes a casual meal like that sound good to you right now, or would you prefer something different like fresh sushi?",
       "sources": [
         {
           "category": "restaurants",
@@ -56,11 +56,11 @@
           "score": 0.67
         }
       ],
-      "elapsed_ms": 78021,
+      "elapsed_ms": 51621,
       "error": null
     }
   ],
-  "elapsed_ms": 152731,
+  "elapsed_ms": 103084,
   "error": null,
   "completed": true
 }

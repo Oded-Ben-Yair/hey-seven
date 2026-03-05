@@ -62,7 +62,14 @@ FIXTURES = {
         "router": RouterOutput(query_type="action_request", confidence=0.94),
         "generate": None,
         "validate": None,
-        "assert_contains_any": ["can't", "cannot", "not able", "information"],
+        "assert_contains_any": [
+            "can't",
+            "cannot",
+            "not able",
+            "information",
+            "connect",
+            "host team",
+        ],
     },
     "hotel_info": {
         "message": "Tell me about the hotel",
