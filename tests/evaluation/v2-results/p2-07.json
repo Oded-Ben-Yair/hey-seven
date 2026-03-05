@@ -1,0 +1,92 @@
+{
+  "id": "p2-07",
+  "name": "Agent asks about visit duration naturally",
+  "source_file": "profiling_p2_active_probing.yaml",
+  "category": "profiling_p2_active_probing",
+  "behavioral_dimension": "P2_active_probing",
+  "expected_behavior": "Uses the hotel check-in and 'through Sunday' mentions to shape a multi-day experience plan. Suggests tonight's activities with awareness that more days are available for other experiences",
+  "expected_behavioral_quality": "Learns visit duration through context rather than directly asking 'how long are you staying?' When the guest mentions hotel or multiple days, the agent can frame a multi-day plan. Otherwise, infers from cues like checkout or 'tomorrow'.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We just checked into the Sky Tower",
+      "agent_response": "Welcome to Mohegan Sun. The Sky Tower is a wonderful choice, especially for those panoramic views of the Thames River valley that make the room feel like a private retreat.\n\nSince standard check-in isn't until 4:00 PM, it is great that your room was ready for you early. You are also just a short walk from the Casino of the Sky, which has a celestial theme and houses some of our best dining options if you are looking to grab a bite after your travels. How many people are staying in the room with you today?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.728
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        }
+      ],
+      "elapsed_ms": 28443,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah we're here through Sunday",
+      "agent_response": "A three-night stay gives you plenty of time to explore the property at your own pace. Since you'll be here through the weekend, you'll be able to catch the live music at the Wolf Den or perhaps a show at the Arena. \n\nAre you visiting for a specific event, or is this just a weekend getaway?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 36434,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What should we do tonight?",
+      "agent_response": "Tonight you can catch a comedy show at Comix Roadhouse or head to Novelle for an upscale lounge experience with craft cocktails and a DJ. If you get hungry late, Lantern Bar & Grill is open 24 hours for a post-show meal. \n\nAre you more in the mood for a comedy show or a high-energy lounge?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.668
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.667
+        }
+      ],
+      "elapsed_ms": 32257,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 97135,
+  "error": null,
+  "completed": true
+}
