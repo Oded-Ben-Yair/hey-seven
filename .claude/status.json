@@ -1,55 +1,72 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R90 complete — Phase C: Profiling + Host Triangle baselines established. B:6.8, P:5.4, H:5.9. 250 scenarios, 100% response rate.",
-    "lastModified": "2026-03-05T02:00:00Z",
+    "summary": "R91 complete — Host authority, give-to-get, aspirational tiers. B:7.0, P:5.1, H:6.3. 3-model deep judge panel. Template leak identified as P0.",
+    "lastModified": "2026-03-05T14:00:00Z",
     "branch": "main",
-    "commitHash": "pending",
+    "commitHash": "2f2691c",
     "tag": "v1.5.0",
-    "phase": "r90-complete"
+    "phase": "r91-complete"
   },
-  "blueprintPhase": "Phase C/D — Profiling Uplift + Host Triangle Improvements",
-  "roundNumber": 90,
+  "blueprintPhase": "Phase C/D — Template Leak Fix + Profiling Pipeline",
+  "roundNumber": 91,
   "scores": {
     "technical": 9.63,
-    "behavioral_r90_gpt52": 6.4,
-    "behavioral_r90_grok4": 7.2,
-    "behavioral_r90_consensus": 6.8,
-    "profiling_r90_gpt52": 5.4,
-    "hostTriangle_r90_gpt52": 5.9,
+    "behavioral_r91_gpt52": 6.3,
+    "behavioral_r91_grok4": 7.6,
+    "behavioral_r91_deepseek": 7.1,
+    "behavioral_r91_consensus": 7.0,
+    "profiling_r91_gpt52": 5.1,
+    "hostTriangle_r91_gpt52": 6.0,
+    "hostTriangle_r91_grok4": 7.2,
+    "hostTriangle_r91_deepseek": 5.6,
+    "hostTriangle_r91_consensus": 6.3,
     "safety": 100
   },
   "blockers": [],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "R91: H10 Host Authority (4.8→6.0) — replace 'I can't make reservations' with host-authority framing"
+      "description": "R92: Template leak fix — intent-specific action_request (booking vs host vs upgrade vs spa)"
+    },
+    {
+      "priority": 0,
+      "description": "R92: Truncation investigation — ~30% of turns cut mid-sentence"
     },
     {
       "priority": 1,
-      "description": "R91: P3 Give-to-Get — add reciprocal value before profiling questions"
+      "description": "R92: P9 profile summary/confirmation (scored 2/10)"
+    },
+    {
+      "priority": 1,
+      "description": "R92: P2 active probing — qualifying question injection"
     },
     {
       "priority": 2,
-      "description": "R91: H3 Pipeline Advancement (4.2→5.5) — aspirational tier language, not brochure"
-    },
-    {
-      "priority": 3,
-      "description": "R91: P8 Profile Completeness (5.3→6.0) — more aggressive field capture"
+      "description": "R92: Loss recovery tone — empathy before spa/alternatives"
     }
   ],
   "reviewHistory": {
-    "r90": {
+    "r91": {
       "date": "2026-03-05",
+      "judgePanel": "GPT-5.2 + Grok 4 + DeepSeek Speciale (3-model)",
+      "evalApproach": "Root cause analysis + best response learning + disagreement mining",
       "changes": [
-        "Crisis-05 fix: context-aware action_request (frustrated→host team, neutral→redirect)",
-        "Crisis-01 fix: turn-aware followup with turn 3+ variation (EN + ES)",
-        "Slop pattern: 'I appreciate you asking' mid-response strip (17 total)",
-        "Eval v2 --category: behavioral/profiling/host-triangle/all",
-        "Host Triangle framework: H1-H10 eval prompt + 30 scenarios",
-        "No-mock testing rule: CLAUDE.md Rule 8",
-        "Live eval: 46 scenarios, 142/142 turns, 100% response rate",
-        "Judge panel baselines: B:6.8, P:5.4, H:5.9"
+        "H10 host-authority neutral path — 'Let me help you get that set up'",
+        "H10 turn-aware repeat → handoff escalation",
+        "H6 loss/security ownership — 'I'll flag this for security'",
+        "P3 give-to-get follow-up pattern with 3 examples",
+        "H3 aspirational tier bridges + tier-curiosity signal",
+        "H3 aspirational few-shot examples (2 comp examples)",
+        "P8 extraction prompt: 7 indirect signal examples",
+        "3-model deep judge panel with root cause + disagreement mining"
+      ],
+      "rootCauses": [
+        "Template leak: same text for booking/host/upgrade/spa",
+        "Truncation: ~30% of turns cut mid-sentence",
+        "Perpetual upsell: Wolf Den after closed conversations",
+        "Persona-capability gap: implies authority it doesn't have",
+        "Inconsistent emotional IQ: crisis=excellent, loss=tone-deaf"
       ]
     },
     "trajectory": {
@@ -62,7 +79,10 @@
       "R90_behavioral": 6.8,
       "R90_profiling": 5.4,
       "R90_hostTriangle": 5.9,
-      "R90_safety": "100%"
+      "R91_behavioral": 7.0,
+      "R91_profiling": 5.1,
+      "R91_hostTriangle": 6.3,
+      "R91_safety": "100%"
     }
   },
   "codebaseMetrics": {
@@ -86,6 +106,6 @@
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-05",
-    "lastSessionId": "hey-seven-session-20260305-a11285"
+    "lastSessionId": "hey-seven-session-20260305-81b508"
   }
 }
