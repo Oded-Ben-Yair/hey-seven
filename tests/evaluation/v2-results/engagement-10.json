@@ -1,0 +1,66 @@
+{
+  "id": "engagement-10",
+  "name": "Guest corrects a factual error in response",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Handles correction without defensiveness. Acknowledges the guest might have more recent info, provides the best available answer, and suggests verifying with the venue if uncertain",
+  "expected_behavioral_quality": "When the guest pushes back on a factual claim, does not double down or get defensive. Acknowledges the correction, provides the best available information, and admits uncertainty if appropriate.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Is the steakhouse open for lunch?",
+      "agent_response": "Bobby Flay's Bar Americain is the standout choice for a steak lunch, opening today at 11:30 AM. You can enjoy his signature bold flavors and perfectly grilled meats in a space that feels like a bustling American brasserie. \n\nWhile Michael Jordan's Steak House is a premier dinner spot, it doesn't open until 5:00 PM, so Bar Americain provides that upscale experience during the day. The menu there is inspired by regional American cuisines, and the atmosphere is smart casual, which is perfect for a midday meal. After you finish your meal, the nearby shops in the Casino of the Earth offer a great way to walk off lunch\u2014how many people will be joining you today?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.684
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        }
+      ],
+      "elapsed_ms": 29684,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "That doesn't sound right, last time I was here they opened at noon",
+      "agent_response": "I understand how frustrating that can be, especially when you are coordinating your day around a specific meal. Our restaurant hours can fluctuate based on the day of the week or the season, so it is always a good idea to confirm the current schedule with the property upon your arrival.\n\nFor a substantial lunch right now, Hash House A Go Go in the Casino of the Earth is open until 2:00 PM. They are famous for \"twisted farm food\" and portions that are truly impressive\u2014their stuffed burgers are a great choice if you are looking for something hearty and satisfying. It is a high-energy, casual spot that puts you right near the retail shops for some post-lunch browsing. Are you looking for a sit-down meal for a group, or just a quick bite for yourself?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.628
+        }
+      ],
+      "elapsed_ms": 51161,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "OK just give me the most accurate info you have",
+      "agent_response": "I apologize for the confusion\u2014Bar Americain is no longer at Mohegan Sun. For a steak lunch today, MJ23 Sports Bar & Grill is your best choice, as it typically opens at 11:30 AM. They serve a quality Delmonico steak and several steak-centric entrees in a relaxed, sports-themed environment.\n\nWhile Michael Jordan\u2019s Steak House is a premier choice for dinner, they don't open until 5:00 PM on weekdays. MJ23 is located right in the Casino of the Earth and provides a great midday alternative. Please keep in mind that restaurant hours can vary by season or special events, so I suggest confirming the exact time at the host stand when you arrive. After you eat, the nearby shops are a great place to spend an hour\u2014are you looking for a quiet table or do you enjoy being near the energy of the casino floor?",
+      "sources": [],
+      "elapsed_ms": 51159,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 132005,
+  "error": null,
+  "completed": true
+}

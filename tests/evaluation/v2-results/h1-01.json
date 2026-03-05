@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hey, first time here at Mohegan Sun. What should we check out?",
-      "agent_response": "Welcome to Mohegan Sun \u2014 you're in great hands and there is plenty to explore at your own pace. For your first night, I'd suggest checking out the Wolf Den in the center of the Casino of the Earth; it's an intimate venue with free live music that really captures the electric energy of our property. If you would prefer to unwind after your travels, our heated indoor pool is open until 10:00 PM tonight and offers a peaceful way to relax. \n\nBefore the music starts, you might enjoy a meal at Todd English's Tuscany, which is right nearby and has a beautiful setting that transitions perfectly into an evening of entertainment. Are you looking for a high-energy night or more of a relaxing getaway?",
+      "agent_response": "Welcome to Mohegan Sun. Since it's your first visit, I'd suggest heading toward the Casino of the Sky to see the planetarium dome and the Wolf Den, which hosts free live music right in the center of the action.\n\nFor a memorable meal, Todd English's Tuscany is a standout choice because of the indoor waterfall and great atmosphere. Our retail shops are also open until 9:00 PM tonight if you want to explore the property. What brings you in today\u2014are you here for a specific event or just exploring the resort?",
       "sources": [
         {
           "category": "amenities",
@@ -29,13 +29,13 @@
           "score": 0.737
         }
       ],
-      "elapsed_ms": 69959,
+      "elapsed_ms": 37597,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "We're mostly into live music and good food",
-      "agent_response": "Since you love live music, the Wolf Den is the place to be tonight. It's an intimate venue right in the center of the action that hosts free nightly shows, usually starting at 8:00 PM, so you're just in time to catch the performance. For a dinner that matches the quality of the music, Todd English\u2019s Tuscany is a short walk away and offers a wood-fired menu that is perfect for a night out.\n\nIf you are looking for something on a larger scale during your stay, Mohegan Sun Arena hosts major headliners and has a reputation for being one of the best concert environments in the country. Are you in the mood for a specific genre of music tonight?",
+      "agent_response": "The Wolf Den is the heart of the music scene here, offering free nightly shows where you're right in the middle of the performance. Tonight's show kicks off at 8:00 PM, and it is a great way to experience the energy of the resort without needing a ticket. \n\nFor a meal that pairs with your entertainment, Comix Roadhouse serves a full dinner menu right inside the venue during their comedy and live music sets. If you are looking for a more high-energy vibe later in the evening, novelle is an upscale lounge that features DJ entertainment and craft cocktails. I can help you with more specific show times or even a recommendation for a relaxing spa treatment for tomorrow morning once you've settled in. Do you have a specific genre of music you usually prefer, or are you open to anything?",
       "sources": [
         {
           "category": "entertainment",
@@ -43,13 +43,13 @@
           "score": 0.662
         }
       ],
-      "elapsed_ms": 27380,
+      "elapsed_ms": 31826,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "That sounds great, we'll definitely check those out",
-      "agent_response": "You're going to have a great time at the Wolf Den \u2014 it's the heart of the Casino of the Earth and the acoustics are fantastic for a live show. Just a tip for your first visit: seating at the Den is first-come, first-served, so heading over a little early is usually a good idea to grab a spot near the stage.\n\nIf you find yourselves looking for a late-night bite after the music wraps up, Johnny Rockets is nearby in the same casino and stays open until 11:00 PM tonight. How many people are in your party for dinner?",
+      "agent_response": "The Wolf Den has an electric energy where you're right there with the performer\u2014it's an experience you shouldn't miss on your first trip. Since it is Thursday, novelle also opens this evening for craft cocktails and a sophisticated lounge atmosphere if you want to keep the night going after the live music. \n\nTo balance out the high energy, our Elemis Spa is the perfect reset for tomorrow morning; their hot stone massage is legendary for guests who have been out on the floor. I can connect you with our host team to help finalize any table plans at novelle or a spa session for tomorrow. Since you enjoy good food, are you looking for a casual spot or something more upscale for your dinner before the music starts?",
       "sources": [
         {
           "category": "entertainment",
@@ -67,11 +67,11 @@
           "score": 0.642
         }
       ],
-      "elapsed_ms": 44423,
+      "elapsed_ms": 33373,
       "error": null
     }
   ],
-  "elapsed_ms": 141763,
+  "elapsed_ms": 102796,
   "error": null,
   "completed": true
 }

@@ -1,0 +1,44 @@
+{
+  "id": "multilingual-03",
+  "name": "Mixed English/Spanish input",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "Detects Spanish elements in the mixed input. Responds in Spanish about hotel information. Does not switch between languages mid-response.",
+  "expected_behavioral_quality": "Detects mixed-language input. When Spanish is present, responds in Spanish to accommodate the guest's likely primary language. Does not respond in a confusing mix of both languages.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hi, puedo preguntar sobre el hotel?",
+      "agent_response": "Por supuesto, con gusto te ayudo. Mohegan Sun cuenta con dos torres principales, Sky Tower y Earth Tower, que suman unas 1,600 habitaciones de lujo con servicio a la habitaci\u00f3n las 24 horas y Wi-Fi de cortes\u00eda. \n\nLa Sky Tower suele ser la preferida por su ambiente sofisticado y vistas panor\u00e1micas. Muchos hu\u00e9spedes disfrutan de un tratamiento en el Mandara Spa despu\u00e9s de registrarse para comenzar su estad\u00eda relajados. \u00bfTienes alguna fecha en mente para tu visita o buscas alg\u00fan tipo de habitaci\u00f3n en particular?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.657
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 28846,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 32875,
+  "error": null,
+  "completed": true
+}

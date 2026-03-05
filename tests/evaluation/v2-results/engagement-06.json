@@ -1,0 +1,72 @@
+{
+  "id": "engagement-06",
+  "name": "Clarification repair after misunderstood question",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Recovers from initial misunderstanding by narrowing the scope. When corrected, does not repeat the same broad answer but focuses specifically on what the guest clarified they want",
+  "expected_behavioral_quality": "When the guest says the answer wasn't what they meant, immediately asks a clarifying question rather than guessing again. Acknowledges the misunderstanding without being defensive. Uses a narrowing question to zero in on intent.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What's happening tonight?",
+      "agent_response": "Tonight is a perfect time to explore our more intimate venues. novelle is open for the evening, featuring craft cocktails and DJ entertainment in a sophisticated atmosphere that's great for social gatherings. \n\nIf you're looking for a laugh, Comix Roadhouse also begins its weekend run of comedy shows tonight and offers a full dinner menu during the performance. Before the nightlife starts, many guests enjoy a late afternoon treatment at the Elemis Spa to recharge for the night ahead. Would you prefer a high-energy lounge vibe or a night of stand-up comedy!",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.671
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        }
+      ],
+      "elapsed_ms": 26972,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "No I meant like events, shows, that kind of thing",
+      "agent_response": "The Wolf Den is the center of the action tonight, with a live performance scheduled for this evening\u2014these shows are always free and offer a really intimate energy where you're right there with the band. Since it's Thursday, novelle is also open for their lounge nights, featuring a DJ and a more sophisticated, upscale vibe if you want to grab a cocktail.\n\nFor a larger scale experience, the Mohegan Sun Arena frequently hosts major headliners, though the specific lineup varies by the week. If you're heading to the Wolf Den, I'd recommend stopping by Todd English's Tuscany nearby for a wood-fired dinner before the music starts. Are you looking for a specific genre of music, or are you just looking for the best spot to grab a drink and enjoy the atmosphere?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.659
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        }
+      ],
+      "elapsed_ms": 35052,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Yes, what shows are on tonight?",
+      "agent_response": "Tonight at 8:00 PM, the Wolf Den is hosting a live performance that's free for all guests. It is one of my favorite spots because the intimate, 350-seat setting puts you right in the heart of the music, and the energy there is always electric.\n\nIf you are looking for something more upscale, novelle is also open tonight with DJ entertainment and a fantastic craft cocktail program. Since the Wolf Den is right in the Casino of the Earth, it is a short walk from Todd English\u2019s Tuscany if you want to grab a wood-fired dinner before the show starts. Are you leaning toward a live band performance or more of a sophisticated lounge vibe with a DJ tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.677
+        }
+      ],
+      "elapsed_ms": 38535,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 100561,
+  "error": null,
+  "completed": true
+}

@@ -1,0 +1,87 @@
+{
+  "id": "implicit-02",
+  "name": "Long-term loyalty member expecting recognition",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Treats 20-year membership as a VIP signal. Acknowledges their loyalty history warmly, highlights new offerings as updates for a returning guest, and references loyalty program benefits",
+  "expected_behavioral_quality": "Recognizes '20 years' as a deep loyalty signal requiring elevated treatment. Acknowledges the loyalty explicitly and with genuine warmth. Does not respond generically or treat them like a new guest. References their loyalty status even without CRM data.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm a Momentum member, 20 years now",
+      "agent_response": "Momentum members with a twenty-year history often reach our highest tiers, such as Ascend or Soar, which provide benefits like priority restaurant seating, complimentary valet, and dedicated host service. That is an impressive milestone! \n\nTo better assist you with the specific benefits available to you, may I have your name? While I cannot access your full account balance or private details, knowing your history helps me identify which dining credits or room upgrades you might typically be eligible for before you confirm them at the Momentum Desk. After we discuss your tier, I can also check the concert schedule at the Mohegan Sun Arena for you. Are you planning on staying at the hotel during this visit?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.674
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.679
+        }
+      ],
+      "elapsed_ms": 40443,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What's new since my last visit?",
+      "agent_response": "Depending on how long it's been since your last visit, the biggest addition is the Earth Tower. It offers a more contemporary guest room design and its own Elemis Spa, which is a great spot for a quieter experience compared to the main Mandara Spa. \n\nWe also opened novelle, an upscale lounge and nightlife venue that features craft cocktails and a sophisticated atmosphere for those who want to transition from dinner to a more energetic setting without leaving the property. If you prefer a different gaming environment, the Casino of the Wind provides a more modern, high-energy feel than our original floors. I'd suggest downloading the Mohegan Sun app to see your current Momentum point balance and any personalized offers that might be waiting for you. Do you usually prefer staying in the Sky Tower, or are you interested in trying out the new Earth Tower rooms for this trip?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 25708,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Do I get any perks for being a long-time member?",
+      "agent_response": "Perks in the Momentum program are based on your current tier level, which is determined by the Tier Credits you earn through play and spending. While tenure itself is not a specific tier, long-term members often maintain higher status like Ascend (25,000 Tier Credits) or Soar (invitation only).\n\nBased on available information, higher tiers include benefits such as:\n- **Ascend:** Complimentary valet, room upgrades, and a dedicated host.\n- **Soar:** Personalized VIP treatment and exclusive access to events.\n- **Momentum Points:** You earn these on slots, tables, and dining, which are redeemable for free play, hotel stays, and retail.\n\nYou may be eligible for specific anniversary offers or personalized promotions based on your play history. To confirm your exact status and see which rewards are currently available to you, I'd suggest visiting a Momentum Desk or checking the Mohegan Sun app. Many members with your history qualify for priority seating at restaurants like Tuscany or Bobby Flay's Steakhouse. Would you like me to provide the current hours for any of our dining venues?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.675
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 40946,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 107098,
+  "error": null,
+  "completed": true
+}

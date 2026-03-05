@@ -1,0 +1,55 @@
+{
+  "id": "agentic-07",
+  "name": "Group size awareness in recommendations",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Factors group size into every recommendation. Leads with group-friendly options. When asked about a specific venue, addresses capacity and reservation logistics proactively",
+  "expected_behavioral_quality": "When a group size is mentioned, proactively adjusts recommendations for group suitability. Suggests venues that can accommodate the group. Does not recommend intimate 2-person experiences for a party of 12.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We have 12 people. Where should we eat?",
+      "agent_response": "Hash House A Go Go in the Casino of the Earth is the perfect spot for a party of 12 right now, specifically for their legendary \"twisted farm food\" served in portions that have to be seen to be believed. The aroma of griddled bacon and fresh coffee hits you the moment you walk in, and their Sage Fried Chicken and Waffles is a total showstopper that arrives stacked high with a steak knife right through the center. It is a high-energy, casual environment that handles large groups exceptionally well, and they are open daily from 8:00 AM until 2:00 PM. \n\nPrices are generally mid-range, though please keep in mind that hours and prices may vary and are best confirmed upon arrival. Let me help you with that by connecting you with our host team to finalize a booking so your group can be seated comfortably! After such a hearty meal, you might enjoy heading over to the Wolf Den in the center of the Earth casino, which features free live music and a great atmosphere. Are you looking for a massive brunch experience like this, or were you thinking of a more formal steakhouse dinner for later this evening?",
+      "sources": [],
+      "elapsed_ms": 53169,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Can the steakhouse handle 12?",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is perfectly suited for a party of 12, offering an elegant atmosphere where the scent of seared USDA Prime steaks and rich garlic bread fills the air. For a group your size, they can arrange a sophisticated table setting, though reservations are highly recommended to ensure everyone is accommodated comfortably. \n\nThey open this evening at 5:00 PM and feature a menu of world-class cuts and fresh seafood with a price range of $$$$. The dress code is business casual, so it's a wonderful excuse for your group to dress up a bit for the night. Let me help you with that by connecting you with our host team to finalize the booking for your 12 guests. After a decadent dinner, you might enjoy heading over to Comix Roadhouse to catch a comedy show. Would you like me to check the performance schedule for tonight to see if it fits your dinner plans?",
+      "sources": [],
+      "elapsed_ms": 70368,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And something fun for the whole group after?",
+      "agent_response": "For a party of 12, novelle is a fantastic destination to keep the energy going after your meal. It is an upscale ultra-lounge located in the Casino of the Sky that features a DJ, craft cocktails, and a sophisticated atmosphere perfect for a large group to gather and dance. Let me help you with that by connecting you with our host team to ensure your party is accommodated for the evening. \n\nIf your group prefers live music, the Wolf Den has this intimate energy where you're right there with the performer \u2014 it's electric! After a high-energy night, the Elemis Spa is the perfect reset for the next morning with their legendary hot stone massages. Would you like me to check the performance schedule for the Wolf Den tonight to see if it matches your group's taste?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        }
+      ],
+      "elapsed_ms": 51057,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 174596,
+  "error": null,
+  "completed": true
+}

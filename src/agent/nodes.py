@@ -1022,6 +1022,16 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
             "all good",
             "i'm done",
             "that'll do",
+            # R95: Gratitude signals that close the conversation.
+            "you've been really helpful",
+            "you've been great",
+            "you've been so helpful",
+            "thanks so much",
+            "thank you so much",
+            "perfect thanks",
+            "perfect thank you",
+            "great thanks",
+            "great thank you",
         )
         _user_lower = (user_msg or "").lower()
         if any(signal in _user_lower for signal in _CLOSE_SIGNALS):
@@ -1084,8 +1094,9 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
         explored = set(domains_discussed) if domains_discussed else set()
         unexplored = sorted(_ALL_DOMAINS - explored)
         if domains_discussed and unexplored:
+            suggested_domain = unexplored[0]
             suggestion_text = _DOMAIN_SUGGESTIONS.get(
-                unexplored[0], f"ask me about {unexplored[0]}"
+                suggested_domain, f"ask me about {suggested_domain}"
             )
             return {
                 "messages": [
@@ -1097,6 +1108,9 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
                 ],
                 "sources_used": [],
                 "retrieved_context": [],
+                # R95: Mark the suggested domain as discussed so we don't
+                # repeat the same suggestion on the next acknowledgment.
+                "domains_discussed": [suggested_domain],
             }
         if domains_discussed:
             return {

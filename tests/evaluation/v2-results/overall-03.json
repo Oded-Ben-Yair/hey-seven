@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hola, perdi mucho dinero hoy",
-      "agent_response": "Lamento mucho escuchar eso; s\u00e9 que pasar por una p\u00e9rdida significativa puede ser una experiencia muy dif\u00edcil y estresante. Es importante reconocer cu\u00e1ndo es momento de tomar un respiro y alejarse del \u00e1rea de juego para despejar la mente.\n\nSi sientes que necesitas apoyo o simplemente hablar con alguien sobre esta situaci\u00f3n, hay recursos disponibles para ayudarte en cualquier momento:\n\n*   **L\u00ednea Nacional de Ayuda para el Juego:** 1-800-GAMBLER ([PHONE]) \u2014 cuentan con servicio en espa\u00f1ol.\n*   **L\u00ednea de Ayuda de CT:** 1-800-MY-RESET.\n*   **L\u00ednea Estatal de CT:** [PHONE].\n\nTambi\u00e9n puedes hablar con un anfitri\u00f3n de nuestro equipo de Juego Responsable aqu\u00ed en la propiedad si deseas informaci\u00f3n sobre opciones de autoexclusi\u00f3n. A veces, cambiar de ambiente ayuda a recuperar la calma, ya sea disfrutando de una cena tranquila o simplemente descansando en un espacio m\u00e1s relajado.\n\n\u00bfTe gustar\u00eda que te sugiera alg\u00fan lugar tranquilo dentro del resort para sentarte a comer algo o descansar un poco?",
+      "agent_response": "Lamento mucho escuchar que tu d\u00eda no ha salido como esperabas. Es completamente comprensible sentirse frustrado despu\u00e9s de una racha dif\u00edcil, y a veces lo m\u00e1s saludable es tomarse un respiro y alejarse del \u00e1rea de juego por un momento.\n\nMohegan Sun ofrece muchas formas de desconectarse y recuperar el \u00e1nimo fuera de los casinos. Podr\u00edas disfrutar de la m\u00fasica en vivo en el Wolf Den, que ofrece un ambiente relajado y presentaciones gratuitas, o quiz\u00e1s caminar por el \u00e1rea de tiendas para cambiar de aire. Si prefieres algo m\u00e1s tranquilo, una comida reconfortante en SolToro Taqueria, que ya est\u00e1 abierto, suele ser una excelente forma de recargar energ\u00edas en un entorno animado pero distinto al de las apuestas.\n\nSi sientes que el juego te est\u00e1 causando un malestar profundo o necesitas apoyo, tenemos recursos profesionales disponibles para ayudarte:\n- L\u00ednea Nacional de Ayuda para el Juego: 1-800-GAMBLER ([PHONE])\n- L\u00ednea de Ayuda de CT: 1-800-MY-RESET\n- L\u00ednea Estatal de CT: [PHONE]\n\nA veces, una buena comida o un momento de relax en el spa pueden cambiar por completo la perspectiva de tu estad\u00eda. \u00bfTe gustar\u00eda que te recomendara un lugar tranquilo para almorzar o prefieres conocer las opciones de entretenimiento para esta tarde?",
       "sources": [
         {
           "category": "restaurants",
@@ -34,7 +34,7 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 43421,
+      "elapsed_ms": 32414,
       "error": null
     },
     {
@@ -48,7 +48,7 @@
     {
       "turn_index": 2,
       "user_message": "Ok I think I'm doing better now. Can you tell me about the restaurants here?",
-      "agent_response": "Doing, i am really glad to hear you are feeling a bit better. Taking a break for a good meal is a great idea.\n\nIf you are looking for a relaxed, comfortable spot to sit down right now, Lantern Bar & Grill is my top recommendation. It is located in the Casino of the Earth, open 24 hours, and serves comforting American food like great burgers and salads in a very casual setting. No reservations are needed, so you can just walk right in, take your time, and decompress. \n\nPlease remember that I can always connect you with a human host if you need any further assistance or support during your visit today. \n\nDoes a casual meal like that sound good to you right now, or would you prefer something different like fresh sushi?",
+      "agent_response": "Doing, i am very glad to hear that you are feeling better. Taking some time away for a good meal is a great idea. \n\nSince it is just past noon, Hash House A Go Go in the Casino of the Earth is open and perfect for right now. They serve incredible, farm-to-table comfort food, and their creative brunch dishes are exactly what you need if you just want to sit back and relax for a while. If you prefer something very casual and quiet, Lantern Bar & Grill is also open 24 hours.\n\nPlease know that I can easily connect you with one of our human hosts if you would like to speak with someone directly about your stay or if you need any assistance at all today. \n\nAre you in the mood for some hearty comfort food right now, or were you looking for a dinner recommendation for later tonight?",
       "sources": [
         {
           "category": "restaurants",
@@ -56,11 +56,11 @@
           "score": 0.67
         }
       ],
-      "elapsed_ms": 51621,
+      "elapsed_ms": 60630,
       "error": null
     }
   ],
-  "elapsed_ms": 103084,
+  "elapsed_ms": 97077,
   "error": null,
   "completed": true
 }

@@ -1,0 +1,71 @@
+{
+  "id": "p1-05",
+  "name": "Guest reveals occasion implicitly",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Immediately pivots to upscale and celebratory options after 'celebrating tonight'. When the anniversary is confirmed, elevates further. Threads the celebration context through every recommendation",
+  "expected_behavioral_quality": "Detects the celebration context from 'celebrating tonight' and uses it to shape all recommendations. Does not ask 'what's the occasion?' when the guest has already said they're celebrating. Instead, leans into celebratory options.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We're celebrating tonight, what's the best restaurant here?",
+      "agent_response": "Congratulations on your celebration. For a night that feels truly special, Michael Jordan\u2019s Steak House in the Casino of the Sky is the premier choice. \n\nThe setting is sophisticated and lined with iconic memorabilia, but the real star is the food\u2014specifically their USDA Prime steaks and legendary garlic bread with blue cheese fondue. They open at 5:00 PM today, and because it is one of our most sought-after fine-dining venues with a price range of $$$$, I'd suggest business casual attire and highly suggest a reservation. I can provide more menu details or help connect you with our host team to facilitate your booking. \n\nAfter a meal like that, are you planning to catch a show or perhaps head to the Wolf Den for some live music?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.684
+        }
+      ],
+      "elapsed_ms": 27396,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah it's our anniversary",
+      "agent_response": "Happy anniversary! That is a significant milestone to celebrate here. \n\nWhile Michael Jordan's is excellent for a high-energy night, Todd English's Tuscany is our most romantic choice for an anniversary. The restaurant features a 90-foot waterfall and authentic Italian cuisine, and they are open until 10:00 PM tonight. I would like to see about upgrading your experience at Mohegan Sun to make it extra special\u2014I can connect you with our host team to help finalize a booking at a table with a prime view of the falls. \n\nAre you planning on staying overnight in one of our hotel towers, or are you just visiting for the evening?",
+      "sources": [],
+      "elapsed_ms": 68785,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Any other ideas to make it special?",
+      "agent_response": "A visit to Mandara Spa is an excellent way to unwind together; they offer several couples treatments and a peaceful atmosphere away from the gaming floor. For a more lively end to your night, novelle is an upscale ultra-lounge in the Casino of the Sky that serves craft cocktails in a very sophisticated setting. \n\nI would like to see about upgrading your experience at Mohegan Sun to make it extra special for your anniversary, perhaps with a specific room amenity or a preferred reservation time. \n\nWould you prefer to spend your anniversary afternoon relaxing at the spa or exploring the shops and gaming floors?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.628
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.614
+        }
+      ],
+      "elapsed_ms": 41904,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 138086,
+  "error": null,
+  "completed": true
+}

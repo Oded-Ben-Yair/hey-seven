@@ -11,21 +11,15 @@
     {
       "turn_index": 0,
       "user_message": "Hi, I'm Sarah. What restaurants do you have?",
-      "agent_response": "Welcome to Mohegan Sun, Sarah. For tonight, SolToro Taqueria & Tequila Bar in the Casino of the Earth is a standout choice for authentic Mexican cuisine in a high-energy setting. \n\nThe air is often filled with the scent of fresh-pressed tortillas, and their extensive tequila and mezcal list is quite impressive for anyone looking to sample something new. They are open until 10:00 PM this evening with a casual dress code, and you generally won't need a reservation to get a table.\n\nAfter you finish your meal, you might enjoy walking over to the Wolf Den nearby, which features free live music every night and has a great atmosphere.\n\nAre you looking for a full sit-down dinner or something a bit quicker?",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.655
-        }
-      ],
-      "elapsed_ms": 48694,
+      "agent_response": "It's a pleasure to meet you, Sarah. We have a collection of spots that range from 24-hour diners to upscale Italian, but for this time of day, Hash House A Go Go in the Casino of the Earth is a must-visit for its famous \"twisted farm food.\" \n\nThe aroma of griddled bacon and fresh sage hits you before you even see the plates, and their portions are truly massive\u2014the sage fried chicken and waffles is a guest favorite that usually requires a serious appetite. They are open until 2:00 PM today, so it is the perfect window to experience their unique take on comfort food in a casual setting. If you are looking for something later in the day, Ballo Italian Restaurant opens at 5:00 PM and offers a beautiful, modern atmosphere with incredible housemade pastas.\n\nAfter a meal that satisfying, a stroll toward the Wolf Den for some free live music is a great way to keep the energy going. Are you in the mood for a big, hearty meal like that, or were you looking for something lighter for lunch?",
+      "sources": [],
+      "elapsed_ms": 45316,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What about the spa?",
-      "agent_response": "Sarah, Since it is 6:34 PM, you still have a little time this evening, though both of our spas will be closing within the next hour or so.\n\nMandara Spa is open until 8:00 PM and is a full-service sanctuary inspired by Balinese healing traditions. It is a fantastic place to find some peace in their relaxation lounge or steam room. For a more modern feel, Elemis Spa in the Earth Tower is open until 7:00 PM, and their hot stone massage is legendary for melting away stress. If you are a hotel guest and just want a warm soak tonight, the heated indoor pool and hot tub are available until 10:00 PM.\n\nI can certainly give you more details on their signature treatments if you are planning a visit for tomorrow morning. Do you usually prefer a deep tissue massage or more of a rejuvenating facial?",
+      "agent_response": "We have two distinct spas depending on the atmosphere you prefer. Mandara Spa is an award-winning retreat inspired by Balinese healing traditions; it features a tranquil relaxation lounge, steam room, and sauna that stay open until 8:00 PM.\n\nIf you're looking for something more modern, the Elemis Spa in the Earth Tower focuses on premium skincare and couples' experiences until 7:00 PM. After a day on the floor, a treatment there is the perfect reset. I can help you decide between a signature body wrap at Mandara or an express service at Elemis, and then I can connect you with our host team to finalize the booking.\n\nOnce you're feeling refreshed, the Wolf Den has an intimate energy where you're right there with the performer\u2014it's electric! Are you looking for a full day of pampering, or just a quick express treatment to get back to the action?",
       "sources": [
         {
           "category": "amenities",
@@ -48,13 +42,13 @@
           "score": 0.645
         }
       ],
-      "elapsed_ms": 33069,
+      "elapsed_ms": 35508,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Can you recommend something fun tonight?",
-      "agent_response": "Sarah, you should definitely head over to the Wolf Den tonight. It has this electric, intimate energy where you're right there with the performers, and since the shows are complimentary, it's the perfect way to spend a Wednesday evening. \n\nThe performance typically starts around 8:00 PM, and since seating is first-come, first-served, it's a good idea to head that way soon to find a spot. For a Wednesday, it\u2019s a great chance to catch a national touring act or a high-energy tribute band without needing a ticket.\n\nIf you find yourself hungry after the show, the Lantern Bar & Grill is open 24 hours for a late-night burger or snack. Are you coming with a group or is it just you tonight?",
+      "agent_response": "Sarah, for tonight, I'd suggest checking out Comix Roadhouse since their comedy shows run every Thursday through Sunday. It is a great venue for catching nationally touring comedians, and they have a full menu if you want to enjoy dinner during the set. \n\nIf you would prefer a more sophisticated atmosphere, novelle is open tonight as well; it is an ultra-lounge with craft cocktails and a DJ that sets a smooth mood for the evening. You might also enjoy the Wolf Den, which has a free live performance at 8:00 PM and offers a very intimate connection with the artists.\n\nBefore the show starts, you could stop by Ballo Italian Restaurant for some housemade pasta to fuel up for the night\u2014it is the perfect pre-show meal! While schedules and prices may change, I can help you with more details on any of these venues if you need them. Would you prefer a night centered around live music or are you looking for some laughs at the comedy club?",
       "sources": [
         {
           "category": "entertainment",
@@ -62,11 +56,11 @@
           "score": 0.687
         }
       ],
-      "elapsed_ms": 26952,
+      "elapsed_ms": 37031,
       "error": null
     }
   ],
-  "elapsed_ms": 108716,
+  "elapsed_ms": 121887,
   "error": null,
   "completed": true
 }

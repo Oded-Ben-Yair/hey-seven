@@ -1,0 +1,82 @@
+{
+  "id": "h1-02",
+  "name": "Guest comparing Mohegan Sun to competitor",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H1_proactive_value_discovery",
+  "expected_behavior": "Highlights Mohegan Sun's dining portfolio as a competitive advantage without badmouthing Foxwoods. Discovers the guest's foodie identity and uses it to position the property. Creates a switching reason tied to the guest's stated values",
+  "expected_behavioral_quality": "When a guest compares to a competitor (Foxwoods, MGM), the agent highlights Mohegan Sun's unique differentiators without disparaging the competitor. Discovers what the guest values most and positions Mohegan Sun as the better fit for those specific preferences.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We usually go to Foxwoods. What's different about Mohegan Sun?",
+      "agent_response": "I specialize in Mohegan Sun\u2014let me help you find exactly what you\u2019re looking for here. Many guests find our layout particularly immersive, as the design across our three casinos\u2014Earth, Sky, and Wind\u2014reflects the Mohegan Tribe\u2019s cultural heritage and natural elements. \n\nOne of our most unique features is the Wolf Den, a centerpiece venue that offers free live music in an intimate setting right in the middle of the Casino of the Sky. Beyond that, we have over 364,000 square feet of gaming space and more than 40 dining options ranging from quick bites to fine dining. \n\nIf you're looking for a standout meal to start your visit, Todd English's Tuscany is a guest favorite for its atmosphere and terrace views of our indoor waterfall. What brings you in for this trip\u2014are you here for a specific show, or just looking to explore the gaming floors?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.769
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.729
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.741
+        }
+      ],
+      "elapsed_ms": 28849,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We're big foodies and love trying new spots",
+      "agent_response": "For a true foodie experience, Sushi Palace in the Casino of the Sky is a standout choice where the craft of the sushi chefs is the main attraction. The experience of ordering omakase and watching the chefs meticulously prepare each piece of sashimi provides a level of artistry that our guests really appreciate. \n\nThey are open now until 10:00 PM with a price range of around $$$, and I highly suggest exploring their extensive sake menu to find a perfect pairing. Reservations are generally recommended for parties of six or more, but smaller groups can often be seated as walk-ins. If you find yourself in the mood for something more casual later, SolToro in the Casino of the Earth serves incredible ceviches and has a massive tequila selection. \n\nDo you usually prefer a traditional omakase style, or are you more into creative specialty rolls?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        }
+      ],
+      "elapsed_ms": 29390,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Those sound amazing. Maybe we'll make the switch",
+      "agent_response": "If you decide to make the move, our Momentum rewards program is the best way to get the most out of your visits. It is free to sign up at any Momentum Desk, and you will immediately start earning Momentum Dollars that can be used just like cash at our restaurants and shops. \n\nFor foodies, the higher tiers even offer priority seating and exclusive dining events that aren't open to the general public. Since you're exploring new spots, you might also enjoy the atmosphere at Novelle, which is our upscale lounge that pairs craft cocktails with a sophisticated nightlife vibe. Are you fans of big stadium concerts, or do you prefer the smaller, intimate shows at the Wolf Den?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.632
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        }
+      ],
+      "elapsed_ms": 43589,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 101829,
+  "error": null,
+  "completed": true
+}

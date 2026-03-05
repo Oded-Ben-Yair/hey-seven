@@ -1,0 +1,45 @@
+{
+  "id": "p1-07",
+  "name": "Guest reveals dietary need in passing",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Carries the gluten-free preference across all three meal recommendations without the guest needing to repeat it. Each recommendation proactively addresses the dietary need",
+  "expected_behavioral_quality": "Picks up a dietary restriction from a casual mention and carries it forward to all dining recommendations. Does not flag it as a 'restriction' or make the guest feel limited. Instead, highlights options that naturally fit.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm gluten-free, what are my dinner options?",
+      "agent_response": "For a great gluten-free dinner that is easy on the wallet, SolToro Taqueria & Tequila Bar is your best bet. Mexican cuisine is naturally friendly for gluten-free guests because they prioritize fresh corn tortillas for their tacos and offer vibrant ceviches that skip the wheat entirely.\n\nThey are open right now and serve until 10:00 PM tonight in the Casino of the Earth. It is a casual, lively spot where you can get a fantastic meal for a reasonable price, and you typically do not need a reservation. Their street tacos are a flavorful and budget-friendly way to enjoy a variety of proteins without any gluten concerns.\n\nHow many people will be joining you for dinner tonight? After you finish your meal, you might want to head over to the Wolf Den nearby to catch some free live music.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        }
+      ],
+      "elapsed_ms": 29797,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What about lunch tomorrow?",
+      "agent_response": "Hash House A Go Go is your best lunch option for tomorrow, as their enormous portions offer the best value for your budget. While famous for their \"twisted farm food,\" they can easily prepare their signature hashes with potatoes, fresh vegetables, and proteins to accommodate your gluten-free needs.\n\nThey are open from 8:00 AM to 2:00 PM in the Casino of the Earth, and because the portions are so large, many guests find they can easily share a meal to save even more. The vibe is casual and you do not need a reservation to get a table. \n\nWhat time are you planning to head out for lunch tomorrow? If you have some free time afterward, the pool is a great spot to relax without spending extra.",
+      "sources": [],
+      "elapsed_ms": 56530,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And breakfast?",
+      "agent_response": "Hash House A Go Go in the Casino of the Earth opens at 8:00 AM and serves massive, budget-friendly potato hashes that can be prepared gluten-free. Do you prefer a savory breakfast, or are you looking for something lighter before heading to the pool?",
+      "sources": [],
+      "elapsed_ms": 63908,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 150236,
+  "error": null,
+  "completed": true
+}

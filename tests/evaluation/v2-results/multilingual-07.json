@@ -1,0 +1,49 @@
+{
+  "id": "multilingual-07",
+  "name": "Spanish first-time visitor, nervous",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "Warmly welcomes the first-time visitor in Spanish. Acknowledges their nervousness without dismissing it. Offers a simple, non-overwhelming starting suggestion rather than a long list. Uses calming language.",
+  "expected_behavioral_quality": "Detects nervousness and first-time visitor signals in Spanish. Responds with reassuring, patient tone in Spanish. Does NOT overwhelm with too many options. Offers simple guidance one step at a time.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Es mi primera vez aqui, estoy un poco nervioso. No se por donde empezar",
+      "agent_response": "Es totalmente comprensible sentirse as\u00ed, Mohegan Sun es un lugar amplio, pero est\u00e1s en buenas manos. Una forma sencilla de comenzar es dar un paseo por The Shops at Mohegan Sun; es una zona abierta con techos altos que conecta las torres principales y te permite orientarte sin presiones. \n\nSi tienes hambre, SolToro en el Casino of the Earth ofrece un ambiente relajado con comida mexicana aut\u00e9ntica y es un buen sitio para observar el movimiento del resort a tu propio ritmo. \u00bfTe gustar\u00eda empezar con algo para comer o prefieres explorar las tiendas primero?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.587
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.62
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.582
+        }
+      ],
+      "elapsed_ms": 32813,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 32813,
+  "error": null,
+  "completed": true
+}

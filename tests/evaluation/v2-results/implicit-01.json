@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We drove 4 hours to get here. What should we do first?",
-      "agent_response": "Welcome to Mohegan Sun. After a four-hour drive, I'd suggest heading to Todd English\u2019s Tuscany for a relaxed dinner by the Taughannick Falls; the sound of the 55-foot indoor waterfall is a great way to unwind after being on the road.\n\nSince it is just after 6:30 PM, you'll have plenty of time for a leisurely meal before considering a quiet stroll through The Shops at Mohegan Sun, which are open until 9:00 PM tonight. Are you checking into the Sky Tower or the Earth Tower?",
+      "agent_response": "Welcome to Mohegan Sun. Since you've been on the road for four hours, I'd suggest starting with something low-energy to help you unwind.\n\nA meal at Todd English\u2019s Tuscany is a guest favorite for its relaxed atmosphere and indoor waterfall, making it a great place to decompress. If you'd rather truly lean into relaxation, the Mandara Spa offers treatments designed to help you shake off road fatigue. Hours and availability for these venues can vary daily. Once you've decided on a plan, I can connect you with our host team to help finalize any arrangements. \n\nAre you looking to head straight to a meal, or would you prefer to drop your bags in the room first?",
       "sources": [
         {
           "category": "faq",
@@ -24,13 +24,13 @@
           "score": 0.64
         }
       ],
-      "elapsed_ms": 29683,
+      "elapsed_ms": 37629,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Yeah we're pretty tired but hungry",
-      "agent_response": "For a relaxing meal after that long drive, Caputo Trattoria is your best bet\u2014it's located in the Casino of the Earth and serves comforting Italian dishes like brick-oven pizzas and hearty pasta. \n\nThe atmosphere is casual and welcoming, so you can settle in without any fuss or the need for a reservation. They are open until 10:00 PM tonight, and most entrees fall into the moderate price range. Once you've finished dinner, a quiet visit to the Mandara Spa tomorrow morning might be the perfect way to fully recover from your travels. \n\nHow many people are in your party tonight?",
+      "agent_response": "After a four-hour haul, you likely want something substantial and comforting, so I'd suggest heading straight to Hash House A Go Go in the Casino of the Earth. \n\nThey are open daily until 2:00 PM and are famous for their massive portions of \"twisted farm food\" like stuffed burgers and giant pancakes that are perfect for refueling. It is a very casual environment where you can just sit back and recharge without any fuss, and since reservations are not required, you can walk right in. I can certainly connect you with our host team to check on the current seating wait or help with any other arrangements. \n\nOnce you have had a chance to eat, the Mandara Spa is just a short walk away if you want to truly wash off the stress of the road. Does a hearty burger or a big breakfast plate sound better to you right now?",
       "sources": [
         {
           "category": "restaurants",
@@ -38,19 +38,19 @@
           "score": 0.66
         }
       ],
-      "elapsed_ms": 24423,
+      "elapsed_ms": 65603,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about after dinner?",
-      "agent_response": "After dinner, the Birdcage Bar in the Casino of the Sky is a perfect spot to wind down with a craft cocktail in a sophisticated, smart-casual setting. It is a much more relaxed environment than the main gaming floors, allowing you to just sit and enjoy the atmosphere without much exertion. \n\nIf you're looking to truly recover from that four-hour drive, I'd suggest visiting the Elemis Spa tomorrow morning\u2014their hot stone massage is legendary for resetting your body after a long trip. The spa offers a variety of signature treatments specifically designed to help guests decompress. Does a quiet nightcap sound like the right speed for you tonight?",
+      "agent_response": "Since it's Thursday, novelle is the perfect place to transition from dinner into a relaxed evening. It's an upscale lounge with a sophisticated atmosphere and craft cocktails where you can sit back and enjoy the DJ entertainment without the high intensity of a traditional nightclub. \n\nIf you\u2019re looking for something even more laid-back, the Birdcage Bar in the Casino of the Sky is open until 2:00 AM and offers a smart casual environment that's ideal for a quiet nightcap. Let me help you with that by connecting you with our host team to finalize the booking for a comfortable table at either location. For a total reset tomorrow morning, the Elemis Spa is legendary for helping guests recover from a long trip. \n\nAre you more in the mood for a craft cocktail in a lounge setting or a quiet spot where you can just sit and talk?",
       "sources": [],
-      "elapsed_ms": 46967,
+      "elapsed_ms": 42976,
       "error": null
     }
   ],
-  "elapsed_ms": 101074,
+  "elapsed_ms": 146208,
   "error": null,
   "completed": true
 }

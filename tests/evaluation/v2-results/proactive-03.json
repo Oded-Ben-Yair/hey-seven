@@ -1,0 +1,92 @@
+{
+  "id": "proactive-03",
+  "name": "Guest mentions checkout \u2014 agent proactively suggests late checkout",
+  "source_file": "behavioral_proactive.yaml",
+  "category": "behavioral_proactive",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Reads the checkout constraint and provides morning-only recommendations. Suggests activities that fit within the time window. Proactively mentions late checkout availability through the front desk",
+  "expected_behavioral_quality": "When a guest mentions tomorrow's checkout, proactively asks about late checkout or suggests activities that fit the departure timeline. Does not wait for the guest to bring up time constraints.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We check out tomorrow at noon. What can we do in the morning?",
+      "agent_response": "Since you're checking out at noon, a morning visit to the Elemis Spa at Earth Tower is a fantastic way to reset. They open at 9:00 AM and offer express services that are perfect if you're looking for a quick refresh without a long time commitment. If you'd rather stay active, The Shops open at 10:00 AM and offer over 40 retail options ranging from fashion to specialty gifts.\n\nI can help you look through the spa treatment menu or find a specific store, and then I can connect you with our host team to finalize any bookings. Would you prefer a relaxing spa treatment or a bit of shopping to end your trip?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.714
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        }
+      ],
+      "elapsed_ms": 46986,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Is there a spa appointment available in the morning?",
+      "agent_response": "Let me help you with that. Both Mandara Spa and Elemis Spa at Earth Tower open at 9:00 AM tomorrow morning, which gives you a perfect window for a treatment before your noon checkout. Mandara is ideal if you want to lean into those Balinese-inspired healing traditions, while Elemis is great for express skincare services that get you ready for the day without feeling rushed. \n\nI can connect you with our host team to see which specific time slots are still open so you can lock one in. Since you'll be finishing up right around brunch time, would you like a recommendation for a quick bite to eat before you head out?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.706
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.661
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.623
+        }
+      ],
+      "elapsed_ms": 29961,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good idea. And breakfast before that?",
+      "agent_response": "Hash House A Go Go is the perfect choice for a hearty start, as they open right at 8:00 AM in the Casino of the Earth. They are famous for \"twisted farm food\" with massive portions, so their giant pancakes or a sage fried chicken Benedict would definitely keep you fueled through your spa morning.\n\nIt's a casual spot with a price range around $$, and you don't need to worry about a reservation. Since you are checking out at noon, I can connect you with our host team to see if we can arrange a late checkout or luggage storage so you don't have to worry about your bags during your massage. After your spa treatment, would you like a quick recommendation for a snack to grab for the road?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.659
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        }
+      ],
+      "elapsed_ms": 23687,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 100635,
+  "error": null,
+  "completed": true
+}

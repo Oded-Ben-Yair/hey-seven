@@ -1,0 +1,87 @@
+{
+  "id": "h2-02",
+  "name": "Guest references a bad past experience",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H2_reactivation_win_back",
+  "expected_behavior": "Takes the complaint seriously without being defensive. Apologizes specifically for the wait time. Offers a concrete alternative for this visit and suggests mentioning the issue to the Momentum Desk for follow-up. Turns the complaint into a chance to demonstrate that things are different now",
+  "expected_behavioral_quality": "When a guest references a negative experience, the agent acknowledges it specifically, investigates without being defensive, and reframes the next visit as a fresh start. Does not minimize the complaint or rush past it.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Last time I was here the service at the steakhouse was awful. Took forever to get seated",
+      "agent_response": "I understand how frustrating it is when a long wait for a table interrupts your evening, especially when you are looking forward to a great meal. To ensure a much smoother experience this time, I'd suggest Michael Jordan\u2019s Steak House in the Casino of the Sky. \n\nIt is an elegant space known for its USDA Prime steaks and a velvety lobster bisque that is a personal favorite of many guests. They open today at 5:00 PM, and since seating can fill up quickly, a reservation is highly recommended to ensure you are walked to your table right away. The atmosphere is sophisticated with a business casual dress code, making it a perfect spot to reset your expectations of dining here.\n\nI can provide you with all the details you need to connect with their host team and secure a time that works for you. Are you planning to dine with a large group or will it just be a few of you tonight?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        }
+      ],
+      "elapsed_ms": 35946,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah it kind of ruined the whole evening honestly",
+      "agent_response": "I truly hate to hear that a long wait at the door cast a shadow over your entire night. To make sure this visit feels completely different, we could focus on a part of the resort where you can set the pace, like a visit to the spa for a signature treatment to help you decompress.\n\nIf you would rather jump right into the nightlife tonight, Novelle is an ultra-lounge that opens this evening with a very sophisticated energy. It is a great spot for craft cocktails and DJ entertainment where the atmosphere is focused on the lounge experience, and it's a perfect place to relax after a long day. They open on Thursday evenings and maintain a refined environment that usually avoids that feeling of being rushed or neglected.\n\nI can help you look at the entertainment schedule for the rest of the weekend if you'd like to plan ahead. Do you usually prefer a high-energy lounge like Novelle or a more relaxed evening at the spa?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        }
+      ],
+      "elapsed_ms": 37048,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "So what would you actually recommend instead?",
+      "agent_response": "I'd recommend heading to Novelle tonight for a more exclusive feel. It's our upscale ultra-lounge that opens on Thursday evenings, and because it has a limited capacity of 500, the atmosphere is much more controlled and sophisticated than a busy dining room. You can enjoy craft cocktails and a DJ in a space that\u2019s designed for a high-end night out without the stress of a crowded lobby.\n\nIf you'd rather leave the noise behind entirely, a late-afternoon visit to Mandara Spa is a perfect way to reset. They are open until 8:00 PM today, and their Balinese healing traditions are legendary for helping guests unwind and find their center. For something a little more casual, the Wolf Den has free live music tonight that you can walk right into without needing a ticket.\n\nI can help you find out which artists are performing tonight or look into the different massage options at the spa. Would you prefer to spend your evening with live music or a bit of pampering?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 36898,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 109893,
+  "error": null,
+  "completed": true
+}

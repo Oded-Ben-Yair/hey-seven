@@ -566,8 +566,11 @@ _BSA_AML_PATTERNS = [
 #: with the property.  This is both a privacy obligation and a liability
 #: concern (stalking, celebrity harassment, domestic disputes).
 _PATRON_PRIVACY_PATTERNS = [
+    # R95: Exclude existential "is there" (normal question) from matching.
+    # Previously, "Is there anything else to do here?" matched as patron privacy
+    # because [\w\s]+ greedily consumed "there anything else to do" → "here".
     regex_engine.compile(
-        r"\bis\s+[\w\s]+\s+(?:a\s+)?(?:member|here|at\s+the|playing|gambling|staying)",
+        r"\bis\s+(?!there\b)[\w\s]+\s+(?:a\s+)?(?:member|here|at\s+the|playing|gambling|staying)",
         re.I,
     ),
     regex_engine.compile(

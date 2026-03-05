@@ -1,0 +1,71 @@
+{
+  "id": "extract-02",
+  "name": "Anniversary occasion extraction for elevated service",
+  "source_file": "behavioral_info_extraction.yaml",
+  "category": "behavioral_info_extraction",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Uses the anniversary context to elevate all recommendations. Suggests romantic options, special experiences, and couples-oriented activities. Maintains celebratory energy throughout",
+  "expected_behavioral_quality": "Picks up on the anniversary mention as both an occasion and a signal for elevated, romantic recommendations. Does not just say 'happy anniversary' \u2014 uses the information to curate the entire experience recommendation.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We're celebrating our 10th anniversary this weekend",
+      "agent_response": "Congratulations on 10 years! For a landmark anniversary dinner, Todd English\u2019s Tuscany is a guest favorite for its romantic atmosphere, especially if you can secure a table with a view of the Taughannic Falls. \n\nI would like to see about how we can help upgrade your experience to make this weekend even more memorable. Beyond dining, many couples enjoy a sophisticated toast at novelle, our upscale lounge, or a relaxing morning at Mandara Spa. Are you planning to see a show at the Arena while you're here?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.608
+        }
+      ],
+      "elapsed_ms": 31848,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What's a nice dinner option for two?",
+      "agent_response": "For a milestone like a 10th anniversary, Michael Jordan\u2019s Steak House is the definitive choice for an elegant, intimate evening. The atmosphere is sophisticated and warm, providing a beautiful backdrop for a private celebration over a USDA Prime steak and a bottle from their extensive wine list. \n\nThey are open Wednesday through Sunday from 5:00 PM to 10:00 PM with a business casual dress code and a price range of $$$$. Because this is one of our most sought-after venues, reservations are highly recommended. I can connect you with our host team to help finalize those details and ensure they know you are celebrating a decade together. Since you're visiting for the weekend, would you prefer a table for Friday or Saturday night?",
+      "sources": [],
+      "elapsed_ms": 43045,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And maybe something fun to do after?",
+      "agent_response": "Since you will be here this weekend, novelle is the perfect spot after dinner for a sophisticated anniversary vibe. It is an upscale ultra-lounge with craft cocktails and a DJ that opens tonight and runs through Saturday, providing an intimate setting to keep the celebration going.\n\nIf you are looking for high-energy dancing, Avalon Nightclub opens at 10:00 PM on Friday and Saturday nights with state-of-the-art sound and top DJs. I can connect you with our host team to help finalize your plans or look into VIP options to make this 10th anniversary even more memorable. Since you are staying through the weekend, would you like to balance the late-night fun with a relaxing couple's treatment at Mandara Spa the next morning?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        }
+      ],
+      "elapsed_ms": 30609,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 105503,
+  "error": null,
+  "completed": true
+}

@@ -1,0 +1,34 @@
+{
+  "id": "multilingual-06",
+  "name": "Spanish hotel availability question",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "Provides hotel room information in Spanish. Mentions room types suitable for 4 guests. Explains that reservations must be made directly with the property (information-only limitation). All in Spanish.",
+  "expected_behavioral_quality": "Responds to hotel question in Spanish with room types, tower names, and practical details. Directs guest to property contact for actual booking since agent is information-only.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hay habitaciones disponibles para este fin de semana? Somos cuatro personas",
+      "agent_response": "Para un grupo de cuatro personas, la opci\u00f3n m\u00e1s funcional es una **habitaci\u00f3n Deluxe con dos camas queen**, que ofrece 450 pies cuadrados y todas las comodidades modernas. Si prefieren un poco m\u00e1s de amplitud, la **Junior Suite** es una excelente alternativa, ya que cuenta con 650 pies cuadrados, una cama king y un sof\u00e1 cama, adem\u00e1s de una tina de hidromasaje para relajarse despu\u00e9s de un d\u00eda largo.\n\nDado que es fin de semana y la disponibilidad cambia constantemente, le sugiero verificar el inventario actual para asegurar su estancia. Al hospedarse en cualquiera de nuestras torres, estar\u00e1n a unos pasos de m\u00e1s de 40 restaurantes y del Wolf Den, que suele tener m\u00fasica en vivo gratuita por las noches.\n\n\u00bfPrefieren estar todos en una misma habitaci\u00f3n o les interesar\u00eda que buscara opciones de habitaciones conectadas para tener m\u00e1s privacidad?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        }
+      ],
+      "elapsed_ms": 46373,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 46373,
+  "error": null,
+  "completed": true
+}

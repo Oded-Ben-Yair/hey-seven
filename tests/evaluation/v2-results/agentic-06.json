@@ -1,0 +1,76 @@
+{
+  "id": "agentic-06",
+  "name": "Proactive weather-context suggestion",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Reads weather context and proactively recommends only indoor activities. Does not suggest pool or outdoor options. Adjusts all recommendations to the rainy-day constraint",
+  "expected_behavioral_quality": "When a guest mentions weather conditions, adjusts recommendations proactively. Does not suggest outdoor activities when the guest mentions rain. Anticipates the practical impact without being asked.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "It's raining pretty hard outside. What should we do?",
+      "agent_response": "You could spend the afternoon at The Shops at Mohegan Sun, which features over 40 brand-name stores, or visit the Wombi Rock Climbing Wall if you're looking to stay active while it pours. For a complete reset from the weather, the Elemis Spa is a legendary retreat for wellness treatments like their hot stone massage. \n\nLater tonight, the Novelle ultra lounge opens for craft cocktails and a sophisticated atmosphere to kick off the night. Keep in mind that schedules and availability for our venues and spa treatments can change, so I'd suggest confirming times as you plan your afternoon. I can look into the latest spa packages for you if you're looking to unwind \u2014 would you prefer a relaxing day or something more high-energy?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.632
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        }
+      ],
+      "elapsed_ms": 37003,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "The spa sounds nice. Is it all indoors?",
+      "agent_response": "Everything is completely indoors, so you can enjoy a full day of pampering without ever worrying about the rain! The Mandara Spa has a tranquil, Balinese-inspired energy and features a relaxation lounge, steam room, and sauna. For a more modern vibe, the Elemis Spa in the Earth Tower offers premium skincare and express services for guests on the go. \n\nIf you are staying with us, the heated indoor pool and hot tub are also open until 10:00 PM today for a quiet dip. Please note that treatment availability and pricing may change, so I suggest confirming those details as you plan your visit. After your session, a wood-fired meal at Todd English's Tuscany is a perfect way to keep that relaxed feeling going. I can help you narrow down a treatment and then connect you with our team to finalize your booking \u2014 are you leaning toward a deep-tissue massage or a signature facial?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.692
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.691
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        }
+      ],
+      "elapsed_ms": 38124,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect. And dinner after?",
+      "agent_response": "Michael Jordan's Steak House is the ultimate way to follow up a spa day because the atmosphere is sophisticated yet comfortable. The aroma of USDA Prime steaks hitting the grill is incredible, and their signature garlic bread with blue cheese fondue is a must-order starter. They open today at 5:00 PM in the Casino of the Sky, with a price range of $$$$ and a business casual dress code.\n\nReservations are highly recommended for Thursday nights, and I can help you coordinate with our host team to finalize the booking. After dinner, the Novelle ultra lounge is just steps away and opens this evening for craft cocktails and a great lounge atmosphere. Does a classic steakhouse dinner sound like the right fit for your mood, or were you looking for something more casual?",
+      "sources": [],
+      "elapsed_ms": 41605,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 116733,
+  "error": null,
+  "completed": true
+}

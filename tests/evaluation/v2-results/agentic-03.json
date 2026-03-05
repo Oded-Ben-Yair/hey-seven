@@ -1,0 +1,72 @@
+{
+  "id": "agentic-03",
+  "name": "Follow-up anticipation for incomplete plan",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Recognizes the guest is building a sequential evening plan. After each decision, proactively suggests the logical next activity in the timeline without waiting to be asked",
+  "expected_behavioral_quality": "When a guest is building an evening plan piece by piece, anticipates the next question rather than waiting passively. After dinner is settled, offers 'and for after dinner...' without being asked.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We need to plan our evening. Start with dinner.",
+      "agent_response": "For a Thursday evening, Ballo Italian Restaurant in the Casino of the Sky is the perfect place to set the tone for your night. It offers a contemporary take on Italian soul food\u2014think housemade pastas and rich risottos served in a stunning space inspired by a gothic Italian cathedral. \n\nThey are open from 5:00 PM to 10:00 PM tonight with a smart casual dress code, and I'd suggest a reservation to ensure you aren't waiting for a table. Once you've finished dinner, you might enjoy heading over to novelle, our upscale ultra-lounge that opens on Thursday nights for craft cocktails and a sophisticated atmosphere. \n\nAre you looking for an intimate, quiet meal or something with a bit more energy to start your night?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        }
+      ],
+      "elapsed_ms": 45060,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Steakhouse at 7. What next?",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is the premier choice for a 7:00 PM dinner tonight. It features USDA Prime steaks and an extensive wine list in an elegant, business-casual setting.\n\nFor after dinner, novelle is an excellent next stop\u2014it's an upscale ultra-lounge open tonight that serves craft cocktails with a live DJ. If you prefer a more high-energy scene with live music, the Wolf Den in the center of the Casino of the Earth always has a show running. \n\nAre you planning to stay out late, or are you looking for a more relaxed end to your night?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.687
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        }
+      ],
+      "elapsed_ms": 33326,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "A show would be fun. And then?",
+      "agent_response": "The Wolf Den is the place to be for a show tonight\u2014the energy is electric because the performers are right there in the round with the audience. Shows typically start at 8:00 PM or 9:00 PM, and because it's an intimate 350-seat venue, you get a front-row feel regardless of where you sit. \n\nAfter the show, you should head over to novelle, which is our upscale ultra-lounge that stays open late on Thursday nights for craft cocktails and a sophisticated DJ set. It is the perfect spot to keep the night going after the live music ends. \n\nWould you like me to check the specific performance time for the Wolf Den tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        }
+      ],
+      "elapsed_ms": 24990,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 103377,
+  "error": null,
+  "completed": true
+}

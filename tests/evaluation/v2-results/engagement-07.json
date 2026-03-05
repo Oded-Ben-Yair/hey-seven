@@ -1,0 +1,77 @@
+{
+  "id": "engagement-07",
+  "name": "Topic pivot mid-conversation",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Handles rapid topic pivots without friction. Does not anchor to the restaurant discussion or try to bring it back. Follows the guest's attention cleanly",
+  "expected_behavioral_quality": "Cleanly handles a topic change without forcing the previous topic to completion. Does not say 'going back to what we discussed earlier' unless the guest brings it up. Treats each new topic as a fresh request.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What restaurants are here?",
+      "agent_response": "For a morning meal that you won't soon forget, Hash House A Go Go in the Casino of the Earth is the place to be. Their \"twisted farm food\" features legendary portions, like the sage fried chicken and waffles or pancakes so large they practically overflow the plate. They are open now until 2:00 PM and offer a casual, high-energy atmosphere without needing a reservation.\n\nIf you prefer a classic American breakfast or even a steak this morning, Lantern Bar & Grill is also open nearby in the Casino of the Earth and serves its full menu 24 hours a day. Later today, SolToro Taqueria & Tequila Bar opens at 11:30 AM for fresh ceviche and authentic tacos, while the more formal Ballo Italian Restaurant will be ready for dinner service starting at 5:00 PM. Please keep in mind that hours and pricing can vary, so confirming with the venue when you arrive is always a good idea.\n\nAfter a big brunch, many guests find that a visit to the Mandara Spa is the perfect way to recharge for the afternoon. Are you looking for a quick bite to get back to the action, or do you have time for a more relaxed meal?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.694
+        }
+      ],
+      "elapsed_ms": 27589,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Actually forget food, where's the spa?",
+      "agent_response": "You have two excellent choices: Mandara Spa is our award-winning full-service retreat open until 8:00 PM, while Elemis Spa in the Earth Tower offers a more modern skincare focus until 7:00 PM. Mandara is the place to go if you want to soak in the Balinese-inspired relaxation lounge or use the steam room before your treatment. After you've recharged, the Wolf Den has free live music tonight that's always a good time. Would you prefer a full-service experience like a massage, or are you looking for a quicker facial or express service?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.699
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        }
+      ],
+      "elapsed_ms": 24810,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And what about the pool?",
+      "agent_response": "The heated indoor pool and hot tub are available to hotel guests and open daily from 6:00 AM to 10:00 PM. You'll find lounge chairs and towel service ready for you there. If you need a more intense reset, Mandara Spa is just a short walk away for a deep tissue massage. Would you like to know the best time to go for a quieter swim?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.68
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 24031,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 76431,
+  "error": null,
+  "completed": true
+}

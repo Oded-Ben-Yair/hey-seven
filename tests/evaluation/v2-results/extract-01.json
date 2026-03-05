@@ -1,0 +1,60 @@
+{
+  "id": "extract-01",
+  "name": "Natural dietary preference extraction during restaurant rec",
+  "source_file": "behavioral_info_extraction.yaml",
+  "category": "behavioral_info_extraction",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Extracts vegetarian preference from casual mention. Carries it forward to all subsequent restaurant recommendations without needing to be reminded. Checks veggie options proactively",
+  "expected_behavioral_quality": "Learns dietary preferences naturally through the conversation flow. Does not explicitly ask 'do you have any dietary requirements?' Picks up on the vegetarian mention and adjusts all subsequent recommendations without being asked.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Where should we eat tonight? I'm vegetarian by the way",
+      "agent_response": "For a vegetarian-focused evening, Ballo Italian Restaurant in the Casino of the Sky is truly exceptional. There is something about the way they prepare their housemade pastas and seasonal risottos that feels indulgent without needing meat. It has a contemporary, smart casual vibe that is perfect for a Thursday night out.\n\nThey open at 5:00 PM today and run until 10:00 PM, with prices generally in the $$$ range. Since it is a popular spot, I recommend a reservation to secure your table. Once you are finished with dinner, the Wolf Den is just a short walk away in the Casino of the Earth and always has great energy with free live music every night.\n\nI can certainly help coordinate with our host team to find a table for you \u2014 how many people will be joining you tonight?",
+      "sources": [],
+      "elapsed_ms": 49222,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What about the steakhouse? Do they have veggie options?",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is a sophisticated choice where the classic sides often steal the spotlight for our vegetarian guests. While the USDA Prime steaks are the main draw for many, the kitchen prepares elevated vegetable-based accompaniments and fresh salads that make for a very satisfying, high-end meal in an elegant setting. \n\nThey open today at 5:00 PM and maintain a business casual dress code, so it feels like a true night out. Since this is a premier destination, I can help you with that by connecting you with our host team to find the perfect table. After your dinner, you might want to stop by the Wolf Den for some free live music\u2014it's right in the heart of the Casino of the Earth and the energy is always good. Would a reservation around 6:30 PM tonight suit your plans?",
+      "sources": [],
+      "elapsed_ms": 43689,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And for breakfast tomorrow?",
+      "agent_response": "Hash House A Go Go in the Casino of the Earth is the perfect spot for a vegetarian breakfast tomorrow\u2014the sight of their legendary, oversized flapjacks being carried through the dining room is quite the morning wake-up call. They specialize in \"twisted farm food\" with massive portions, and you'll find plenty of meat-free options like their signature pancakes and creative egg dishes. \n\nThey open at 8:00 AM tomorrow and serve until 2:00 PM, with a casual dress code and prices in the $$ range. Since they don't require reservations, you can head over whenever you're ready, though I can certainly help you coordinate with our host team if you have any special requests for your morning. After a hearty meal there, a visit to the Mandara Spa is a wonderful way to continue a relaxing Friday morning. \n\nDo you usually prefer a large sit-down breakfast like this, or are you looking for something a bit quicker?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.659
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.605
+        }
+      ],
+      "elapsed_ms": 48716,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 141629,
+  "error": null,
+  "completed": true
+}

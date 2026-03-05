@@ -1,0 +1,71 @@
+{
+  "id": "implicit-03",
+  "name": "Partner feeling unwell implies quiet needs",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Picks up on partner illness as a need for quiet, comfortable options. Avoids high-energy suggestions entirely. Splits recommendations when one partner needs rest and the other wants activity",
+  "expected_behavioral_quality": "Infers that 'not feeling well' shifts the entire recommendation context toward comfort and calm. Does not suggest shows, gaming, or anything high-energy. Leads with room service, spa, or quiet dining. Expresses care for the partner without being intrusive.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "My wife isn't feeling well. What can we do that's relaxing?",
+      "agent_response": "I am sorry to hear your wife isn't feeling well. For a peaceful escape, Mandara Spa is our most comprehensive wellness destination, featuring a tranquil relaxation lounge and treatments inspired by Balinese healing traditions. They are open until 8:00 PM tonight, and spending time in their steam room or sauna can be a very effective way to decompress. \n\nIf she prefers a more modern setting, the Elemis Spa at Earth Tower specializes in premium skincare and offers a very calm, luxury environment. Afterward, you might enjoy a quiet visit to novelle, which offers a sophisticated and relaxed atmosphere perfect for a low-key evening. I can connect you with our spa team to see which treatments would be most soothing for her today; would she prefer a full-body massage or a refreshing facial?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.601
+        }
+      ],
+      "elapsed_ms": 28571,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "She might want to just stay in the room. Is there room service?",
+      "agent_response": "Staying in is a great way to rest, and we offer 24-hour room service to both our Sky and Earth towers to make that as easy as possible. The menu includes a wide variety of comfort foods, from classic breakfast dishes to late-night snacks, delivered right to your door. For something gentle on the stomach, their seasonal soups are often a favorite for guests looking for a light, warming meal. I can help you find a specific item on the menu to see if it suits her appetite; would she prefer something warm like a broth or perhaps a light salad?",
+      "sources": [],
+      "elapsed_ms": 41338,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And something I can do nearby while she rests?",
+      "agent_response": "The Shops at Mohegan Sun offer over 40 retail locations that are perfect for browsing while staying within a short walk of your tower. If you're looking for a physical activity to clear your head, the Wombi Rock climbing wall provides a unique indoor experience for all skill levels and provides all the necessary equipment. Since it is Thursday, our upscale ultra-lounge, novelle, opens this evening and offers a sophisticated atmosphere where you can grab a craft cocktail while remaining close to the room. I can find the exact location of a specific store or venue for you; are you looking for high-end fashion or do you prefer more unique specialty boutiques? Once she is feeling a bit better, a quiet dinner at one of our cafes would be a nice way to transition back into your stay.",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.64
+        }
+      ],
+      "elapsed_ms": 70869,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 140779,
+  "error": null,
+  "completed": true
+}

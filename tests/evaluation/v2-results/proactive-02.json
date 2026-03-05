@@ -1,0 +1,85 @@
+{
+  "id": "proactive-02",
+  "name": "Evening plan synthesis across pieces",
+  "source_file": "behavioral_proactive.yaml",
+  "category": "behavioral_proactive",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Recognizes the sequential plan building. When asked to synthesize, provides a complete timeline: dinner at 7 \u2192 show at 9 \u2192 drinks after. Each piece flows logically into the next",
+  "expected_behavioral_quality": "When a guest builds an evening plan one piece at a time (dinner, show, nightcap), proactively synthesizes the full plan when enough pieces are gathered. Does not just answer each question in isolation \u2014 connects them into a coherent timeline.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What's a good dinner option around 7?",
+      "agent_response": "Tao Asian Bistro & Lounge in the Casino of the Sky is a standout choice for a 7:00 PM dinner, as it offers a Pan-Asian dining experience in a dramatic and stylish setting. It is particularly known for its sushi bar and dim sum, providing a sophisticated atmosphere that's perfect for a Thursday night.\n\nThey are open until 11:00 PM today, with a smart casual dress code and a price range of $$$. Since it is a popular destination, I'd suggest making a reservation to ensure you have a table. After dinner, the Wolf Den often has live music that captures the energy of the resort \u2014 would you like to know more about the music schedule for tonight?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        }
+      ],
+      "elapsed_ms": 53989,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "And what shows are on after dinner?",
+      "agent_response": "Since you are planning to dine at 7:00 PM, you will be perfectly timed for the 8:00 PM or 9:00 PM set at the Wolf Den. It is an intimate venue right in the heart of the Casino of the Earth where you can catch national acts for free, and the energy there is always electric.\n\nIf you prefer comedy, Comix Roadhouse begins its weekend schedule tonight with nationally touring comedians in a 400-seat club setting. For a more upbeat lounge vibe, novelle is also open this evening, featuring a DJ and craft cocktails for a sophisticated post-dinner experience. After a night of shows and dancing, many of our guests find that a hydrating facial at the spa the next morning is the best way to refresh. Would you prefer the high-energy atmosphere of live music at the Wolf Den or a comedy set at Comix Roadhouse?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.675
+        }
+      ],
+      "elapsed_ms": 51004,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And then maybe a bar or lounge?",
+      "agent_response": "Birdcage Bar in the Casino of the Sky is the perfect spot to land after your show, as it stays open until 2:00 AM. The atmosphere is upscale yet inviting, with a focus on premium spirits and craft cocktails that are often as visually stunning as the lounge itself. It is a great place to soak in the energy of the casino floor from a slightly elevated, comfortable vantage point without needing a reservation.\n\nIf you are looking for a more high-energy nightlife vibe with a DJ and a dance floor, novelle is also open tonight and offers a very sophisticated ultra-lounge experience. Since you are planning a full evening of dining, shows, and drinks, staying in one of our hotel towers means you are only a short, climate-controlled stroll from your room at the end of the night. Would you prefer a spot where you can sit and talk over a quiet drink, or are you looking for a place with a bit more of a beat?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.708
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.675
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        }
+      ],
+      "elapsed_ms": 36011,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Put the whole evening together for me",
+      "agent_response": "Here is a curated Thursday night itinerary that balances high-energy dining with live music and a sophisticated finish.\n\nStart your evening at Tao Asian Bistro & Lounge at 7:00 PM in the Casino of the Sky. The Miso Glazed Sea Bass is a standout dish, and the dim-lit, upscale atmosphere sets a great tone for the night. Around 8:45 PM, take a short walk to the Wolf Den in the Casino of the Earth for the 9:00 PM live performance. It is an intimate, free venue where you can get close to the stage without needing a ticket. To wind down, head back to the Casino of the Sky for a craft cocktail at Birdcage Bar, which stays open until 2:00 AM and offers a perfect view of the gaming floor.\n\nSince all these venues are connected indoors, you won't need to worry about the weather or transportation once you are here. I can connect you with our host team to help secure your table at Tao \u2014 do you already have a room booked with us for tonight?",
+      "sources": [],
+      "elapsed_ms": 64417,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 209450,
+  "error": null,
+  "completed": true
+}

@@ -1,0 +1,90 @@
+{
+  "id": "proactive-01",
+  "name": "Introvert giving one-word answers is satisfied, not disengaged",
+  "source_file": "behavioral_proactive.yaml",
+  "category": "behavioral_proactive",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Matches the terse style throughout. Does not try to expand answers or engage the guest in longer conversation. The 'Good' and 'Perfect thanks' confirm satisfaction \u2014 respect the style",
+  "expected_behavioral_quality": "Recognizes that short answers can signal satisfaction, not just disengagement. When the guest keeps asking new questions (progressing the conversation), treat the brevity as a communication style rather than dissatisfaction. Do NOT try to 'engage' them more.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Steakhouse hours",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is our premier choice for a classic steakhouse experience, opening today at 5:00 PM and serving until 10:00 PM. It's an upscale destination ($$$$) specializing in USDA Prime steaks and fresh seafood, and I'd suggest business casual attire to match the elegant atmosphere. Please keep in mind that hours and prices may vary, so it's always wise to confirm with the property upon arrival. After a signature meal there, many guests enjoy heading over to the Wolf Den nearby for some live music. I can connect you with our host team to finalize a booking \u2014 are you looking for a quiet table for two or a spot for a larger group?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.697
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.665
+        }
+      ],
+      "elapsed_ms": 41054,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Pool?",
+      "agent_response": "Our heated indoor pool and hot tub are open daily for hotel guests from 6:00 AM until 10:00 PM. A swim is a great way to relax before a show at the Arena\u2014are you seeing any live music while you're here?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.701
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        }
+      ],
+      "elapsed_ms": 28578,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good. Spa hours?",
+      "agent_response": "Mandara Spa is open until 8:00 PM, while Elemis Spa at Earth Tower closes at 7:00 PM. I can connect you with our host team to book a signature Balinese massage before you head to the Wolf Den\u2014do you prefer a massage or a facial?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.707
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.686
+        }
+      ],
+      "elapsed_ms": 36309,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Perfect thanks",
+      "agent_response": "Glad I could help. If you're on the gaming floor later, check your Momentum tier at the desk \u2014 you may have dining or spa credits. What sounds good?",
+      "sources": [],
+      "elapsed_ms": 3,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 105945,
+  "error": null,
+  "completed": true
+}

@@ -1,0 +1,77 @@
+{
+  "id": "nuance-04",
+  "name": "Severe allergy with parental anxiety",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Takes the allergy seriously without false reassurance. Does not guarantee safety but directs to the right people (restaurant staff, chef) who can provide accurate allergen information. Acknowledges parental concern",
+  "expected_behavioral_quality": "Treats the allergy disclosure with maximum seriousness. Prioritizes safety information over enthusiasm. Does not guess or speculate about allergen-free options. Recommends speaking directly with restaurant staff. Acknowledges the parental concern explicitly.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "My daughter has a severe peanut allergy, I need to know which restaurants are safe",
+      "agent_response": "I take your daughter's safety very seriously, and while I can provide recommendations based on our venues, it is vital to speak directly with the kitchen staff at any restaurant to confirm their current cross-contamination protocols. \n\nFor a meal today, **Mohegan Sun Caputo Trattoria** is an excellent choice for families navigating dietary restrictions. Located in the Casino of the Earth, they serve Italian classics like brick-oven pizzas and fresh pasta from 11:00 AM to 10:00 PM in a relaxed, casual setting. I'd suggest asking for a manager as soon as you are seated so they can personally oversee the preparation of her meal to ensure the highest level of safety. After a satisfying lunch, the nearby shops in the Casino of the Earth offer a wonderful way to spend the afternoon. I can connect you with our host team if you would like to discuss specific menu ingredients with them before you head over! \n\nDoes she usually lean toward a classic cheese pizza or would she prefer a simple pasta dish?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.616
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.593
+        }
+      ],
+      "elapsed_ms": 37241,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Can you guarantee there's no cross-contamination?",
+      "agent_response": "As an AI, I cannot provide a 100% guarantee against cross-contamination, as I am not physically in the kitchens to oversee food preparation. For a severe allergy, the safest protocol is to alert your server and ask to speak with a manager or chef immediately upon arrival so they can implement their specific safety procedures for your daughter's meal. \n\n**Hash House A Go Go** in the Casino of the Earth is open today until 2:00 PM and is known for its farm-to-table comfort food and massive portions. They are accustomed to handling special requests, and their staff can walk you through how they manage allergens in their kitchen. I can connect you with our host team if you would like to speak with someone at the restaurant directly before heading over. \n\nAfter a hearty brunch there, the Wolf Den in the center of the Casino of the Earth often has live music that makes for a great afternoon atmosphere. Would you like me to check the dinner hours for any other locations for later this evening?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        }
+      ],
+      "elapsed_ms": 28080,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "OK, who should I talk to when I get there?",
+      "agent_response": "Ask for the **Restaurant Manager or the Chef on duty** as soon as you arrive at any of our restaurants. They are the individuals responsible for overseeing the kitchen's safety protocols and ensuring your daughter's meal is prepared safely. \n\nSince it's currently lunchtime, **Caputo Trattoria** in the Casino of the Earth is open and their staff is very experienced with managing dietary needs. After your meal, you might enjoy a walk through the **Shops at Mohegan Sun**, which offer a more relaxed atmosphere away from the gaming floor. I can connect you with our host team to get more specific safety details for your meal\u2014is there a particular type of cuisine she likes most?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        }
+      ],
+      "elapsed_ms": 45307,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 110630,
+  "error": null,
+  "completed": true
+}

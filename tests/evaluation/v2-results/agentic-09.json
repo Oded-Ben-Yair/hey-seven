@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "My mom uses a wheelchair. What restaurants are easy to get to?",
-      "agent_response": "Frank Pepe\u2019s Pizzeria Napoletana in the Casino of the Earth is a standout choice because the restaurant features a wide, open layout and flat entry that makes navigating with a wheelchair very simple. The smell of the coal-fired ovens is incredible, and their New Haven-style \"apizza\" is a must-try, especially the classic tomato pie with its thin, charred crust. They are open until 10:00 PM tonight and offer a relaxed, casual atmosphere with no reservations required.\n\nAre you looking for a casual meal like pizza, or would you prefer a more formal sit-down experience for your mother?\n\nAfter your meal, you might enjoy stopping by the Wolf Den right nearby, which features free live music in an accessible, high-energy setting.",
+      "agent_response": "Hash House A Go Go in the Casino of the Earth is a wonderful option because the dining area is very open, making it easy to position a wheelchair comfortably at the table. You'll smell the sweet aroma of their giant griddled pancakes the moment you get close, and the portions of their \"twisted farm food\" are truly legendary. They are open until 2:00 PM today with a casual dress code and mid-range pricing, making it a perfect spot for a relaxed morning meal.\n\n[1] Hash House A Go Go: Daily 8:00 AM - 2:00 PM. Price range: $$. Reservations: Not required.\n\nPlease note that hours and prices can vary, so it is best to confirm with the restaurant. Since you are in the Casino of the Earth, you are also very close to the shops at Mohegan Sun for a bit of browsing after you eat\u2014how many people will be joining you today?",
       "sources": [
         {
           "category": "restaurants",
@@ -19,38 +19,48 @@
           "score": 0.638
         }
       ],
-      "elapsed_ms": 46463,
+      "elapsed_ms": 29421,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "And can she get to the spa?",
-      "agent_response": "She certainly can, as both of our spa locations are fully accessible and easy to reach via the main elevators in the hotel towers. Mandara Spa in the Sky Tower is open until 8:00 PM tonight and offers a Balinese-inspired atmosphere that is incredibly peaceful. Elemis Spa in the Earth Tower is another excellent choice for high-end skincare, though they do close a bit earlier at",
-      "sources": [
-        {
-          "category": "amenities",
-          "source": "mohegan_sun.json",
-          "score": 0.662
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.643
-        }
-      ],
-      "elapsed_ms": 53915,
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 44051,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Great. She'll love that.",
-      "agent_response": "I'm so glad she'll have that chance to relax. Elemis Spa is the perfect reset after a long day, and their hot stone massage is legendary for melting away any tension. The atmosphere there is incredibly calming, making it a wonderful escape from the energy of the casino floor. Since it's currently 6:24 PM, you may want to head over soon as spa hours can vary, and they often close by 7:00 PM or 8:00 PM on weeknights.\n\nAfter her spa session, you might enjoy heading to the Wolf Den in the Casino of the Earth for some live music, as it's an easy spot to grab a seat and enjoy the performance!\n\nWould you like to know more about the specific massage or facial treatments available?",
-      "sources": [],
-      "elapsed_ms": 56526,
+      "agent_response": "She is going to have an incredible time. After her treatment, you might enjoy wandering through the Shops at Mohegan Sun since the concourse is wide and very easy to navigate with a wheelchair. For tonight, novelle is our upscale ultra-lounge that offers a sophisticated atmosphere with craft cocktails and DJ entertainment, and it is a great spot for a post-spa wind-down. Are you looking to catch a major headliner at the Arena, or does a night of music and drinks at novelle sound more like her style?\n\n[1] novelle: Ultra Lounge. Upscale lounge and nightlife destination featuring craft cocktails and DJ entertainment. Open Thursday-Saturday evenings. Capacity: 500.\n[3] Mohegan Sun Arena: World-class arena hosting major concerts, comedy shows",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        }
+      ],
+      "elapsed_ms": 48125,
       "error": null
     }
   ],
-  "elapsed_ms": 160921,
+  "elapsed_ms": 121598,
   "error": null,
   "completed": true
 }

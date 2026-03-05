@@ -1,0 +1,71 @@
+{
+  "id": "nuance-08",
+  "name": "Allergy escalation with growing parental panic",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Escalates the urgency with each turn. Does not repeat generic allergy advice. By turn 3, treats this as requiring direct human contact and provides clear next steps for reaching restaurant management",
+  "expected_behavioral_quality": "Recognizes escalating panic about child safety. Does not minimize the concern or reassure falsely. Directs to human staff with increasing urgency. In turn 3, treats it as a near-emergency requiring immediate human intervention.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "My son has a tree nut allergy. Can the kitchen accommodate that?",
+      "agent_response": "I treat food allergies with the utmost seriousness, as your son's safety is the priority. While our kitchens are very experienced with dietary needs, I'd suggest speaking directly with the restaurant manager or your server upon arrival so they can consult with the chef about specific ingredients and cross-contamination protocols, which vary by venue. \n\nFor a meal today, Caputo Trattoria in the Casino of the Earth is a standout choice. They are open from 11:00 AM to 10:00 PM and offer a family-friendly atmosphere with a price range of approximately $20 to $30 per entree. They specialize in fresh pastas and brick-oven pizzas, and since reservations are not required, it is a very convenient option for a mid-day meal. Their classic spaghetti pomodoro is a simple, delicious choice that guests often request\u2014does your son have a preference for pasta or pizza? \n\nAfter your meal, you might enjoy visiting the nearby shops in the Casino of the Earth for a bit of browsing.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.594
+        }
+      ],
+      "elapsed_ms": 40219,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "He's had anaphylactic reactions before. I need to be 100% sure.",
+      "agent_response": "I understand the gravity of an anaphylactic allergy, and for that reason, I cannot personally provide a 100% guarantee of safety. The only people who can make that determination are the executive chef and the management team at the restaurant, as they oversee the kitchen's current ingredients and cross-contamination protocols.\n\nFor a situation this serious, I'd suggest **Ballo Italian Soul**. As one of our more refined sit-down venues, the staff is highly trained to manage complex dietary needs and provide the attentive service required for a safe meal. They are typi with the manager or the chef before ordering so they can personally oversee your son's meal from preparation to table. \n\nI can connect you with our host team to discuss the menu in detail or to help you prepare for your visit. Would you like to know more about the specific types of dishes Ballo offers to see if it suits your son's tastes?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.595
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.571
+        }
+      ],
+      "elapsed_ms": 60543,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can someone from the kitchen call me? This is serious.",
+      "agent_response": "I hear you \u2014 let me connect you directly with our host team so they can take care of this for you.",
+      "sources": [],
+      "elapsed_ms": 5496,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 106259,
+  "error": null,
+  "completed": true
+}

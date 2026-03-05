@@ -1,0 +1,87 @@
+{
+  "id": "nuance-06",
+  "name": "Grief conversation with extended emotional processing",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Holds space for grief across two turns without pivoting to services. When the guest signals readiness to move forward in turn 3, transitions gently to practical help while honoring the emotional context",
+  "expected_behavioral_quality": "Sustains compassionate tone across multiple grief-related turns. Does not rush to 'fix' the emotion or pivot to activities. Sits with the grief. Only transitions to practical help when the guest initiates it.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "This was my dad's favorite casino. He passed two weeks ago.",
+      "agent_response": "I am truly sorry for your loss. It sounds like your father had many meaningful experiences here over the years. \n\nWhen you feel ready, I would be glad to help you find any of the specific restaurants or areas he enjoyed most. Would you like to start with one of his favorite spots?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        }
+      ],
+      "elapsed_ms": 21918,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "He would always sit at the same blackjack table",
+      "agent_response": "Mohegan Sun features 370 table games, and many guests find a sense of place at a specific blackjack table in the Casino of the Earth. I understand that these spots can hold a lot of history for our long-term visitors. When you play at these tables with a Momentum card, you earn points and tier credits based on your average bet and length of play. \n\nThe Bow & Arrow Sports Bar is located right next to the gaming floor in the Casino of the Earth if you are looking for a spot nearby. Did he have a favorite restaurant near the pits that he liked to visit?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 54774,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "I think he'd want me to have a good time tonight. What's for dinner?",
+      "agent_response": "Ballo Italian Restaurant in the Casino of the Sky is my top pick for a dinner that feels both celebratory and soulful tonight. It opens at 5:00 PM and specializes in a modern presentation of traditional Italian recipes; the housemade pastas and risottos are particularly exceptional! The price range is generally $$$ and they follow a smart casual dress code, making it a wonderful setting for a meaningful meal. \n\nPlease keep in mind that hours and pricing can vary, so it is always a good idea to confirm upon arrival. After dinner, the Wolf Den in the Casino of the Earth usually has free live music to keep the energy high. I can connect you with our host team to finalize a booking \u2014 how many people will be in your party?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        }
+      ],
+      "elapsed_ms": 60378,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 137071,
+  "error": null,
+  "completed": true
+}

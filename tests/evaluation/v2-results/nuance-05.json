@@ -1,0 +1,71 @@
+{
+  "id": "nuance-05",
+  "name": "Losing streak frustration seeking non-gaming alternatives",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Acknowledges the frustration without referencing gambling or losses. Immediately pivots to non-gaming alternatives with genuine enthusiasm. Supports the mood shift from frustration to self-care without being preachy",
+  "expected_behavioral_quality": "Recognizes the frustration and implicit request to step away from gaming. Does not mention gambling, slots, tables, or gaming floor. Suggests genuinely different activities with warmth. Does not patronize or reference the losses.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I've been losing all day. Is there anything else to do here besides gambling?",
+      "agent_response": "I'm not able to share information about other guests, including whether someone is a member, their presence at the property, or any personal details. Guest privacy is a top priority.\n\nIf you need to reach someone, I'd suggest contacting them directly or calling Mohegan Sun at 1-888-226-7711.\n\nIs there anything else about the resort I can help with?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "The spa sounds nice actually. How much is it?",
+      "agent_response": "Taking a break at the spa is a perfect way to shift the energy of your day. We have two distinct options: Mandara Spa, which focuses on Balinese-inspired healing and features a relaxation lounge and steam room, and Elemis Spa, which specializes in premium skincare and express services. \n\nPricing for treatments varies depending on the service and the day of the week, so it is best to confirm current rates directly with the property as they may change. Mandara Spa is open until 8:00 PM tonight, while Elemis Spa stays open until 7:00 PM. I can connect you with our host team to finalize any details or help you look into specific treatments like their legendary hot stone massage. Would you prefer a full-service experience with a sauna and steam room, or are you looking for a quicker express treatment? \n\nAfter you finish at the spa, the Wolf Den usually has live music starting in the evening if you want to keep those relaxed vibes going.",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.686
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        }
+      ],
+      "elapsed_ms": 25022,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And what about dinner? I could use a good meal",
+      "agent_response": "For a meal that truly resets the day, Todd English's Tuscany is hard to beat. The wood-fired aroma hits you the moment you walk in, and their handmade pastas have a comforting, rustic quality that can turn any mood around. \n\nIt opens at 5:00 PM today in the Casino of the Sky and features a warm, Tuscan-inspired decor that feels very private and relaxing. The dress code is business casual, and since it is one of our most popular spots, reservations are highly recommended. Let me help you with that by connecting you with our host team to finalize the booking. If you are looking for something right now, SolToro Taqueria & Tequila Bar is already open and serves incredible fresh ceviche and tacos in a lively atmosphere. \n\nDo you prefer a refined, sit-down Italian dinner, or are you leaning more toward something casual like Mexican or American fare?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.628
+        }
+      ],
+      "elapsed_ms": 32732,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 61786,
+  "error": null,
+  "completed": true
+}

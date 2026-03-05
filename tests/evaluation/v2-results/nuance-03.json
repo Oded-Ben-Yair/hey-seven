@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "We just got married! Honeymoon trip!",
-      "agent_response": "Congratulations on your marriage and welcome to Mohegan Sun. It is an honor to have you celebrating such a special milestone with us.\n\nFor a memorable honeymoon dinner, I'd suggest Todd English's Tuscany; the atmosphere near the indoor waterfall is wonderful for a romantic evening. If you're looking to unwind after the wedding festivities, the Mandara Spa offers Balinese-inspired treatments and is open until 8:00 PM tonight.\n\nWould you prefer a high-energy evening with some live music, or are you looking for a more quiet, intimate stay?",
+      "agent_response": "Congratulations to you both! For a memorable honeymoon dinner, Todd English's Tuscany is a guest favorite for its romantic atmosphere near the indoor waterfall. \n\nYou might also consider spending some time at the Mandara Spa, which offers Balinese-inspired treatments and a quiet relaxation lounge to help you unwind after the wedding. After dinner, novelle is an upscale lounge perfect for a celebratory cocktail and is open starting this evening. Since I will be assisting you during your stay, what is your name?",
       "sources": [
         {
           "category": "hotel",
@@ -39,32 +39,21 @@
           "score": 0.586
         }
       ],
-      "elapsed_ms": 27030,
+      "elapsed_ms": 39282,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What's the most romantic dinner option?",
-      "agent_response": "For an unforgettable honeymoon dinner tonight, Michael Jordan's Steak House in the Casino of the Sky is the most elegant choice for a romantic celebration. The rich aroma of seared prime beef and the sophisticated, warm lighting create a perfect atmosphere for a toast to your new life together. \n\nAs our premier steakhouse, they specialize in USDA Prime cuts and fresh seafood, complemented by an extensive wine list",
-      "sources": [
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.637
-        },
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.639
-        }
-      ],
-      "elapsed_ms": 52715,
+      "agent_response": "Ballo Italian Restaurant in the Casino of the Sky is the most romantic destination for your honeymoon dinner. The atmosphere is sophisticated and grand, providing a beautiful backdrop for sharing housemade pastas and a bottle from their excellent Italian wine list. They open today at 5:00 PM with a smart casual dress code and a price range of around $$$, and I recommend a reservation to ensure you have the perfect table. \n\nI can connect you with our host team to finalize the booking for you. After dinner, would you like to find a lounge for a celebratory craft cocktail?",
+      "sources": [],
+      "elapsed_ms": 69668,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "And something special we can do together tomorrow?",
-      "agent_response": "Since tomorrow is Thursday, novelle opens for the weekend. It is an upscale ultra lounge with a sophisticated atmosphere and DJ entertainment, which is an excellent way to celebrate your first trip as a married couple.\n\nIf you would rather focus on relaxation, the Elemis Spa is a legendary reset; their hot stone massage is a wonderful way to let go of any lingering wedding stress together.\n\nAre you looking to keep the celebration high-energy, or would a relaxing spa afternoon be more your speed?\n\nIf you decide on the spa, the resort also offers seasonal hotel packages that can bundle your stay with dining credits to make your honeymoon dining even more seamless.",
+      "agent_response": "A couples' massage at Mandara Spa is the perfect way to spend your first morning as a married couple. The Balinese-inspired atmosphere is incredibly peaceful, and sharing that relaxation in a private suite makes for a very special memory. \n\nLater in the evening, Avalon Nightclub opens at 10:00 PM for a high-energy celebration, or you can find a more intimate, upscale vibe at novelle which features DJ entertainment and craft cocktails on Friday nights. Please keep in mind that schedules and availability can change, so it is best to confirm these details when you arrive. I can connect you with our host team to look into spa availability or VIP lounge options for tomorrow. Would you prefer a quiet, relaxing start to your day or something with a bit more energy for your Friday night?",
       "sources": [
         {
           "category": "entertainment",
@@ -82,11 +71,11 @@
           "score": 0.616
         }
       ],
-      "elapsed_ms": 66191,
+      "elapsed_ms": 31870,
       "error": null
     }
   ],
-  "elapsed_ms": 145937,
+  "elapsed_ms": 140820,
   "error": null,
   "completed": true
 }

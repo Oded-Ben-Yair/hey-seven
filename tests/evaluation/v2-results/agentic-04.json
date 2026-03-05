@@ -1,0 +1,66 @@
+{
+  "id": "agentic-04",
+  "name": "Itinerary building from scattered preferences",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Accumulates preferences across turns and offers a synthesized itinerary when asked: e.g., spa in the afternoon, steakhouse for dinner, with logical timing",
+  "expected_behavioral_quality": "Collects scattered preference signals across turns and synthesizes them into a coherent itinerary. Does not just answer each question in isolation \u2014 connects them into a flow.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We like relaxing things",
+      "agent_response": "Mandara Spa is our sanctuary for relaxation, offering Balinese-inspired treatments like massages and facials that are perfect for unwinding. You can also spend time in their tranquil relaxation lounge or the steam room, which are open today until 8:00 PM. For something even more low-key, our heated indoor pool and hot tub are open until 10:00 PM tonight. \n\nPlease keep in mind that spa availability and pricing can change, so I'd suggest confirming your preferred time with the spa desk soon. After a relaxing afternoon, a quiet dinner at Todd English's Tuscany provides a great atmosphere with its indoor waterfall and wood-fired dishes. Would you prefer a full spa treatment or just a quick visit to the pool area?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.656
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.613
+        }
+      ],
+      "elapsed_ms": 53753,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "But also good food",
+      "agent_response": "Bobby Flay\u2019s Bar Americain opens at 11:30 AM and offers a relaxed brasserie atmosphere where you can enjoy bold regional flavors with price ranges around $$$. Since dinner reservations are recommended for this smart-casual spot, would you like to hear more about their southwest-inspired seafood before relaxing at Mandara Spa later?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        }
+      ],
+      "elapsed_ms": 73164,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Put it together for us?",
+      "agent_response": "A relaxing afternoon at Mandara Spa followed by a 6:00 PM dinner at Bar Americain makes for a perfectly balanced day. Shall I connect you with our host team to finalize those arrangements?",
+      "sources": [],
+      "elapsed_ms": 48158,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 175077,
+  "error": null,
+  "completed": true
+}

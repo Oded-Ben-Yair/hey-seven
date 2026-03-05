@@ -1,0 +1,95 @@
+{
+  "id": "extract-03",
+  "name": "Building party composition across 4 turns naturally",
+  "source_file": "behavioral_info_extraction.yaml",
+  "category": "behavioral_info_extraction",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Accumulates party info across turns: adults + 2 kids + elderly parent with mobility issues. Adjusts for kid-friendliness, accessibility, and group size without explicitly asking for these details",
+  "expected_behavioral_quality": "Assembles party composition from scattered mentions across multiple turns. Uses 'we' as a group indicator, then picks up specifics (kids, grandma) as they appear. Adjusts recommendations to fit the emerging group profile without asking for a headcount.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We're looking for something to do tonight",
+      "agent_response": "Since it is Thursday, I suggest heading over to novelle for a sophisticated evening of craft cocktails and DJ entertainment in an upscale lounge setting. If you are in the mood for laughs, Comix Roadhouse kicks off its weekend comedy lineup tonight, which is always a great way to spend a few hours.\n\nThe Wolf Den also features free live performances right in the heart of the casino, providing an electric energy where you are just steps away from the stage. After a late night out, a session at the Mandara Spa tomorrow morning would be the perfect way to recharge. Do you prefer live music or a more lounge-style atmosphere?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.671
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        }
+      ],
+      "elapsed_ms": 26140,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "The kids are with us too, ages 8 and 12",
+      "agent_response": "Cyber Quest is going to be a major hit with your kids because it features the latest video games and attractions that really keep that age group engaged. For something a bit more active, the Wombi Rock Climbing Wall is right nearby and offers a great indoor challenge for all skill levels with full instruction provided. If you and your partner want to catch a show at the Wolf Den or visit the spa, Kids Quest offers supervised play for children up to 12 years old.\n\nOur Junior Suites are quite popular for families of your size because they offer a separate living area and a sofa bed so everyone has their own space to relax. Are you planning on staying together as a family for the whole night, or were you hoping for a bit of time to explore the adult-only areas?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.67
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.635
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.616
+        }
+      ],
+      "elapsed_ms": 35519,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Oh and my mother-in-law, she doesn't walk well",
+      "agent_response": "To ensure your mother-in-law is as comfortable as possible, I'd suggest using our valet parking service at the hotel entrance to bypass the walk from the parking garages. The Sky Tower is an excellent choice for her because the elevators are centrally located, providing the most direct access to the rest of the resort.\n\nConnecting rooms in the Sky Tower are perfect for your family dynamic\u2014the kids get their own space, you have yours, and your mother-in-law can be right next door for peace of mind. Check-in is typically between 3:00 PM and 4:00 PM, but our 24-hour front desk will have everything ready for you whenever you pull up to the property. For a relaxed dinner tonight, Todd English's Tuscany is a great pick because it has plenty of accessible seating and is just a short, flat walk from the Sky Tower elevators. \n\nWould you like me to go over the specific amenities in our Sky Tower suites to see which would fit her needs best?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.597
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.59
+        }
+      ],
+      "elapsed_ms": 51092,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Put something together for all of us?",
+      "agent_response": "I recommend starting your evening with an early dinner at Todd English's Tuscany, which is located just a short distance from the Sky Tower elevators and features a view of the 55-foot indoor waterfall. After your meal, the kids can head to Cyber Quest for arcade games while the adults relax at the Wolf Den to enjoy the free live music from the nearby lounge seating.\n\nTo help your mother-in-law navigate the property comfortably, we offer complimentary wheelchairs and electric scooters at our coat check stands on a first-come, first-served basis. Does this itinerary feel like a good balance of activity and relaxation for your group?",
+      "sources": [],
+      "elapsed_ms": 52585,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 165338,
+  "error": null,
+  "completed": true
+}

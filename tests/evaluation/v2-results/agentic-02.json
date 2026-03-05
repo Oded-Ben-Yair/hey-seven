@@ -1,0 +1,45 @@
+{
+  "id": "agentic-02",
+  "name": "Proactive timing awareness for property hours",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "When the guest mentions a late time, proactively flags which restaurants may be closing soon and suggests options that will definitely still be open",
+  "expected_behavioral_quality": "When recommending a venue, proactively mentions closing time or last seating if it's approaching. Does not wait for the guest to ask 'is it still open?' Anticipates the practical concern.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What restaurants are good?",
+      "agent_response": "If you are looking for a meal right now, Hash House A Go Go in the Casino of the Earth is a local legend for what they call \"twisted farm food.\" The aroma of their signature sage-fried chicken is unmistakable, and their giant pancakes are famously larger than the plates they are served on.\n\nThey are open until 2:00 PM today with a casual dress code and mid-range pricing ($$), and since they do not require reservations, it is a perfect spot to drop in for a high-energy brunch. If your tastes lean more toward fresh sushi or Japanese specialties later today, Sushi Palace opens at noon and offers a beautiful omakase experience. Are you looking for a massive comfort food meal to start your day, or would you prefer to wait for something like sushi or Mexican cuisine?\n\nAfter you have had your fill, the Wolf Den in the Casino of the Earth is a great place to catch some free live music later this afternoon!",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        }
+      ],
+      "elapsed_ms": 44352,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We're thinking around 9:30 PM",
+      "agent_response": "Ballo Italian Restaurant in the Casino of the Sky is an excellent choice for a 9:30 PM dinner as they serve until 10:00 PM on Thursday nights. Their housemade pastas and smart casual atmosphere offer a sophisticated way to wrap up the evening.\n\nIf you want more of a nightlife vibe at that hour, novelle is an upscale lounge featuring DJ entertainment and craft cocktails that fits a late-night schedule perfectly. Let me help you with that\u2014I can connect you with our host team to finalize a reservation at Ballo or check availability for a table at novelle. \n\nAfter dinner, the Wolf Den often has live music that keeps the energy going late into the night. Would you prefer a formal sit-down Italian meal or a more high-energy lounge environment?",
+      "sources": [],
+      "elapsed_ms": 46855,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good to know. We'll hurry",
+      "agent_response": "Ballo is centrally located in the Casino of the Sky, which is about a 10-minute walk from the hotel lobby. If you are looking for more action after dinner, the Casino of the Wind features additional slots and table games just a short walk away. \n\nLet me help you with that\u2014I can connect you with our host team to let them know you are heading over. Is it just the two of you tonight?",
+      "sources": [],
+      "elapsed_ms": 44552,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 139789,
+  "error": null,
+  "completed": true
+}

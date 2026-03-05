@@ -1,0 +1,39 @@
+{
+  "id": "extract-06",
+  "name": "The memory test \u2014 guest checks if agent remembers prior info",
+  "source_file": "behavioral_info_extraction.yaml",
+  "category": "behavioral_info_extraction",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Remembers and uses the guest's name (Sarah), party size (5), and occasion (birthday) naturally throughout. When tested, confirms recall warmly rather than defensively",
+  "expected_behavioral_quality": "Demonstrates memory of information shared earlier in the conversation. When the guest tests this ('remember I said...'), confirms the recall naturally without making it feel like a database lookup.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm Sarah, here for my birthday this weekend with 4 friends",
+      "agent_response": "Happy Birthday, Sarah\u2014it's great to have you and your friends with us for the weekend. For a group of five, I'd recommend a celebratory dinner at Todd English's Tuscany; the atmosphere by the Taughannick Falls is perfect for a birthday toast. \n\nTo help start the festivities, Mohegan Sun would like to offer you a $25 dining credit to use at any of our restaurants while you're here. After dinner, are you looking for a high-energy spot like Avalon Nightclub or something more laid-back like the Birdcage Bar?",
+      "sources": [],
+      "elapsed_ms": 52433,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Can you recommend a restaurant for 5 of us?",
+      "agent_response": "For a birthday group of five, Ballo Italian Restaurant in the Casino of the Sky is the perfect choice. The atmosphere is inspired by a Tuscan cathedral with massive stone arches and a high-energy vibe that really picks up on the weekends. They are known for their incredible housemade pastas and a curated selection of Italian wines that are meant for a celebratory toast. \n\nBallo is open from 5:00 PM to 10:00 PM on the weekends, and they suggest a smart casual dress code, which fits a birthday celebration perfectly. Since you have a party of five during a busy weekend, I\u2019d suggest making a reservation to ensure you're seated together\u2014I can connect you with our host team to help finalize those details. After dinner, you might want to stop by the Wolf Den for some live music, as it\u2019s located right nearby and always has a great crowd. \n\nAre you and your friends more into sharing plates of pasta and Italian specialties, or were you looking for a different style of cuisine for your big night?",
+      "sources": [],
+      "elapsed_ms": 48880,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Wait, do you even remember my name?",
+      "agent_response": "I certainly do, Sarah. You're here celebrating your birthday this weekend with four of your friends.\n\nMy goal is to make sure your group has a great time, so I'm keeping those details in mind for all my suggestions. Since you have a party of five, you might also enjoy a brunch at Hash House A Go Go the next morning; they are famous for their massive portions and \"twisted farm food\" like their giant pancakes, which are perfect for a group to share. \n\nWould you like me to see what live music is playing at the Wolf Den this weekend for your group to check out?",
+      "sources": [],
+      "elapsed_ms": 40951,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 142264,
+  "error": null,
+  "completed": true
+}

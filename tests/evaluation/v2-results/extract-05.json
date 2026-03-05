@@ -1,0 +1,82 @@
+{
+  "id": "extract-05",
+  "name": "Extracting loyalty tier for human host handoff",
+  "source_file": "behavioral_info_extraction.yaml",
+  "category": "behavioral_info_extraction",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Registers Platinum tier status and treats as VIP throughout. When handoff is needed, directs to host team with context about who's requesting and their tier level",
+  "expected_behavioral_quality": "Captures loyalty tier information and uses it to provide elevated service. When the conversation leads to a handoff, provides a summary of what's been learned to the human host pathway.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm a Platinum Momentum member. Where's the VIP lounge?",
+      "agent_response": "Mohegan Sun's Momentum program uses the Core, Ignite, Leap, Ascend, and Soar tier structure. Access to the Momentum Lounge, located in Casino of the Sky, is a benefit reserved for members at the Ascend and Soar levels. \n\nIf your Platinum status is from an affiliated Mohegan property, you should visit a Momentum Desk to verify how your tier translates to our local benefits and have a Mohegan Sun card printed. Momentum Desks are located in both Casino of the Earth and Casino of the Sky. After you have confirmed your lounge access, would you like a recommendation for a dining spot nearby?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.733
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.694
+        }
+      ],
+      "elapsed_ms": 37653,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "And I need to talk to my host about my comp balance",
+      "agent_response": "Dedicated hosts are typically assigned to members at the Ascend and Soar tiers. You can review your Momentum Point balance at any Momentum Desk, through the Mohegan Sun app, or at a promotional kiosk. \n\nIf you believe your play history qualifies you for host services or specific comps, the staff at the Momentum Desk in Casino of the Sky can verify your account and facilitate an introduction to a host. Comp eligibility depends on several factors including recent play, tier status, and current offers. Once you've reviewed your balance, are you planning to use your points for a specific dining experience like Todd English's Tuscany?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.611
+        }
+      ],
+      "elapsed_ms": 29677,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can you let them know I'm here?",
+      "agent_response": "I can help you with that. The most direct way to alert your host of your arrival is to visit the Momentum Desk in the Casino of the Sky or any VIP services counter. The team there can check your host's schedule and send a notification that you've arrived.\n\nSince you're looking to discuss your comp balance, the desk can also provide a printed statement of your rewards to have on hand for that meeting. Since it is currently mid-morning, would you like a recommendation for a lunch spot nearby like SolToro?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.609
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        }
+      ],
+      "elapsed_ms": 44208,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 111538,
+  "error": null,
+  "completed": true
+}

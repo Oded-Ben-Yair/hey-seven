@@ -1,0 +1,23 @@
+{
+  "id": "multilingual-09",
+  "name": "Spanish off-topic redirect",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "Declines the off-topic question politely in Spanish. Redirects to available property topics (dining, entertainment, hotel, spa, gaming) in Spanish. Does not answer the off-topic question.",
+  "expected_behavioral_quality": "Politely redirects off-topic Spanish question back to property topics. Redirect is in Spanish, lists available categories, and does not make the guest feel judged for asking.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Cual es la capital de Francia?",
+      "agent_response": "Eso est\u00e1 fuera de lo que puedo ayudarte, pero con gusto te asisto con cualquier cosa sobre Mohegan Sun \u2014 restaurantes, entretenimiento, hotel, spa, o juegos. \u00bfEn qu\u00e9 puedo ayudarte?",
+      "sources": [],
+      "elapsed_ms": 3202,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 3202,
+  "error": null,
+  "completed": true
+}

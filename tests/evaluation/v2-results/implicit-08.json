@@ -1,0 +1,77 @@
+{
+  "id": "implicit-08",
+  "name": "Fatigue indicators implying need for low-effort options",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Reads exhaustion and conference context as needing comfort-first recommendations. Prioritizes proximity, ease, and relaxation. Does not suggest gaming floor or shows",
+  "expected_behavioral_quality": "Detects fatigue signals (exhausted, long day, need to unwind) and shifts all recommendations toward restful, low-effort options. Does not suggest shows, gaming, or anything requiring energy.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We've been on our feet all day at the conference. Exhausted.",
+      "agent_response": "I am sorry to hear your day was so draining. The Elemis Spa at Earth Tower is the perfect place to decompress, as they offer premium skincare treatments and express services that can help you recharge without requiring much effort. \n\nThey are open until 7:00 PM tonight if you want to squeeze in a session before heading to your room. If you would rather just sit and relax, novelle opens this evening and offers a sophisticated lounge atmosphere with plush seating and craft cocktails where you can take a load off. I can connect you with our host team if you would like to look into a late-afternoon spa slot or check on lounge seating. Would you prefer a treatment to soothe your muscles or just a quiet spot to grab a drink and unwind?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.608
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        }
+      ],
+      "elapsed_ms": 50417,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Something close, we don't want to walk far",
+      "agent_response": "Since you are likely near the convention space, Caputo Trattoria is just a short walk away in the Casino of the Earth and offers the perfect low-effort Italian comfort food. The aroma of their brick-oven pizzas hits you as you approach, and their pasta dishes are exactly what you need when you are too tired to navigate a complex menu. \n\nThey are open from now until 10:00 PM and have a very relaxed, family-friendly atmosphere where you can just sit back and let the staff take care of you. I can check with their host team to see how the wait time looks so you can walk right in and get off your feet. After a warm meal, are you planning to head straight to your room in the Earth or Sky Tower to call it a night?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.676
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.665
+        }
+      ],
+      "elapsed_ms": 44743,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect. Anything else low-key tonight?",
+      "agent_response": "The Wolf Den is a fantastic choice for a low-key night since it is centrally located in the Casino of the Earth and offers plenty of seating where you can truly relax. There is a free live show tonight at 8:00 PM, which is a great way to enjoy a national touring act or a high-energy tribute band without the hassle of tickets or standing in a long line. \n\nIf you prefer something even more chilled, novelle is an upscale lounge nearby that is open on Thursday nights and features very plush seating with a sophisticated atmosphere. I can connect you with our host team to see which venue has the best seating available for your group tonight so you can stay off your feet. Since these spots are both centrally located, would you like me to look into a restorative spa treatment for tomorrow morning so you can fully recover from the conference?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.674
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        }
+      ],
+      "elapsed_ms": 33911,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 129073,
+  "error": null,
+  "completed": true
+}

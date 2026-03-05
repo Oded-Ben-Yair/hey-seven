@@ -20,10 +20,10 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 - **Tests**: 3502 tests, 0 failures, 90%+ coverage
 - **Agent**: 13-node LangGraph StateGraph v2.4 (29 state fields, 17 feature flags) with 6 specialist agents + profiling enrichment node
 - **Model routing**: Flash→Pro for complex/emotional queries (low confidence, grief, frustrated, crisis, high-complexity)
-- **Review Score**: R75 tech 9.63/10, R82 behavioral 4.7/10
-- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R82(4.7) behavioral
+- **Review Score**: R75 tech 9.63/10, R95 behavioral B-avg 6.62/10
+- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R91(7.0) → R95(6.62, 80 scenarios) behavioral
 - **Version**: v1.5.0
-- **Latest commit**: R83: Gemini 3.1 migration, Flash→Pro model routing, few-shot wiring, ack fix
+- **Latest commit**: R95: Final validation, judge scores, regression fixes
 - **ADRs**: 28 architectural decision records with status lifecycle
 - **Research**: 8 deep domain research docs (R72)
 - **Behavioral scenarios**: 220 across 27+ YAML files (74 behavioral + 56 profiling + 90 other)

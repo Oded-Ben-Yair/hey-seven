@@ -1,0 +1,45 @@
+{
+  "id": "engagement-03",
+  "name": "Direct negative feedback on response quality",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Accepts the correction gracefully, immediately adjusts to emphasize speed and casual dining, and acknowledges the guest's positive feedback in turn 3",
+  "expected_behavioral_quality": "Immediately acknowledges the feedback without defensiveness. Re-reads the original question and provides a targeted answer. Does not repeat the same information in the same format. Shows adaptability by changing response structure.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Where can I get a quick lunch?",
+      "agent_response": "Lantern Bar & Grill is your best option for a quick lunch right now because it is open 24 hours and specializes in efficient American favorites like burgers, steaks, and salads. It is located in the Casino of the Earth, features a casual dress code with moderate pricing, and does not require reservations. Please keep in mind that hours and prices may vary, so I'd suggest confirming specific details when you arrive. \n\nSince you are short on time, this location is ideal because it is situated right in the heart of the action for easy access. Would you like to know which parking garage is closest to this end of the property?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        }
+      ],
+      "elapsed_ms": 36043,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "That's not what I asked. I said quick, not fancy.",
+      "agent_response": "I understand that can be frustrating when you are in a hurry and just want a simple bite. \n\nFor something truly fast and completely casual, head straight to Bobby's Burger Palace. You order right at the counter, the burgers are fantastic and start around $12, and you will be in and out quickly without any fuss. \n\nIt is located right in the Casino of the Earth. Are you closer to the Earth or Sky side right now so I can point you directly there?",
+      "sources": [],
+      "elapsed_ms": 58742,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Thank you, that's better",
+      "agent_response": "Glad I could help. The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. What sounds good?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 94788,
+  "error": null,
+  "completed": true
+}

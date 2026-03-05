@@ -1,0 +1,87 @@
+{
+  "id": "h2-03",
+  "name": "Guest mentions they switched to competitor",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H2_reactivation_win_back",
+  "expected_behavior": "Does not badmouth Foxwoods or Gordon Ramsay. Instead, highlights Mohegan Sun's own new dining portfolio (Beauty & Essex, The Farm Italy, The Shed) as reasons to come back. Creates competitive differentiation through quality, not criticism",
+  "expected_behavioral_quality": "When a guest says they have been going to a competitor instead, the agent does not disparage the competitor. Instead, discovers what drew them away and highlights what Mohegan Sun offers in that area. Creates a 'come back and see' moment around genuine improvements.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I've been going to Foxwoods mostly. They opened some cool new restaurants",
+      "agent_response": "I'd love to show you what makes the dining scene here at Mohegan Sun so special. For a lunch that hits the spot, Caputo Trattoria is currently serving up incredible brick-oven pizzas and fresh pasta in a very relaxed, casual setting. \n\nIt is located in the Casino of the Earth and stays open until 10:00 PM tonight, with entrees generally in the $20-$30 range. No reservations are required there, though hours and pricing can occasionally vary, so it is always a good idea to confirm when you arrive. After you eat, you're just steps away from the Wolf Den, which has free live music every night and a great energy. Are you looking for a quick, casual meal like that for now, or would you prefer a recommendation for a signature fine-dining experience for later this evening?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.712
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.719
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.683
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        }
+      ],
+      "elapsed_ms": 46769,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah their Gordon Ramsay place is really good",
+      "agent_response": "If you enjoy a high-energy atmosphere led by an iconic chef, Bobby Flay\u2019s Bar Americain right here in the Casino of the Earth is an experience you won't want to miss. The restaurant feels like a grand, bustling American brasserie, and the menu is packed with those bold, Southwest-inspired flavors Bobby Flay is famous for.\n\nThey are open right now until 10:00 PM tonight, and the dress code is smart casual. Guests often rave about the shellfish cocktails and the prime steaks, though many come specifically for the \"crunchified\" burgers. While they are a great spot for a walk-in lunch, I'd suggest a reservation for dinner to ensure you have a table during the evening rush.\n\nAfter your meal, the Wolf Den is just a short walk away and features free live music every night, which is a great way to keep the energy going. Since you appreciate a chef-driven menu, would you like to hear about some of the signature dishes that make Bar Americain a favorite?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        }
+      ],
+      "elapsed_ms": 32602,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Hmm those do sound worth trying",
+      "agent_response": "If you're looking for a true Connecticut institution, Frank Pepe's Pizzeria Napoletana in the Casino of the Earth is a must. The scent of the coal-fired oven is unmistakable, and that signature thin crust has a char and crunch that guests travel miles for, especially to try the world-famous white clam pie. \n\nThey are open until 10:00 PM tonight and offer a casual, mid-range dining experience ($$) where no reservations are needed. While the clam pie is the star, the simple tomato pie with pecorino romano is a masterclass in balanced flavor. After dinner, novelle opens its doors for the evening, offering craft cocktails in a sophisticated lounge setting if you want to keep the night going. Do you usually go for a classic cheese pizza, or are you adventurous enough for the white clam?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.614
+        }
+      ],
+      "elapsed_ms": 49219,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 128591,
+  "error": null,
+  "completed": true
+}

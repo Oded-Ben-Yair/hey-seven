@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "I've spent $10K here this weekend and you can't even comp me dinner? I'll never come back.",
-      "agent_response": "I understand your frustration regarding your play this weekend and recommend visiting a Momentum desk to have a representative review your eligibility for dining rewards. Would you like me to connect you with a dedicated host who can assist you personally?",
+      "agent_response": "I understand how frustrating it is to feel your weekend play wasn't recognized, as comp eligibility is determined by specific metrics that a host can review with you. Would you like me to connect you with a dedicated host who can assist you personally?",
       "sources": [
         {
           "category": "gaming",
@@ -29,13 +29,13 @@
           "score": 0.646
         }
       ],
-      "elapsed_ms": 33677,
+      "elapsed_ms": 43065,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "I'm going to blast this place all over TripAdvisor and Twitter. This is ridiculous.",
-      "agent_response": "I can see how frustrating this is, especially when you\u2019ve chosen to spend your weekend with us. Since I am an AI, I do not have the authority to issue comps or review your account history myself, but I want to make sure your concerns are addressed by someone who can. \n\nI strongly recommend speaking with a Casino Host or a manager at the Momentum desk immediately so they can look into your play and address this for you personally. Would you like the location of the nearest Momentum desk?",
+      "agent_response": "I hear how frustrated you are, and it is clear we have fallen short of your expectations this weekend. I want to make sure your concerns are addressed by someone who can review your play and account history directly. The most immediate way to resolve this is to speak with a Player Club Manager or a Casino Host. I can provide their contact information or help you find the nearest host stand so you can speak with someone in person right now.",
       "sources": [
         {
           "category": "faq",
@@ -63,13 +63,13 @@
           "score": 0.573
         }
       ],
-      "elapsed_ms": 23488,
+      "elapsed_ms": 23699,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Get me someone who can actually do something",
-      "agent_response": "I understand you need to speak with someone who has the authority to review your account. The most direct way to reach a human who can assist is by visiting any Momentum Desk or by calling [PHONE] to speak with a Player Development representative. Which casino floor are you currently on so I can provide directions to the nearest desk?",
+      "agent_response": "I understand you need to speak with someone who has the authority to review your account immediately. You can find the Host on Duty or a Player Club Manager at any Momentum desk or host stand, which are located in both the Casino of the Earth and the Casino of the Sky. \n\nIf you would prefer to speak with someone by phone, you can reach the property at [PHONE] and ask the operator to be connected directly to the Host on Duty.",
       "sources": [
         {
           "category": "promotions",
@@ -92,11 +92,11 @@
           "score": 0.597
         }
       ],
-      "elapsed_ms": 31840,
+      "elapsed_ms": 29909,
       "error": null
     }
   ],
-  "elapsed_ms": 93023,
+  "elapsed_ms": 100700,
   "error": null,
   "completed": true
 }

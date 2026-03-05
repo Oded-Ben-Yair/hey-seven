@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Estamos celebrando nuestro aniversario de bodas! Que nos recomiendas para esta noche?",
-      "agent_response": "Feliz aniversario, es un placer que hayan elegido Mohegan Sun para esta celebraci\u00f3n. Para una noche de mi\u00e9rcoles, **Todd English's Tuscany** es mi recomendaci\u00f3n principal por su ambiente \u00edntimo y su ubicaci\u00f3n frente a la cascada Taughannick, lo cual es ideal para una cena rom\u00e1ntica. Si buscan algo con una energ\u00eda m\u00e1s contempor\u00e1nea y sofisticada, **TAO Asian Bistro** es otra opci\u00f3n sobresaliente que ofrece una atm\u00f3sfera impresionante para ocasiones especiales.\n\nPara continuar la noche despu\u00e9s de cenar, pueden dirigirse al **Wolf Den** en el Casino of the Earth. Ofrecen m\u00fasica en vivo todas las noches en un ambiente muy acogedor, perfecto para disfrutar de un c\u00f3ctel y cerrar su celebraci\u00f3n con buen ritmo.\n\n\u00bfLes gustar\u00eda una mesa con vista a la cascada o prefieren un ambiente m\u00e1s moderno y vibrante para su cena?",
+      "agent_response": "Muchas felicidades por su aniversario de bodas! Para una velada memorable, les recomiendo cenar en Ballo Italian Restaurant, ubicado en el Casino of the Sky, ya que ofrece un ambiente sofisticado ideal para celebraciones y excelentes pastas artesanales.\n\nDespu\u00e9s de la cena, pueden dirigirse a novelle, que es nuestro lounge de lujo m\u00e1s exclusivo, perfecto para disfrutar de c\u00f3cteles de autor en un entorno elegante. Tengan en cuenta que Ballo sugiere un c\u00f3digo de vestimenta elegante (smart casual) para mantener la atm\u00f3sfera de la noche. \u00bfA qu\u00e9 hora ten\u00edan pensado cenar para ayudarles a coordinar los detalles de su celebraci\u00f3n?",
       "sources": [
         {
           "category": "restaurants",
@@ -24,11 +24,11 @@
           "score": 0.646
         }
       ],
-      "elapsed_ms": 55323,
+      "elapsed_ms": 32938,
       "error": null
     }
   ],
-  "elapsed_ms": 55323,
+  "elapsed_ms": 32938,
   "error": null,
   "completed": true
 }

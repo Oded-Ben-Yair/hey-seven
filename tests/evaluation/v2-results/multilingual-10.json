@@ -1,0 +1,37 @@
+{
+  "id": "multilingual-10",
+  "name": "Language switch mid-conversation \u2014 Spanish to English",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "First turn: responds in Spanish about restaurants. Second turn: switches to English naturally without commenting on the language change. Provides steakhouse information in English.",
+  "expected_behavioral_quality": "Follows the guest's language switch naturally. When guest starts in Spanish then switches to English, agent follows and responds in English. No awkward language mixing or commenting on the switch.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hola, me gustaria saber sobre los restaurantes",
+      "agent_response": "Bienvenido a Mohegan Sun. Tenemos una gran variedad de opciones para cada momento del d\u00eda, con m\u00e1s de 40 restaurantes y bares en todo el resort.\n\nDado que son casi las 11:30 de la ma\u00f1ana, te sugiero considerar **Hash House A Go Go** en el Casino of the Earth si buscas algo sustancioso; son famosos por sus porciones generosas de comida casera, pero ten en cuenta que cierran a las 2:00 PM. Si prefieres un ambiente m\u00e1s animado con sabores aut\u00e9nticos, **SolToro Taqueria** acaba de abrir y ofrece excelentes tacos y una selecci\u00f3n de tequilas de primer nivel.\n\nDespu\u00e9s de almorzar, muchos de nuestros hu\u00e9spedes disfrutan caminar por las tiendas de The Shops at Mohegan Sun para bajar la comida. \u00bfTienes alg\u00fan tipo de cocina espec\u00edfica en mente o buscas algo para una ocasi\u00f3n especial?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        }
+      ],
+      "elapsed_ms": 23786,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Actually, can you tell me about the steakhouse in English?",
+      "agent_response": "Michael Jordan's Steak House is our premier choice for a classic steakhouse experience, featuring USDA Prime cuts and an atmosphere filled with iconic sports memorabilia in the Casino of the Sky. The dining room feels elevated and sophisticated, making it the perfect spot if you are looking for a high-end meal.\n\nThey open today at 5:00 PM and serve until 10:00 PM, and since it is a very popular destination, I highly recommend a reservation and business casual attire. While the steaks are the star, their garlic bread with Gorgonzola fondue is a legendary starter that many guests consider a must-order.\n\nI can certainly connect you with our host team to finalize a booking for this evening if that sounds like the right fit. After a steak dinner, many of our guests enjoy heading over to the Wolf Den for some free live music. Are you planning a dinner for a special occasion or just looking for the best ribeye on the property?",
+      "sources": [],
+      "elapsed_ms": 39500,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 64093,
+  "error": null,
+  "completed": true
+}

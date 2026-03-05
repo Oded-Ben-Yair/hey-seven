@@ -1,0 +1,77 @@
+{
+  "id": "nuance-02",
+  "name": "First-time casino visitor with anxiety",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Validates the anxiety as completely normal. Provides gentle orientation without overwhelming. When the guest self-selects dining as a comfortable first step, supports that choice warmly",
+  "expected_behavioral_quality": "Validates the nervousness without dismissing it. Orients them gently with manageable next steps rather than an overwhelming property overview. Suggests low-pressure activities first. Does not say 'don't worry' or 'there's nothing to be nervous about'.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "First time at a casino, kind of nervous honestly",
+      "agent_response": "Welcome to Mohegan Sun! It\u2019s completely normal to feel a bit overwhelmed your first time here, but you\u2019re in great hands. \n\nA good way to start is by heading to the Casino of the Earth; it has a warm, grounded atmosphere that many first-time visitors find very approachable. You can take your time walking through the Shops at Mohegan Sun first to get a feel for the layout without any pressure. Since it is just before noon, many of our casual spots like the Bow & Arrow Sports Bar are open and offer a relaxed place to sit and observe the energy of the floor before you decide what to do next.\n\nAre you planning to stay overnight with us or are you just visiting for the day?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        }
+      ],
+      "elapsed_ms": 25053,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "It's just a lot bigger than I expected",
+      "agent_response": "It is impressive in scale, covering over 3 million square feet across several distinct areas. To make it feel smaller, I'd suggest picking one \"hub\" like the Casino of the Earth to explore first rather than trying to see everything at once. \n\nIf you need a break from the energy of the gaming floors, the Earth Tower lobby is a much quieter space where you can sit and get your bearings. Hash House A Go Go is also right in the Casino of the Earth and serves familiar comfort food in very generous portions, which can be a nice way to settle in. \n\nWould you like me to tell you more about the dining options in that area or are you looking for a specific landmark?",
+      "sources": [
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        }
+      ],
+      "elapsed_ms": 33341,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Maybe we should just get something to eat first",
+      "agent_response": "Taking a seat and enjoying a meal is a great way to let the initial excitement settle. I'd suggest **Hash House A Go Go** in the Casino of the Earth; it\u2019s famous for \"twisted farm food\" and portions so large they practically demand you take a moment to just sit and relax. \n\nThe atmosphere is casual and the menu is full of elevated comfort classics like their sage fried chicken and waffles or giant pancakes that are almost too big for the plate. Since they are open until 2:00 PM today, arriving now means you'll have plenty of time to enjoy a hearty lunch while you get comfortable with the surroundings. It's a very approachable spot where the focus is entirely on the food and the friendly service.\n\nAfter you've had a chance to refuel, the Shops at Mohegan Sun are just a short walk away if you'd like to do some low-pressure window shopping. Does a menu of hearty, oversized comfort food sound like what you're looking for?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.649
+        }
+      ],
+      "elapsed_ms": 28041,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 86436,
+  "error": null,
+  "completed": true
+}

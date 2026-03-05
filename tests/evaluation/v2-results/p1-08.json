@@ -1,0 +1,82 @@
+{
+  "id": "p1-08",
+  "name": "Guest signals budget range indirectly",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Leads with affordable and mid-range options, not the steakhouse. When asked about Ballo, provides honest pricing context. Does not upsell or push premium alternatives",
+  "expected_behavioral_quality": "Interprets 'nothing too pricey' as a budget signal without asking for a dollar amount. Adjusts recommendations away from premium options toward mid-range and casual dining. Does not condescend or suggest the guest cannot afford better.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Where can we eat? Nothing too pricey though",
+      "agent_response": "Johnny Rockets in the Casino of the Earth is the best spot for a classic, budget-friendly meal that doesn't sacrifice flavor. The atmosphere is pure 1950s nostalgia, and there's nothing quite like one of their thick, hand-spun shakes paired with a fresh-off-the-grill burger. \n\nThey are open today until 11:00 PM with a casual dress code and no reservations needed, and as our most affordable option, it's a great way to save your budget for the gaming floor. The nearby Wolf Den often has free live music if you're looking for a show after you eat\u2014how many people will be joining you for lunch today?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        }
+      ],
+      "elapsed_ms": 34505,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What about that Italian place?",
+      "agent_response": "Caputo Trattoria in the Casino of the Earth is the perfect choice for a relaxed Italian meal that fits a more modest budget. It is open right now until 10:00 PM and specializes in classic brick-oven pizzas and hearty pasta dishes without the high price tags of our fine-dining spots. \n\nSince our more formal Italian restaurants like Tuscany and Ballo do not open until 5:00 PM and are notably more expensive, Caputo offers that same comforting flavor in a much more casual setting where no reservations are required. After a filling meal, the nearby shops in the Casino of the Earth offer a great way to walk off those carbs\u2014are you leaning more toward a sit-down pasta dish or just a quick pizza?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.635
+        }
+      ],
+      "elapsed_ms": 49554,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Yeah that works. Thanks",
+      "agent_response": "You're welcome. Caputo is right in the Casino of the Earth, which is very close to the Wolf Den if you're interested in some free live music after you eat. Would you like to know who is performing tonight?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.62
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.615
+        }
+      ],
+      "elapsed_ms": 40010,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 124071,
+  "error": null,
+  "completed": true
+}

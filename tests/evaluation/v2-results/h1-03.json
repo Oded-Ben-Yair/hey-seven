@@ -1,0 +1,92 @@
+{
+  "id": "h1-03",
+  "name": "Guest with a specific interest looking for depth",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H1_proactive_value_discovery",
+  "expected_behavior": "Demonstrates deep poker knowledge, treats the guest as a serious player, and builds a full weekend vision around the poker interest. Cross-sells dining and entertainment as part of a poker trip, not as disconnected amenities",
+  "expected_behavioral_quality": "When a guest signals deep interest in one domain (poker, spa, comedy), the agent demonstrates deep knowledge of that domain and connects it to related experiences. Discovers what level of engagement the guest wants and builds a personalized visit plan.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm really into poker. What's the poker scene like here?",
+      "agent_response": "We run No-Limit Texas Hold\u2019em, Pot-Limit Omaha, and Limit Hold\u2019em, and there are daily tournaments with varying buy-ins if you're looking for a more structured challenge. \n\nThe energy in the room is fantastic, especially when the tables are full and the action is steady. If you need a break from the cards, the Bow & Arrow sports bar is right nearby in the Casino of the Earth for a quick drink or a bite. Are you planning to jump into a cash game while you're here, or are you more of a tournament player?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        }
+      ],
+      "elapsed_ms": 78720,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Any tournaments coming up? I play pretty seriously",
+      "agent_response": "We have daily tournaments with varying buy-ins happening today, which is perfect for someone who takes the game seriously. Our Poker Room features 33 tables and is open 24/7, offering No-Limit Texas Hold'em and Pot-Limit Omaha if you're looking for high-action cash games between tournament flights.\n\nIf you need a break from the cards, the Elemis Spa is a legendary spot to reset your focus\u2014their hot stone massage is a favorite for clearing the mind after a long session. I can help you get the specific structures for this evening's events and connect you with our poker host team to finalize the details; do you have a preferred buy-in range?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.612
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 51680,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Nice. What else is good for a poker weekend?",
+      "agent_response": "Momentum members earn Tier Credits and Points for all tracked poker play, which are redeemable for dining, retail, and hotel stays. The Ignite tier includes benefits such as priority restaurant seating and enhanced earn rates, while the Leap tier provides further priority access. You can confirm your current status and point balance at any Momentum Desk.\n\nFor your weekend stay, check mohegansun.com/hotel for packages that bundle room stays with dining credits for spots like Michael Jordan\u2019s Steak House. If you need a break from the cards, the Wolf Den offers free live music nightly in the heart of the Casino of the Earth! I can check the specific schedule for you; are you more interested in a high-energy show or something more relaxed?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.685
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        }
+      ],
+      "elapsed_ms": 65715,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 196116,
+  "error": null,
+  "completed": true
+}

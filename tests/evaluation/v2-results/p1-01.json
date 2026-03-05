@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Hey, I'm Mike. What's good for dinner tonight?",
-      "agent_response": "Welcome, Mike. For tonight, Michael Jordan's Steak House in the Casino of the Sky is a standout choice if you are looking for an incredible meal. \n\nThe sizzle of a USDA Prime steak hitting the grill and the elegant atmosphere, complete with Michael Jordan\u2019s own memorabilia, really sets the tone for a great evening. They are open until 10:00 PM tonight, and while the dress code is business casual, the experience is worth the extra effort. Prices generally fall in the $$$$ range, and since it is a popular spot, I'd suggest checking for a reservation. Please keep in mind that hours and prices may vary, so it is always best to confirm with the property. \n\nAfter dinner, you might enjoy heading over to the Wolf Den in the Casino of the Earth for some live music. Are you looking for a full multi-course dinner or something a bit faster?",
+      "agent_response": "Welcome to Mohegan Sun, Mike. For tonight, **Michael Jordan\u2019s Steak House** in the Casino of the Sky is a premier choice\u2014it opens at 5:00 PM and serves some of the finest USDA Prime steaks you'll find anywhere. The atmosphere is upscale and elegant, featuring an impressive wine list that pairs perfectly with their signature charred cuts. It is a business casual environment where reservations are highly recommended to ensure you get a prime spot. \n\nI can connect you with our host team to finalize a booking if that sounds like your speed. After dinner, Comix Roadhouse usually has a great lineup if you are in the mood for some laughs\u2014are you looking for a big celebration tonight or something a bit more low-key?",
       "sources": [
         {
           "category": "restaurants",
@@ -24,13 +24,13 @@
           "score": 0.606
         }
       ],
-      "elapsed_ms": 51384,
+      "elapsed_ms": 40564,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What about something more casual?",
-      "agent_response": "Mike, for a casual atmosphere, Johnny Rockets in the Casino of the Earth is a perfect spot for tonight. \n\nThe 1950s-style diner theme is a lot of fun, especially when the staff breaks into a song while you\u2019re enjoying a hand-pressed burger and a thick, hand-dipped milkshake. They are open until 11:00 PM, and since the price range is quite budget-friendly ($), it\u2019s a great way to have a relaxed meal without any fuss. No reservations are needed, and the dress code is completely casual. Please keep in mind that hours and prices can change, so it's a good idea to confirm with the property when you arrive.\n\nAfter your burger, you might want to wander over to the Wolf Den in the center of the Casino of the Earth to catch some free live music. How many people are in your party tonight?",
+      "agent_response": "Mike, Johnny Rockets in the Casino of the Earth is a fantastic spot for a casual meal\u2014it's open until 11:00 PM and doesn't require reservations. You'll get that classic 1950s diner feel the second you walk in, complete with the aroma of burgers on the griddle and hand-spun shakes. It is a budget-friendly choice where you can relax in a t-shirt and jeans without a second thought while enjoying some of the best fries on the property. \n\nAfter you finish your meal, you might want to stop by the Wolf Den nearby, as they feature free live music every night in a high-energy setting. Since Johnny Rockets is a walk-in venue, I can help you with details for other spots if your plans change, or I can connect you with our host team for any venues that do take bookings. How many people are in your party for dinner tonight?",
       "sources": [
         {
           "category": "faq",
@@ -48,7 +48,7 @@
           "score": 0.663
         }
       ],
-      "elapsed_ms": 27387,
+      "elapsed_ms": 40858,
       "error": null
     },
     {
@@ -60,7 +60,7 @@
       "error": null
     }
   ],
-  "elapsed_ms": 78774,
+  "elapsed_ms": 81424,
   "error": null,
   "completed": true
 }

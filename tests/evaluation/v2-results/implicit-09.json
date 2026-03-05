@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "I spend a lot of money here every month",
-      "agent_response": "Regular monthly visits contribute to your Momentum tier status and earned points. The program tracks your activity through Tier Credits to determine your level among the five tiers: Core, Ignite, Leap, Ascend, and the invitation-only Soar tier. \n\nBenefits for higher tiers typically include earn rate bonuses, priority access, and dedicated host services. Points you earn are redeemable for dining, hotel stays, and retail purchases at locations like The Shops at Mohegan Sun. Since I am an AI, I cannot access your personal account details, but you can verify your specific tier and point balance at any Momentum Desk or via the Mohegan Sun app. \n\nIf you prefer an upscale environment while gaming, the high-limit areas provide dedicated hosts and premium service. Are you looking for a specific table game or slot machine during your visit?",
+      "agent_response": "Consistent play at that level typically qualifies you for the higher tiers of our Momentum program, such as Ascend or Soar. These tiers include benefits like a dedicated host, access to VIP gaming lounges, and priority restaurant seating. You also earn Momentum Points that are redeemable for dining, hotel stays, and retail purchases throughout the property. \n\nSince I cannot access your personal account, the Momentum Desk or the Mohegan Sun app can provide your exact Tier Credit balance and available offers. Our high-limit gaming areas also offer premium drink service and dedicated hosts for guests with your level of play. Are you primarily interested in slot play or table games during your visits?",
       "sources": [
         {
           "category": "entertainment",
@@ -39,38 +39,27 @@
           "score": 0.611
         }
       ],
-      "elapsed_ms": 36015,
+      "elapsed_ms": 26235,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What's the best you can do for dinner tonight?",
-      "agent_response": "For tonight, Todd English's Tuscany is the premier choice \u2014 the wood-fired aroma hits you the moment you walk into the Casino of the Sky. It is open until 10:00 PM and features handmade pastas and signature wood-fired dishes in an elevated, business casual setting. As a frequent guest who appreciates the best we have to offer, you'll find the warm, Tuscan-",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.592
-        },
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.584
-        }
-      ],
-      "elapsed_ms": 57822,
+      "agent_response": "For a guest who visits us as often as you do, **Tao Asian Bistro & Lounge** in the Casino of the Sky is the standout choice for tonight. The atmosphere is visually stunning, featuring a dramatic 16-foot Buddha and a menu of exceptional Pan-Asian dishes like their signature Miso Glazed Chilean Sea Bass.\n\nTao opens at 5:00 PM today and typically follows a smart casual dress code. Since you are a frequent guest, I can connect you with our host team to help facilitate a reservation, as they often have the best insight into availability for our loyal players.\n\nTheir sushi bar is also world-class if you prefer something lighter \u2014 are you looking for a full multi-course dinner or more of a lounge vibe?",
+      "sources": [],
+      "elapsed_ms": 40687,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Can you check on any comp availability?",
-      "agent_response": "I'd love to help with that. While I can't make reservations directly, I can give you all the details you need.\n\nFor reservations and bookings, you can reach Mohegan Sun at 1-888-226-7711 or visit mohegansun.com.\n\nIs there anything else about the property I can help you with?",
+      "agent_response": "I hear you \u2014 let me connect you directly with our host team so they can take care of this for you.",
       "sources": [],
-      "elapsed_ms": 2858,
+      "elapsed_ms": 3203,
       "error": null
     }
   ],
-  "elapsed_ms": 96696,
+  "elapsed_ms": 70126,
   "error": null,
   "completed": true
 }

@@ -1,0 +1,39 @@
+{
+  "id": "p1-04",
+  "name": "Guest mentions party size implicitly",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Registers 'me and the wife' as party of 2 and tilts toward romantic or couples-appropriate recommendations. Does not ask 'how many in your party?' when it was already stated",
+  "expected_behavioral_quality": "Infers party size from conversational cues like pronouns and companion mentions. 'Me and the wife' means party of 2. 'The four of us' means party of 4. Does not ask for a headcount when it has been stated implicitly.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Me and the wife are looking for a nice dinner spot",
+      "agent_response": "Todd English's Tuscany is the premier choice for a nice night out because the rustic, wood-fired aroma and candlelit ambiance make it our most romantic setting. It features an open kitchen where chefs craft handmade pastas and wood-fired specialties, and they open today at 5:00 PM with a business casual dress code and a price range of $$$$.\n\nSince it is a guest favorite, I recommend a reservation, and I can certainly connect you with our host team to finalize that for you. After dinner, the Wolf Den often has great live music nearby in the Casino of the Earth if you want to keep the evening going. Would you prefer a table near the hearth or closer to the indoor waterfall?",
+      "sources": [],
+      "elapsed_ms": 50767,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Something with a view or good atmosphere",
+      "agent_response": "For a truly captivating atmosphere, Tao Asian Bistro & Lounge in the Casino of the Sky is unmatched. The dramatic, stylish decor creates an immersive experience the moment you step inside, making it feel like a special escape within the resort. They open at 5:00 PM today and specialize in a pan-Asian menu that includes a fantastic sushi bar and signature dim sum, all served in a high-energy yet sophisticated setting. \n\nSince this is one of our most popular venues, I suggest a smart casual dress code and a reservation, which I can help you facilitate by connecting you with our host team. After dinner, the Wolf Den often has free live music which is a great way to keep the energy up \u2014 would you prefer a table closer to the sushi bar so you can watch the chefs at work?",
+      "sources": [],
+      "elapsed_ms": 49079,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That sounds perfect for the two of us",
+      "agent_response": "Tao is a fantastic choice for a memorable evening together. To complement that vibrant atmosphere, I highly recommend a Deluxe Room in the Sky Tower, which features floor-to-ceiling windows that offer stunning views of the Thames River or the surrounding hills. It truly feels like a private retreat where you can relax before heading down to dinner, with rates typically starting around $169 depending on the date.\n\nSince it is currently 12:41 PM, please keep in mind that our standard check-in begins between 3:00 PM and 4:00 PM, though our 24-hour front desk is happy to store your luggage if you arrive early to explore the shops. After your dinner at Tao, you might enjoy heading over to novelle for a sophisticated cocktail and some live DJ entertainment to end the night. Would you like me to look into the different suite options in the Sky Tower if you're looking for a bit more space to spread out?",
+      "sources": [],
+      "elapsed_ms": 53606,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 153452,
+  "error": null,
+  "completed": true
+}

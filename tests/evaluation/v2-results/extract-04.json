@@ -1,0 +1,61 @@
+{
+  "id": "extract-04",
+  "name": "Guest guards personal info vs freely shares",
+  "source_file": "behavioral_info_extraction.yaml",
+  "category": "behavioral_info_extraction",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Picks up on the guest's preference for minimal interaction and direct answers. Stops probing and gives concise, factual responses. Does not try to personalize when the guest wants transactional efficiency",
+  "expected_behavioral_quality": "Respects the guest's resistance to sharing information. Does not push for details when the guest deflects. Provides helpful service with minimal personal data. Does not ask follow-up personal questions after being deflected once.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What restaurants are open?",
+      "agent_response": "For a late morning meal right now, Lantern Bar & Grill in the Casino of the Earth is your best bet since they serve a full American menu 24 hours a day. It is a comfortable, casual spot where the aroma of grilled steaks and burgers welcomes you at any hour, and no reservations are required. \n\nIf you have about fifteen minutes to spare, SolToro Taqueria & Tequila Bar opens at 11:30 AM, offering a vibrant atmosphere and authentic street tacos that are perfect for a midday energy boost. Later today at 12:00 PM, Sushi Palace will also open its doors for fresh sashimi and specialty rolls. Please keep in mind that hours and pricing can vary, so I suggest confirming details with the venues when you arrive. \n\nAfter your meal, you might enjoy a stroll through the Shops at Mohegan Sun to see the latest fashion and crystal displays. Are you looking for a quick, casual bite to get back to the gaming floor, or are you interested in a more relaxed, sit-down lunch experience?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        }
+      ],
+      "elapsed_ms": 37140,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Just tell me what's open, I don't need the whole story",
+      "agent_response": "I understand that can be frustrating. Here is a direct list of what is open right now:\n\n- Hash House A Go Go\n- Starbucks\n- Dunkin'\n- Krispy Kreme",
+      "sources": [],
+      "elapsed_ms": 64566,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "The buffet. Where is it?",
+      "agent_response": "Seasons Buffet is located in the Casino of the Sky. It is currently closed and reopens Friday at 4:00 PM. \n\nFor a hearty meal right now, Hash House A Go Go is open in the Casino of the Earth until 2:00 PM and is a great alternative for large portions of American comfort food. Please note that hours can vary, so it is best to confirm with the venue when you arrive. After lunch, the nearby Wolf Den usually has live entertainment \u2014 would you like directions to that side of the property?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.687
+        },
+        {
+          "category": "dining",
+          "source": "cms:dining/dining-001",
+          "score": 0.687
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        }
+      ],
+      "elapsed_ms": 48558,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 150266,
+  "error": null,
+  "completed": true
+}

@@ -1,0 +1,87 @@
+{
+  "id": "engagement-02",
+  "name": "Same question repeated signals inadequate prior answer",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Detects that the guest is repeating the same question with increasing frustration. By the third turn, provides a clear, direct answer with the specific time prominently stated. Does not lecture the guest or reference prior answers defensively",
+  "expected_behavioral_quality": "Recognizes that repeating the same question in different words means the prior answer was unsatisfactory. By the third attempt, acknowledges the repetition explicitly, apologizes for the confusion, and delivers the answer in a different format (direct time, not prose).",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What time does the buffet open?",
+      "agent_response": "Seasons Buffet is currently scheduled to open for its weekend run starting tomorrow, Friday, at 4:00 PM. \n\nSince it is Thursday morning, you might enjoy Sushi Palace in the Casino of the Sky, which opens at noon today and features an extensive sake menu and fresh sashimi. Are you looking for a dining spot that can accommodate a larger group for your visit?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.703
+        },
+        {
+          "category": "dining",
+          "source": "cms:dining/dining-001",
+          "score": 0.707
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.683
+        }
+      ],
+      "elapsed_ms": 28987,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "When can I eat at the buffet?",
+      "agent_response": "Seasons Buffet in the Casino of the Sky is open Friday through Sunday from 4:00 PM to 9:00 PM. It is a casual, all-you-can-eat spot that offers a great variety of international dishes and rotating seafood stations for a moderate price, and you do not need a reservation. \n\nSince it is Thursday morning and the buffet is currently closed, you might enjoy the Lantern Bar & Grill in the Casino of the Earth, which is open 24 hours and serves hearty American favorites like steaks and burgers. After your meal, the Wolf Den often has free live music that provides a great energy for the rest of your day. Are you planning a weekend trip, or are you looking for a place to grab lunch today?",
+      "sources": [
+        {
+          "category": "dining",
+          "source": "cms:dining/dining-001",
+          "score": 0.71
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.713
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        }
+      ],
+      "elapsed_ms": 48637,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "I ASKED about buffet hours",
+      "agent_response": "Seasons Buffet, located in the Casino of the Sky, is open Friday through Sunday from 4:00 PM to 9:00 PM. Since it is currently Thursday, the buffet is closed and will reopen tomorrow at 4:00 PM. \n\nPlease note that hours and pricing may vary, so I'd suggest confirming when you arrive. Are you looking for a recommendation for a restaurant that is open for lunch today?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.684
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.68
+        },
+        {
+          "category": "dining",
+          "source": "cms:dining/dining-001",
+          "score": 0.668
+        }
+      ],
+      "elapsed_ms": 34767,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 116420,
+  "error": null,
+  "completed": true
+}

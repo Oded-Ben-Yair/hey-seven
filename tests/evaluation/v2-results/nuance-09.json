@@ -1,0 +1,39 @@
+{
+  "id": "nuance-09",
+  "name": "Losing streak empathy with subtle responsible gaming awareness",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Validates the bad-luck frustration empathetically. When the guest self-initiates a break from gaming, supports that choice warmly without being preachy. Provides practical spa info to support the shift",
+  "expected_behavioral_quality": "Validates frustration about losses without encouraging more gambling. Naturally steers toward non-gaming experiences. Does not lecture about responsible gaming or mention helplines unless the guest shows signs of problem gambling.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Down $500 today. Not my day.",
+      "agent_response": "I'm sorry to hear it hasn't been your day. Sometimes taking a break from the floor is the best way to reset. Todd English's Tuscany offers a very relaxing atmosphere with its indoor waterfall, making it a great spot to step away from the noise for a while. \n\nAre you looking for a quiet dinner, or would you prefer something like a show at the Wolf Den to change the energy?",
+      "sources": [],
+      "elapsed_ms": 47690,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "I should probably take a break from the tables",
+      "agent_response": "Stepping away for a bit is a smart way to reset. Since it's midday, the Mandara Spa is the perfect sanctuary \u2014 their Elemis hot stone massage is legendary for helping guests decompress and clear their head. I can help you with the details for that or any other signature treatment, and then I can connect you with our host team to finalize the booking. \n\nAfter a massage, a quiet lunch at Todd English's Tuscany by the indoor waterfall is a great way to enjoy the atmosphere away from the floor. Does a spa session sound like the right move for your break?",
+      "sources": [],
+      "elapsed_ms": 62874,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What time does the spa close?",
+      "agent_response": "The Mandara Spa is open until 8:00 PM tonight, while the Elemis Spa in the Earth Tower closes a bit earlier at 7:00 PM. Both locations are excellent for a reset, but the Mandara Spa is particularly known for its tranquil relaxation lounge and Balinese-inspired healing traditions. \n\nI can help you narrow down a specific time that works for your schedule, and then I can connect you with our host team to finalize the booking. After you've had some time to unwind, the Wolf Den has free live music tonight which is a great way to enjoy the evening without being back at the tables. Would you like me to look into the availability for a specific treatment like a deep tissue massage or a refreshing facial?",
+      "sources": [],
+      "elapsed_ms": 45253,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 155818,
+  "error": null,
+  "completed": true
+}

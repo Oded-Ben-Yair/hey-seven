@@ -1,0 +1,79 @@
+{
+  "id": "engagement-01",
+  "name": "Terse disengaged replies signal need for focused questions",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Adapts to disengaged communication style. Stops listing options and switches to narrow, focused questions. By the final turn, gives a concrete plan rather than more choices",
+  "expected_behavioral_quality": "Recognizes monosyllabic replies as disengagement. Shifts from open-ended suggestions to focused binary or narrow questions. Does not keep listing options. By turn 3, asks a concrete either/or question rather than offering another menu of choices.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What should we do tonight?",
+      "agent_response": "Tonight you can catch a live comedy set at Comix Roadhouse or enjoy craft cocktails and a DJ at novelle, which has a fantastic upscale energy. Before the show, the wood-fired dishes at Todd English's Tuscany are a great way to start the evening, though keep in mind that schedules and showtimes are subject to change. I can provide more details on these or connect you with our host team to finalize any plans\u2014are you in the mood for laughs or more of a lounge vibe?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.668
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.667
+        }
+      ],
+      "elapsed_ms": 66583,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "ok",
+      "agent_response": "Glad I could help. If you haven't tried Todd English's Tuscany yet, their wood-fired dishes are a property standout. What sounds good?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "fine",
+      "agent_response": "Frank Pepe's in the Casino of the Earth is a Connecticut institution for legendary coal-fired pizza. Are you looking for a quick bite or a full sit-down dinner?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.612
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        }
+      ],
+      "elapsed_ms": 23216,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "sure",
+      "agent_response": "Glad I could help. If you haven't tried Todd English's Tuscany yet, their wood-fired dishes are a property standout. What sounds good?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 97858,
+  "error": null,
+  "completed": true
+}

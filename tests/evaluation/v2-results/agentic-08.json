@@ -1,0 +1,72 @@
+{
+  "id": "agentic-08",
+  "name": "Budget awareness without being asked",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Picks up budget signal from turn 1 and carries it through all recommendations. Leads with free or affordable options. Does not suggest the premium steakhouse after a budget signal",
+  "expected_behavioral_quality": "When the guest signals budget consciousness (e.g., 'nothing too expensive'), adjusts all subsequent recommendations without requiring a reminder each turn. Maintains budget awareness throughout the conversation.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What's good for dinner? Nothing too expensive",
+      "agent_response": "Lantern Bar & Grill in the Casino of the Earth is an excellent choice for a satisfying dinner that stays within a reasonable budget. They serve a full menu of American favorites, including steaks, burgers, and fresh salads, in a relaxed setting where you can enjoy a hearty meal without the formal price tag of some of our fine-dining spots.\n\nThe venue is open 24 hours a day and does not require reservations, which is perfect for a low-stress evening. Please keep in mind that hours and pricing are subject to change, so confirming these details with the property is always a smart move. After dinner, the Wolf Den often has free live music to enjoy\u2014would you like me to check the schedule for you?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        }
+      ],
+      "elapsed_ms": 33667,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "That works. What else can we do tonight?",
+      "agent_response": "The Wolf Den is a fantastic option for tonight because it offers free live music every single evening in a space that puts you right in the middle of the action without needing a ticket. If you're looking for something with a bit more of a nightlife edge, novelle opens on Thursday nights for DJ sets and craft cocktails in a very sophisticated lounge setting that is perfect for a post-dinner drink. \n\nFor a more relaxing evening, the Elemis Spa is a legendary spot for a wellness reset if you would rather recharge after your day. I can help you find the specific start times for the music tonight\u2014are you more into a live band or a DJ set?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        }
+      ],
+      "elapsed_ms": 31109,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Are any shows free?",
+      "agent_response": "The Wolf Den has a free show tonight, and it is easily the best way to enjoy live music here without needing a ticket. It has this fantastic intimate energy where you're right there with the performers in a 350-seat venue located right in the heart of the action.\n\nSince it's Thursday, the show typically starts at 8:00 PM or 9:00 PM, though I'd suggest confirming the exact time with the property as schedules can change. To make the evening even easier, Mohegan Sun offers free self-parking in all of our garages so you don't have to worry about extra costs. Would you like me to find out what kind of music is playing tonight so you can plan your dinner around it?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.725
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        }
+      ],
+      "elapsed_ms": 31547,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 96324,
+  "error": null,
+  "completed": true
+}

@@ -11,7 +11,7 @@
     {
       "turn_index": 0,
       "user_message": "Where should we go for dinner tonight?",
-      "agent_response": "For your dinner this evening, SolToro Taqueria & Tequila Bar is my top pick. The scent of charred peppers and fresh lime hits you the moment you step inside this vibrant spot in the Casino of the Earth. Their authentic tacos and house-made ceviche are perfect for a midweek meal, and they boast an impressive selection of tequila if you are in the mood for a signature margarita.\n\nThey are open until 10:00 PM tonight with a casual dress code, and you usually do not need a reservation to grab a table. Prices generally fall in the mid-range ($$).\n\nHow many people will be joining you for dinner?\n\nAfter you finish your meal, you might enjoy catching some live music over at the Wolf Den just a short walk away.",
+      "agent_response": "For a Thursday evening, I'd suggest Tao Asian Bistro & Lounge in the Casino of the Sky. The atmosphere is incredibly dramatic and stylish, and you shouldn't miss their signature dim sum or the fresh selections from the sushi bar. They open at 5:00 PM today and stay open until 11:00 PM, with a smart casual dress code and reservations highly suggested.\n\nWhile Tao is perfect for a full experience, SolToro is a great alternative if you want a lively tequila bar and authentic tacos in a more casual setting. Please note that hours and prices may vary, so I recommend confirming these details with the property directly. I can help connect you with our host team to finalize a booking if Tao sounds like the right fit. Are you celebrating a special occasion tonight or just looking for a great meal before catching some live music at the Wolf Den?",
       "sources": [
         {
           "category": "restaurants",
@@ -24,13 +24,13 @@
           "score": 0.647
         }
       ],
-      "elapsed_ms": 28474,
+      "elapsed_ms": 27916,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "The steakhouse sounds good. What time?",
-      "agent_response": "Michael Jordan's Steak House is open tonight from 5:00 PM until 10:00 PM. The space in the Casino of the Sky is elegant and refined, known for serving incredible USDA Prime steaks and fresh seafood in an atmosphere filled with iconic sports memorabilia.\n\nSince it is one of our premier fine-dining venues ($$$$), they recommend business casual attire and highly suggest making a reservation to ensure you get a table.\n\nAre you celebrating a special occasion tonight?\n\nIf you have some time after dinner, the shops at the Crystal Mall are nearby for some evening browsing.",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky opens at 5:00 PM tonight and serves until 10:00 PM. The dining room has an incredible, sophisticated energy with its sports memorabilia and elegant lighting, making it the perfect spot for their signature USDA Prime steaks.\n\nSince this is an upscale venue, business casual attire is recommended and reservations are highly encouraged to ensure you get a table. Please keep in mind that hours and prices can vary, so it is best to confirm when you arrive. Let me help you with these details, and I can connect you with our host team to finalize the booking for you. Would you like a table earlier in the evening so you can catch a show at Comix Roadhouse afterward?",
       "sources": [
         {
           "category": "restaurants",
@@ -48,7 +48,7 @@
           "score": 0.624
         }
       ],
-      "elapsed_ms": 27292,
+      "elapsed_ms": 25578,
       "error": null
     },
     {
@@ -60,7 +60,7 @@
       "error": null
     }
   ],
-  "elapsed_ms": 55769,
+  "elapsed_ms": 53497,
   "error": null,
   "completed": true
 }

@@ -1,0 +1,87 @@
+{
+  "id": "engagement-05",
+  "name": "Request to switch from verbose to concise",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Delivers a detailed overview first, then compresses to bullet-point or single-sentence format when asked. Maintains concise style in subsequent turns without reverting to verbose",
+  "expected_behavioral_quality": "Immediately shifts to a concise format when asked. Subsequent responses are noticeably shorter without losing useful content. Does not explain why it was verbose or justify the previous style. Just adapts.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Tell me about the property",
+      "agent_response": "Mohegan Sun is one of the largest and most impressive casino resorts in the Western Hemisphere, located in Uncasville, Connecticut, on the land of the Mohegan Tribe. The property features two distinct hotel towers\u2014Sky Tower and Earth Tower\u2014with a combined total of approximately 1,600 rooms and suites designed to serve as your private retreat. \n\nThe Earth Tower is our newest addition, offering a contemporary design with cutting-edge amenities, while the Sky Tower is known for its classic luxury and expansive views. Our standard Deluxe rooms are quite spacious at 450 square feet and feature floor-to-ceiling windows that really showcase the surrounding landscape. Beyond the accommodations, you will find three casinos, over 40 restaurants, and a full-service spa all under one roof.\n\nCheck-in typically begins between 3:00 PM and 4:00 PM, but our front desk is staffed 24 hours a day to assist you whenever you arrive! Since we have a variety of dining options ranging from casual spots to high-end steakhouses, what kind of food are you usually in the mood for after you settle into your room?",
+      "sources": [
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.668
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        }
+      ],
+      "elapsed_ms": 29869,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Can you just give me the quick version?",
+      "agent_response": "Mohegan Sun is a 3.3 million square foot resort in Uncasville, Connecticut, featuring two luxury hotel towers, three casinos, and over 40 restaurants. It also houses a 10,000-seat arena and a world-class spa, all owned and operated by the Mohegan Tribe.\n\nOur newest tower, the Earth Tower, offers a more contemporary design and is just a short walk from the main gaming floor. Since you're looking for the highlights, would you like a quick recommendation for a fast lunch near the casino floor?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.65
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.613
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 27102,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What time does the steakhouse open?",
+      "agent_response": "Michael Jordan's Steak House opens at 5:00 PM today in the Casino of the Sky ($$$$). It is an upscale venue where business casual attire is recommended and reservations are highly encouraged.\n\nSince it is currently 10:35 AM, you might also consider Bobby Flay's Bar Americain, which opens at 11:30 AM and serves excellent grilled meats. After dinner, the Wolf Den usually has free live music\u2014are you looking for a formal sit-down dinner or a quicker option for lunch?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.702
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        }
+      ],
+      "elapsed_ms": 63195,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 120167,
+  "error": null,
+  "completed": true
+}

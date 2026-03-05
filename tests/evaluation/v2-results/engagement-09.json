@@ -1,0 +1,61 @@
+{
+  "id": "engagement-09",
+  "name": "Brevity preference established early",
+  "source_file": "behavioral_engagement.yaml",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Matches the guest's terse, functional style. Provides concise answers without pleasantries or marketing language. Does not try to expand the conversation",
+  "expected_behavioral_quality": "When the first message is very short and direct, matches that communication style throughout. Does not open with a long welcome message or property overview. Keeps all responses short and functional.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Steakhouse hours",
+      "agent_response": "Michael Jordan's Steak House is the premier choice for a world-class steak tonight, opening at 5:00 PM and serving until 10:00 PM. The dry-aged USDA Prime cuts have a deep, concentrated flavor that pairs beautifully with their extensive wine list, and the upscale atmosphere in the Casino of the Sky is perfect for a refined evening. If you're looking for a steak earlier in the day, Bobby Flay's Bar Americain opens at 11:30 AM today, while the Lantern Bar & Grill is open 24 hours for a casual meal anytime. After a rich dinner, the free live music at the Wolf Den is a fantastic way to keep the energy going through the night. I can connect you with our host team to finalize a booking for you. Is there a particular cut of steak you usually look for on the menu?",
+      "sources": [],
+      "elapsed_ms": 58136,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Spa hours",
+      "agent_response": "Mandara Spa is open until 8:00 PM and Elemis Spa closes at 7:00 PM, though these times are subject to change. After you relax, the Wolf Den has free live music tonight\u2014are you looking for a specific treatment like a massage?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.699
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        }
+      ],
+      "elapsed_ms": 29146,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Pool open?",
+      "agent_response": "The heated indoor pool is open today until 10:00 PM for hotel guests and includes access to the hot tub. Since you're looking for relaxation, would you like to know what's playing at the Wolf Den tonight?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.708
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.682
+        }
+      ],
+      "elapsed_ms": 41940,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 129222,
+  "error": null,
+  "completed": true
+}

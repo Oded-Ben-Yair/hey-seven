@@ -1,0 +1,71 @@
+{
+  "id": "implicit-06",
+  "name": "Loyalty tier drop implies frustration and entitlement",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Treats returning former-Gold guest as VIP. Acknowledges their history without dwelling on tier change. Focuses on making them feel valued and informed about current options",
+  "expected_behavioral_quality": "Reads 'used to be Gold' as frustration about tier loss and implicit expectation of elevated treatment despite current status. Acknowledges the loyalty history, does not reference the downgrade negatively, and offers help with genuine warmth.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I used to be Gold tier. Coming back after a while.",
+      "agent_response": "The Momentum program tiers are currently Core, Ignite, Leap, Ascend, and Soar. Since it has been a while since your last visit, you should visit any Momentum Desk or check the Mohegan Sun app to see your current tier standing and Tier Credit balance. \n\nBased on your previous play history, you may be eligible for the Ascend tier at 25,000 Tier Credits, which includes benefits such as complimentary valet, room upgrades, and access to a dedicated host. You earn these credits and Momentum Points through gaming as well as dining and hotel stays.\n\nWhen are you planning to visit? Knowing your dates helps me check which specific promotions will be active during your stay.",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.667
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.585
+        }
+      ],
+      "elapsed_ms": 34722,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Things look different. Where's the good steakhouse?",
+      "agent_response": "For a truly standout experience, Michael Jordan's Steak House in the Casino of the Sky is the place to go. They serve incredible USDA Prime steaks and fresh seafood in an upscale setting that feels both elegant and storied with the sports memorabilia throughout the room. They open at 5:00 PM today, and I'd suggest a reservation as it is one of our most sought-after tables.\n\nWith your previous history at the Gold level, you should definitely check in with a host or at a Momentum desk. Guests with your play history often qualify for complimentary dining credits that could be used toward their signature Delmonico steak or the famous garlic bread with blue cheese fondue.\n\nAfter a meal like that, a walk over to the Wolf Den for some live music is a great way to keep the evening going. Are you looking to grab a table for tonight, or are you planning a dinner for later this weekend?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.691
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        }
+      ],
+      "elapsed_ms": 24447,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Do returning guests get anything special?",
+      "agent_response": "As a returning guest, your best first step is to visit any Momentum Desk to check for personalized reactivation offers or \"Win Back\" bonuses that may be tied to your account. Your previous Gold status indicates a play history that often qualifies for complimentary dining, room offers, or Free Slot Play based on your past activity.\n\nThe Momentum program currently uses five tiers: Core, Ignite, Leap, Ascend, and Soar. If your play history places you at the Ascend level, you would be eligible for a dedicated host and priority valet service. These benefits and any available offers are subject to your current account standing, which the rewards desk can verify for you.\n\nSince you are looking into rewards, would you like to know about the current hotel packages that combine room stays with dining credits for your visit?",
+      "sources": [],
+      "elapsed_ms": 41347,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 100518,
+  "error": null,
+  "completed": true
+}

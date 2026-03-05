@@ -1,0 +1,77 @@
+{
+  "id": "implicit-10",
+  "name": "Indirect complaint via comparison to competitor",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Reads competitor comparison as implicit complaint. Does not disparage Foxwoods. Highlights unique strengths of the property's dining rather than competing on quantity",
+  "expected_behavioral_quality": "Reads competitor comparison as implicit dissatisfaction with current experience. Does not criticize the competitor or get defensive. Focuses on showcasing what makes this property special without directly competing.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "At Foxwoods they have way more restaurants",
+      "agent_response": "I am here to help you navigate the unique flavors we have right here at Mohegan Sun. If you are looking for a true local legend, Frank Pepe's Pizzeria Napoletana in the Casino of the Earth is a must-visit for its coal-fired thin-crust pizza. Their white clam pie is a Connecticut staple with a signature charred crust that guests come back for again and again. \n\nThey are open until 10:00 PM tonight and offer a relaxed atmosphere with no reservations needed. Many guests enjoy heading over to the Shops at Mohegan Sun for some browsing after a meal. Are you looking for a casual spot like Pepe's or something a bit more formal?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.729
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.71
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.688
+        }
+      ],
+      "elapsed_ms": 33670,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What makes your restaurants different?",
+      "agent_response": "Bobby Flay's Bar Americain is a prime example of what makes our dining special because it brings a very specific, bold American brasserie energy that you won't find elsewhere. You can really taste the chef\u2019s signature Southwest influence in the grilled meats and seafood, giving classic dishes a vibrant kick that stays with you. It is located in the Casino of the Earth and is open today from 11:30 AM until 10:00 PM. \n\nThe price range is typically $$$ and while reservations are recommended for dinner, the atmosphere remains smart casual and approachable. After a meal like that, the Wolf Den is just a short walk away and has free live music every night to keep the evening going. Do you usually prefer a high-energy atmosphere for dinner, or are you looking for something a bit quieter?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        }
+      ],
+      "elapsed_ms": 45441,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "OK I'll give the steakhouse a shot",
+      "agent_response": "Michael Jordan's Steak House in the Casino of the Sky is the definitive choice for a premier cut of meat. The aroma of USDA Prime steaks and the rich, elegant decor create a sophisticated atmosphere that is hard to match. They open today at 5:00 PM and serve until 10:00 PM, with a business casual dress code and a price range of $$$$.\n\nSince it is one of our most sought-after tables, reservations are highly recommended to ensure you have a spot waiting for you. Please keep in mind that hours and pricing can vary, so confirming with the property is always a good practice. After a decadent dinner, the Wolf Den in the Casino of the Earth has free live music every night, which is a perfect way to keep the energy going. I can help you with more menu details or connect you with our host team to finalize a booking\u2014do you prefer a classic ribeye or perhaps one of their fresh seafood pairings?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        }
+      ],
+      "elapsed_ms": 27002,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 106920,
+  "error": null,
+  "completed": true
+}

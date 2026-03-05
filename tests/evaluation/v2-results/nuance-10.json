@@ -1,0 +1,39 @@
+{
+  "id": "nuance-10",
+  "name": "Celebration calibration for birthday milestone",
+  "source_file": "behavioral_nuance.yaml",
+  "category": "behavioral_nuance",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Celebrates the milestone birthday with genuine enthusiasm. Recommends group-friendly dining and suggests contacting the host team for special arrangements. Maintains elevated energy throughout",
+  "expected_behavioral_quality": "Matches celebration energy for a milestone birthday. Recommends special, memorable experiences. Does not give a generic answer. Treats the birthday as deserving elevated service and enthusiasm.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "It's my 50th birthday this weekend!",
+      "agent_response": "Congratulations on your 50th birthday! For a milestone dinner this weekend, Todd English's Tuscany is a guest favorite for its atmosphere and views of the Taughannick Falls. Since you will be here for the weekend, you might also enjoy Novelle, our upscale lounge that features craft cocktails and DJ entertainment on Thursday, Friday, and Saturday nights. How many guests will be in your party for the celebration?",
+      "sources": [],
+      "elapsed_ms": 52935,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We have a group of 8. What should we do?",
+      "agent_response": "Congratulations on your 50th birthday! For a party of eight, Todd English's Tuscany is an excellent choice for dinner because the atmosphere is refined and the terrace seating by the waterfall is memorable. \n\nTo help celebrate, Mohegan Sun would like to offer you a $25 dining credit to use at any of our restaurants during your stay. After dinner, Novelle is a great spot for a group of your size, as it is an upscale ultra lounge offering craft cocktails and DJ entertainment on Friday and Saturday nights. I can provide more details on these venues and connect you with our host team to help finalize any arrangements. \n\nDo you prefer your celebration to have a high-energy nightlife vibe or something more relaxed?",
+      "sources": [],
+      "elapsed_ms": 55939,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can we do anything special for the birthday?",
+      "agent_response": "For a group of eight, booking a VIP table at Novelle or Avalon Nightclub is an excellent way to have a dedicated home base for the night with bottle service. If you would like to do something relaxing during the day, Mandara Spa is a great option for group treatments before your big dinner.\n\nTo add a personalized touch to your meal, I can connect you with our host team to see about arranging a champagne toast or a custom dessert for your party. We also have that $25 dining credit waiting for you to use toward your birthday celebration!\n\nWould you like to know which artists are performing at the Mohegan Sun Arena or the Wolf Den this weekend?",
+      "sources": [],
+      "elapsed_ms": 55959,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 164834,
+  "error": null,
+  "completed": true
+}

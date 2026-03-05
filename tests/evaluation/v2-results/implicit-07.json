@@ -1,0 +1,71 @@
+{
+  "id": "implicit-07",
+  "name": "Urgency without explicit words",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Reads checkout time constraint as urgency. Provides short, direct answers focused on proximity and speed. Does not add marketing fluff or suggest long activities",
+  "expected_behavioral_quality": "Detects urgency from context (checking out soon, need quick answer) without the guest explicitly saying 'urgent' or 'hurry'. Provides fast, actionable answers without preamble.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Checking out in an hour. Anywhere I can grab breakfast?",
+      "agent_response": "Hash House A Go Go in the Casino of the Earth is your best option for a legendary breakfast; they serve massive portions of twisted farm food like their famous sage fried chicken and waffles until 2:00 PM. It is a casual, $$ priced venue that doesn't require reservations, making it ideal for a quick transition to your checkout. Since you're heading out soon, the Bell Desk can hold your bags while you eat\u2014would you like directions from the hotel lobby?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.676
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        }
+      ],
+      "elapsed_ms": 32745,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Is it close to the lobby?",
+      "agent_response": "Yes, it is a three-minute walk through the Earth Tower lobby directly into the Casino of the Earth. If you're coming from the Sky Tower, it's about a seven-minute walk through the shopping concourse. \n\nYou can use the express checkout on your room television to save time before you head down for your meal. Are you using our valet service or did you park in one of the garages?",
+      "sources": [],
+      "elapsed_ms": 59544,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Thanks. Last thing \u2014 where do I return the room key?",
+      "agent_response": "You can drop your keys in the express checkout boxes located at the elevator banks or leave them at the front desk. Since standard checkout is at 11:00 AM, the bell desk is happy to store your luggage while you enjoy your meal so you don't have to worry about the time. \n\nWould you like directions to the nearest luggage drop-off from the lobby?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.611
+        }
+      ],
+      "elapsed_ms": 60285,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 152575,
+  "error": null,
+  "completed": true
+}

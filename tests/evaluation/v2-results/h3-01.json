@@ -11,56 +11,29 @@
     {
       "turn_index": 0,
       "user_message": "I'm here pretty much every weekend. Love the blackjack tables",
-      "agent_response": "Playing blackjack earns Tier Credits and Momentum Points based on your average bet and length of play. Frequent weekend visits typically move members through the tiers, starting from Core toward Ignite at 2,500 credits or Leap at 10,000 credits. Higher tiers like Ascend and Soar include benefits such as dedicated hosts and access to VIP high-limit gaming areas with premium drink service.\n\nYou can verify your current Tier Credit balance and any specific table game offers at any Momentum Desk or through the Mohegan Sun app. After a session at the tables, Michael Jordan's Steak House is a frequent choice for a high-end dinner.\n\nDo you usually prefer the high-limit tables or the main casino floor?",
-      "sources": [
-        {
-          "category": "gaming",
-          "source": "mohegan_sun.json",
-          "score": 0.673
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.655
-        }
-      ],
-      "elapsed_ms": 27664,
+      "agent_response": "Consistent play on the blackjack tables earns both Momentum Points and Tier Credits. Based on that frequency, you are likely moving toward tiers like Ignite at 2,500 Tier Credits or Leap at 10,000.\n\nThe Ignite tier includes a 10% earn rate bonus and priority restaurant seating, while Leap provides additional benefits such as valet access and higher earn rates. You can check your specific balance and progress toward the next tier at any Momentum Desk or through the Mohegan Sun app. If you ever need a break from the main floor, the Bow & Arrow sports bar in the Casino of the Earth is a nearby option for a drink. Do you prefer the atmosphere of the main floor tables, or do you usually play in the high-limit areas?",
+      "sources": [],
+      "elapsed_ms": 42664,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Yeah I've got the card but I never really pay attention to it",
-      "agent_response": "Using your card while playing blackjack earns both Momentum Points and Tier Credits. Momentum Points function like cash for dining, hotel stays, and retail purchases throughout the resort. Tier Credits determine your status level; for example, reaching the Ignite tier at 2,500 credits provides a 10% bonus on your point earn rate and priority restaurant seating. \n\nYou can check your current point balance and tier status at any Momentum Desk or via the Mohegan Sun app. After a long session, many guests use their points for a meal at Tuscany or SolToro. \n\nDo you have a favorite restaurant on property where you'd like to use your rewards?",
+      "agent_response": "It is common for table players to focus on the game rather than the card, but keeping track of it ensures you receive credit for your play. Your blackjack play earns Tier Credits, which determine your status, and Momentum Points, which function as currency for dining, hotel stays, and retail. For instance, the Ignite tier at 2,500 Tier Credits includes a 10% earn rate bonus and priority seating at our restaurants. \n\nYou can view your current totals by swiping your card at any kiosk or through the Mohegan Sun app. After a session at the tables, Michael Jordan\u2019s Steak House is a popular choice for a high-quality meal \u2014 would you like me to look into their weekend hours for you?",
       "sources": [],
-      "elapsed_ms": 41827,
+      "elapsed_ms": 47194,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Really? What kind of perks are we talking?",
-      "agent_response": "Momentum rewards include points that are redeemable for dining, hotel stays, and retail purchases throughout the resort. Higher status levels provide benefits such as increased point-earning rates, priority seating at restaurants, and complimentary valet parking. Premium benefits for frequent guests include room upgrades and dedicated host services. \n\nAll table play is tracked via your card to determine eligibility for these benefits and seasonal promotions. Beyond the casino",
-      "sources": [
-        {
-          "category": "promotions",
-          "source": "mohegan_sun.json",
-          "score": 0.69
-        },
-        {
-          "category": "faq",
-          "source": "mohegan_sun.json",
-          "score": 0.652
-        },
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.645
-        }
-      ],
-      "elapsed_ms": 55048,
+      "agent_response": "The benefits of the Momentum program increase as you earn Tier Credits. At 2,500 credits, you reach the Ignite tier, which includes a 10% earn rate bonus on Momentum Points and priority restaurant seating. If your play moves you to the Leap tier at 10,000 credits, you receive complimentary valet, room upgrades based on availability, and a dedicated host.\n\nFor players at the Ascend level with 25,000 credits, additional perks include priority access to Mohegan Sun Arena and VIP event invitations. Momentum Points earned during your blackjack sessions can be spent like cash at a 1:1 ratio for dining, hotel stays, or retail purchases throughout the resort. After a long session at the tables, many guests use their points for a meal at Tuscany or SolToro. Would you like to know which specific restaurants offer priority seating for Momentum members?",
+      "sources": [],
+      "elapsed_ms": 40755,
       "error": null
     }
   ],
-  "elapsed_ms": 124541,
+  "elapsed_ms": 130614,
   "error": null,
   "completed": true
 }

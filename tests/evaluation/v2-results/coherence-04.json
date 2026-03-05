@@ -1,0 +1,71 @@
+{
+  "id": "coherence-04",
+  "name": "Profile persistence across specialist domains",
+  "source_file": "behavioral_multiturn_coherence.yaml",
+  "category": "behavioral_multiturn_coherence",
+  "behavioral_dimension": "B7_coherence",
+  "expected_behavior": "Party of 6 stated in turn 1 carries to entertainment (turn 2 recommends group-friendly options) and hotel (turn 3 acknowledges the group size). The agent does not ask 'How many people?' in turn 2 or 3",
+  "expected_behavioral_quality": "Information gathered in one specialist domain (dining) should be available to other specialists (entertainment, hotel). Party size mentioned for dinner should carry over to show recommendations and room suggestions.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Table for 6 at the steakhouse please",
+      "agent_response": "For an unforgettable steakhouse dinner, Michael Jordan's Steak House in the Casino of the Sky is the premier choice. It features a sophisticated, high-energy atmosphere with incredible USDA Prime cuts and fresh seafood that really sets the stage for a great evening.\n\nThey open at 5:00 PM tonight, and for a party of six, I'd suggest securing a spot early as the larger booths fill up quickly. To help me get everything ready, what time were you looking to dine, and are there any specific dietary needs or a special occasion I should note for the team?\n\nOnce we have those details, I can connect you with our host team to finalize the booking. After a big steak dinner, the Wolf Den is just a short walk away in the Casino of the Earth and offers free live music every night\u2014would your group be interested in catching a show after you eat?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.661
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        }
+      ],
+      "elapsed_ms": 41863,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We also need something fun for the group tonight",
+      "agent_response": "For a group of six looking for excitement tonight, Novelle is an excellent choice. It is an upscale ultra-lounge that features DJ entertainment and craft cocktails in a sophisticated setting, and since they are open on Thursday evenings, it is the perfect spot to transition to after your steak dinner. \n\nThe energy there is high but the atmosphere remains refined, making it easy for a larger group to enjoy the music while still being able to talk. Another fantastic option is the Wolf Den, located right in the heart of the Casino of the Earth, which hosts free live music every single night with no cover charge. If your group is feeling more competitive, the Cyber Quest arcade is open daily and offers a wide variety of the latest video games that are fun for all ages. Since schedules for live performances can sometimes shift, I'd suggest checking the specific set times when you arrive at the property. \n\nNovelle usually starts humming with energy later in the evening, so it is a great place to cap off the night. Would your group prefer a lounge with a DJ or the more casual, high-energy vibe of a live band at the Wolf Den?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.684
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        }
+      ],
+      "elapsed_ms": 25728,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Any room deals for a big group like ours?",
+      "agent_response": "For a group of six, I suggest booking connecting Deluxe Rooms in the Sky Tower so everyone has enough space to get ready for your dinner and evening out. Deluxe Rooms are 450 square feet and start at $169 per night, while our Junior Suites offer more room at 650 square feet with a sofa bed starting at $299 [3][4]. If you want the entire group to stay together in one retreat, the Presidential Suite is over 1,800 square feet with multiple bedrooms and a private terrace [2]. \n\nWe offer various hotel packages that combine your stay with dining credits or show tickets, which could be a great way to save on your steakhouse meal tonight [1]. Rates and availability do vary, so checking our current offers is the best way to find a deal for your specific dates. Let me help you with that\u2014once you choose a room style, I can connect you with our host team to finalize the booking. The Sky Tower rooms offer some of the best views of the Thames River and are located very close to the steakhouse\u2014would you like me to look into connecting rooms there for you?",
+      "sources": [],
+      "elapsed_ms": 57190,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 124782,
+  "error": null,
+  "completed": true
+}

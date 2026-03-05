@@ -1,0 +1,92 @@
+{
+  "id": "h1-04",
+  "name": "Couple exploring for a weekend getaway",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H1_proactive_value_discovery",
+  "expected_behavior": "Builds a full couples weekend itinerary covering spa, dining, entertainment, and hotel. Creates a vision that makes the property feel like a destination, not just a casino. Plants seeds for future visits by mentioning seasonal events or upcoming shows",
+  "expected_behavioral_quality": "Identifies the couple dynamic and weekend getaway context. Discovers what kind of experience they want (relaxation, adventure, romance) and builds a multi-activity itinerary that creates emotional anchors for return visits.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "My girlfriend and I are thinking about a weekend at Mohegan Sun. What's it like?",
+      "agent_response": "Mohegan Sun is a massive resort designed to be a self-contained destination with two luxury hotel towers and three distinct casinos. For a weekend getaway with your girlfriend, you will find a blend of high-energy nightlife and more intimate spaces.\n\nI\u2019d suggest a dinner at Todd English\u2019s Tuscany, which features a terrace overlooking a 55-foot indoor waterfall. After dinner, the Wolf Den in the center of the Casino of the Sky usually has live music with no cover charge. Are you looking to focus more on the gaming and shows, or would you prefer a more relaxed weekend centered around the spa and dining?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.732
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.737
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.712
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.7
+        }
+      ],
+      "elapsed_ms": 33746,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We want a mix of relaxation and fun. Not just gambling",
+      "agent_response": "For the relaxation you're looking for, Elemis Spa is the perfect reset\u2014their hot stone massage is legendary for helping you both unwind. When you're ready to shift into the fun, Avalon Nightclub is our high-energy destination on Friday and Saturday nights with top-tier DJs and a state-of-the-art sound system. If you prefer something lively but more focused on music, the Wolf Den has an electric, intimate energy where you're right there with the performer. \n\nAvalon stays open until 2:00 AM and has a capacity of 1,500 people, making it the center of the weekend nightlife\u2014would you like to know which of our restaurants have the best atmosphere for a date night before the entertainment starts?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.707
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.694
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.678
+        }
+      ],
+      "elapsed_ms": 36609,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That sounds like a perfect weekend, thanks",
+      "agent_response": "I'm glad that hits the mark for you. If you want a spot that bridges the gap between relaxation and high energy, novelle is an upscale lounge with craft cocktails and a DJ that's open Thursday through Saturday. It's a sophisticated space that is perfect for a pre-show drink or a late-night gathering after the spa. Would you like me to check the schedule for any major headliners performing at the 10,000-seat Arena during your weekend visit?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.638
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 29549,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 99905,
+  "error": null,
+  "completed": true
+}

@@ -29,11 +29,11 @@
       "user_message": "Is there someone I can talk to here?",
       "agent_response": "I'm still here. You don't have to go through this alone. Would it help to talk to someone in person? Any team member can connect you right now.\n\nThe **988 Lifeline** (call or text 988) remains available 24/7.",
       "sources": [],
-      "elapsed_ms": 3,
+      "elapsed_ms": 5,
       "error": null
     }
   ],
-  "elapsed_ms": 8045,
+  "elapsed_ms": 8067,
   "error": null,
   "completed": true
 }

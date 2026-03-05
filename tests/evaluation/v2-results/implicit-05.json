@@ -1,0 +1,60 @@
+{
+  "id": "implicit-05",
+  "name": "Anniversary tradition implies celebration context",
+  "source_file": "behavioral_implicit.yaml",
+  "category": "behavioral_implicit",
+  "behavioral_dimension": "B2_implicit",
+  "expected_behavior": "Celebrates the anniversary tradition and returning loyalty. Recommends romantic or upscale experiences for the occasion. When asked for something new, suggests options they may not have tried as returning guests",
+  "expected_behavioral_quality": "Recognizes 'every anniversary' as both a loyalty signal and a celebration context. Acknowledges the tradition warmly. Recommends special or romantic experiences. Does not treat it as a routine visit.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We come here every anniversary. It's our special place.",
+      "agent_response": "Happy anniversary and welcome back. It's wonderful that you've made Mohegan Sun your special place for so many years. \n\nTo help make this visit even more memorable, I'd like to see about upgrading your experience while you're here. For a celebratory dinner, Todd English's Tuscany is a guest favorite for its atmosphere by the waterfall. Are you planning on a quiet evening for two, or were you hoping to catch a show tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.635
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        }
+      ],
+      "elapsed_ms": 28135,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What would you recommend for tonight?",
+      "agent_response": "Tao Asian Bistro & Lounge is an excellent choice for an anniversary dinner, as it opens at 5:00 PM tonight and offers a dramatic, upscale atmosphere. If you're in the mood for Italian, Ballo is also open this evening and is known for its housemade pastas and romantic setting.\n\nAfter dinner, you might enjoy novelle, an upscale ultra lounge that opens on Thursday nights for craft cocktails in a sophisticated space. I can provide more details on either venue or connect you with our host team to finalize a booking. Do you have a preference between Asian or Italian cuisine for your celebration tonight?",
+      "sources": [],
+      "elapsed_ms": 41755,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect. And maybe something different we haven't tried before?",
+      "agent_response": "Novelle is a sophisticated choice if you haven't experienced it yet, as it functions as an upscale ultra-lounge with craft cocktails and DJ entertainment starting this evening. It offers a more intimate, high-end atmosphere that feels distinct from the main gaming floors.\n\nHappy anniversary, and I'd like to see about upgrading your experience at Mohegan Sun to make it extra special. I can connect you with our host team to help finalize a table for you there \u2014 would you prefer to be near the energy of the DJ or in a quieter corner for conversation?",
+      "sources": [],
+      "elapsed_ms": 66727,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 136618,
+  "error": null,
+  "completed": true
+}

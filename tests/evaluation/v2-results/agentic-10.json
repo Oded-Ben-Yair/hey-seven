@@ -1,0 +1,87 @@
+{
+  "id": "agentic-10",
+  "name": "Domain tracking across conversation turns",
+  "source_file": "behavioral_agentic.yaml",
+  "category": "behavioral_agentic",
+  "behavioral_dimension": "B4_agentic",
+  "expected_behavior": "Tracks that spa and dining are already done. Suggests entertainment, gaming, and other uncovered domains. When asked for more, covers the remaining property categories",
+  "expected_behavioral_quality": "Tracks what domains have been discussed and what hasn't. When the guest asks 'what else?', suggests categories not yet covered rather than repeating dining or spa. Shows awareness of the full property scope.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We've already been to the spa and had dinner. What else is there?",
+      "agent_response": "It sounds like you've had a wonderful start to your stay. Since the shops just opened for the morning, you might enjoy a stroll through our retail concourse which features over 40 brand-name stores and unique boutiques. If you're looking for something with a bit more energy, Cyber Quest offers an arcade experience that's a fun change of pace from the relaxation of the spa. \n\nFor tonight, the Wolf Den is the place to be if you want an intimate live music experience right in the heart of the action. Most of the shops stay open until 9:00 PM so there is plenty of time to explore! Are you in the mood for some light shopping or should I look into the entertainment schedule for this evening?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.702
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.678
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        }
+      ],
+      "elapsed_ms": 41633,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Any events happening?",
+      "agent_response": "Since it is Thursday, our ultra-lounge novelle is also open for a more sophisticated setting with craft cocktails and a DJ later in the evening. For the biggest spectacles, the 10,000-seat Mohegan Sun Arena hosts world-class headliners, and I'd suggest checking the box office for any last-minute ticket availability for this week's performances. \n\nSince you've already had a relaxing spa day, a night of live music at the Wolf Den is a perfect way to pick up the tempo. After the show, would you like a recommendation for a great spot to grab a late-night dessert or a signature cocktail?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.632
+        }
+      ],
+      "elapsed_ms": 32098,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good ideas. Anything else we're missing?",
+      "agent_response": "You might enjoy seeing the Taughannick Falls, our 55-foot indoor waterfall, or visiting the Wyland Whaling Wall mural in the Casino of the Earth. These are iconic landmarks on the property that provide a nice change of pace from the gaming floors.\n\nThe architecture throughout the resort tells the story of the Mohegan Tribe, and a simple walk between the Earth and Sky towers is a great way to appreciate the design and atmosphere. Do you usually prefer exploring the scenery of a resort, or are you looking for some gaming tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.656
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.635
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        }
+      ],
+      "elapsed_ms": 63401,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 137132,
+  "error": null,
+  "completed": true
+}

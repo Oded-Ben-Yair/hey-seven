@@ -1,0 +1,45 @@
+{
+  "id": "coherence-05",
+  "name": "Conversation derailment and recovery",
+  "source_file": "behavioral_multiturn_coherence.yaml",
+  "category": "behavioral_multiturn_coherence",
+  "behavioral_dimension": "B7_coherence",
+  "expected_behavior": "Turn 2 pivot to pool handled without losing the dinner context. Turn 3 return to dinner topic should still have anniversary context and party of 2 \u2014 agent does not start the dinner recommendation from scratch",
+  "expected_behavioral_quality": "When a guest abruptly changes topic mid-recommendation, the agent handles the pivot gracefully and can return to the original topic if the guest circles back. No loss of previously gathered context.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I need a dinner reservation for 2, we're celebrating our anniversary",
+      "agent_response": "Congratulations on your anniversary! For a milestone this special, Michael Jordan\u2019s Steak House in the Casino of the Sky is my top recommendation for its elegant atmosphere and exceptional USDA Prime steaks. It is an upscale setting that feels truly celebratory, and I would love to look into ways we can make your evening extra memorable. \n\nThey are open Wednesday through Sunday from 5:00 PM to 10:00 PM with a business casual dress code, and since it is a premier destination for celebrations, reservations are highly recommended. I can certainly help you with the details and then connect you with the host team to finalize the booking. After a dinner like that, heading over to the Wolf Den for some live music is a great way to keep the energy going. What date were you thinking of joining us so I can check the availability for your table of two?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        }
+      ],
+      "elapsed_ms": 32389,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Wait, where's the pool? My wife wants to swim first",
+      "agent_response": "The heated indoor pool is open right now until 10:00 PM tonight for our hotel guests, making it a perfect spot for your wife to relax before your anniversary dinner. It features a relaxing hot tub and full towel service, so she can simply head down and enjoy the atmosphere. \n\nHappy anniversary! Let me see about upgrading your experience at Mohegan Sun to make it extra special. If she wants to take that relaxation even further, Elemis Spa is the perfect reset\u2014their hot stone massage is legendary and I can certainly help you with the details for that. After her swim and your dinner, the Wolf Den has live music tonight that provides an electric, intimate energy for a nightcap. Are you planning to head to the pool this afternoon, or were you looking for a morning swim before the festivities begin?",
+      "sources": [],
+      "elapsed_ms": 48130,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Ok so about that dinner \u2014 steakhouse?",
+      "agent_response": "Michael Jordan\u2019s Steak House in the Casino of the Sky is the definitive choice for an anniversary dinner, where the scent of dry-aged beef and the dim, elegant lighting set a perfect stage for a celebration. Since it is Thursday, they open tonight at 5:00 PM and serve until 10:00 PM, specializing in USDA Prime cuts and an impressive wine list that pairs beautifully with their signature seafood towers. It is an upscale environment with a business casual dress code, so it will feel quite special for your milestone.\n\nHappy anniversary! Let me see about upgrading your experience at Mohegan Sun to make it extra special. I can help you with any specific menu questions and then connect you with the host team to finalize the booking for your party of two. After dinner, catching a live set at the Wolf Den is a classic way to keep the evening going. Would you prefer a table around 7:00 PM so you have plenty of time for that swim first?",
+      "sources": [],
+      "elapsed_ms": 60316,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 140836,
+  "error": null,
+  "completed": true
+}

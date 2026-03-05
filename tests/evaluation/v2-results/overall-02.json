@@ -1,0 +1,102 @@
+{
+  "id": "overall-02",
+  "name": "Mixed signals requiring adaptation",
+  "source_file": "behavioral_overall_quality.yaml",
+  "category": "behavioral_overall_quality",
+  "behavioral_dimension": "B10_overall",
+  "expected_behavior": "Turn 1: Matches excitement without over-enthusiasm. Turn 2: Does not take offense or over-apologize \u2014 adjusts recommendations based on implicit 'I want something more interesting/upscale'. Turn 3: Smoothly provides spa details without commenting on the mood shift. Coherent adaptation across tones",
+  "expected_behavioral_quality": "Guest sends mixed signals \u2014 starts enthusiastic, becomes critical, then re-engages. Tests the agent's ability to adapt tone, maintain coherence, and not overreact to mood shifts.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hey! First time here, super excited. What should we check out?",
+      "agent_response": "Welcome to Mohegan Sun! It is so great to have you here for your first visit. You are in great hands, and there is so much to explore at your own pace.\n\nSince it is Thursday, I'd suggest checking out the Wolf Den. It is an intimate venue right in the heart of the action where you can catch live music for free, and tonight\u2019s show usually kicks off around 8:00 PM or 9:00 PM. If you want to start with a more sophisticated atmosphere, novelle is an upscale lounge open on Thursday nights that is perfect for craft cocktails and a very sleek vibe.\n\nAfter you have had a chance to settle in, the Elemis Spa is a legendary spot to book a reset for tomorrow morning if you want to truly unwind. The Wolf Den seats fill up quickly because it is a complimentary show, so heading over a little early is always a smart move. Are you more in the mood for a live band or a quiet place to grab a drink tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.676
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        }
+      ],
+      "elapsed_ms": 60144,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Hmm, those options sound kind of basic honestly",
+      "agent_response": "I hear you\u2014those are the standard starting points for most guests. If you want something with a bit more of a \"wow\" factor, TAO Asian Bistro & Lounge is likely what you're looking for. It features a 16-foot tall Quan Yin statue and an immersive, high-energy atmosphere that feels like a destination in itself. \n\nFor something even more exclusive, you might prefer our high-limit gaming areas, which offer a more private experience and dedicated hosts. TAO is one of our most popular spots and often requires a reservation well in advance to get a prime table. What kind of atmosphere do you usually look for when you're out on the town?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.632
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        }
+      ],
+      "elapsed_ms": 59386,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Wait actually the spa thing sounds pretty good. Tell me more",
+      "agent_response": "Mandara Spa is the perfect reset after a long day, and the experience is truly legendary. It is an award-winning space inspired by Balinese healing traditions, featuring a tranquil relaxation lounge, steam room, and sauna that are perfect for fully disconnecting. \n\nIf you are staying in the Earth Tower, the Elemis Spa is right there and offers premium skincare treatments and express services if you want to get back to the action quickly. Mandara is open until 8:00 PM tonight, while Elemis closes at 7:00 PM. I can help you look at the specific menus for either location and then connect you with our host team to finalize a booking. Since you will likely be in a total state of bliss afterward, would you like a recommendation for a relaxing spot to grab dinner nearby?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.652
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.636
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        }
+      ],
+      "elapsed_ms": 64994,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 188556,
+  "error": null,
+  "completed": true
+}

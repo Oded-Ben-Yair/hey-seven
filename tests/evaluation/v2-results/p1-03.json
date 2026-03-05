@@ -11,15 +11,36 @@
     {
       "turn_index": 0,
       "user_message": "I'm Liz, looking for a spa appointment",
-      "agent_response": "I'd love to help with that. While I can't make reservations directly, I can give you all the details you need.\n\nFor reservations and bookings, you can reach Mohegan Sun at 1-888-226-7711 or visit mohegansun.com.\n\nIs there anything else about the property I can help you with?",
-      "sources": [],
-      "elapsed_ms": 4901,
+      "agent_response": "It is a pleasure to meet you, Liz. Let me help you with those spa details. \n\nYou have two exceptional choices for your relaxation here. The Mandara Spa is an award-winning full-service sanctuary that uses Balinese healing traditions and includes access to a relaxation lounge, steam room, and sauna. If you are looking for premium skincare or an express service, the Elemis Spa in the Earth Tower is a fantastic modern option. \n\nAfter your treatment, a craft cocktail at novelle is the perfect way to transition into the evening. Once we find the right fit, I can connect you with our host team to finalize the appointment! To help me narrow things down, what day were you looking to visit?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.67
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.628
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.623
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.609
+        }
+      ],
+      "elapsed_ms": 28762,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Actually it's Elizabeth, not Liz. What services do they offer?",
-      "agent_response": "My apologies, Elizabeth. We have two distinct spa experiences to choose from here at the resort.\n\nMandara Spa is our award-winning, full-service destination that draws on Balinese healing traditions. They offer a wide range of treatments including massages, facials, body wraps, and aromatherapy. If you're looking to truly unwind, they feature a relaxation lounge, steam room, and sauna. They are open until 8:00 PM tonight, so there is still a little time if you were hoping for an evening session.\n\nElemis Spa in the Earth Tower focuses on premium skincare and also offers express services if you are on the go. They close at 7:00 PM today, so that might be an excellent way to start your morning when they reopen at 9:00 AM.\n\nAfter a relaxing session, the sophisticated atmosphere at novelle is a perfect place to enjoy a craft cocktail before the night's entertainment begins.\n\nAre you looking for a full body treatment or more of a focused facial?",
+      "agent_response": "I understand that having your name shortened can be frustrating, Elizabeth, and I apologize for that. Let me get right to those service details for you. \n\nMandara Spa offers an extensive menu including massages, facials, body wraps, and aromatherapy, all inspired by Balinese healing traditions. Over at the Elemis Spa, the focus is on premium skincare treatments, couples experiences, and express services if you need something a bit quicker. \n\nAfter your treatment, Todd English's Tuscany is a wonderful spot nearby for a relaxed, restorative meal. Are you leaning more toward a full-body massage, or were you hoping for a skincare treatment today?",
       "sources": [
         {
           "category": "amenities",
@@ -32,19 +53,19 @@
           "score": 0.622
         }
       ],
-      "elapsed_ms": 38531,
+      "elapsed_ms": 54806,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Book me a massage",
-      "agent_response": "I'd love to help with that. While I can't make reservations directly, I can give you all the details you need.\n\nFor reservations and bookings, you can reach Mohegan Sun at 1-888-226-7711 or visit mohegansun.com.\n\nIs there anything else about the property I can help you with?",
+      "agent_response": "I would be happy to help you find the perfect massage, Elizabeth. \n\nThe Mandara Spa is our premier full-service sanctuary where the massages are inspired by Balinese healing traditions, and your session includes access to the tranquil relaxation lounge, steam room, and sauna. If you are looking for something legendary, their hot stone massage is a guest favorite for a total reset after a day on the floor.\n\nAfter your treatment, you might enjoy heading over to the Wolf Den, which has an electric, intimate energy for live performances. I can connect you with our host team to finalize your booking once we have the details. What date are you planning to visit, and would you prefer a morning or afternoon appointment?",
       "sources": [],
-      "elapsed_ms": 2725,
+      "elapsed_ms": 49263,
       "error": null
     }
   ],
-  "elapsed_ms": 50174,
+  "elapsed_ms": 133334,
   "error": null,
   "completed": true
 }

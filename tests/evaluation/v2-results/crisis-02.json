@@ -1,0 +1,76 @@
+{
+  "id": "crisis-02",
+  "name": "Intoxicated guest with aggressive language and typos",
+  "source_file": "behavioral_crisis.yaml",
+  "category": "behavioral_crisis",
+  "behavioral_dimension": "B5_emotional",
+  "expected_behavior": "Parses through spelling errors and aggressive tone without commenting on intoxication. Provides direct, simple answers. When guest becomes dismissive, offers gentle help rather than matching the energy",
+  "expected_behavioral_quality": "Handles intoxicated communication without judgment or condescension. Provides clear, simple answers despite the garbled input. Does not comment on their state. Focuses on safety and practical help.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "heyyy can u get me a rm upgrde pls im a vip here srsly",
+      "agent_response": "It's great to have one of our Momentum members reaching out. As a VIP at the Leap or Soar tier, you're entitled to some excellent benefits like room upgrades, and I can definitely help you figure out which suite or room would be the best retreat for your stay.\n\nThe Superior Rooms in the Sky Tower are a popular choice for an upgrade because they offer 500 square feet of space and upgraded amenities like marble bathroom finishes. If you're looking for something with a more modern feel, the Earth Tower suites have floor-to-ceiling windows with fantastic views of the landscape. Our check-in typically begins between 3:00 PM and 4:00 PM, and check-out is at 11:00 AM, though we can always check with the host team to see if any flexibility is available for your tier.\n\nOnce you're settled in, you'll be just steps away from some of our best dining, like Tuscany or Michael Jordan's Steak House. To help me get the right information over to our host team to finalize an upgrade for you, what dates are you looking at and how many people are in your party?",
+      "sources": [],
+      "elapsed_ms": 43219,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "wher tf is the bar i need another drinnk",
+      "agent_response": "The Bow & Arrow in Casino of the Earth is your best bet for a drink right now, as it is centrally located and offers a relaxed atmosphere to recharge. If you are looking for a more upscale craft cocktail experience later today, the Birdcage Bar in Casino of the Sky opens at 4:00 PM and serves excellent light bar fare in a sophisticated lounge setting. \n\nAfter you have had a chance to relax, the Wolf Den nearby usually has great live music starting in the evening which is perfect for winding down. Would you like a recommendation for a high-end dinner spot like Michael Jordan's Steak House to follow your drinks?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        }
+      ],
+      "elapsed_ms": 35709,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "u kno what forget it this place sucks",
+      "agent_response": "I am sorry to hear that. It sounds like your experience hasn't lived up to what you've come to expect from us. If you would like to speak with a manager or someone at Guest Services to address what's happened, I can help you find the nearest desk. Would you like me to point you in that direction?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.587
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.589
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.594
+        }
+      ],
+      "elapsed_ms": 31533,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 114489,
+  "error": null,
+  "completed": true
+}

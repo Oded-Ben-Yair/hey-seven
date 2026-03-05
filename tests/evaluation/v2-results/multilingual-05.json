@@ -1,0 +1,29 @@
+{
+  "id": "multilingual-05",
+  "name": "Spanish dining question",
+  "source_file": "behavioral_multilingual.yaml",
+  "category": "behavioral_multilingual",
+  "behavioral_dimension": "B8_cultural",
+  "expected_behavior": "Provides specific restaurant recommendations in Spanish. Mentions atmosphere or cuisine details relevant to a romantic dinner. Uses warm concierge tone in Spanish.",
+  "expected_behavioral_quality": "Handles a routine Spanish dining question with the same quality as English. Response includes specific restaurant names, cuisine types, and helpful details \u2014 all in Spanish.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Cuales son los mejores restaurantes? Busco algo para una cena romantica",
+      "agent_response": "Para una cena rom\u00e1ntica con un toque de elegancia, Michael Jordan's Steak House en el Casino of the Sky es la opci\u00f3n m\u00e1s destacada por sus cortes de carne premium y su ambiente refinado. Si prefieren algo con un estilo italiano contempor\u00e1neo, Ballo Italian Restaurant ofrece pastas artesanales y una atm\u00f3sfera muy acogedora que suele gustar mucho a las parejas.\n\nAmbos restaurantes abren sus puertas a las 5:00 PM esta tarde y las reservaciones son altamente recomendables para asegurar la mejor mesa. Despu\u00e9s de la cena, pueden pasar por el VISTA Lounge en el Wombi Rock para disfrutar de un c\u00f3ctel bajo el techo de cristal del planetario. \u00bfSer\u00eda una mesa solo para ustedes dos o vienen con un grupo m\u00e1s grande?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        }
+      ],
+      "elapsed_ms": 43843,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 43843,
+  "error": null,
+  "completed": true
+}

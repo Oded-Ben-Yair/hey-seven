@@ -11,21 +11,15 @@
     {
       "turn_index": 0,
       "user_message": "I'm vegetarian. What are my dinner options?",
-      "agent_response": "For a refined vegetarian dinner tonight, Todd English's Tuscany is a standout choice where the vegetable-forward dishes truly shine. The wood-fired aroma hits you the moment you walk in, and their handmade pastas and artisanal pizzas offer rich, complex flavors that make for a sophisticated meal in a warm, Tuscan-inspired setting. \n\nThey are located in the Casino of the Sky and are open tonight until 10:00 PM. The dress code is business casual, and because it is one of our premier venues, reservations are highly recommended for this $$$$ experience. If you are looking for something more casual, Mohegan Sun Caputo Trattoria in the Casino of the Earth serves excellent brick-oven pizzas and classic pasta dishes in a relaxed environment until 10:00 PM. \n\nPlease keep in mind that hours and prices may vary, so it is always a good idea to confirm with the venue directly. After dinner, you might enjoy catching some live music at the Wolf Den, which is right in the heart of the Casino of the Earth. \n\nHow many people will be in your party this evening?",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.673
-        }
-      ],
-      "elapsed_ms": 27602,
+      "agent_response": "For a standout vegetarian dinner, Todd English's Tuscany is an exceptional choice where the wood-fired aroma of the kitchen sets the stage for a wonderful meal. Their handmade pastas and artisanal pizzas are crafted with a level of detail that makes them favorites even for our non-vegetarian guests.\n\nThey are located in the Casino of the Sky and open this evening at 5:00 PM, with service until 10:00 PM. The setting is business casual with a price range of $$$$, so I do recommend a reservation to ensure you have a table waiting. I can easily connect you with our host team to handle that booking for you.\n\nSince the Casino of the Earth is just a short walk away, you might enjoy catching a live performance at the Wolf Den after your meal. How many guests are in your party tonight?",
+      "sources": [],
+      "elapsed_ms": 42167,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "Actually tell me about the spa first",
-      "agent_response": "If you are looking to unwind before dinner, you have two excellent options right here on the property. Mandara Spa is a full-service sanctuary that draws on Balinese healing traditions, featuring a tranquil relaxation lounge and steam rooms that are perfect for a complete reset. They are open until 8:00 PM tonight, which gives you some time if you head over soon.\n\nFor something more focused on premium skincare and modern treatments, the Elemis Spa at Earth Tower is a great choice. They offer signature couples experiences and express services if you are on a tighter schedule, though they do close at 7:00 PM this evening. \n\nSince it is currently 6:36 PM, Mandara Spa might be your best bet for a relaxing evening session before they close. Please note that hours and treatment availability are subject to change, so it is always a good idea to confirm with the spa directly. After you have had some time to recharge, the live music at the Wolf Den is a great way to transition into the evening.\n\nAre you looking for a specific type of treatment, like a massage or a facial?",
+      "agent_response": "The spas here are designed to be a complete escape from the energy of the casino floor. Mandara Spa is our award-winning, full-service retreat that uses Balinese healing traditions, and it's perfect if you want to spend time in the steam room or sauna before your treatment. They are open until 8:00 PM tonight.\n\nIf you're looking for something more modern or focused on skincare, the Elemis Spa at Earth Tower is excellent. They offer premium Elemis treatments and even express services if you're looking for a quicker refresh before dinner. They stay open until 7:00 PM daily. I can certainly help you get in touch with the spa team to see which therapists are available for a session today.\n\nSince you're planning on a vegetarian dinner later, a mid-afternoon spa session would time out perfectly for a 5:00 PM reservation. Are you leaning more toward a full body massage or a focused skincare treatment?",
       "sources": [
         {
           "category": "amenities",
@@ -43,19 +37,25 @@
           "score": 0.633
         }
       ],
-      "elapsed_ms": 28245,
+      "elapsed_ms": 27559,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Ok back to dinner \u2014 where should I go?",
-      "agent_response": "For tonight, SolToro Taqueria & Tequila Bar is an excellent choice \u2014 their modern Mexican menu features authentic tacos and fresh flavors that work beautifully for a vegetarian meal. The atmosphere is high-energy with colorful decor, making it a great spot to transition from a relaxing spa session into a fun evening.\n\nThey are located in the Casino of the Earth and are open until 1",
-      "sources": [],
-      "elapsed_ms": 57410,
+      "agent_response": "For a vegetarian-friendly dinner, Tao Asian Bistro & Lounge is a standout choice because their menu features an incredible array of vegetable-focused dim sum and specialized sushi rolls. The 16-foot Buddha and the dark, stylish lighting create a dramatic atmosphere that makes the meal feel like a special event.\n\nThey open today at 5:00 PM and serve until 11:00 PM, though hours and pricing in the $$$ range can vary, so confirming with the property is always a good idea. It is a smart casual venue where reservations are highly recommended, and I can certainly connect you with our host team to finalize a booking for you. Since you were looking into the spa earlier, an early evening reservation would give you plenty of time to relax before your meal! After dinner, the shops at the Casino of the Sky are just a few steps away for some late-night browsing. Does a Pan-Asian menu sound like the right fit for your evening?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.657
+        }
+      ],
+      "elapsed_ms": 77548,
       "error": null
     }
   ],
-  "elapsed_ms": 113258,
+  "elapsed_ms": 151303,
   "error": null,
   "completed": true
 }

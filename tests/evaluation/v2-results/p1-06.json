@@ -1,0 +1,72 @@
+{
+  "id": "p1-06",
+  "name": "Guest mentions gaming preference casually",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Captures 'love blackjack' as a gaming preference and uses it to shape gaming recommendations. When the guest asks for more, connects to related table game experiences rather than random amenities",
+  "expected_behavioral_quality": "Registers the gaming preference from a casual mention. 'Love blackjack' is a profiling signal for gaming preferences, comp eligibility, and table game recommendations. Stores and references it without making the guest feel tracked.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I love blackjack. Where are the table games?",
+      "agent_response": "I'm Seven. You'll find blackjack tables in all three of our main gaming areas: Casino of the Earth, Casino of the Sky, and Casino of the Wind. \n\nCasino of the Earth is a good choice if you prefer a more traditional atmosphere, while Casino of the Sky is more open and sits right under our signature planetarium dome. If you're looking for a meal nearby after your session, Michael Jordan's Steak House in the Casino of the Sky is a standout option for a great steak. Are you visiting us for the day or staying for the weekend?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.693
+        }
+      ],
+      "elapsed_ms": 39545,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "What about the minimum bets?",
+      "agent_response": "Minimum bets vary by game and time of day. Generally, you'll find lower minimums during weekday mornings and afternoons, while they typically increase on Friday and Saturday nights when the floor is busier.\n\nSince it's a Thursday afternoon, you'll likely find a good range of table limits available right now across all three casinos. If you're looking for a more exclusive experience, our High Limit areas in the Casino of the Earth and Casino of the Sky offer elevated minimums with premium drink service. Do you have a specific table minimum you usually look for when you play?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.722
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.667
+        }
+      ],
+      "elapsed_ms": 27106,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Cool. Anything else fun for a blackjack fan?",
+      "agent_response": "Since you enjoy the tables, you might find Spanish 21 or Casino War to be a fun change of pace as they are both card-based games available on our gaming floor. \n\nFor entertainment, the Wolf Den is located right in the center of Casino of the Earth and offers free live music every night in an intimate setting. It has this electric energy where you're right there with the performer, making it a perfect spot to take a break without leaving the action behind. If you're looking for a spot to grab a drink and catch a game between hands, the Bow & Arrow Sports Bar is also just a few steps away from the blackjack pits. Since it is Thursday afternoon, would you like to know about the live performances we have scheduled for this evening?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.659
+        }
+      ],
+      "elapsed_ms": 73182,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 139834,
+  "error": null,
+  "completed": true
+}
