@@ -371,6 +371,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "profiling_question_injected": False,
         # R83: Model routing observability
         "model_used": None,
+        # R92: Booking intent signal for specialist pipeline
+        "booking_intent": None,
     }
 
 

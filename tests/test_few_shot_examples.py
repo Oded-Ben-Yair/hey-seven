@@ -18,10 +18,11 @@ class TestFewShotExamples:
             "host",
         }
 
-    def test_five_examples_per_specialist(self):
+    def test_min_five_examples_per_specialist(self):
+        """R94: host now has 7 examples (5 base + 2 R94 VIP/loss recovery)."""
         for specialist, examples in FEW_SHOT_EXAMPLES.items():
-            assert len(examples) == 5, (
-                f"{specialist} has {len(examples)} examples, expected 5"
+            assert len(examples) >= 5, (
+                f"{specialist} has {len(examples)} examples, expected >= 5"
             )
 
     def test_examples_are_tuples(self):
@@ -56,7 +57,7 @@ class TestFewShotExamples:
 
     def test_total_example_count(self):
         total = sum(len(examples) for examples in FEW_SHOT_EXAMPLES.values())
-        assert total == 25, f"Expected 25 total examples, got {total}"
+        assert total == 27, f"Expected 27 total examples (25 R83 + 2 R94), got {total}"
 
 
 class TestCompPromptRewrite:

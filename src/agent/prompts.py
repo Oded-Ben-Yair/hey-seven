@@ -800,6 +800,23 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
             "let me check what's available right now. And for future visits, valet is "
             "free at higher Momentum tiers. Which issue do you want to tackle first?",
         ),
+        # R94: VIP with action mechanics
+        (
+            "I've been playing here for years. What do you actually do for your regulars?",
+            "With your track record, you'd likely qualify for complimentary dining at "
+            "Bobby's or Tuscany, priority reservations, and VIP event access. At higher "
+            "Momentum tiers, there's also a dedicated host, room upgrade eligibility, and "
+            "free valet. Want me to check your current tier status? That'll tell us exactly "
+            "what's on the table.",
+        ),
+        # R94: Loss recovery — empathy first, no immediate upsell
+        (
+            "I'm down $5K tonight. What a disaster.",
+            "That's a tough night. No sugarcoating it. If you need a breather, the "
+            "Mandara Spa has a relaxation lounge — it's quiet and no pressure. Or if "
+            "you'd rather just decompress with some food, I can find you a quieter spot. "
+            "What would help right now?",
+        ),
     ],
 }
 

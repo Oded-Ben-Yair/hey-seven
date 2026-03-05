@@ -18,7 +18,7 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 
 - **Codebase**: 24K+ LOC, 66 source modules across 10 packages
 - **Tests**: 3502 tests, 0 failures, 90%+ coverage
-- **Agent**: 12-node LangGraph StateGraph v2.3 (28 state fields, 17 feature flags) with 6 specialist agents + profiling enrichment node
+- **Agent**: 13-node LangGraph StateGraph v2.4 (29 state fields, 17 feature flags) with 6 specialist agents + profiling enrichment node
 - **Model routing**: Flash→Pro for complex/emotional queries (low confidence, grief, frustrated, crisis, high-complexity)
 - **Review Score**: R75 tech 9.63/10, R82 behavioral 4.7/10
 - **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R82(4.7) behavioral
@@ -148,7 +148,7 @@ static/                      - Static assets
 
 ## Architecture Overview
 
-The agent uses a custom 12-node LangGraph StateGraph with validation loops:
+The agent uses a custom 13-node LangGraph StateGraph with validation loops:
 
 ```
 router -> [specialist dispatch] -> generate -> profiling_enrichment -> validate -> respond
@@ -175,8 +175,11 @@ Key architectural patterns:
 - **re2-compatible guardrail patterns** across all 5 guardrail categories
 - **Guest profiling enrichment node** between generate and validate with LLM-powered extraction, confidence gating, and golden path sequencing (ADR-028)
 - **Incentive engine** with per-casino rules, tiered autonomy ($50 auto-approve threshold), and natural language framing templates
-- **Flash→Pro model routing** — deterministic routing to Pro for low confidence, grief, frustrated, crisis, and high-complexity queries (R83)
-- **Few-shot behavioral examples** — 25 examples (5 specialists x 5 patterns) injected into specialist system prompts via feature flag (R83)
+- **Flash→Pro model routing** — deterministic routing to Pro for low confidence, grief, frustrated, disappointed, crisis, and high-complexity queries (R83/R94)
+- **Few-shot behavioral examples** — 27 examples (5 specialists, 5-7 per specialist) injected into specialist system prompts via feature flag (R83/R94)
+- **Booking intent routing** — action_request queries flow through specialist pipeline with RAG instead of canned off_topic response (R92). Booking context injected with qualifying questions.
+- **Profile confirmation** — profiling enrichment node prepends "So I've got: [name, occasion, party size]" when guest confirms and profile is ≥30% complete (R93)
+- **Loss recovery + VIP mechanics** — emotional intelligence for loss/disappointment contexts, VIP recognition with specific comp mechanics instead of generic "valued guest" (R94)
 
 ## Known Limitations
 

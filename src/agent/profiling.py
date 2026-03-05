@@ -432,6 +432,63 @@ async def profiling_enrichment_node(state: PropertyQAState) -> dict[str, Any]:
             "profiling_question_injected": False,
         }
 
+        # R93: Profile confirmation — when guest confirms/agrees AND we have
+        # enough profile data, prepend a brief profile summary to the AI response.
+        # This makes the guest feel heard ("So I've got: anniversary for 2...")
+        # and gives them a chance to correct any misunderstandings.
+        _CONFIRM_SIGNALS = (
+            "sounds good",
+            "perfect",
+            "great",
+            "book it",
+            "let's do",
+            "that works",
+            "yes",
+            "yeah",
+            "yep",
+            "sure",
+            "do that",
+            "sounds perfect",
+            "love it",
+            "go with that",
+            "awesome",
+        )
+        _user_lower = (user_message or "").lower()
+        if (
+            completeness >= 0.3
+            and merged
+            and any(sig in _user_lower for sig in _CONFIRM_SIGNALS)
+        ):
+            from src.agent.extraction import get_guest_profile_summary
+
+            profile_summary = get_guest_profile_summary(merged)
+            if profile_summary and ai_response:
+                # Build a brief guest-facing confirmation line
+                _summary_parts: list[str] = []
+                if merged.get("name"):
+                    _summary_parts.append(merged["name"])
+                if merged.get("occasion"):
+                    _summary_parts.append(merged["occasion"])
+                if merged.get("party_size"):
+                    _summary_parts.append(f"party of {merged['party_size']}")
+                if merged.get("preferences"):
+                    _summary_parts.append(merged["preferences"])
+                if _summary_parts:
+                    _confirm_text = f"So I've got: {', '.join(_summary_parts)}. "
+                    # Prepend confirmation to AI response by replacing last AI message
+                    for msg in reversed(messages):
+                        if isinstance(msg, AIMessage) and msg.content:
+                            original = _normalize_content(msg.content)
+                            enriched = f"{_confirm_text}{original}"
+                            replacement = AIMessage(content=enriched, id=msg.id)
+                            result["messages"] = [replacement]
+                            logger.info(
+                                "R93: Profile confirmation injected (completeness=%.2f, fields=%s)",
+                                completeness,
+                                list(_summary_parts),
+                            )
+                            break
+
         # R78 fix: Inject profiling question by REPLACING the last AI message
         # (preserving its id so the add_messages reducer replaces, not appends).
         # The profiling question injection in _base.py is the primary path --

@@ -51,19 +51,23 @@ class TestEval:
             w in lower for w in ["can't", "cannot", "not able", "gambling advice"]
         )
 
-    async def test_booking_refusal(self, graph):
+    async def test_booking_request(self, graph):
+        """R92: Booking requests now go through specialist pipeline with helpful info."""
         result = await chat(graph, "Book me a table at the steakhouse")
         lower = result["response"].lower()
+        # Should provide helpful information, not refuse
+        assert len(result["response"]) > 50  # Substantive response
         assert any(
             w in lower
             for w in [
-                "can't",
-                "cannot",
-                "not able",
-                "information",
-                "contact",
-                "connect",
-                "host team",
+                "steakhouse",
+                "dinner",
+                "reservation",
+                "table",
+                "restaurant",
+                "dining",
+                "party",
+                "host",
             ]
         )
 

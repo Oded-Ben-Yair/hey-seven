@@ -608,11 +608,28 @@ class TestRouteFromRouter:
         state = _state(query_type="gambling_advice")
         assert route_from_router(state) == "off_topic"
 
-    def test_action_request_routes_to_off_topic(self):
-        """Action request routes to off_topic node."""
+    def test_action_request_routes_to_retrieve(self):
+        """R92: Action request routes to retrieve for specialist pipeline."""
         from src.agent.nodes import route_from_router
 
         state = _state(query_type="action_request")
+        assert route_from_router(state) == "retrieve"
+
+    def test_action_request_repeat_routes_to_off_topic(self):
+        """R92: Repeated action request routes to off_topic for handoff escalation."""
+        from langchain_core.messages import AIMessage, HumanMessage
+        from src.agent.nodes import route_from_router
+
+        state = _state(
+            query_type="action_request",
+            messages=[
+                HumanMessage(content="Can you book me a table?"),
+                AIMessage(
+                    content="Let me help you get that set up. Our reservations team at 1-888-226-7711 can lock it in."
+                ),
+                HumanMessage(content="No, I want YOU to book it."),
+            ],
+        )
         assert route_from_router(state) == "off_topic"
 
     def test_property_qa_routes_to_retrieve(self):
@@ -2090,3 +2107,21 @@ class TestGreetingNodeAcknowledgment:
         result = await greeting_node(state)
         content = result["messages"][0].content
         assert "else" in content.lower() or "help" in content.lower()
+
+    async def test_closed_conversation_no_upsell(self):
+        """R92: Closed-conversation signals get clean goodbye without Wolf Den upsell."""
+        from src.agent.nodes import greeting_node
+
+        for signal in ("that's all", "goodbye", "no thanks", "all set"):
+            state = _state(
+                messages=[
+                    HumanMessage(content="Tell me about dining"),
+                    AIMessage(content="We have many restaurants."),
+                    HumanMessage(content=signal),
+                ],
+                domains_discussed=["dining"],
+            )
+            result = await greeting_node(state)
+            content = result["messages"][0].content
+            assert "Enjoy" in content
+            assert "Wolf Den" not in content  # No upsell

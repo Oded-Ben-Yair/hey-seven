@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # --- Google API ---
-    GOOGLE_API_KEY: SecretStr = SecretStr("")  # Required for production; langchain auto-detects from env
+    GOOGLE_API_KEY: SecretStr = SecretStr(
+        ""
+    )  # Required for production; langchain auto-detects from env
 
     # --- Property ---
     PROPERTY_NAME: str = "Mohegan Sun"
@@ -27,11 +29,17 @@ class Settings(BaseSettings):
     # --- LLM ---
     MODEL_NAME: str = "gemini-3-flash-preview"
     COMPLEX_MODEL_NAME: str = "gemini-3.1-pro-preview"  # R83: Used for complex/emotional queries via model routing
-    MODEL_TEMPERATURE: float = 1.0  # Gemini 3.x REQUIRES temperature=1.0; lower causes looping/degradation
-    MODEL_ROUTING_ENABLED: bool = True  # R83: Route complex queries to COMPLEX_MODEL_NAME
+    MODEL_TEMPERATURE: float = (
+        1.0  # Gemini 3.x REQUIRES temperature=1.0; lower causes looping/degradation
+    )
+    MODEL_ROUTING_ENABLED: bool = (
+        True  # R83: Route complex queries to COMPLEX_MODEL_NAME
+    )
     MODEL_TIMEOUT: int = 30  # LLM call timeout in seconds
     MODEL_MAX_RETRIES: int = 2  # LLM call retry count
-    MODEL_MAX_OUTPUT_TOKENS: int = 2048  # Max response tokens
+    MODEL_MAX_OUTPUT_TOKENS: int = (
+        4096  # R92: Increased from 2048 to eliminate ~30% truncation
+    )
     WHISPER_LLM_TEMPERATURE: float = 0.2  # Lower temperature for deterministic planning
 
     # --- Embeddings ---
@@ -42,7 +50,9 @@ class Settings(BaseSettings):
     RAG_TOP_K: int = 5
     RAG_CHUNK_SIZE: int = 800
     RAG_CHUNK_OVERLAP: int = 120  # 15% of chunk size (industry recommendation)
-    RAG_MIN_RELEVANCE_SCORE: float = 0.3  # Minimum relevance score (0-1, higher = more relevant)
+    RAG_MIN_RELEVANCE_SCORE: float = (
+        0.3  # Minimum relevance score (0-1, higher = more relevant)
+    )
     RRF_K: int = 60  # Reciprocal Rank Fusion constant (see ADR-011, original RRF paper)
 
     # --- API ---
@@ -50,26 +60,50 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = ["http://localhost:8080"]
     RATE_LIMIT_CHAT: int = 20  # requests per minute
     RATE_LIMIT_MAX_CLIENTS: int = 10000  # max tracked client IPs (memory guard)
-    TRUSTED_PROXIES: list[str] | None = None  # CIDRs/IPs that may set X-Forwarded-For; None = trust direct peer only
+    TRUSTED_PROXIES: list[str] | None = (
+        None  # CIDRs/IPs that may set X-Forwarded-For; None = trust direct peer only
+    )
     SSE_TIMEOUT_SECONDS: int = 60
     MAX_REQUEST_BODY_SIZE: int = 65536  # 64 KB max request body
 
     # --- Agent ---
-    MAX_MESSAGE_LIMIT: int = 40  # max total messages (human + AI) before forcing conversation end
+    MAX_MESSAGE_LIMIT: int = (
+        40  # max total messages (human + AI) before forcing conversation end
+    )
     MAX_HISTORY_MESSAGES: int = 20  # sliding window: only last N messages sent to LLM
-    ENABLE_HITL_INTERRUPT: bool = False  # When True, adds interrupt_before=["generate"] for human-in-the-loop
-    GRAPH_RECURSION_LIMIT: int = Field(default=10, ge=2, le=50)  # LangGraph recursion limit (validate->retry loop bound)
+    ENABLE_HITL_INTERRUPT: bool = (
+        False  # When True, adds interrupt_before=["generate"] for human-in-the-loop
+    )
+    GRAPH_RECURSION_LIMIT: int = Field(
+        default=10, ge=2, le=50
+    )  # LangGraph recursion limit (validate->retry loop bound)
     CB_FAILURE_THRESHOLD: int = 5  # circuit breaker: consecutive failures to open
     CB_COOLDOWN_SECONDS: int = 60  # circuit breaker: seconds before half-open probe
-    CB_ROLLING_WINDOW_SECONDS: float = 300.0  # circuit breaker: failure counting window (R10 fix — DeepSeek F8)
-    CB_SYNC_INTERVAL: float = 2.0  # R59 fix D8: Redis CB sync interval in seconds (R52 reduced from 5s)
+    CB_ROLLING_WINDOW_SECONDS: float = (
+        300.0  # circuit breaker: failure counting window (R10 fix — DeepSeek F8)
+    )
+    CB_SYNC_INTERVAL: float = (
+        2.0  # R59 fix D8: Redis CB sync interval in seconds (R52 reduced from 5s)
+    )
     RETRIEVAL_TIMEOUT: int = 10  # RAG retrieval timeout in seconds (R37 fix M-006)
-    COMP_COMPLETENESS_THRESHOLD: float = 0.60  # minimum profile completeness for comp agent
-    SEMANTIC_INJECTION_ENABLED: bool = True  # enable/disable semantic injection classifier (LLM second layer)
-    SEMANTIC_INJECTION_THRESHOLD: float = 0.8  # confidence threshold for semantic injection classifier
-    SEMANTIC_INJECTION_MODEL: str = ""  # override model for semantic classifier (empty = use default)
-    PROFILING_LLM_TEMPERATURE: float = 0.1  # Low temperature for deterministic profiling extraction
-    PROFILING_MIN_CONFIDENCE: float = 0.7  # Minimum confidence threshold for profiling field acceptance
+    COMP_COMPLETENESS_THRESHOLD: float = (
+        0.60  # minimum profile completeness for comp agent
+    )
+    SEMANTIC_INJECTION_ENABLED: bool = (
+        True  # enable/disable semantic injection classifier (LLM second layer)
+    )
+    SEMANTIC_INJECTION_THRESHOLD: float = (
+        0.8  # confidence threshold for semantic injection classifier
+    )
+    SEMANTIC_INJECTION_MODEL: str = (
+        ""  # override model for semantic classifier (empty = use default)
+    )
+    PROFILING_LLM_TEMPERATURE: float = (
+        0.1  # Low temperature for deterministic profiling extraction
+    )
+    PROFILING_MIN_CONFIDENCE: float = (
+        0.7  # Minimum confidence threshold for profiling field acceptance
+    )
 
     # --- State Backend ---
     STATE_BACKEND: str = "memory"  # "memory" | "redis"
@@ -78,8 +112,12 @@ class Settings(BaseSettings):
     # --- Deployment ---
     KMS_KEY_PATH: str = ""  # GCP KMS key path for cosign image signing
     CANARY_ERROR_THRESHOLD: float = 5.0  # Max 5xx error rate (%) before canary rollback
-    CANARY_STAGE_WAIT_SECONDS: int = 60  # Seconds to observe between canary traffic stages
-    LLM_SEMAPHORE_TIMEOUT: int = 30  # Seconds to wait for LLM semaphore before 503 backpressure
+    CANARY_STAGE_WAIT_SECONDS: int = (
+        60  # Seconds to observe between canary traffic stages
+    )
+    LLM_SEMAPHORE_TIMEOUT: int = (
+        30  # Seconds to wait for LLM semaphore before 503 backpressure
+    )
 
     # --- Vector DB ---
     VECTOR_DB: str = "chroma"  # "chroma" (local dev) or "firestore" (GCP prod)
@@ -90,12 +128,16 @@ class Settings(BaseSettings):
     CASINO_ID: str = "mohegan_sun"  # Multi-tenant casino identifier
 
     # --- CMS ---
-    CMS_WEBHOOK_SECRET: SecretStr = SecretStr("")  # HMAC-SHA256 secret for Google Sheets webhook verification
+    CMS_WEBHOOK_SECRET: SecretStr = SecretStr(
+        ""
+    )  # HMAC-SHA256 secret for Google Sheets webhook verification
     GOOGLE_SHEETS_ID: str = ""  # Default Google Sheets spreadsheet ID for CMS content
 
     # --- SMS ---
     SMS_ENABLED: bool = False
-    CONSENT_HMAC_SECRET: SecretStr = SecretStr("change-me-in-production")  # HMAC key for consent hash chain
+    CONSENT_HMAC_SECRET: SecretStr = SecretStr(
+        "change-me-in-production"
+    )  # HMAC key for consent hash chain
     PERSONA_MAX_CHARS: int = 0  # 0 = unlimited, 160 = SMS segment limit
     TELNYX_API_KEY: SecretStr = SecretStr("")
     TELNYX_MESSAGING_PROFILE_ID: str = ""
@@ -124,7 +166,9 @@ class Settings(BaseSettings):
         ``config.py`` defaults disagree on the prefix.
         """
         if self.EMBEDDING_MODEL.startswith("models/"):
-            object.__setattr__(self, "EMBEDDING_MODEL", self.EMBEDDING_MODEL.removeprefix("models/"))
+            object.__setattr__(
+                self, "EMBEDDING_MODEL", self.EMBEDDING_MODEL.removeprefix("models/")
+            )
         return self
 
     @model_validator(mode="after")

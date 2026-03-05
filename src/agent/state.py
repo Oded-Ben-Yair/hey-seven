@@ -206,18 +206,24 @@ class PropertyQAState(TypedDict):
     """
 
     messages: Annotated[list, add_messages]
-    query_type: str | None          # router classification (7 categories)
-    router_confidence: float        # 0.0-1.0 from router LLM
+    query_type: str | None  # router classification (7 categories)
+    router_confidence: float  # 0.0-1.0 from router LLM
     retrieved_context: list[RetrievedChunk]  # chunks from RAG retriever
-    validation_result: str | None   # PASS / FAIL / RETRY
-    retry_count: int                # max 1 retry before fallback
-    skip_validation: bool           # True to bypass validator (safe fallback paths)
-    retry_feedback: str | None      # why validation failed
-    current_time: str               # injected at graph entry
-    sources_used: list[dict[str, Any] | str]  # knowledge-base sources (dict provenance or str category)
+    validation_result: str | None  # PASS / FAIL / RETRY
+    retry_count: int  # max 1 retry before fallback
+    skip_validation: bool  # True to bypass validator (safe fallback paths)
+    retry_feedback: str | None  # why validation failed
+    current_time: str  # injected at graph entry
+    sources_used: list[
+        dict[str, Any] | str
+    ]  # knowledge-base sources (dict provenance or str category)
     # v2 fields
-    extracted_fields: Annotated[dict[str, Any], _merge_dicts]  # structured fields from guest message (persists across turns via reducer)
-    whisper_plan: dict[str, Any] | None  # background planner output (WhisperPlan.model_dump())
+    extracted_fields: Annotated[
+        dict[str, Any], _merge_dicts
+    ]  # structured fields from guest message (persists across turns via reducer)
+    whisper_plan: (
+        dict[str, Any] | None
+    )  # background planner output (WhisperPlan.model_dump())
     # v3 fields (Phase 3: Agent Quality Revolution)
     guest_sentiment: str | None  # positive/negative/neutral/frustrated (from VADER)
     # Populated by _dispatch_to_specialist via get_agent_context(extracted_fields).
@@ -225,7 +231,9 @@ class PropertyQAState(TypedDict):
     # Denormalized from extracted_fields["name"] for O(1) access in
     # persona_envelope_node (which runs on every response turn).
     # Updated by _dispatch_to_specialist when guest_profile_enabled.
-    guest_name: Annotated[str | None, _keep_latest_str]  # extracted guest name for personalization
+    guest_name: Annotated[
+        str | None, _keep_latest_str
+    ]  # extracted guest name for personalization
     # _keep_max reducer: preserves the maximum value across state updates.
     # When _initial_state() resets this to 0, max(existing, 0) preserves
     # the accumulated count. When compliance_gate increments, the new value
@@ -283,23 +291,33 @@ class PropertyQAState(TypedDict):
     # (e.g., "gemini-3-flash-preview" or "gemini-3.1-pro-preview").
     # Ephemeral per-turn — reset by _initial_state().
     model_used: str | None
+    # R92: Booking intent signal for specialist pipeline.
+    # Set by router_node when query_type == "action_request".
+    # Tells specialist agents to inject booking-context instructions
+    # (qualifying questions, venue recommendations before phone redirect).
+    booking_intent: str | None
 
 
 class RouterOutput(BaseModel):
     """Structured output from the router node."""
+
     query_type: Literal[
-        "property_qa", "hours_schedule", "greeting", "off_topic",
-        "gambling_advice", "action_request", "ambiguous",
+        "property_qa",
+        "hours_schedule",
+        "greeting",
+        "off_topic",
+        "gambling_advice",
+        "action_request",
+        "ambiguous",
     ] = Field(
         description="One of: property_qa, hours_schedule, greeting, off_topic, gambling_advice, action_request, ambiguous"
     )
     confidence: float = Field(
-        ge=0.0, le=1.0,
-        description="Confidence in the classification (0.0 to 1.0)"
+        ge=0.0, le=1.0, description="Confidence in the classification (0.0 to 1.0)"
     )
     detected_language: Literal["en", "es", "other"] = Field(
         default="en",
-        description="Detected language of the user message (en=English, es=Spanish, other=unsupported)"
+        description="Detected language of the user message (en=English, es=Spanish, other=unsupported)",
     )
 
 
@@ -311,21 +329,22 @@ class DispatchOutput(BaseModel):
     keyword counting.  Falls back to keyword counting when the LLM
     is unavailable (circuit breaker open, parsing failure, network error).
     """
+
     specialist: Literal["dining", "entertainment", "comp", "hotel", "host"] = Field(
         description="Which specialist agent should handle this query"
     )
     confidence: float = Field(
-        ge=0.0, le=1.0,
-        description="Confidence in the routing decision (0.0 to 1.0)"
+        ge=0.0, le=1.0, description="Confidence in the routing decision (0.0 to 1.0)"
     )
     reasoning: str = Field(
         max_length=500,
-        description="Brief explanation of why this specialist was chosen"
+        description="Brief explanation of why this specialist was chosen",
     )
 
 
 class ValidationResult(BaseModel):
     """Structured output from the validation node."""
+
     status: Literal["PASS", "FAIL", "RETRY"] = Field(
         description="PASS if the response meets all 6 criteria, RETRY for minor issues worth correcting, FAIL for serious violations"
     )
@@ -334,5 +353,3 @@ class ValidationResult(BaseModel):
         description="Why the response passed or failed validation",
         max_length=500,
     )
-
-

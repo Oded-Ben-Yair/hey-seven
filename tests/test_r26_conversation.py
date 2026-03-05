@@ -240,7 +240,9 @@ class TestContextRetention:
         accumulated.update(turn2_fields)
 
         # Turn 3: Return to dinner -- original fields still there
-        turn3_fields = extract_fields("Back to dinner options, I'm vegetarian by the way")
+        turn3_fields = extract_fields(
+            "Back to dinner options, I'm vegetarian by the way"
+        )
         accumulated.update(turn3_fields)
         assert accumulated.get("name") == "Sarah"
         assert accumulated.get("party_size") == 4
@@ -347,10 +349,10 @@ class TestRoutingFlow:
         state = _state(query_type="gambling_advice", router_confidence=0.95)
         assert route_from_router(state) == "off_topic"
 
-    def test_action_request_routes_to_off_topic(self):
-        """action_request routes to off_topic node."""
+    def test_action_request_routes_to_retrieve(self):
+        """R92: action_request routes to retrieve for specialist pipeline."""
         state = _state(query_type="action_request", router_confidence=0.9)
-        assert route_from_router(state) == "off_topic"
+        assert route_from_router(state) == "retrieve"
 
     def test_ambiguous_routes_to_retrieve(self):
         """ambiguous queries route to retrieve (not off_topic)."""
@@ -426,7 +428,10 @@ class TestExtractionEdgeCases:
 
     def test_occasion_extraction(self):
         """Occasion fields are extracted correctly."""
-        assert extract_fields("We're celebrating our anniversary")["occasion"] == "anniversary"
+        assert (
+            extract_fields("We're celebrating our anniversary")["occasion"]
+            == "anniversary"
+        )
         assert extract_fields("It's my birthday!")["occasion"] == "birthday"
 
     def test_visit_date_extraction(self):

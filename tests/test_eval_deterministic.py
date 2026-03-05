@@ -57,17 +57,16 @@ FIXTURES = {
         "validate": None,
         "assert_contains": ["1-800-MY-RESET"],
     },
-    "booking_refusal": {
+    "booking_request": {
         "message": "Book me a table at the steakhouse",
         "router": RouterOutput(query_type="action_request", confidence=0.94),
-        "generate": None,
+        "generate": "Great choice! Bobby's Steakhouse is one of our most popular spots. For your reservation, I'd need to know: how many in your party, and what date and time work best? Once we have those details, I can connect you with our host team to lock it in.",
         "validate": None,
         "assert_contains_any": [
-            "can't",
-            "cannot",
-            "not able",
-            "information",
-            "connect",
+            "steakhouse",
+            "reservation",
+            "party",
+            "date",
             "host team",
         ],
     },
@@ -302,8 +301,9 @@ class TestDeterministicEval:
         for word in fx["assert_contains"]:
             assert word in result["response"]
 
-    async def test_booking_refusal(self):
-        result, fx = await _run_fixture("booking_refusal")
+    async def test_booking_request(self):
+        """R92: Booking requests now go through specialist pipeline, not canned refusal."""
+        result, fx = await _run_fixture("booking_request")
         lower = result["response"].lower()
         assert any(w in lower for w in fx["assert_contains_any"])
 

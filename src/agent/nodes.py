@@ -245,8 +245,8 @@ def _select_model(state: dict) -> str:
         logger.info("R83 model routing: Pro (low confidence %.2f)", confidence)
         return "complex"
 
-    # Pro for emotional contexts (grief, frustration need nuanced responses)
-    if sentiment in ("frustrated", "grief", "negative"):
+    # Pro for emotional contexts (grief, frustration, disappointment need nuanced responses)
+    if sentiment in ("frustrated", "grief", "negative", "disappointed"):
         logger.info("R83 model routing: Pro (sentiment=%s)", sentiment)
         return "complex"
 
@@ -385,10 +385,14 @@ async def router_node(state: PropertyQAState) -> dict[str, Any]:
 
     try:
         result: RouterOutput = await router_llm.ainvoke(prompt_text)
+        # R92: Set booking_intent when guest wants to book/reserve something.
+        # This signals specialist agents to inject booking-context instructions.
+        booking_intent = "booking" if result.query_type == "action_request" else None
         return {
             "query_type": result.query_type,
             "router_confidence": result.confidence,
             "detected_language": result.detected_language,
+            "booking_intent": booking_intent,
             **sentiment_update,
         }
     except (ValueError, TypeError) as exc:
@@ -666,7 +670,8 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
                     "Slop detector: cleaned %d chars from response",
                     len(content) - len(cleaned),
                 )
-                cleaned_message = AIMessage(content=cleaned)
+                # Preserve message ID for add_messages reducer to REPLACE, not append
+                cleaned_message = AIMessage(content=cleaned, id=msg.id)
             break
 
     result: dict[str, Any] = {
@@ -998,6 +1003,55 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
     human_count = sum(1 for m in messages if isinstance(m, HumanMessage))
     if human_count > 1:
         user_msg = _get_last_human_message(messages)
+
+        # R92: Detect closed-conversation signals. Don't upsell after "goodbye".
+        _CLOSE_SIGNALS = (
+            "that's all",
+            "that is all",
+            "nothing else",
+            "goodbye",
+            "good bye",
+            "thanks that's it",
+            "we're good",
+            "have a good",
+            "good night",
+            "nope that's it",
+            "no thanks",
+            "no i'm good",
+            "all set",
+            "all good",
+            "i'm done",
+            "that'll do",
+        )
+        _user_lower = (user_msg or "").lower()
+        if any(signal in _user_lower for signal in _CLOSE_SIGNALS):
+            # R93: Include brief profile summary in farewell when we have profile data
+            _extracted = state.get("extracted_fields") or {}
+            _farewell_parts: list[str] = []
+            if _extracted.get("name"):
+                _farewell_parts.append(_extracted["name"])
+            if _extracted.get("occasion"):
+                _farewell_parts.append(f"your {_extracted['occasion']}")
+            if _farewell_parts:
+                _farewell_prefix = (
+                    f"Great chatting with you, {', '.join(_farewell_parts)}! "
+                )
+            else:
+                _farewell_prefix = ""
+            return {
+                "messages": [
+                    AIMessage(
+                        content=(
+                            f"{_farewell_prefix}"
+                            f"Enjoy your time at {settings.PROPERTY_NAME}! "
+                            "I'm here anytime you need me."
+                        )
+                    )
+                ],
+                "sources_used": [],
+                "retrieved_context": [],
+            }
+
         # This is a mid-conversation acknowledgment routed here by compliance_gate 7.9.
         # Return a brief, contextual follow-up that maintains conversation flow.
         domains_discussed = state.get("domains_discussed", [])
@@ -1572,12 +1626,27 @@ def route_from_router(state: PropertyQAState) -> str:
     if query_type in (
         "off_topic",
         "gambling_advice",
-        "action_request",
         "age_verification",
         "patron_privacy",
         "bsa_aml",
     ):
         return NODE_OFF_TOPIC
+
+    # R92: Route action_request through specialist pipeline for RAG-grounded
+    # responses instead of canned off_topic template. Guests asking to book
+    # dinner, reserve a room, etc. now get specialist answers with real data.
+    # Preserve R91 escalation: repeated action_requests still go to off_topic
+    # for handoff to human host team.
+    if query_type == "action_request":
+        messages = state.get("messages", [])
+        _ACTION_MARKERS = ("host team", "reservations team", "equipo de anfitriones")
+        for _prev_msg in reversed(messages):
+            if isinstance(_prev_msg, AIMessage):
+                _prev_content = _normalize_content(_prev_msg.content).lower()
+                if any(m in _prev_content for m in _ACTION_MARKERS):
+                    return NODE_OFF_TOPIC  # Repeated request → handoff
+                break
+        return NODE_RETRIEVE
 
     if confidence < 0.3:
         logger.info(

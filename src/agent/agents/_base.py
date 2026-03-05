@@ -418,16 +418,63 @@ def _build_behavioral_prompt_sections(
         )
     ):
         emotional_guides.append(EMOTIONAL_CONTEXT_GUIDES["gambling_frustration"])
+    # R94: Loss recovery — lead with empathy, not upsell
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "lost $",
+            "down $",
+            "dropped $",
+            "blew $",
+            "lost a lot",
+            "bad night",
+            "rough night",
+            "lost everything",
+            "lost big",
+        )
+    ):
+        emotional_guides.append(
+            "**Loss Recovery**: The guest has experienced a significant loss. "
+            "Lead with genuine empathy: 'That's a tough night.' "
+            "Do NOT suggest dining, spa, or entertainment UNTIL the guest opens the door. "
+            "Wait for them to ask for a distraction. If they vent, just listen and acknowledge. "
+            "NEVER say 'cheer up' or immediately pivot to 'but we have great shows!'"
+        )
+    # R94: Disappointment/dissatisfaction (not frustration — more subtle)
+    if any(
+        kw in user_msg_lower
+        for kw in (
+            "disappointed",
+            "letdown",
+            "let down",
+            "expected more",
+            "not what i expected",
+            "underwhelm",
+            "mediocre",
+        )
+    ):
+        emotional_guides.append(
+            "**Disappointment Recovery**: The guest is disappointed (not angry — subtle). "
+            "Acknowledge: 'I hear you — that's not the experience we want for you.' "
+            "Then offer a specific alternative: 'If you're open to it, [X] might be more what you're looking for.' "
+            "Don't dismiss or argue with their assessment."
+        )
     if emotional_guides:
         sections.append("## Emotional Context\n" + "\n\n".join(emotional_guides))
 
     # Implicit signal guides (loyalty, urgency, fatigue, budget)
     if extracted.get("loyalty_signal"):
         sections.append(
-            "## Loyalty Context\n"
+            "## VIP Recognition (Action, Not Words)\n"
             f'The guest has signaled loyalty: "{extracted["loyalty_signal"]}". '
-            "Treat them as a valued long-term guest. Acknowledge their history warmly. "
-            "Recommend elevated, VIP-appropriate experiences."
+            "Do NOT just say 'valued guest' — that's generic. Instead:\n"
+            "- Reference specific benefits they'd qualify for: 'With your play history, "
+            "you'd typically qualify for complimentary dining at Bobby's or Tuscany.'\n"
+            "- Offer to check their Momentum status: 'I can look into your tier — "
+            "that would tell us exactly what comps are available.'\n"
+            "- Suggest elevated experiences: private gaming salons, VIP events, host introduction.\n"
+            "- Use their history to personalize: 'Guests who visit as often as you do "
+            "usually have a dedicated host — I can connect you.'"
         )
     if extracted.get("urgency"):
         sections.append(
@@ -916,6 +963,11 @@ async def execute_specialist(
         "answer directly with what you know. If you don't have specific details, "
         "give your best recommendation from the context available and offer to "
         "look into specifics.\n\n"
+        "CRITICAL: NEVER say 'I can't make reservations' or 'While I can't book directly'. "
+        "Instead, say 'Let me help you with that' and provide specific recommendations "
+        "with details (venue name, hours, what makes it great). After giving info, "
+        "say 'I can connect you with our host team to finalize the booking.' "
+        "You facilitate — you don't refuse.\n\n"
         "## Reading Between the Lines\n"
         "Interpret implicit guest signals and adapt your response:\n"
         '- "drove 3 hours" / "long day" → guest is exhausted, recommend '
@@ -955,6 +1007,34 @@ async def execute_specialist(
         'Frame concretely: "After dinner, the Wolf Den usually has great live '
         'music" not "Would you also like entertainment?"'
     )
+
+    # R92: Booking context — when guest wants to make a reservation,
+    # inject qualifying question guidance for the specialist.
+    if state.get("booking_intent"):
+        _BOOKING_QUALIFIERS = {
+            "dining": "party size, date/time, occasion, and dietary restrictions",
+            "hotel": "check-in/check-out dates, room type, and number of guests",
+            "entertainment": "number of tickets, preferred seating, and date",
+            "spa": "preferred treatment, date/time, and number of guests",
+        }
+        _qualifier = _BOOKING_QUALIFIERS.get(
+            agent_name, "date, party size, and preferences"
+        )
+        system_prompt += (
+            "\n\n## Booking Context\n"
+            "The guest wants to make a reservation or booking. Your response should:\n"
+            "1. Provide specific venue/option recommendations based on what they've told you\n"
+            "2. Confirm any details you already know (party size, date, preferences)\n"
+            f"3. Ask for missing qualifying details: {_qualifier}\n"
+            "4. When they're ready, offer to connect them with the host team to finalize\n\n"
+            "Do NOT just redirect to a phone number. Give them real, helpful information first.\n\n"
+            "## Recommendation→Question Micro-Flow (REQUIRED for booking)\n"
+            "After every venue/option recommendation, ALWAYS ask ONE qualifying question.\n"
+            "Examples:\n"
+            '- "Todd English\'s Tuscany has amazing wood-fired pasta — how many will be joining you?"\n'
+            '- "The Sky Tower rooms have mountain views starting at $199 — what dates are you looking at?"\n'
+            '- "The Mandara Spa\'s couples massage is our most popular — would morning or afternoon work better?"'
+        )
 
     # R83: Inject few-shot behavioral examples for the current specialist.
     # Examples show the model the exact tone and style expected — more effective
