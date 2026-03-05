@@ -11,35 +11,40 @@
     {
       "turn_index": 0,
       "user_message": "Hi, I'm Linda. My husband and I love Italian food. What's good here?",
-      "agent_response": "Welcome, Linda. Since you and your husband are Italian food enthusiasts, Todd English's Tuscany in the Casino of the Sky is my top recommendation for you tonight.\n\nThe warm, Tuscan-inspired decor and the sight of chefs working in the open kitchen create an inviting atmosphere that's perfect for a couple's dinner. Their handmade pastas are exceptional, but many guests rave about the wood-fired pizzas which have a distinct, smoky char that really sets them apart. They are open tonight until 10:00 PM and have a business casual dress code. Since it is a popular spot, I'd suggest checking for a reservation to ensure you get a great table.\n\nIf you are looking for a more relaxed setting, Mohegan Sun Caputo Trattoria in the Casino of the Earth is also open until 10:00 PM and serves excellent brick-oven pizzas and traditional pasta dishes in a casual environment. Please keep in mind that hours and prices can vary, so it is a good idea to confirm directly with the property.\n\nAre you celebrating a special occasion this evening?\n\nAfter your meal, you might enjoy catching some free live music at the Wolf Den, which is located right in the heart of the Casino of the Earth.",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.689
-        }
-      ],
-      "elapsed_ms": 45734,
+      "agent_response": "Welcome, Linda. Since you and your husband are fans of Italian cuisine, Todd English's Tuscany is the standout choice for your evening. \n\nThe wood-fired aroma hits you the moment you walk into the restaurant in the Casino of the Sky, and their handmade pastas have a delicate, fresh texture that guests come back for again and again. It opens today at 5:00 PM and follows a business casual dress code, so I highly recommend a reservation to ensure you get a great table; I can certainly help connect you with our host team to finalize that booking. \n\nAfter dinner, the Wolf Den is just a short walk away and offers free live music every night which makes for a perfect post-meal stroll. Are you celebrating a special occasion during this visit, or are you just looking to enjoy a great meal together?",
+      "sources": [],
+      "elapsed_ms": 56255,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "We also have a gluten-free situation so that limits things",
-      "agent_response": "Linda, having a gluten-free requirement shouldn't hold you back from a great Italian meal. I recommend heading to Caputo Trattoria in the Casino of the Earth. \n\nThe aroma of fresh garlic and simmering marinara greets you the moment you arrive at this cozy spot. While the menu features classic brick-oven pizzas and pasta, our chefs are excellent at accommodating dietary needs\u2014simply let your server",
+      "agent_response": "Linda, for an Italian meal that is both budget-friendly and accommodating for gluten-free needs, Caputo Trattoria in the Casino of the Earth is a fantastic choice. The kitchen team is very experienced with dietary restrictions and can prepare gluten-free versions of their classic pasta dishes, ensuring you don't have to miss out on those authentic flavors. It is open now until 10:00 PM and offers a relaxed atmosphere in the $$ price range, and since it is casual, reservations are not required. \n\nI can certainly connect you with our host team to finalize any details or answer specific questions for the chef if you'd like. After your meal, the Wolf Den is just a short walk away and features free live music every night, which is a perfect way to enjoy the resort",
       "sources": [],
-      "elapsed_ms": 67845,
+      "elapsed_ms": 66132,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "What about after dinner? Any shows tonight?",
-      "agent_response": "Since it's Wednesday, the Wolf Den is the perfect spot for you and your husband to spend the evening. They host free live music starting at 8:00 PM right in the heart of the Casino of the Earth, featuring everything from national touring acts to impressive tribute bands. \n\nIt has an electric, intimate energy where you're right there with the performers, and since there is no cover charge, it's a fantastic value for a night out. I recommend heading over soon to secure a spot since the 350 seats can fill up quickly. Please keep in mind that performers and times are subject to change, so you can confirm tonight's specific lineup at the venue entrance. \n\nDo you and your husband prefer high-energy shows or something a bit more mellow? \n\nIf you have some downtime tomorrow, a signature treatment at the Elemis Spa is a legendary way to reset after a busy day.",
-      "sources": [],
-      "elapsed_ms": 51666,
+      "agent_response": "Linda, Since it is Thursday, you have some great options for tonight, and the Wolf Den is the standout choice for a fun, budget-friendly evening. It features free live music every single night, and there is something special about the intimate 350-seat setup where you are right in the middle of the action without needing to buy a ticket.\n\nShows there typically start at 8:00 PM or 9:00 PM, and because it is complimentary, I'd suggest getting there a bit early to snag a good seat near the stage. If you are looking for something different, Comix Roadhouse also kicks off its weekend of comedy tonight, and novelle offers a more sophisticated lounge atmosphere with DJ entertainment on Thursday evenings. \n\nI can help you with more details on any of these venues or connect you with our team to check on ticket availability for the comedy shows. After the shows, Lantern Bar & Grill is open 24 hours if you find yourselves wanting a late-night snack\u2014are you more in the mood for a high-energy tribute band or some stand-up comedy?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.689
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.687
+        }
+      ],
+      "elapsed_ms": 56348,
       "error": null
     }
   ],
-  "elapsed_ms": 165245,
+  "elapsed_ms": 178736,
   "error": null,
   "completed": true
 }

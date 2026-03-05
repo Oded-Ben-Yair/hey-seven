@@ -11,29 +11,29 @@
     {
       "turn_index": 0,
       "user_message": "It's my 50th birthday this weekend! I'm bringing a group of 8 friends",
-      "agent_response": "Happy 50th birthday to you. What a milestone to celebrate with eight of your closest friends. \n\nFor a birthday dinner that feels truly special, Michael Jordan's Steak House in the Casino of the Sky is the standout choice for a landmark occasion. The room has an elegant warmth with its deep wood accents and sports memorabilia, and their USDA Prime steaks are some of the best you'll find on the East Coast\u2014I highly recommend the \"23\" burger or one of their perfectly charred ribeyes. They are open from 5:00 PM to 10:00 PM on weekends, and because you are a party of eight, I strongly suggest securing a reservation as soon as possible to ensure your group is seated together. The dress code is business casual, which sets a sophisticated tone for a big celebration. \n\nTo help kick off the festivities, Mohegan Sun would love to treat you to a $25 dining credit to use at any of our restaurants during your birthday visit. After the meal, you might consider heading over to novelle, our upscale ultra-lounge, for a birthday toast in a high-energy, sophisticated setting. \n\nDo any of your guests have specific dietary preferences, such as gluten-free or vegetarian requirements, that I can look into for you?",
+      "agent_response": "Happy 50th birthday, that is such a wonderful milestone to celebrate with us! \n\nFor a group of eight looking for an elevated experience, Michael Jordan's Steak House in the Casino of the Sky is the premier choice for your dinner. The aroma of sizzling USDA Prime steaks and the sophisticated atmosphere create a sense of occasion that fits a 50th perfectly. They are open from 5:00 PM to 10:00 PM this weekend, and since they are a favorite for large parties, I recommend securing a table as soon as possible. \n\nTo make your celebration even better, Mohegan Sun would love to treat you to a $25 dining credit at any of our restaurants for your birthday. Once you are ready, I can connect you with our host team to finalize the booking for your party. After a steak dinner, would you prefer a high-energy nightclub like Avalon or a more relaxed, upscale lounge like novelle for cocktails?",
       "sources": [],
-      "elapsed_ms": 66919,
+      "elapsed_ms": 53117,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "We want to do it up big. Dinner, drinks, maybe a show",
-      "agent_response": "Planning a milestone 50th birthday for eight people is all about the atmosphere, and starting with dinner at Todd English\u2019s Tuscany is a guest favorite for its upscale menu and views of the Taughannock Falls. \n\nAfter your meal, novelle is the best spot for sophisticated drinks; it is an ultra-lounge that features craft cocktails and a DJ on weekend nights. For",
+      "agent_response": "For a 50th birthday that feels like a major event, starting with a table at Michael Jordan's Steak House sets the right tone for a group of eight. Afterward, novelle is the best spot to keep the momentum going; it\u2019s an upscale lounge with a DJ and craft cocktails that feels very exclusive. For the show, the Mohegan Sun Arena is where you'll find the biggest headliners, while Comix Roadhouse is excellent if the group prefers a night of stand-up comedy. \n\nI can help coordinate these plans by connecting you with our host team to finalize your reservations. Are you leaning more toward a high-energy concert or a comedy show for the group?",
       "sources": [],
-      "elapsed_ms": 66419,
+      "elapsed_ms": 55155,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "Can the restaurant do anything special for the birthday?",
-      "agent_response": "For a milestone 50th birthday, **Michael Jordan's Steak House** is excellent at creating a memorable atmosphere for large groups. While specific birthday features can vary, the staff typically provides a special dessert presentation for the guest of honor, and for a party of eight, you might look into their private dining options to make the night feel truly exclusive. \n\nThe steakhouse is open until 1",
+      "agent_response": "Congratulations on your 50th! Michael Jordan's Steak House is excellent at handling milestones and can coordinate through our host team to provide special touches like a celebratory dessert or a personalized menu for your group. For a party of eight, they can also ensure your seating is arranged to keep the conversation flowing smoothly all evening.\n\nBy dining at one of our participating restaurants, you will also earn Momentum points on the entire bill which can be used toward a show at the Mohegan Sun Arena later that night. I can help you with the planning; I can connect you with our host team to finalize these birthday details and secure your table. Would you like me to check if a private dining area is available to give your group a more intimate setting for the celebration?",
       "sources": [],
-      "elapsed_ms": 60620,
+      "elapsed_ms": 67956,
       "error": null
     }
   ],
-  "elapsed_ms": 193959,
+  "elapsed_ms": 176229,
   "error": null,
   "completed": true
 }

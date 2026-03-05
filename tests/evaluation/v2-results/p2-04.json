@@ -11,34 +11,23 @@
     {
       "turn_index": 0,
       "user_message": "Hi, I'm Rachel. Party of 4, it's my husband's 50th birthday.",
-      "agent_response": "Happy 50th birthday to your husband, Rachel! For a milestone like this, SolToro Taqueria & Tequila Bar in the Casino of the Earth is a wonderful choice for a party of four. \n\nThe atmosphere there is vibrant and festive, filled with the aroma of fresh lime and grilled meats, making it an ideal spot for a celebratory meal. Their menu features a modern take",
-      "sources": [
-        {
-          "category": "restaurants",
-          "source": "mohegan_sun.json",
-          "score": 0.653
-        },
-        {
-          "category": "entertainment",
-          "source": "mohegan_sun.json",
-          "score": 0.646
-        }
-      ],
-      "elapsed_ms": 66097,
+      "agent_response": "Happy 50th birthday to your husband, Rachel! For a milestone like this, SolToro Taqueria & Tequila Bar in the Casino of the Earth offers a vibrant, modern atmosphere that feels like a celebration the moment you walk in. \n\nTheir extensive tequila and mezcal selection is perfect for a celebratory toast, and the authentic ceviches have a fresh, bright flavor that guests rave about. They're open today until 10:00 PM with prices typically in the moderate range, though I'd suggest confirming hours and pricing when you arrive as they can vary. Since you're celebrating a birthday, Mohegan Sun would love to treat you to a $25 dining credit to use at any of our restaurants during your visit. \n\nAfter dinner, novelle is a fantastic spot nearby for craft cocktails in a sophisticated lounge setting to keep the night going. I can help you with more details on their menu or connect you with our host team to finalize a plan, but first, does your husband have a favorite type of cuisine?",
+      "sources": [],
+      "elapsed_ms": 67855,
       "error": null
     },
     {
       "turn_index": 1,
       "user_message": "What restaurant do you recommend?",
-      "agent_response": "For a milestone 50th birthday, Michael Jordan's Steak House in the Casino of the Sky is the gold standard. The atmosphere is sophisticated and elegant, and the scent of searing USDA Prime steaks from the broiler is unmistakable the moment you arrive. It is an impressive setting for a party of four to enjoy prime cuts and fresh seafood with an extensive wine list to toast the occasion. \n\nSince you are celebrating a birthday, Mohegan Sun would love to treat you to a $25 dining credit to use at any of our restaurants. Michael Jordan's is open until 10:00 PM tonight, and business casual dress is recommended for this upscale experience. Reservations are highly recommended here to ensure you get a prime table for the celebration. After a celebratory dinner, you might enjoy catching some free live music at the Wolf Den in the Casino of the Earth. \n\nDoes your husband have a favorite style of cuisine, or are you set on a classic steakhouse dinner?",
+      "agent_response": "For a landmark 50th birthday, Michael Jordan\u2019s Steak House in the Casino of the Sky is the quintessential choice for an unforgettable evening. The atmosphere is sophisticated and electric, where the rich aroma of char-grilled USDA Prime steaks sets the stage for a truly elevated meal.\n\nThey open today at 5:00 PM and serve until 10:00 PM, with a business casual dress code that feels right for such a milestone celebration. Their signature USDA Prime cuts and fresh seafood are the stars of the show, and for a party of four, I highly recommend a reservation to ensure you have the perfect table. I can provide more specific menu details or connect you with our host team to finalize the booking for you.\n\nSince we are celebrating his big day, remember that Mohegan Sun is offering you a $25 dining credit to use toward this special meal. After dinner, you might enjoy heading to the Wolf Den for some live music\u2014it is a fantastic way to keep the energy high for the rest of the night. Does your husband enjoy a classic steakhouse experience, or is he more of a fan of housemade pasta and Italian wines?",
       "sources": [],
-      "elapsed_ms": 58268,
+      "elapsed_ms": 54121,
       "error": null
     },
     {
       "turn_index": 2,
       "user_message": "And after dinner?",
-      "agent_response": "Rachel, Since it is Wednesday night, the Wolf Den in the Casino of the Earth is a perfect next stop after dinner. It has this intimate energy where you are right there with the performer \u2014 it's electric, and the live music there is a great way to keep the celebration going for a party of four.\n\nIf you are looking for a more sophisticated setting to toast his 50th birthday, the Birdcage Bar in the Casino of the Sky is open until 2:00 AM and serves incredible craft cocktails in an upscale atmosphere. After the night's festivities, a morning visit to the Elemis Spa might be just the thing to reset; their hot stone massage is legendary and would be a relaxing way to start his first day as a 50-year-old.\n\nDoes your husband prefer a high-energy live music environment or a more relaxed lounge for a late-night drink?",
+      "agent_response": "Rachel, After an incredible meal at Michael Jordan's, novelle is the perfect next step for a milestone celebration like this. It is an upscale ultra-lounge right here on the property that balances a sophisticated atmosphere with craft cocktails and DJ entertainment, and since it is Thursday, they will be open and ready for your group of four. The energy there is very polished, making it a great spot to grab a table and toast to your husband's 50th.\n\nIf you are looking for something with a bit more of a raw, electric feel, the Wolf Den in the Casino of the Earth features free live music every night. It is an intimate venue where you are right there with the performers, which always makes for a memorable night out on the casino floor. \n\nTo help everyone recharge the next morning, a session at Elemis Spa is the perfect reset, as their signature massage treatments are legendary for unwinding after a big celebration. I can help you with more details on the lounge atmosphere at novelle or look into the live music schedule at the Wolf Den, but first, are you in the mood for a high-energy lounge vibe or a spot where you can sit and enjoy a live band?",
       "sources": [
         {
           "category": "entertainment",
@@ -56,11 +45,11 @@
           "score": 0.642
         }
       ],
-      "elapsed_ms": 30695,
+      "elapsed_ms": 28123,
       "error": null
     }
   ],
-  "elapsed_ms": 155061,
+  "elapsed_ms": 150100,
   "error": null,
   "completed": true
 }

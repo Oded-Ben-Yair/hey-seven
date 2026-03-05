@@ -1,0 +1,77 @@
+{
+  "id": "p2-06",
+  "name": "Agent probes after providing value first",
+  "source_file": "profiling_p2_active_probing.yaml",
+  "category": "profiling_p2_active_probing",
+  "behavioral_dimension": "P2_active_probing",
+  "expected_behavior": "First response lists shows AND naturally asks who's attending or what kind of show they enjoy. The show listing is complete regardless of whether the guest answers the follow-up. Value first, probe second",
+  "expected_behavioral_quality": "Demonstrates the give-to-get pattern: first delivers a genuine answer to the guest's question, THEN asks a natural follow-up profiling question. The answer must be complete and useful on its own, not gated behind the profiling question.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What shows are on tonight?",
+      "agent_response": "Tonight being a Thursday, the Wolf Den is a fantastic choice for live music with a free show that typically starts around 8:00 PM or 9:00 PM. With only 350 seats, the energy there is incredibly electric and you are right there with the performers! For a more sophisticated atmosphere, novelle also opens this evening, offering DJ entertainment and craft cocktails in a high-end lounge setting.\n\nShow times and performers are subject to change, but I can certainly help you find the specific lineup for tonight. If you are planning a late night, the Elemis Spa is the perfect place to recharge with a hot stone massage tomorrow morning. Are you leaning toward a live band or more of a DJ lounge vibe for this evening?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.668
+        }
+      ],
+      "elapsed_ms": 45033,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Just me and a friend",
+      "agent_response": "The Wolf Den is a great spot for two since seating is first-come, first-served and puts you close to the stage. If you prefer a booth and cocktails, novelle is also open this evening. Michael Jordan's 23.sportcafe is right next to the Wolf Den if you want a quick bite before the music starts. Would you like me to check the specific set times for tonight?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.592
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.59
+        }
+      ],
+      "elapsed_ms": 32196,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Comedy sounds fun",
+      "agent_response": "Comix Roadhouse is the perfect spot for comedy tonight. It is an intimate 400-seat club that features nationally touring comedians, and because it is also a restaurant, you and your friend can enjoy a full dinner right at your table during the show. Since it is Thursday, the weekend lineup is just getting started and the atmosphere is always high-energy! \n\nAfter the laughs, the Wolf Den usually has a free live band playing late into the night to keep the momentum going. Do you prefer an early show or something later in the evening?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.677
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 25888,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 103119,
+  "error": null,
+  "completed": true
+}

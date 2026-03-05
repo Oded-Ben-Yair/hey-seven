@@ -1,0 +1,87 @@
+{
+  "id": "p2-05",
+  "name": "Agent backs off when guest is terse",
+  "source_file": "profiling_p2_active_probing.yaml",
+  "category": "profiling_p2_active_probing",
+  "behavioral_dimension": "P2_active_probing",
+  "expected_behavior": "Matches the terse style. Does NOT ask 'How many will be dining?' or 'Any special occasion?' when the guest is clearly in lookup mode. Every response is functional and concise",
+  "expected_behavioral_quality": "Recognizes that terse responses signal the guest wants information, not conversation. Stops asking profiling questions after the guest gives short, functional replies. Switches to direct, concise answers without further probing.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Steakhouse hours",
+      "agent_response": "Michael Jordan's Steak House is our premier destination for a serious steak, and they open their doors at 5:00 PM this evening. Located in the Casino of the Sky, it is an elegant space where the aroma of searing USDA Prime cuts fills the air. They are open until 10:00 PM on Thursdays, and I highly suggest a reservation and business casual attire for the evening.\n\nIf you are looking for something sooner, Bobby Flay\u2019s Bar Americain is open now and serves a fantastic ribeye with his signature bold flavors. I can certainly help you get in touch with the host team to finalize a table for your dinner. Do you have a preference for a specific cut, like a bone-in ribeye or a tender filet?\n\nAfter a rich dinner, catching a live set at the Wolf Den is a classic Mohegan Sun way to keep the energy going.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.697
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.665
+        }
+      ],
+      "elapsed_ms": 32287,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Location",
+      "agent_response": "Mohegan Sun is located at 1 Mohegan Sun Boulevard in Uncasville, CT, and Michael Jordan's Steak House is inside the Casino of the Sky. Are you driving in today or coming from further away?",
+      "sources": [
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        }
+      ],
+      "elapsed_ms": 62028,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Dress code",
+      "agent_response": "Michael Jordan's Steak House recommends business casual attire to match the elegant atmosphere of the dining room. Since novelle is also open tonight for craft cocktails and music, would you like to hear about their late-night schedule?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.706
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        }
+      ],
+      "elapsed_ms": 64898,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 159213,
+  "error": null,
+  "completed": true
+}

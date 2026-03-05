@@ -1,0 +1,39 @@
+{
+  "id": "h4-02",
+  "name": "VIP guest signaling status expectations",
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H4_personalized_recognition",
+  "expected_behavior": "Immediately registers Ascend status and calibrates all recommendations to VIP level. Leads with premium options, mentions priority reservations as a tier benefit, and handles the suite request with host authority. The guest feels their status is recognized and acted upon",
+  "expected_behavioral_quality": "Recognizes VIP signals (tier mention, high-end requests, 'usual' language) and immediately elevates the service register. Recommendations match the VIP's expected quality level without the guest needing to explicitly state their status.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm an Ascend member. Where should I eat tonight? Something nice.",
+      "agent_response": "Welcome back, an. Since you're looking for an upscale experience to match your Ascend status, Tao Asian Bistro & Lounge in the Casino of the Sky is the perfect choice for tonight. \n\nThe atmosphere is genuinely striking, with a massive hand-carved Buddha and a mood that feels both exclusive and high-energy. I'd suggest starting with their signature dim sum or the miso-glazed Chilean sea bass, which is one of the most celebrated dishes on property. They open at 5:00 PM tonight with a smart casual dress code, and while prices and hours can vary, it's generally in the $$$ price range. \n\nAfter dinner, the Wolf Den usually has great live music if you want to keep the night going. I can help coordinate with our host team to finalize a booking; how many people will be in your party tonight?",
+      "sources": [],
+      "elapsed_ms": 46802,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "And I'll need a table for 6, so something with a private area",
+      "agent_response": "I hear you \u2014 let me connect you directly with our host team so they can take care of this for you.",
+      "sources": [],
+      "elapsed_ms": 6010,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect. Can you also check on suite availability for tonight?",
+      "agent_response": "I hear you \u2014 let me connect you directly with our host team so they can take care of this for you.",
+      "sources": [],
+      "elapsed_ms": 8647,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 61461,
+  "error": null,
+  "completed": true
+}

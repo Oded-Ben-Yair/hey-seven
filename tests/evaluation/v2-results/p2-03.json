@@ -1,0 +1,77 @@
+{
+  "id": "p2-03",
+  "name": "Agent asks about dining preferences naturally",
+  "source_file": "profiling_p2_active_probing.yaml",
+  "category": "profiling_p2_active_probing",
+  "behavioral_dimension": "P2_active_probing",
+  "expected_behavior": "Opens with a preference question rather than dumping all options. Uses the answer to give a targeted recommendation. The interaction feels like a conversation with a host, not a menu search",
+  "expected_behavioral_quality": "Instead of listing all restaurants, asks a preference question first to narrow recommendations. The question is framed as 'What are you in the mood for?' or 'Any cuisine you're craving?' rather than 'What are your dining preferences?'",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Where should we eat?",
+      "agent_response": "For a meal that truly captures the culinary energy here, I'd suggest Bobby Flay's Bar Americain in the Casino of the Earth. The menu is a celebration of regional American flavors, featuring signature Southwest touches like smoked chile butters and vibrant spice rubs on their grilled steaks and seafood.\n\nThey are open now until 10:00 PM, and while the atmosphere is upscale with a smart casual dress code, it feels approachable enough for a high-end lunch. Prices typically fall in the $$$ range, and while reservations are recommended for dinner, the midday service is often a bit more flexible. After you finish, the Wolf Den is just a short walk away and features free live music every night. Are you celebrating a special occasion today, or just looking for a great meal between rounds on the floor?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        }
+      ],
+      "elapsed_ms": 45904,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Something Italian",
+      "agent_response": "Caputo Trattoria in the Casino of the Earth is open now until 10:00 PM and serves excellent brick-oven pizzas and handmade pastas in a casual setting. It is steps away from the Wolf Den for live music\u2014how many people are in your party?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        }
+      ],
+      "elapsed_ms": 76478,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Ballo sounds good",
+      "agent_response": "Ballo opens at 5:00 PM in the Casino of the Sky and features housemade pastas in a $$$ smart casual setting. After dinner, novelle is great for cocktails\u2014should I connect you with our host team for a reservation?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.714
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.623
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.597
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.613
+        }
+      ],
+      "elapsed_ms": 40933,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 163317,
+  "error": null,
+  "completed": true
+}

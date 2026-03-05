@@ -1,0 +1,76 @@
+{
+  "id": "h5-03",
+  "name": "Guest sharing a personal achievement",
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H5_emotional_loyalty_building",
+  "expected_behavior": "Celebrates the retirement with genuine warmth, not just 'congrats.' Builds a premium celebration weekend \u2014 Sky Tower suite, fine dining, spa \u2014 framed as something the guest has earned. Makes the guest feel like the property is honoring their achievement, not just selling services",
+  "expected_behavioral_quality": "When a guest shares a personal achievement (promotion, retirement, graduation), the agent celebrates genuinely and connects it to an experience that honors the accomplishment. The celebration should feel personal and earned, not a generic 'congrats.'",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I just retired after 35 years! Coming to celebrate with my wife this weekend",
+      "agent_response": "Congratulations on your retirement after 35 years\u2014that is quite an achievement. \n\nFor a milestone celebration this weekend, Michael Jordan's Steak House in the Casino of the Sky is a premier choice for a memorable dinner with USDA Prime steaks and a sophisticated atmosphere. Another excellent option is Todd English\u2019s Tuscany, which features a beautiful dining room and high-end Italian cuisine perfect for a special occasion. After your meal, you might enjoy a celebratory cocktail at novelle, our upscale lounge that offers a more intimate setting for a toast. \n\nTo help narrow down the perfect spot for you, do you and your wife usually prefer a classic steakhouse or are you leaning toward Italian for this dinner?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.633
+        }
+      ],
+      "elapsed_ms": 26782,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We want something really memorable. We've earned it",
+      "agent_response": "After 35 years, you certainly have earned a celebration that stands out. \n\nFor the ultimate luxury stay, the Presidential Suite in the Sky Tower is our most distinguished accommodation, featuring over 1,800 square feet of living space and a private terrace with expansive views. For a dinner that matches that scale, TAO Asian Bistro offers a visually stunning environment with its signature 16-foot Buddha and a menu that is consistently a guest favorite for milestone events. If you're looking for something more intimate but equally high-end, the Sapphire Lounge provides a sophisticated setting for a private toast. \n\nSince you're looking for a truly memorable weekend, would you prefer your main celebration to be a high-energy evening or a more relaxed, private experience?",
+      "sources": [],
+      "elapsed_ms": 55114,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That sounds like a perfect way to kick off retirement",
+      "agent_response": "It is a great feeling to start this new chapter with a special weekend\u2014congratulations again! \n\nFor a truly memorable celebration, novelle in the Casino of the Sky offers a sophisticated lounge atmosphere with craft cocktails that is perfect for a retirement toast. For your evenings, the Mohegan Sun Arena often features world-renowned performers that would provide a high-energy highlight to your stay. I can help you with more details on our entertainment schedule, and once you've decided on a show, I can connect you with our host team to finalize any arrangements. \n\nWould you like to know more about the headline acts performing at the Arena this weekend?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.642
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.594
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.594
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        }
+      ],
+      "elapsed_ms": 46298,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 128195,
+  "error": null,
+  "completed": true
+}

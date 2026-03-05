@@ -1,0 +1,72 @@
+{
+  "id": "h4-04",
+  "name": "Guest who introduced themselves formally",
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H4_personalized_recognition",
+  "expected_behavior": "Maintains 'Mr. Chen' throughout, never dropping to first name. Matches the formal register in vocabulary and sentence structure. Recommendation blends fine dining with a 'hidden gem' angle, showing the agent listened to what Mr. Chen actually values \u2014 not just price tier",
+  "expected_behavioral_quality": "Mirrors the guest's formality level throughout the conversation. A guest who introduces themselves with a title or full name expects that register to be maintained. Recognition includes respecting the communication style, not just remembering the name.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Good evening. I'm Mr. Chen, visiting from New York. I understand you have quite a dining portfolio.",
+      "agent_response": "Welcome, Mr. Seven. Since you're visiting from New York, you'll likely appreciate the vibrant energy and authentic flavors at **Tao Asian Bistro & Lounge** in the Casino of the Sky. \n\nIt's our premier spot for Pan-Asian cuisine, where the dim sum and hand-crafted sushi are served in a space that feels both grand and intimate. They open at 5:00 PM this evening and the smart casual atmosphere is perfect for a sophisticated start to your visit. Since it's quite popular, I would recommend a reservation to secure your preferred time. \n\nAre you looking for a full sit-down dinner tonight, or would you prefer something a bit more casual like a quick bite between games? After you've finished your meal, the lounge at novelle nearby offers a great spot for a craft cocktail and some live DJ music.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        }
+      ],
+      "elapsed_ms": 27173,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "I appreciate fine dining but also enjoy discovering hidden gems. What would you recommend?",
+      "agent_response": "Mr, for a mix of fine dining and that \"hidden gem\" feel, **Todd English's Tuscany** is unparalleled \u2014 the wood-fired aroma hits you the moment you walk in, and sitting near the Taughannick Falls makes the meal feel worlds away from the casino floor.\n\nIt's located in the Casino of the Sky and is open tonight from 5:00 PM to 10:00 PM. While it is a premier destination with a business casual dress code, the tucking away of the restaurant against the waterfall gives it an intimate, discovered atmosphere that many guests overlook. Their handmade pastas and wood-fired pizzas are staples, but the signature flatbreads are where the chef's creativity really shines. I'd suggest a reservation to ensure you get a seat with a view of the falls. \n\nI can help you gather more details to share with the host team to finalize a booking. Would you prefer a table close to the water for a quieter evening, or do you enjoy the energy of being near the open kitchen? \n\nAfter your meal, you might enjoy heading over to the Wolf Den in the Casino of the Earth for some free live music \u2014 it's a great way to transition from a sophisticated dinner into the night's energy.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.657
+        }
+      ],
+      "elapsed_ms": 30935,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Excellent taste. I'll try the Tuscany tonight.",
+      "agent_response": "You've made a wonderful choice, Mr. Seven. The handmade pastas and the signature wood-fired flatbreads at Todd English's Tuscany are highlights of the menu, and the open kitchen gives the whole room a rustic, inviting energy. \n\nSince they open at 5:00 PM today and follow a business casual dress code, I can certainly help you gather the details to share with our host team to finalize a booking for you. I'd suggest trying to secure a table about 30 minutes before you'd like to eat to enjoy the atmosphere. Would you like me to look into availability for a specific time this evening? \n\nAfter your meal, you might enjoy walking over to the Wolf Den in the Casino of the Earth for some free live music\u2014it's a great way to keep the evening's momentum going.",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.689
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.649
+        }
+      ],
+      "elapsed_ms": 27649,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 85758,
+  "error": null,
+  "completed": true
+}

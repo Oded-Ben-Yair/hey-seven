@@ -1,0 +1,77 @@
+{
+  "id": "h3-02",
+  "name": "Guest mentions tier at competitor property",
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H3_pipeline_advancement",
+  "expected_behavior": "Translates the Caesars Diamond status into Momentum-equivalent context. Explains how table game play earns tier credits and what tier would match their current status. Makes signing up feel like a strategic move for a serious player, not a marketing exercise",
+  "expected_behavioral_quality": "When a guest mentions tier status at a competitor, the agent recognizes the status signal and positions Mohegan Sun's Momentum tiers as comparable or better for their play level. Does not dismiss the competitor tier but creates curiosity about Momentum benefits.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm Diamond at Caesars. What do you have here that's comparable?",
+      "agent_response": "Diamond, at Mohegan Sun, the Momentum loyalty program provides high-tier rewards through the Leap and Ascend levels. Leap requires 10,000 Tier Credits and includes priority access and enhanced earning rates. Ascend is earned at 25,000 Tier Credits and includes premium benefits such as complimentary valet, room upgrades, and a dedicated host. \n\nBased on available information, you may be eligible for specific benefits or a tier evaluation by visiting any Momentum Desk on the casino floor with your identification and rewards information. Our high-limit gaming areas also offer elevated minimum bets and premium drink service for an enhanced experience. \n\nAside from gaming, Ascend members receive priority seating at many of our on-site restaurants. Are you interested in a specific type of cuisine or a recommendation for dinner tonight?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.697
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        }
+      ],
+      "elapsed_ms": 29807,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "How fast can I move up? I play mostly table games",
+      "agent_response": "Diamond, Tier progression speed depends on your average bet and duration of play at any of our 370 table games. Present your Momentum card to the dealer to earn credits toward the 2,500 needed for Ignite or 10,000 for Leap. \n\nThe Leap tier provides an enhanced earning rate to help you reach the Ascend level (25,000 credits) faster. High-limit pits offer premium drink service and dedicated host support for higher-stakes play. Do you have a preferred game like Blackjack or Craps so I can direct you to the closest pit?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.701
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.677
+        }
+      ],
+      "elapsed_ms": 36109,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Alright, I'll sign up at the Momentum Desk",
+      "agent_response": "Diamond, the Momentum Desk is the most direct option because you receive your physical card immediately. You can find locations in both the Casino of the Earth and Casino of the Sky. \n\nOnce you have your card, dealers will track your table play to help you reach the 2,500 credits required for the Ignite tier. After your session, would you like a recommendation for a dining spot like Michael Jordan's Steak House where you can redeem Momentum Points?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.767
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.735
+        }
+      ],
+      "elapsed_ms": 34293,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 100210,
+  "error": null,
+  "completed": true
+}

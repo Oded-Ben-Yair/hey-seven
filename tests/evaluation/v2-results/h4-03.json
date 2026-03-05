@@ -1,0 +1,82 @@
+{
+  "id": "h4-03",
+  "name": "Guest with children seeking family-appropriate options",
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H4_personalized_recognition",
+  "expected_behavior": "Distinguishes between teenager interests and young child interests. Recommends experiences that teenagers would consider 'cool' rather than childish. Dinner recommendation accounts for family-friendly seating while not being a kids' restaurant. Makes the family feel like there is something for everyone",
+  "expected_behavioral_quality": "Recognizes the family context and personalizes all recommendations around the full group's needs. Balances adult interests with kid-friendly options without condescending. Uses the family dynamic to create a personalized experience vision.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We're here with two teenagers, 14 and 16. What can we all do together?",
+      "agent_response": "For something even more active, the Wombi Rock climbing wall is right nearby and offers a great physical challenge for all skill levels, making it a perfect group activity where you can all cheer each other on. \n\nThe climbing wall creates such an electric atmosphere right in the heart of the resort, and they provide all the instruction and equipment you'll need. I can connect you with our recreation team to get the current hours and availability for the wall this afternoon. Are your teens more into competitive gaming or would they prefer a physical challenge like climbing?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.675
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        }
+      ],
+      "elapsed_ms": 32508,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "They're pretty bored of the usual family stuff, they want something cool",
+      "agent_response": "If they want a real challenge, Wombi Rock is our massive indoor climbing wall that offers a legitimate physical test and looks incredible against the resort backdrop!\n\nI can help you with the current hours for both the arcade and the climbing wall so you can drop in when the energy is highest. After they've spent some time there, the dining area in the Casino of the Sky has several spots that are usually a big hit with that age group \u2014 would you like a recommendation for a casual dinner nearby?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.649
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.602
+        }
+      ],
+      "elapsed_ms": 36581,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And we need dinner for all four of us",
+      "agent_response": "For your group of four, Mohegan Sun Caputo Trattoria is the standout choice for tonight\u2014the aroma of fresh dough and melted cheese from their brick oven makes it a favorite for guests who want something more exciting than a standard family meal. It is a casual Italian spot in the Casino of the Earth that feels modern and lively, serving up massive calzones and pastas until 10:00 PM. Entrees are generally in the $$ price range, and while they don't typically require reservations, I can help you coordinate with our host team to ensure your group is taken care of.\n\nAfter dinner, the Wolf Den often has live music that creates a great atmosphere for the whole family to enjoy while you're exploring the property. To help me coordinate with our host team, what",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.595
+        }
+      ],
+      "elapsed_ms": 80671,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 149761,
+  "error": null,
+  "completed": true
+}

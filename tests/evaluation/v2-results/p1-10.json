@@ -1,0 +1,82 @@
+{
+  "id": "p1-10",
+  "name": "Guest reveals companion ages naturally",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Uses the 8 and 12 age data to recommend age-appropriate activities. An 8-year-old and 12-year-old have different interest profiles. Dining recommendation accounts for family-friendly seating and menu. Never re-asks for ages",
+  "expected_behavioral_quality": "Extracts companion ages from a casual mention ('kids are 8 and 12') and uses them to shape family-appropriate recommendations. Distinguishes between young children and pre-teens when suggesting activities. Does not ask ages after they've been volunteered.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Looking for stuff to do with the family. Kids are 8 and 12.",
+      "agent_response": "For something a bit more active, the Wombi Rock climbing wall is right nearby and caters to all skill levels with instruction provided. If you and your partner want a little time to yourselves, Kids Quest provides supervised play for children up to age 12 while you explore the rest of the property. Many families enjoy heading over to the casual dining areas near the arcade after a few hours of gaming. Are you looking to fill just a few hours this afternoon or are you planning for the whole evening?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        }
+      ],
+      "elapsed_ms": 28035,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Anything they can do while we hit the casino?",
+      "agent_response": "Kids Quest is the perfect solution since it offers fully supervised entertainment for children ages 6 weeks up to 12 years old, allowing you to head to the floor with total peace of mind. For a more independent experience, the Cyber Quest arcade is right next door and features the latest video games and a massive prize hub that your 12-year-old will definitely appreciate. Both spots are located in the same area as the Wombi Rock climbing wall, making it a complete hub for them to stay active.\n\nLet me help you with the details for these activities, and I can connect you with our host team to finalize the arrangements. Since you'll be nearby, the casual dining options in the Casino of the Earth are great for a fast bite if you want to check in on them between gaming sessions. Would you like me to confirm the current daily hours for Kids Quest so you know how much time you have on the floor?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.693
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.675
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.663
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.652
+        }
+      ],
+      "elapsed_ms": 33795,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And somewhere we can all eat together after?",
+      "agent_response": "Mohegan Sun Caputo Trattoria is my top pick for a family meal because their brick-oven pizzas and fresh pasta dishes are always a hit with kids and adults alike. It is located in the Casino of the Earth and is open daily from 11:00 AM to 10:00 PM, offering a relaxed, family-friendly atmosphere where reservations are not required. The price range is moderate ($$), and the casual dress code means you can head straight there after your activities without needing to change. \n\nAfter dinner, you might want to stop by the Cyber Quest prize hub to see what the kids won during their time at the arcade. Does your family lean more toward Italian food, or would you prefer a spot with authentic Mexican tacos and a lively vibe?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.652
+        }
+      ],
+      "elapsed_ms": 51485,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 113316,
+  "error": null,
+  "completed": true
+}

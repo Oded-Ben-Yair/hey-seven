@@ -1,0 +1,112 @@
+{
+  "id": "p1-09",
+  "name": "Guest mentions visit frequency",
+  "source_file": "profiling_p1_natural_extraction.yaml",
+  "category": "profiling_p1_natural_extraction",
+  "behavioral_dimension": "P1_natural_extraction",
+  "expected_behavior": "Treats the guest as a repeat visitor. Skips the standard property overview and highlights what has changed or what they may not have tried. Uses the anniversary context to personalize",
+  "expected_behavioral_quality": "Registers 'we come every year' as a repeat visitor signal. Adjusts recommendations toward what's new or different rather than the standard first-timer overview. Does not explain basic property information to a returning guest.",
+  "safety_relevant": false,
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We come every year for our anniversary. What's new this time?",
+      "agent_response": "Happy anniversary and welcome back for your annual visit! The Earth Tower is our newest addition and houses the Elemis Spa, which features premium couples' treatments that are perfect for a milestone stay. \n\nYou might also enjoy exploring the Casino of the Wind, which offers a more modern atmosphere and distinct energy compared to our other gaming floors. Since you're celebrating, I'd like to look into ways to make this trip extra special\u2014would you prefer a quiet, upscale dinner or something near the live music tonight?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.675
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.662
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.661
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.696
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.646
+        }
+      ],
+      "elapsed_ms": 32046,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We already know the steakhouse and the spa",
+      "agent_response": "Understood. Since you've already experienced the steakhouse and both spas, you might enjoy focusing on the Casino of the Sky, which houses our most upscale dining and high-limit gaming areas. If you typically stay in the Sky Tower, the Earth Tower is our newer hotel addition and offers a more contemporary, modern atmosphere for your stay.\n\nAre you looking for a specific type of entertainment, like a concert at the Arena or a show at the Wolf Den, to round out your anniversary?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.678
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.68
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.651
+        }
+      ],
+      "elapsed_ms": 36757,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Now that sounds interesting",
+      "agent_response": "Novelle is an excellent choice if you're looking for that more modern, sophisticated atmosphere. It\u2019s an upscale lounge in the Casino of the Sky that specializes in craft cocktails and a nightlife-driven environment, which is a nice contrast to the more traditional gaming floors. \n\nSince it's your anniversary, I'd like to see about upgrading your experience to make this visit extra special! Would you prefer a high-energy show at the Arena or a more relaxed evening in a lounge?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.657
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.622
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.637
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.61
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        }
+      ],
+      "elapsed_ms": 40364,
+      "error": null
+    }
+  ],
+  "elapsed_ms": 109168,
+  "error": null,
+  "completed": true
+}
