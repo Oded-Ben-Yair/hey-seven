@@ -48,6 +48,7 @@ class FeatureFlags(TypedDict, total=False):
     profiling_enabled: bool
     incentives_enabled: bool
     few_shot_examples_enabled: bool
+    model_routing_enabled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -64,25 +65,28 @@ class FeatureFlags(TypedDict, total=False):
 # Layer 2 (runtime): Flags that alter BEHAVIOR WITHIN NODES (e.g. specialist_agents_enabled,
 #   ai_disclosure_enabled) are read per-request via the async is_feature_enabled() API
 #   below, which merges these defaults with per-casino Firestore overrides.
-DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType({
-    "ai_disclosure_enabled": True,
-    "whisper_planner_enabled": True,
-    "specialist_agents_enabled": True,
-    "comp_agent_enabled": True,
-    "spanish_support_enabled": True,
-    "outbound_campaigns_enabled": False,
-    "hitl_interrupt_enabled": False,
-    "human_like_delay_enabled": True,
-    "sms_enabled": False,  # Requires Telnyx setup
-    "sentiment_detection_enabled": True,  # Phase 3: VADER sentiment in router
-    "guest_profile_enabled": True,  # Phase 3: guest profile injection (enabled after R19 review)
-    "field_extraction_enabled": True,  # Phase 3: deterministic field extraction
-    "sentiment_llm_augmented": True,  # Phase 2: LLM augmentation for ambiguous VADER
-    "extraction_llm_augmented": True,  # Phase 2: LLM fallback for regex misses
-    "profiling_enabled": True,  # Profiling enrichment node in graph topology (Layer 1)
-    "incentives_enabled": True,  # Incentive engine for proactive offers
-    "few_shot_examples_enabled": True,  # R83: Inject behavioral examples into specialist prompts
-})
+DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType(
+    {
+        "ai_disclosure_enabled": True,
+        "whisper_planner_enabled": True,
+        "specialist_agents_enabled": True,
+        "comp_agent_enabled": True,
+        "spanish_support_enabled": True,
+        "outbound_campaigns_enabled": False,
+        "hitl_interrupt_enabled": False,
+        "human_like_delay_enabled": True,
+        "sms_enabled": False,  # Requires Telnyx setup
+        "sentiment_detection_enabled": True,  # Phase 3: VADER sentiment in router
+        "guest_profile_enabled": True,  # Phase 3: guest profile injection (enabled after R19 review)
+        "field_extraction_enabled": True,  # Phase 3: deterministic field extraction
+        "sentiment_llm_augmented": True,  # Phase 2: LLM augmentation for ambiguous VADER
+        "extraction_llm_augmented": True,  # Phase 2: LLM fallback for regex misses
+        "profiling_enabled": True,  # Profiling enrichment node in graph topology (Layer 1)
+        "incentives_enabled": True,  # Incentive engine for proactive offers
+        "few_shot_examples_enabled": True,  # R83: Inject behavioral examples into specialist prompts
+        "model_routing_enabled": True,  # R97: Flash->Pro routing per casino (was global MODEL_ROUTING_ENABLED)
+    }
+)
 
 # Parity check: FeatureFlags TypedDict must declare every key in DEFAULT_FEATURES.
 # Catches schema drift at import time (same pattern as _initial_state parity in graph.py).
@@ -178,4 +182,3 @@ async def is_feature_enabled(casino_id: str, flag_name: str) -> bool:
     """
     flags = await get_feature_flags(casino_id)
     return flags.get(flag_name, False)
-

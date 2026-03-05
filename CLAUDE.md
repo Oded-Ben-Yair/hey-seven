@@ -12,13 +12,13 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 5. **NO mock data**: All demos use real casino domain data from knowledge-base/
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
-8. **NO MOCK TESTING**: All tests must use live real LLM API calls. No mock LLMs, no fake responses, no assumptions about model behavior. Tests that can't call the real API should be skipped, not mocked.
+8. **TESTING STRATEGY**: Unit tests mock LLM calls for speed and CI reliability. Deterministic components (guardrails, sentiment, crisis, slang, incentives) are tested without mocks. Live LLM behavior is validated through the evaluation framework (`tests/evaluation/`). Schema compatibility is spot-checked via `@pytest.mark.live` tests. New `with_structured_output()` schemas require at least one live integration test.
 
 ## Current State (Updated 2026-03-03)
 
 - **Codebase**: 24K+ LOC, 66 source modules across 10 packages
 - **Tests**: 3502 tests, 0 failures, 90%+ coverage
-- **Agent**: 13-node LangGraph StateGraph v2.4 (29 state fields, 17 feature flags) with 6 specialist agents + profiling enrichment node
+- **Agent**: 13-node LangGraph StateGraph v2.4 (29 state fields, 18 feature flags) with 6 specialist agents + profiling enrichment node
 - **Model routing**: Flash→Pro for complex/emotional queries (low confidence, grief, frustrated, crisis, high-complexity)
 - **Review Score**: R75 tech 9.63/10, R95 behavioral B-avg 6.62/10
 - **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R91(7.0) → R95(6.62, 80 scenarios) behavioral
@@ -175,7 +175,7 @@ Key architectural patterns:
 - **re2-compatible guardrail patterns** across all 5 guardrail categories
 - **Guest profiling enrichment node** between generate and validate with LLM-powered extraction, confidence gating, and golden path sequencing (ADR-028)
 - **Incentive engine** with per-casino rules, tiered autonomy ($50 auto-approve threshold), and natural language framing templates
-- **Flash→Pro model routing** — deterministic routing to Pro for low confidence, grief, frustrated, disappointed, crisis, and high-complexity queries (R83/R94)
+- **Flash→Pro model routing** — deterministic per-casino routing to Pro for low confidence, grief, frustrated, disappointed, crisis, and high-complexity queries (R83/R94, R97: per-casino via `model_routing_enabled` feature flag)
 - **Few-shot behavioral examples** — 27 examples (5 specialists, 5-7 per specialist) injected into specialist system prompts via feature flag (R83/R94)
 - **Booking intent routing** — action_request queries flow through specialist pipeline with RAG instead of canned off_topic response (R92). Booking context injected with qualifying questions.
 - **Profile confirmation** — profiling enrichment node prepends "So I've got: [name, occasion, party size]" when guest confirms and profile is ≥30% complete (R93)

@@ -133,6 +133,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "profiling_enabled": True,
         "incentives_enabled": True,
         "few_shot_examples_enabled": True,
+        "model_routing_enabled": True,
     },
     "prompts": {
         "system_prompt_override": None,
@@ -659,13 +660,15 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
 # Profile completeness validation (R52 fix D10)
 # ---------------------------------------------------------------------------
 
-_REQUIRED_PROFILE_FIELDS = frozenset({
-    "state",
-    "gaming_age_minimum",
-    "responsible_gaming_helpline",
-    "state_helpline",
-    "self_exclusion_authority",
-})
+_REQUIRED_PROFILE_FIELDS = frozenset(
+    {
+        "state",
+        "gaming_age_minimum",
+        "responsible_gaming_helpline",
+        "state_helpline",
+        "self_exclusion_authority",
+    }
+)
 
 
 def _validate_profiles_completeness() -> None:
@@ -822,11 +825,7 @@ def _deep_merge(base: dict, overrides: dict) -> dict:
     """
     merged = dict(base)
     for key, value in overrides.items():
-        if (
-            key in merged
-            and isinstance(merged[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
             merged[key] = _deep_merge(merged[key], value)
         else:
             merged[key] = value

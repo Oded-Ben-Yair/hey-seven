@@ -1975,44 +1975,50 @@ class TestCircuitBreakerConcurrency:
 
 
 class TestModelRouting:
-    """R83: Tests for Flash→Pro model routing logic."""
+    """R83: Tests for Flash->Pro model routing logic. R97: Now per-casino."""
 
-    def test_default_routes_to_flash(self):
+    @pytest.mark.asyncio
+    async def test_default_routes_to_flash(self):
         """Normal queries route to Flash (default)."""
         from src.agent.nodes import _select_model
 
         state = _state(router_confidence=0.9, guest_sentiment="positive")
-        assert _select_model(state) == "default"
+        assert await _select_model(state) == "default"
 
-    def test_low_confidence_routes_to_pro(self):
+    @pytest.mark.asyncio
+    async def test_low_confidence_routes_to_pro(self):
         """Low router confidence routes to Pro model."""
         from src.agent.nodes import _select_model
 
         state = _state(router_confidence=0.5, guest_sentiment="neutral")
-        assert _select_model(state) == "complex"
+        assert await _select_model(state) == "complex"
 
-    def test_frustrated_routes_to_pro(self):
+    @pytest.mark.asyncio
+    async def test_frustrated_routes_to_pro(self):
         """Frustrated sentiment routes to Pro model."""
         from src.agent.nodes import _select_model
 
         state = _state(router_confidence=0.9, guest_sentiment="frustrated")
-        assert _select_model(state) == "complex"
+        assert await _select_model(state) == "complex"
 
-    def test_grief_routes_to_pro(self):
+    @pytest.mark.asyncio
+    async def test_grief_routes_to_pro(self):
         """Grief sentiment routes to Pro model."""
         from src.agent.nodes import _select_model
 
         state = _state(router_confidence=0.9, guest_sentiment="grief")
-        assert _select_model(state) == "complex"
+        assert await _select_model(state) == "complex"
 
-    def test_crisis_routes_to_pro(self):
+    @pytest.mark.asyncio
+    async def test_crisis_routes_to_pro(self):
         """Crisis state routes to Pro model."""
         from src.agent.nodes import _select_model
 
         state = _state(router_confidence=0.9, crisis_active=True)
-        assert _select_model(state) == "complex"
+        assert await _select_model(state) == "complex"
 
-    def test_high_complexity_routes_to_pro(self):
+    @pytest.mark.asyncio
+    async def test_high_complexity_routes_to_pro(self):
         """High query complexity from whisper planner routes to Pro model."""
         from src.agent.nodes import _select_model
 
@@ -2020,21 +2026,23 @@ class TestModelRouting:
             router_confidence=0.9,
             whisper_plan={"query_complexity": "high"},
         )
-        assert _select_model(state) == "complex"
+        assert await _select_model(state) == "complex"
 
-    def test_routing_disabled_returns_default(self):
-        """When MODEL_ROUTING_ENABLED=False, always returns default."""
+    @pytest.mark.asyncio
+    async def test_routing_disabled_returns_default(self):
+        """When model_routing_enabled=False per-casino, always returns default."""
         from src.agent.nodes import _select_model
-        from src.config import get_settings
 
-        get_settings.cache_clear()
-        with patch.dict("os.environ", {"MODEL_ROUTING_ENABLED": "false"}):
-            get_settings.cache_clear()
+        with patch(
+            "src.agent.nodes.is_feature_enabled",
+            new_callable=AsyncMock,
+            return_value=False,
+        ):
             state = _state(router_confidence=0.3, guest_sentiment="grief")
-            assert _select_model(state) == "default"
-        get_settings.cache_clear()
+            assert await _select_model(state) == "default"
 
-    def test_simple_greeting_stays_flash(self):
+    @pytest.mark.asyncio
+    async def test_simple_greeting_stays_flash(self):
         """Simple greetings stay on Flash model."""
         from src.agent.nodes import _select_model
 
@@ -2043,7 +2051,7 @@ class TestModelRouting:
             guest_sentiment="positive",
             query_type="greeting",
         )
-        assert _select_model(state) == "default"
+        assert await _select_model(state) == "default"
 
 
 class TestGreetingNodeAcknowledgment:

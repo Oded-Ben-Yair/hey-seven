@@ -103,27 +103,31 @@ def _extract_node_metadata(
 # R50 fix (Grok MAJOR-D1-002): MappingProxyType prevents accidental mutation.
 # Plain dict allows `_CATEGORY_TO_AGENT["typo"] = "value"` to corrupt routing
 # for all concurrent requests in the same process.
-_CATEGORY_TO_AGENT: dict[str, str] = _MappingProxy({
-    "restaurants": "dining",
-    "entertainment": "entertainment",
-    "spa": "entertainment",
-    "gaming": "comp",
-    "promotions": "comp",
-    "hotel": "hotel",
-})
+_CATEGORY_TO_AGENT: dict[str, str] = _MappingProxy(
+    {
+        "restaurants": "dining",
+        "entertainment": "entertainment",
+        "spa": "entertainment",
+        "gaming": "comp",
+        "promotions": "comp",
+        "hotel": "hotel",
+    }
+)
 
 # Business-priority tie-break order for specialist dispatch.
 # When two categories have equal chunk counts, the higher-priority category
 # wins. Dining > hotel > entertainment > comp because dining queries are the
 # most common guest request type and have the most actionable content.
-_CATEGORY_PRIORITY: dict[str, int] = _MappingProxy({
-    "restaurants": 4,
-    "hotel": 3,
-    "entertainment": 2,
-    "spa": 2,
-    "gaming": 1,
-    "promotions": 1,
-})
+_CATEGORY_PRIORITY: dict[str, int] = _MappingProxy(
+    {
+        "restaurants": 4,
+        "hotel": 3,
+        "entertainment": 2,
+        "spa": 2,
+        "gaming": 1,
+        "promotions": 1,
+    }
+)
 
 
 def _keyword_dispatch(retrieved: list[dict]) -> str:
@@ -270,7 +274,10 @@ async def _route_to_specialist(
         # because google-genai raises various exception types across versions.
         # Record failure so the circuit breaker tracks dispatch LLM health.
         await cb.record_failure()
-        logger.warning("Structured dispatch LLM call failed, falling back to keyword counting", exc_info=True)
+        logger.warning(
+            "Structured dispatch LLM call failed, falling back to keyword counting",
+            exc_info=True,
+        )
 
     # --- Fallback: keyword counting ---
     if agent_name is None:
@@ -278,12 +285,18 @@ async def _route_to_specialist(
         logger.info(
             "Keyword fallback dispatch -> %s (categories=%s)",
             agent_name,
-            {c.get("metadata", {}).get("category", "") for c in retrieved if c.get("metadata", {}).get("category")},
+            {
+                c.get("metadata", {}).get("category", "")
+                for c in retrieved
+                if c.get("metadata", {}).get("category")
+            },
         )
 
     # Feature flag: specialist_agents_enabled controls dispatch to non-host agents.
     # When disabled, all queries route to the general host concierge.
-    specialist_enabled = await is_feature_enabled(settings.CASINO_ID, "specialist_agents_enabled")
+    specialist_enabled = await is_feature_enabled(
+        settings.CASINO_ID, "specialist_agents_enabled"
+    )
     if agent_name != "host" and not specialist_enabled:
         logger.info("Specialist agents disabled; routing %s to host", agent_name)
         agent_name = "host"
@@ -314,6 +327,7 @@ def _inject_guest_context(
         return {}
     try:
         from src.data.guest_profile import get_agent_context
+
         extracted = state.get("extracted_fields", {})
         if not extracted:
             return {}
@@ -331,7 +345,9 @@ def _inject_guest_context(
             update["guest_name"] = agent_ctx["name"]
         return update
     except Exception:
-        logger.warning("Guest profile lookup failed, continuing without context", exc_info=True)
+        logger.warning(
+            "Guest profile lookup failed, continuing without context", exc_info=True
+        )
         return {}
 
 
@@ -386,10 +402,14 @@ async def _execute_specialist(
             settings.MODEL_TIMEOUT * 2,
         )
         result = {
-            "messages": [AIMessage(content=(
-                "I apologize, but I'm having trouble generating a response right now. "
-                "Please try again, or contact us directly for assistance."
-            ))],
+            "messages": [
+                AIMessage(
+                    content=(
+                        "I apologize, but I'm having trouble generating a response right now. "
+                        "Please try again, or contact us directly for assistance."
+                    )
+                )
+            ],
             "skip_validation": True,
         }
     except Exception:
@@ -401,10 +421,14 @@ async def _execute_specialist(
             agent_name,
         )
         result = {
-            "messages": [AIMessage(content=(
-                "I apologize, but I'm having trouble generating a response right now. "
-                "Please try again, or contact us directly for assistance."
-            ))],
+            "messages": [
+                AIMessage(
+                    content=(
+                        "I apologize, but I'm having trouble generating a response right now. "
+                        "Please try again, or contact us directly for assistance."
+                    )
+                )
+            ],
             "skip_validation": True,
         }
 
@@ -416,7 +440,8 @@ async def _execute_specialist(
         logger.warning(
             "Specialist %s returned dispatch-owned keys %s -- stripping "
             "(specialist should not set these)",
-            agent_name, collisions,
+            agent_name,
+            collisions,
         )
         # R47 fix C1: Strip dispatch-owned keys from specialist result.
         # Previously only warned -- specialist values persisted in state,
@@ -431,7 +456,8 @@ async def _execute_specialist(
     if unknown:
         logger.warning(
             "Specialist %s returned unknown state keys %s -- filtering out",
-            agent_name, unknown,
+            agent_name,
+            unknown,
         )
         result = {k: v for k, v in result.items() if k in _VALID_STATE_KEYS}
 
@@ -476,7 +502,9 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
 
     # R38 fix M-002: Cache profile feature flag alongside routing to avoid
     # TOCTOU issues from calling is_feature_enabled() at different times.
-    profile_enabled = await is_feature_enabled(settings.CASINO_ID, "guest_profile_enabled")
+    profile_enabled = await is_feature_enabled(
+        settings.CASINO_ID, "guest_profile_enabled"
+    )
 
     # Phase 2: Inject guest profile context
     guest_context_update = _inject_guest_context(state, profile_enabled)
@@ -484,8 +512,10 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     # R83: Compute model routing decision BEFORE specialist execution.
     # The model_route is recorded in state for observability and passed through
     # to execute_specialist which uses it to select Flash vs Pro LLM.
-    model_route = _select_model(state)
-    model_name = settings.COMPLEX_MODEL_NAME if model_route == "complex" else settings.MODEL_NAME
+    model_route = await _select_model(state)
+    model_name = (
+        settings.COMPLEX_MODEL_NAME if model_route == "complex" else settings.MODEL_NAME
+    )
 
     # Phase 3: Execute specialist agent
     logger.info(
@@ -494,7 +524,9 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         dispatch_method,
         model_name,
     )
-    result = await _execute_specialist(state, agent_name, guest_context_update, settings, dispatch_method)
+    result = await _execute_specialist(
+        state, agent_name, guest_context_update, settings, dispatch_method
+    )
     # R83: Record model routing decision in state for observability
     result["model_used"] = model_name
     return result

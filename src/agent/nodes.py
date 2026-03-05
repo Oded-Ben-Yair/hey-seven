@@ -219,11 +219,12 @@ async def _get_complex_llm() -> ChatGoogleGenerativeAI:
         return llm
 
 
-def _select_model(state: dict) -> str:
+async def _select_model(state: dict) -> str:
     """Determine which model to use for this query.
 
     R83: Routes to Pro (COMPLEX_MODEL_NAME) for queries that benefit
     from deeper reasoning. Routes to Flash (MODEL_NAME) for everything else.
+    R97: Per-casino flag via is_feature_enabled() for canary rollout.
 
     Deterministic routing — no LLM call. Decision based on state signals
     already computed by upstream nodes (router confidence, sentiment,
@@ -233,7 +234,7 @@ def _select_model(state: dict) -> str:
         "complex" if Pro should be used, "default" otherwise.
     """
     settings = get_settings()
-    if not settings.MODEL_ROUTING_ENABLED:
+    if not await is_feature_enabled(settings.CASINO_ID, "model_routing_enabled"):
         return "default"
 
     confidence = state.get("router_confidence", 1.0)
@@ -270,7 +271,7 @@ async def _get_routed_llm(state: dict) -> tuple[ChatGoogleGenerativeAI, str]:
     Returns:
         Tuple of (llm_instance, model_name_used).
     """
-    route = _select_model(state)
+    route = await _select_model(state)
     if route == "complex":
         llm = await _get_complex_llm()
         settings = get_settings()
