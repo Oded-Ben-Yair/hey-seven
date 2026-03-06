@@ -1,107 +1,105 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R97 complete — Architecture audit (13 reports, 83.6% confidence), per-casino model routing fix, Wave 1 eval done (109 scenarios). Phase 2 tools NOT built (subagents failed). Next: judge Wave 1, build 4 tools, Wave 3 eval.",
-    "lastModified": "2026-03-06T00:00:00Z",
+    "summary": "R98 complete — Phase 2 tools built (CompStrategy, HandoffOrchestrator, LTV Nudge, Rapport Ladder), streaming judge pipeline, Flash eval validated. Tools inject correctly but Flash can't integrate — Pro switch is P0.",
+    "lastModified": "2026-03-06T10:15:00Z",
     "branch": "main",
-    "commitHash": "e4702d7",
+    "commitHash": "dc424c3",
     "tag": "v1.5.0",
-    "phase": "r97-audit-complete-phase1-started"
+    "phase": "r98-phase2-complete-pro-switch-pending"
   },
-  "blueprintPhase": "Phase 1+2 — Pro-First, Distill-Down (Execution)",
-  "roundNumber": 97,
+  "blueprintPhase": "Phase 2 Complete → Phase 1 Pro Switch Pending",
+  "roundNumber": 98,
   "scores": {
     "technical": 9.63,
-    "behavioral_r95_gpt52": 6.62,
-    "profiling_r96_gpt52": 5.12,
-    "hostTriangle_r96_gpt52": 4.84,
-    "safety_behavioral": "93.7%",
-    "safety_profiling": "98.1%",
-    "safety_hostTriangle": "100%",
+    "behavioral_r98_gpt52": 6.15,
+    "profiling_r98_gpt52": 4.06,
+    "hostTriangle_r98_gpt52": 5.04,
+    "safety_behavioral": "91.1%",
     "responseRate": "100%",
     "deflectionRate": "0%",
-    "per_dimension_behavioral": {
-      "B1_sarcasm": 6.9,
-      "B2_implicit": 6.2,
-      "B3_engagement": 6.2,
-      "B4_agentic": 6.1,
-      "B5_emotional": 6.7,
-      "B6_tone": 6.8,
-      "B7_coherence": 7.1,
-      "B8_cultural": 7.2,
-      "B9_safety": 6.6,
-      "B10_overall": 6.3
+    "per_dimension_behavioral_r98": {
+      "B1_sarcasm": 6.52,
+      "B2_implicit": 5.88,
+      "B3_engagement": 5.57,
+      "B4_agentic": 5.61,
+      "B5_emotional": 6.23,
+      "B6_tone": 6.69,
+      "B7_coherence": 5.84,
+      "B8_cultural": 7.05,
+      "B9_safety": 6.41,
+      "B10_overall": 5.70
     },
-    "per_dimension_profiling": {
-      "P1_natural_extraction": 5.3,
-      "P2_active_probing": 6.1,
-      "P3_give_to_get": 7.2,
-      "P4_assumptive_bridging": 5.1,
-      "P5_progressive_sequencing": 5.3,
-      "P6_incentive_framing": 4.2,
-      "P7_privacy_respect": 5.8,
-      "P8_profile_completeness": 3.7,
-      "P9_host_handoff": 2.1,
-      "P10_cross_turn_memory": 6.3
+    "per_dimension_profiling_r98": {
+      "P1_natural_extraction": 2.90,
+      "P2_active_probing": 4.99,
+      "P3_give_to_get": 7.08,
+      "P4_assumptive_bridging": 4.50,
+      "P5_progressive_sequencing": 4.16,
+      "P6_incentive_framing": 3.57,
+      "P7_privacy_respect": 3.75,
+      "P8_profile_completeness": 2.07,
+      "P9_host_handoff": 2.66,
+      "P10_cross_turn_memory": 4.91
     },
-    "per_dimension_hostTriangle": {
-      "H1_property_knowledge": 6.6,
-      "H2_need_anticipation": 5.5,
-      "H3_solution_synthesis": 4.7,
-      "H4_emotional_attunement": 6.0,
-      "H5_trust_building": 5.1,
-      "H6_rapport_depth": 4.0,
-      "H7_revenue_natural": 5.4,
-      "H8_upsell_timing": 5.7,
-      "H9_comp_strategy": 1.9,
-      "H10_lifetime_value": 3.5
+    "per_dimension_hostTriangle_r98": {
+      "H1_property_knowledge": 6.77,
+      "H2_need_anticipation": 5.77,
+      "H3_solution_synthesis": 5.00,
+      "H4_emotional_attunement": 6.03,
+      "H5_trust_building": 5.13,
+      "H6_rapport_depth": 4.07,
+      "H7_revenue_natural": 5.62,
+      "H8_upsell_timing": 6.10,
+      "H9_comp_strategy": 2.16,
+      "H10_lifetime_value": 3.77
     }
   },
   "blockers": [],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "Judge Wave 1 eval (r97-pro-canary-responses.json) with GPT-5.2. Compare B-avg to 6.62 baseline."
+      "description": "Switch to Gemini 3.1 Pro — set COMPLEX_MODEL_NAME=gemini-3.1-pro-preview, run parallel streaming eval+judge on all 3 categories"
     },
     {
       "priority": 1,
-      "description": "Build CompStrategy tool (src/agent/tools/comp_strategy.py) — H9: 1.9 → 5.0+"
+      "description": "Test GPT-5.3-chat as judge — 5 scenarios, compare vs GPT-5.2"
     },
     {
       "priority": 2,
-      "description": "Build HandoffOrchestrator tool (src/agent/tools/handoff.py) — P9: 2.1 → 5.0+"
+      "description": "Verify targets: B-avg>=7.0, H6>=5.0, H9>=5.0, H10>=5.0, P9>=5.0"
     },
     {
       "priority": 3,
-      "description": "Build LTV Nudge Engine (src/agent/tools/ltv_nudge.py) — H10: 3.5 → 5.0+"
-    },
-    {
-      "priority": 4,
-      "description": "Build Rapport Ladder (src/agent/tools/rapport_ladder.py) — H6: 4.0 → 5.0+"
-    },
-    {
-      "priority": 5,
-      "description": "Wave 3 integration eval (165 scenarios, 3 categories, GPT-5.2 judge)"
+      "description": "If Pro targets met, begin Phase 3 fine-tuning data collection spec for Vertex AI 2.5 Flash"
     }
   ],
   "codebaseMetrics": {
-    "tests": 3555,
+    "tests": 3671,
     "testFailures": 0,
-    "coverage": 90.62,
+    "coverage": 90.0,
     "graphNodes": 13,
     "stateFields": 29,
-    "featureFlags": 18,
+    "featureFlags": 17,
     "guardrailPatterns": 214,
     "slopPatterns": 17,
     "fewShotExamples": 27,
     "bridges": 15,
     "sarcasmPatterns": 17,
     "totalScenarios": 250,
-    "sourceModules": 66,
-    "scaffoldedModules": 0
+    "sourceModules": 70,
+    "scaffoldedModules": 0,
+    "behaviorTools": 4,
+    "behaviorToolTests": 119
+  },
+  "evalInfrastructure": {
+    "streamingJudge": "tests/evaluation/streaming_judge.py",
+    "liveEvalRunner": "tests/evaluation/run_live_eval.py",
+    "legacyJudge": "tests/evaluation/run_r95_judge.py",
+    "judgeModel": "gpt-5.2 (gpt-5.3-chat available, test before swapping)"
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-06",
-    "lastSessionId": "hey-seven-session-20260306-ac0443"
+    "lastSessionId": "hey-seven-session-20260306-ffb07f"
   }
 }
