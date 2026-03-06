@@ -1166,7 +1166,9 @@ async def execute_specialist(
             )
 
     # R98: CompStrategy — deterministic comp policy injection for comp agent.
-    # Provides specific offers, talking points, and restrictions per guest tier.
+    # R99 lesson: expanding to ALL agents caused 1.43-point H-avg regression
+    # (prompt pollution). Comp context stays comp-only. For H9, improve dispatch
+    # routing to send comp-related queries to comp agent instead.
     if agent_name == "comp":
         from src.agent.behavior_tools.comp_strategy import get_comp_prompt_section
 

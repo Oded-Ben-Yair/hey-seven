@@ -13,6 +13,7 @@ live in ``guardrails.py``.
 import asyncio
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -233,6 +234,11 @@ async def _select_model(state: dict) -> str:
     Returns:
         "complex" if Pro should be used, "default" otherwise.
     """
+    # R99: Force Pro for all queries during eval (set FORCE_PRO_MODEL=true)
+    if os.environ.get("FORCE_PRO_MODEL", "").lower() in ("true", "1"):
+        logger.info("R99 model routing: Pro (FORCE_PRO_MODEL override)")
+        return "complex"
+
     settings = get_settings()
     if not await is_feature_enabled(settings.CASINO_ID, "model_routing_enabled"):
         return "default"
