@@ -1,81 +1,72 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R98 complete — Phase 2 tools built (CompStrategy, HandoffOrchestrator, LTV Nudge, Rapport Ladder), streaming judge pipeline, Flash eval validated. Tools inject correctly but Flash can't integrate — Pro switch is P0.",
-    "lastModified": "2026-03-06T10:15:00Z",
+    "summary": "R99 complete — Pro switch validated (H-avg 5.28, +0.24 vs Flash, 0 errors). CompStrategy all-agents reverted (1.43-pt regression). Streaming eval+judge pipeline working. Behavioral eval blocked by 250 RPD quota.",
+    "lastModified": "2026-03-06T15:00:00Z",
     "branch": "main",
-    "commitHash": "dc424c3",
+    "commitHash": "6e439a5",
     "tag": "v1.5.0",
-    "phase": "r98-phase2-complete-pro-switch-pending"
+    "phase": "r99-pro-switch-validated-behavioral-pending"
   },
-  "blueprintPhase": "Phase 2 Complete → Phase 1 Pro Switch Pending",
-  "roundNumber": 98,
+  "blueprintPhase": "Phase 1 Pro Switch — partially validated (HT done, behavioral blocked by quota)",
+  "roundNumber": 99,
   "scores": {
     "technical": 9.63,
-    "behavioral_r98_gpt52": 6.15,
-    "profiling_r98_gpt52": 4.06,
-    "hostTriangle_r98_gpt52": 5.04,
-    "safety_behavioral": "91.1%",
+    "behavioral_r99_pro_ht": 6.74,
+    "behavioral_r96_flash_80": 6.62,
+    "profiling_r99_pro_ht": 4.94,
+    "hostTriangle_r99_pro": 5.28,
+    "hostTriangle_r98_flash": 5.04,
+    "safety": "91%",
     "responseRate": "100%",
     "deflectionRate": "0%",
-    "per_dimension_behavioral_r98": {
-      "B1_sarcasm": 6.52,
-      "B2_implicit": 5.88,
-      "B3_engagement": 5.57,
-      "B4_agentic": 5.61,
-      "B5_emotional": 6.23,
-      "B6_tone": 6.69,
-      "B7_coherence": 5.84,
-      "B8_cultural": 7.05,
-      "B9_safety": 6.41,
-      "B10_overall": 5.70
-    },
-    "per_dimension_profiling_r98": {
-      "P1_natural_extraction": 2.90,
-      "P2_active_probing": 4.99,
-      "P3_give_to_get": 7.08,
-      "P4_assumptive_bridging": 4.50,
-      "P5_progressive_sequencing": 4.16,
-      "P6_incentive_framing": 3.57,
-      "P7_privacy_respect": 3.75,
-      "P8_profile_completeness": 2.07,
-      "P9_host_handoff": 2.66,
-      "P10_cross_turn_memory": 4.91
-    },
-    "per_dimension_hostTriangle_r98": {
-      "H1_property_knowledge": 6.77,
-      "H2_need_anticipation": 5.77,
-      "H3_solution_synthesis": 5.00,
-      "H4_emotional_attunement": 6.03,
-      "H5_trust_building": 5.13,
-      "H6_rapport_depth": 4.07,
-      "H7_revenue_natural": 5.62,
-      "H8_upsell_timing": 6.10,
-      "H9_comp_strategy": 2.16,
-      "H10_lifetime_value": 3.77
+    "errorRate_pro": "0%",
+    "errorRate_flash": "10%",
+    "per_dimension_hostTriangle_r99_pro": {
+      "H1_property_knowledge": 6.73,
+      "H2_need_anticipation": 6.07,
+      "H3_solution_synthesis": 5.37,
+      "H4_emotional_attunement": 6.2,
+      "H5_trust_building": 5.63,
+      "H6_rapport_depth": 4.4,
+      "H7_revenue_natural": 5.79,
+      "H8_upsell_timing": 6.17,
+      "H9_comp_strategy": 2.0,
+      "H10_lifetime_value": 4.45
     }
   },
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "quota",
+      "description": "Gemini 3.1 Pro 250 RPD free tier exhausted. Behavioral eval cannot run same day as host-triangle. Resets ~midnight PT.",
+      "severity": "P0",
+      "workaround": "Retry next day or upgrade to paid tier"
+    }
+  ],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "Switch to Gemini 3.1 Pro — set COMPLEX_MODEL_NAME=gemini-3.1-pro-preview, run parallel streaming eval+judge on all 3 categories"
+      "description": "Run /learning-loop on R97-R99 findings — codify Pro switch learnings, eval methodology, prompt pollution anti-pattern"
     },
     {
       "priority": 1,
-      "description": "Test GPT-5.3-chat as judge — 5 scenarios, compare vs GPT-5.2"
+      "description": "Run full 109-scenario behavioral eval with FORCE_PRO_MODEL=true (quota resets ~midnight PT)"
     },
     {
       "priority": 2,
-      "description": "Verify targets: B-avg>=7.0, H6>=5.0, H9>=5.0, H10>=5.0, P9>=5.0"
+      "description": "Fix H9 dispatch routing — add comp keywords to dispatch.py so comp-intent queries go to comp agent"
     },
     {
       "priority": 3,
-      "description": "If Pro targets met, begin Phase 3 fine-tuning data collection spec for Vertex AI 2.5 Flash"
+      "description": "E2E architecture reality check — what's production-ready vs what's dev-only (see handover Tier 1/2/3)"
+    },
+    {
+      "priority": 4,
+      "description": "Test GPT-5.3-chat as judge — 5 scenarios, compare vs GPT-5.2"
     }
   ],
   "codebaseMetrics": {
-    "tests": 3671,
+    "tests": 3674,
     "testFailures": 0,
     "coverage": 90.0,
     "graphNodes": 13,
@@ -94,12 +85,20 @@
   },
   "evalInfrastructure": {
     "streamingJudge": "tests/evaluation/streaming_judge.py",
-    "liveEvalRunner": "tests/evaluation/run_live_eval.py",
+    "liveEvalRunner": "tests/evaluation/run_live_eval.py (now with --timeout, --streaming-dir)",
     "legacyJudge": "tests/evaluation/run_r95_judge.py",
-    "judgeModel": "gpt-5.2 (gpt-5.3-chat available, test before swapping)"
+    "judgeModel": "gpt-5.2 (variance +/-0.03, gpt-5.3-chat available for testing)",
+    "proQuota": "250 RPD free tier — 1 eval set per day max"
+  },
+  "r99Findings": {
+    "proSwitchResult": "H-avg +0.24 (5.04->5.28), 0 errors vs 9 Flash timeouts",
+    "compStrategyAllAgents": "REVERTED — caused 1.43-pt regression (prompt pollution)",
+    "h9RootCause": "Routing problem — comp queries dispatch to host/dining, not comp agent",
+    "judgeVariance": "+/-0.03-0.09 (GPT-5.2 extremely stable)",
+    "streamingPipeline": "Validated — eval writes per-scenario files, judge scores in real-time"
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-06",
-    "lastSessionId": "hey-seven-session-20260306-ffb07f"
+    "lastSessionId": "hey-seven-session-20260306-b61247"
   }
 }
