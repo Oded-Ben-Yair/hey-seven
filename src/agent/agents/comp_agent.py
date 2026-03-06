@@ -100,6 +100,9 @@ async def comp_agent(state: PropertyQAState) -> dict:
     program information, using profile data to personalize when available.
     Previous gate (COMP_COMPLETENESS_THRESHOLD=0.60) caused 90%+ of comp
     queries to loop on the same canned response (R76: P6=1.40).
+
+    R98: CompStrategy tool injects deterministic comp policy into system
+    prompt — specific offers, talking points, restrictions per guest tier.
     """
     settings = get_settings()
 
@@ -109,7 +112,7 @@ async def comp_agent(state: PropertyQAState) -> dict:
         f"right rewards."
     )
 
-    return await execute_specialist(
+    result = await execute_specialist(
         state,
         agent_name="comp",
         system_prompt_template=COMP_SYSTEM_PROMPT,
@@ -119,3 +122,5 @@ async def comp_agent(state: PropertyQAState) -> dict:
         get_cb_fn=_get_circuit_breaker,
         include_whisper=True,
     )
+
+    return result

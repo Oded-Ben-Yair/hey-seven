@@ -14,20 +14,22 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
 8. **TESTING STRATEGY**: Unit tests mock LLM calls for speed and CI reliability. Deterministic components (guardrails, sentiment, crisis, slang, incentives) are tested without mocks. Live LLM behavior is validated through the evaluation framework (`tests/evaluation/`). Schema compatibility is spot-checked via `@pytest.mark.live` tests. New `with_structured_output()` schemas require at least one live integration test.
 
-## Current State (Updated 2026-03-03)
+## Current State (Updated 2026-03-06)
 
-- **Codebase**: 24K+ LOC, 66 source modules across 10 packages
-- **Tests**: 3502 tests, 0 failures, 90%+ coverage
-- **Agent**: 13-node LangGraph StateGraph v2.4 (29 state fields, 18 feature flags) with 6 specialist agents + profiling enrichment node
-- **Model routing**: Flash→Pro for complex/emotional queries (low confidence, grief, frustrated, crisis, high-complexity)
-- **Review Score**: R75 tech 9.63/10, R95 behavioral B-avg 6.62/10
-- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R91(7.0) → R95(6.62, 80 scenarios) behavioral
+- **Codebase**: 24K+ LOC, 70+ source modules across 10 packages
+- **Tests**: 3555+ tests, 0 failures, 90%+ coverage
+- **Agent**: 13-node LangGraph StateGraph v2.4 (29 state fields, 17 feature flags) with 6 specialist agents + profiling enrichment node
+- **Model routing**: Flash→Pro for complex/emotional queries (low confidence, grief, frustrated, crisis, high-complexity), per-casino via `model_routing_enabled` feature flag
+- **Review Score**: R75 tech 9.63/10, R96 behavioral B-avg 6.62, P-avg 5.12, H-avg 4.84
+- **Review Trajectory**: R52(67.7) → R68(92.9) → R75(9.63) infra, R72(4.1) → R91(7.0) → R96(B:6.62, P:5.12, H:4.84)
 - **Version**: v1.5.0
-- **Latest commit**: R95: Final validation, judge scores, regression fixes
+- **Latest commit**: R97: Architecture audit + per-casino model routing
 - **ADRs**: 28 architectural decision records with status lifecycle
 - **Research**: 8 deep domain research docs (R72)
-- **Behavioral scenarios**: 220 across 27+ YAML files (74 behavioral + 56 profiling + 90 other)
+- **Behavioral scenarios**: 250 across 27+ YAML files (80 behavioral + 56 profiling + 30 host-triangle + 84 other)
 - **Profiling**: 10-dimension evaluation framework (P1-P10), incentive engine with tiered autonomy
+- **Phase 2 tools**: CompStrategy (H9), HandoffOrchestrator (P9), LTV Nudge (H10), Rapport Ladder (H6)
+- **GCP docs**: Use `mcp__google-developer-knowledge__search_documents` for Gemini, Cloud Run, Firestore, Vertex AI docs
 - **GCP Infra**: KMS cosign key, Redis Memorystore, VPC connector provisioned
 
 ## Tech Stack Decisions
@@ -82,6 +84,11 @@ src/                         - Production source code
     dispatch.py              - Specialist dispatch helpers (SRP extraction)
     streaming_pii.py         - Streaming PII redactor for SSE tokens
     regex_engine.py          - RE2/stdlib regex engine fallback
+    behavior_tools/          - Phase 2 structured behavior tools
+      comp_strategy.py       - Deterministic comp policy engine (H9)
+      handoff.py             - Structured host handoff summary (P9)
+      ltv_nudge.py           - Return-visit seeding engine (H10)
+      rapport_ladder.py      - Rapport building micro-patterns (H6)
   api/                       - FastAPI backend
     app.py                   - App with lifespan, SSE streaming
     middleware.py             - Pure ASGI middleware (logging, security, rate limit)

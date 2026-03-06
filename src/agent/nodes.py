@@ -1576,17 +1576,26 @@ async def off_topic_node(state: PropertyQAState) -> dict[str, Any]:
                     crisis_turn_count=current_crisis_turn,
                 )
         # Phase 5: Early return with structured handoff for crisis situations.
+        # R98: Enhanced with structured handoff summary from HandoffOrchestrator.
+        from src.agent.behavior_tools.handoff import build_handoff_summary
+
+        _handoff_req = build_handoff_request(
+            department="responsible_gaming",
+            reason="Guest expressing self-harm or crisis indicators",
+            extracted_fields=state.get("extracted_fields"),
+            urgency="critical",
+        )
+        _handoff_dict = _handoff_req.model_dump()
+        _summary = build_handoff_summary(
+            state, handoff_reason="Guest expressing self-harm or crisis indicators"
+        )
+        _handoff_dict["structured_summary"] = _summary.model_dump()
         return {
             "messages": [AIMessage(content=content)],
             "sources_used": [],
             "retrieved_context": [],
             "crisis_turn_count": current_crisis_turn,
-            "handoff_request": build_handoff_request(
-                department="responsible_gaming",
-                reason="Guest expressing self-harm or crisis indicators",
-                extracted_fields=state.get("extracted_fields"),
-                urgency="critical",
-            ).model_dump(),
+            "handoff_request": _handoff_dict,
         }
     else:
         # General off-topic — genuinely unrelated to the property.

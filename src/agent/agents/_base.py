@@ -1165,6 +1165,32 @@ async def execute_specialist(
                 agent_name,
             )
 
+    # R98: CompStrategy — deterministic comp policy injection for comp agent.
+    # Provides specific offers, talking points, and restrictions per guest tier.
+    if agent_name == "comp":
+        from src.agent.behavior_tools.comp_strategy import get_comp_prompt_section
+
+        comp_section = get_comp_prompt_section(state, casino_id=settings.CASINO_ID)
+        if comp_section:
+            system_prompt += comp_section
+            logger.info("R98: CompStrategy section injected (agent=%s)", agent_name)
+
+    # R98: Rapport Ladder — micro-pattern retrieval for rapport building.
+    # Provides context-specific conversation techniques per guest type.
+    from src.agent.behavior_tools.rapport_ladder import get_rapport_prompt_section
+
+    rapport_section = get_rapport_prompt_section(state)
+    if rapport_section:
+        system_prompt += rapport_section
+
+    # R98: LTV Nudge Engine — return-visit seeding.
+    # Plants forward-looking hooks for lifetime value optimization.
+    from src.agent.behavior_tools.ltv_nudge import get_ltv_prompt_section
+
+    ltv_section = get_ltv_prompt_section(state, casino_id=settings.CASINO_ID)
+    if ltv_section:
+        system_prompt += ltv_section
+
     # R74 B4 / R82 1F: Proactive suggestion injection via extracted helper.
     # Gated by: confidence >= 0.6 (R82: lowered from 0.8), sentiment not
     # negative/frustrated, max 1 per session (suggestion_offered), grounding exists.
@@ -1366,14 +1392,23 @@ async def execute_specialist(
         result["handoff_request"] = _incentive_approval
 
     # Phase 5: Wire handoff for persistent frustration (overwrites incentive handoff).
+    # R98: Enhanced with structured handoff summary from HandoffOrchestrator.
     if frustrated_count >= 3:
         from src.agent.handoff import build_handoff_request
+        from src.agent.behavior_tools.handoff import build_handoff_summary
 
-        result["handoff_request"] = build_handoff_request(
+        handoff_req = build_handoff_request(
             department="vip_services",
             reason="Guest frustrated across 3+ consecutive messages",
             extracted_fields=state.get("extracted_fields"),
             urgency="high",
-        ).model_dump()
+        )
+        # R98: Enrich with structured summary
+        summary = build_handoff_summary(
+            state, handoff_reason="Guest frustrated across 3+ consecutive messages"
+        )
+        handoff_dict = handoff_req.model_dump()
+        handoff_dict["structured_summary"] = summary.model_dump()
+        result["handoff_request"] = handoff_dict
 
     return result
