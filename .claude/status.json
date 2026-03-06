@@ -1,15 +1,15 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R96 complete — All 3 eval categories judged (GPT-5.2). B-avg 6.62, P-avg 5.12, H-avg 4.84. 6-model debate selected 'Pro-First, Distill-Down' strategy for 8.0+. Next: implement Phase 1 (Pro switch + behavior contracts).",
-    "lastModified": "2026-03-05T14:35:00Z",
+    "summary": "R97 complete — Architecture audit (13 reports, 83.6% confidence), per-casino model routing fix, Wave 1 eval done (109 scenarios). Phase 2 tools NOT built (subagents failed). Next: judge Wave 1, build 4 tools, Wave 3 eval.",
+    "lastModified": "2026-03-06T00:00:00Z",
     "branch": "main",
-    "commitHash": "df9731c",
+    "commitHash": "e4702d7",
     "tag": "v1.5.0",
-    "phase": "r96-strategy-decided"
+    "phase": "r97-audit-complete-phase1-started"
   },
-  "blueprintPhase": "Phase E — Strategy for 8.0+ (R96 Complete)",
-  "roundNumber": 96,
+  "blueprintPhase": "Phase 1+2 — Pro-First, Distill-Down (Execution)",
+  "roundNumber": 97,
   "scores": {
     "technical": 9.63,
     "behavioral_r95_gpt52": 6.62,
@@ -57,110 +57,51 @@
       "H10_lifetime_value": 3.5
     }
   },
-  "strategy": {
-    "name": "Pro-First, Distill-Down",
-    "confidence": 0.82,
-    "council": "6-model debate (GPT-5.2, Grok-4, Perplexity, DeepSeek, GPT-5 Pro, GPT-5.3 Codex)",
-    "phases": [
-      {
-        "phase": 1,
-        "name": "Pro Switch + Canary Rollout",
-        "timeline": "Days 1-3",
-        "target": "B-avg >= 7.0",
-        "cost": "$280/month at 10K conv"
-      },
-      {
-        "phase": 2,
-        "name": "Structured Behavior Contracts",
-        "timeline": "Weeks 1-3",
-        "target": "H9 >= 5.0, P9 >= 5.0, H10 >= 5.0",
-        "tools": [
-          "CompStrategy",
-          "HandoffOrchestrator",
-          "LTV Nudge Engine",
-          "Rapport Depth Ladder"
-        ]
-      },
-      {
-        "phase": 3,
-        "name": "Flash Fine-Tune + Distillation",
-        "timeline": "Weeks 4-8",
-        "target": "B-avg >= 8.0 at Flash cost",
-        "prerequisite": "2K+ graded Pro conversations"
-      }
-    ]
-  },
   "blockers": [],
   "nextSteps": [
     {
+      "priority": 0,
+      "description": "Judge Wave 1 eval (r97-pro-canary-responses.json) with GPT-5.2. Compare B-avg to 6.62 baseline."
+    },
+    {
       "priority": 1,
-      "description": "Phase 1: Switch specialist agent LLM to Gemini 3.1 Pro (config change in nodes.py). Canary rollout: 10%->50%->100% over 3 days."
+      "description": "Build CompStrategy tool (src/agent/tools/comp_strategy.py) — H9: 1.9 → 5.0+"
     },
     {
       "priority": 2,
-      "description": "Phase 2a: Build CompStrategy tool (typed schema + business rules) for H9 comp scenarios. Target H9 >= 5.0."
+      "description": "Build HandoffOrchestrator tool (src/agent/tools/handoff.py) — P9: 2.1 → 5.0+"
     },
     {
       "priority": 3,
-      "description": "Phase 2b: Build HandoffOrchestrator tool (structured 6-point summary) for P9 handoff scenarios. Target P9 >= 5.0."
+      "description": "Build LTV Nudge Engine (src/agent/tools/ltv_nudge.py) — H10: 3.5 → 5.0+"
     },
     {
       "priority": 4,
-      "description": "Phase 2c: Build LTV Nudge Engine (return-visit seeding) for H10 scenarios. Target H10 >= 5.0."
+      "description": "Build Rapport Ladder (src/agent/tools/rapport_ladder.py) — H6: 4.0 → 5.0+"
     },
     {
       "priority": 5,
-      "description": "Re-run 80-scenario behavioral eval after Phase 1+2 to validate B-avg >= 7.5"
+      "description": "Wave 3 integration eval (165 scenarios, 3 categories, GPT-5.2 judge)"
     }
   ],
-  "reviewHistory": {
-    "r96": {
-      "date": "2026-03-05",
-      "judgePanel": "GPT-5.2 (Azure AI Foundry)",
-      "results": {
-        "profiling_scenarios": 54,
-        "profiling_Pavg": 5.12,
-        "hostTriangle_scenarios": 30,
-        "hostTriangle_Havg": 4.84,
-        "strategy_debate": "6-model council, Pro-First Distill-Down selected"
-      }
-    },
-    "trajectory": {
-      "R52": 67.7,
-      "R68_consensus": 92.9,
-      "R75_technical": 9.63,
-      "R87_behavioral": 5.2,
-      "R88_behavioral": 6.85,
-      "R89_behavioral": 8.5,
-      "R90_behavioral": 6.8,
-      "R91_behavioral": 7.0,
-      "R92pre_behavioral": 6.5,
-      "R95_behavioral": 6.62,
-      "R96_profiling": 5.12,
-      "R96_hostTriangle": 4.84
-    }
-  },
   "codebaseMetrics": {
-    "tests": 2611,
-    "testFailures": 1,
-    "coverage": 90,
+    "tests": 3555,
+    "testFailures": 0,
+    "coverage": 90.62,
     "graphNodes": 13,
     "stateFields": 29,
-    "featureFlags": 17,
+    "featureFlags": 18,
     "guardrailPatterns": 214,
     "slopPatterns": 17,
     "fewShotExamples": 27,
     "bridges": 15,
     "sarcasmPatterns": 17,
     "totalScenarios": 250,
-    "evalCategories": [
-      "behavioral",
-      "profiling",
-      "host-triangle"
-    ]
+    "sourceModules": 66,
+    "scaffoldedModules": 0
   },
   "sessionNotes": {
-    "lastSessionDate": "2026-03-05",
-    "lastSessionId": "hey-seven-session-20260305-r96"
+    "lastSessionDate": "2026-03-06",
+    "lastSessionId": "hey-seven-session-20260306-ac0443"
   }
 }
