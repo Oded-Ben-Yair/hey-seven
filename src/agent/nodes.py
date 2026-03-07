@@ -271,22 +271,6 @@ async def _select_model(state: dict) -> str:
     return "default"
 
 
-async def _get_routed_llm(state: dict) -> tuple[ChatGoogleGenerativeAI, str]:
-    """Get the appropriate LLM based on model routing decision.
-
-    Returns:
-        Tuple of (llm_instance, model_name_used).
-    """
-    route = await _select_model(state)
-    if route == "complex":
-        llm = await _get_complex_llm()
-        settings = get_settings()
-        return llm, settings.COMPLEX_MODEL_NAME
-    llm = await _get_llm()
-    settings = get_settings()
-    return llm, settings.MODEL_NAME
-
-
 async def _get_validator_llm() -> ChatGoogleGenerativeAI:
     """Get or create the validation LLM instance (TTL-cached singleton).
 

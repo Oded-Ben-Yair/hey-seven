@@ -248,7 +248,6 @@ def _determine_profiling_phase(
     # Relationship: occasion, companion info, visit frequency
     relationship_fields = (
         "occasion",
-        "companion_names",
         "visit_frequency",
         "loyalty_tier",
     )

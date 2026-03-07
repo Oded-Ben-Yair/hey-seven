@@ -242,7 +242,8 @@ async def _route_to_specialist(
     # host/dining because RAG retrieves generic property context.
     query_text = _get_last_human_message(state.get("messages", []))
     query_lower = query_text.lower() if query_text else ""
-    if any(word in query_lower for word in _COMP_INTENT_WORDS):
+    query_words = set(query_lower.split())
+    if query_words & _COMP_INTENT_WORDS:
         # Check if RAG context strongly points to a non-comp category
         category_counts: dict[str, int] = {}
         for chunk in retrieved:

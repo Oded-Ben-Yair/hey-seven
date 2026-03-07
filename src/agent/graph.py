@@ -318,7 +318,7 @@ def build_graph(checkpointer: Any | None = None) -> CompiledStateGraph:
         interrupt_before=interrupt_before,
     )
     compiled.recursion_limit = settings.GRAPH_RECURSION_LIMIT  # type: ignore[attr-defined]
-    logger.info("Custom 12-node StateGraph compiled successfully.")
+    logger.info("Custom 13-node StateGraph compiled successfully.")
     return compiled
 
 
