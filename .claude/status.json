@@ -1,24 +1,24 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R100 complete — H9 comp routing fix (35 overrides), P9 handoff threshold lowered, extraction+incentive strengthened, Next.js 15 frontend MVP, 250-scenario Flash eval (B:5.9, P:3.8, 22.7% timeout). External review prompts created for ChatGPT Codex + GPT 5.4 Pro.",
-    "lastModified": "2026-03-07T06:00:00Z",
+    "summary": "R101 PARADIGM SHIFT — Root cause found: agent answers questions instead of building relationships. TONE→RELATIONSHIP→AGENCY framework (Oded). Failure taxonomy: 32% timeout, 11% canned, 11% wrong_mode. Gold traces scored 9.2/10. 4 bug fixes committed. Process rules created.",
+    "lastModified": "2026-03-07T12:30:00Z",
     "branch": "main",
-    "commitHash": "7ac23be",
+    "commitHash": "ab783a4",
     "tag": "v1.5.0",
-    "phase": "r100-external-review-pending"
+    "phase": "r101-paradigm-shift-complete"
   },
-  "blueprintPhase": "External Review Integration — Codex 4-output + GPT Pro deep research → R101 action plan",
-  "roundNumber": 100,
+  "blueprintPhase": "RELATIONSHIP-FIRST REWRITE — Fix infra, rewrite purpose, teach profiling-through-conversation",
+  "roundNumber": 101,
   "scores": {
     "technical": 9.63,
     "behavioral_r100_flash_250": 5.9,
-    "behavioral_r99_pro_ht": 6.74,
     "profiling_r100_flash_109": 3.8,
-    "profiling_r99_pro_ht": 4.94,
     "hostTriangle_r99_pro": 5.28,
     "errorRate_r100_flash": "22.7%",
-    "compRoutingOverrides_r100": 35,
+    "cleanScenarioAvg": 5.42,
+    "timeoutScenarioAvg": 3.99,
+    "goldTraceCeiling": 9.2,
     "per_dimension_r99_pro": {
       "B1": 8.0,
       "B2": 6.1,
@@ -50,76 +50,82 @@
       "H8": 6.2,
       "H9": 2.0,
       "H10": 4.5
+    }
+  },
+  "rootCauseDiagnosis": {
+    "framework": "TONE(3-6) → RELATIONSHIP(6-8) → AGENCY(8-9)",
+    "currentLevel": "TONE solved (5.9). RELATIONSHIP is the gap.",
+    "agentPurpose": "Must change from 'answer questions' to 'build relationships, gather intel for human host team, customize through curiosity'",
+    "failureTaxonomy": {
+      "timeout": "32.3% (20/62)",
+      "generic_response": "11.3% (7/62)",
+      "wrong_mode": "11.3% (7/62)",
+      "didnt_take_lead": "11.3% (7/62)",
+      "over_protection": "8.1%",
+      "fallback_error": "8.1%",
+      "missed_intent": "8.1%"
     },
-    "r100_fixes_pending_rejudge": [
-      "H9",
-      "P9",
-      "P8",
-      "P6"
+    "odedFeedback": [
+      "Every turn is a missed profiling opportunity",
+      "Generic suggestions without asking preferences first",
+      "No human host bridge offered",
+      "Empty upgrade promises without specifics",
+      "Rushing to suggestions instead of learning about guest"
     ]
   },
   "blockers": [],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "Ingest ChatGPT Codex 4-output + GPT 5.4 Pro deep research (user provides at session start)"
+      "description": "Read handover-20260307-eeced6.md + r102-implementation-plan.md + hey-seven-process.md"
     },
     {
       "priority": 1,
-      "description": "Re-judge R100 results — score ALL 250 scenarios (not just 109 behavioral), extract per-dimension H9/P9/P6/P8 scores to measure R100 fix impact"
+      "description": "Fix infra: timeout 60s→90s, canned closer, crisis exit, Spanish crisis"
     },
     {
       "priority": 2,
-      "description": "Apply top CRITICAL/MAJOR findings from Codex review (prioritized by impact-per-effort)"
+      "description": "Rewrite ALL specialist system prompts with relationship-first purpose (answer + profiling question + customization + host bridge)"
     },
     {
       "priority": 3,
-      "description": "Run Pro targeted eval on 30 weakest scenarios (FORCE_PRO_MODEL=true --timeout 120)"
+      "description": "Design profiling question bank by context (first contact, group, dining, loss, returning)"
     },
     {
       "priority": 4,
-      "description": "/honest-answer on path from current (B:5.9, P:3.8, H:5.28) to targets (B:7.5, P:5.5, H:6.0)"
+      "description": "Update gold traces + few-shots with profiling questions (per Oded feedback)"
+    },
+    {
+      "priority": 5,
+      "description": "Create 10 longer eval scenarios (5-7 turns) testing relationship building"
+    },
+    {
+      "priority": 6,
+      "description": "Re-eval 30 scenarios at 90s timeout, present 5 to Oded for host/chatbot verdict"
     }
   ],
+  "keyFiles": {
+    "failureTaxonomy": "~/.claude/teams/r101-paradigm-shift/failure-taxonomy.md",
+    "goldTraces": "~/.claude/teams/r101-paradigm-shift/gold-traces.md",
+    "domainResearch": "~/.claude/teams/r101-paradigm-shift/research-findings.md",
+    "r102Plan": "~/.claude/teams/r101-paradigm-shift/r102-implementation-plan.md",
+    "processRules": "~/.claude/rules/hey-seven-process.md",
+    "handover": ".claude/handover-20260307-eeced6.md"
+  },
   "codebaseMetrics": {
     "tests": 3674,
     "testFailures": 1,
-    "testFailureNote": "pre-existing timing test (test_sweep_evicts_expired_entries)",
+    "testFailureNote": "pre-existing timing test",
     "graphNodes": 13,
     "stateFields": 29,
     "featureFlags": 17,
     "guardrailPatterns": 214,
-    "slopPatterns": 17,
-    "fewShotExamples": 27,
-    "bridges": 15,
-    "sarcasmPatterns": 17,
     "totalScenarios": 250,
     "sourceModules": 72,
-    "scaffoldedModules": 0,
-    "behaviorTools": 4,
-    "behaviorToolTests": 119,
-    "compIntentKeywords": 20,
-    "frontendFirstLoadJS": "105KB"
-  },
-  "evalInfrastructure": {
-    "r100EvalData": "tests/evaluation/r100-flash-streaming/ (250 JSON files)",
-    "r100EvalSummary": "250 scenarios, 692 turns, 157 timeouts (22.7%), 0 API errors",
-    "streamingJudge": "tests/evaluation/streaming_judge.py (use --category all, not behavioral)",
-    "liveEvalRunner": "tests/evaluation/run_live_eval.py (use --timeout 90 for Flash)",
-    "progressChecker": "tests/evaluation/check_eval_progress.sh",
-    "judgeModel": "gpt-5.2 (variance +/-0.03-0.09)",
-    "externalReviewPrompts": "docs/r100-codex-prompt.md + docs/r100-gpt-pro-prompt.md"
-  },
-  "r100Changes": {
-    "h9DispatchFix": "dispatch.py: _COMP_INTENT_WORDS (20 keywords) + pre-dispatch override",
-    "p9HandoffFix": "_base.py: threshold 3→2, repeated-question signal",
-    "p8ExtractionFix": "profiling.py: stronger extraction prompt",
-    "p6IncentiveFix": "incentives.py: REQUIRED heading + worked example",
-    "frontendMVP": "frontend/: Next.js 15 + React 19 + Tailwind CSS 4 + SSE streaming",
-    "evalComplete": "250 scenarios, 109 judged (B:5.9, P:3.8), 141 pending judge"
+    "behaviorTools": 4
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-07",
-    "lastSessionId": "hey-seven-session-20260307-e19788"
+    "lastSessionId": "hey-seven-session-20260307-eeced6"
   }
 }
