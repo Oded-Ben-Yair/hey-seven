@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold: #c5a467;
+  --color-gold-light: #d4b872;
+  --color-dark-brown: #2c2926;
+  --color-dark-brown-light: #3a3530;
+  --color-cream: #f5f3ef;
+  --color-warm-gray: #e8e4de;
+  --color-deep-black: #0a0a0a;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  src: url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-warm-gray);
+  border-radius: 3px;
+}
+
+/* Typing indicator animation */
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+}
+.typing-dot {
+  animation: bounce 1.4s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
