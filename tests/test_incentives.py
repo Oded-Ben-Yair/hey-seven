@@ -391,7 +391,7 @@ class TestGetIncentivePromptSection:
             profile_completeness=0.80,
             extracted_fields={"birthday": "March 15"},
         )
-        assert "Available Incentives" in result
+        assert "Guest Incentive" in result
         assert "Mohegan Sun" in result
 
     def test_unknown_casino_uses_defaults(self, monkeypatch):
@@ -404,7 +404,7 @@ class TestGetIncentivePromptSection:
             profile_completeness=0.3,
             extracted_fields={"birthday": "June 1"},
         )
-        assert "Available Incentives" in result
+        assert "Guest Incentive" in result
 
     def test_high_value_shows_approval_note(self, monkeypatch):
         monkeypatch.setenv("PROPERTY_NAME", "Test Casino")

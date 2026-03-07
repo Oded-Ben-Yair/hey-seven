@@ -54,5 +54,8 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
+# Frontend (separate build/deploy)
+frontend/
+
 # Data (rebuilt at startup via lifespan)
 data/chroma/

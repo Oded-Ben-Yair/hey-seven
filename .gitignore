@@ -64,14 +64,22 @@ heyseven-full-page.png
 CLAUDE.md
 reviews/
 
-# Evaluation artifacts (keep scripts, reports, and delta reports; ignore raw logs/data)
+# Evaluation artifacts (keep scripts, reports, and delta reports; ignore raw data)
 tests/evaluation/*-raw.txt
 tests/evaluation/*-eval-log.txt
+tests/evaluation/*-eval.log
 tests/evaluation/*-baseline.json
 tests/evaluation/*-batch-judge-prompt.txt
 tests/evaluation/*-batch-*.txt
 tests/evaluation/*-responses.json
 tests/evaluation/*-judge-scores*.json
+tests/evaluation/*-judge.json
+tests/evaluation/*-judge.log
 tests/evaluation/eval-log.txt
 tests/evaluation/batch-judge-prompt.txt
 tests/evaluation/judge-prompts.json
+# Streaming eval result dirs (large, regeneratable)
+tests/evaluation/*-streaming/
+# v2-results (per-scenario JSON — large, regeneratable)
+tests/evaluation/v2-results/
+tests/evaluation/v2-results-*/

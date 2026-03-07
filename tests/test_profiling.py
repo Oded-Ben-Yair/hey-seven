@@ -939,13 +939,13 @@ class TestGetIncentivePromptSection:
         result, approval = get_incentive_prompt_section(
             "mohegan_sun", 0.0, {"birthday": "2026-03-15"}
         )
-        assert "Available Incentives" in result
+        assert "Guest Incentive" in result
         assert "Mohegan Sun" in result
         assert approval is None  # Mohegan birthday=$25, threshold=$50 → auto-approved
 
     def test_returns_section_for_completeness_75(self):
         result, approval = get_incentive_prompt_section("mohegan_sun", 0.80, {})
-        assert "Available Incentives" in result
+        assert "Guest Incentive" in result
 
     def test_includes_natural_offer_guidance(self):
         result, approval = get_incentive_prompt_section(

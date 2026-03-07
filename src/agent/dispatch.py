@@ -129,6 +129,35 @@ _CATEGORY_PRIORITY: dict[str, int] = _MappingProxy(
     }
 )
 
+# R100 fix H9: Comp-intent keywords for pre-dispatch detection.
+# When user message contains comp-intent words, force dispatch to comp agent
+# regardless of RAG category distribution. This fixes the routing gap where
+# "What rewards do I get?" retrieves dining context and dispatches to dining.
+_COMP_INTENT_WORDS: frozenset[str] = frozenset(
+    {
+        "comp",
+        "complimentary",
+        "loyalty",
+        "rewards",
+        "tier",
+        "points",
+        "budget",
+        "deal",
+        "free play",
+        "comps",
+        "promotion",
+        "momentum",
+        "perks",
+        "benefits",
+        "my status",
+        "upgrade",
+        "player card",
+        "rewards program",
+        "earn",
+        "redeem",
+    }
+)
+
 
 def _keyword_dispatch(retrieved: list[dict]) -> str:
     """Determine specialist agent name from retrieved context via keyword counting.
@@ -168,7 +197,7 @@ Retrieved context categories: $categories
 Available specialists:
 - dining: restaurants, food, bars, dining reservations
 - entertainment: shows, events, concerts, comedy, spa, amenities
-- comp: player rewards, comps, loyalty programs, gaming promotions
+- comp: player rewards, comps, loyalty programs, gaming promotions, tier status, points, complimentary offers, budgets, deals, free play, perks, benefits, momentum, player card, redeem
 - hotel: rooms, reservations, towers, accommodations
 - host: general concierge, mixed topics, or unclear domain""")
 
@@ -205,6 +234,36 @@ async def _route_to_specialist(
         return existing_specialist, "retry_reuse"
 
     agent_name: str | None = None
+
+    # R100 fix H9: Pre-dispatch comp-intent check.
+    # If the user message contains comp-intent keywords AND RAG didn't strongly
+    # point to another category, force dispatch to comp agent. This fixes the
+    # gap where "What rewards do I get?" or "loyalty tier" dispatches to
+    # host/dining because RAG retrieves generic property context.
+    query_text = _get_last_human_message(state.get("messages", []))
+    query_lower = query_text.lower() if query_text else ""
+    if any(word in query_lower for word in _COMP_INTENT_WORDS):
+        # Check if RAG context strongly points to a non-comp category
+        category_counts: dict[str, int] = {}
+        for chunk in retrieved:
+            cat = chunk.get("metadata", {}).get("category", "")
+            if cat:
+                category_counts[cat] = category_counts.get(cat, 0) + 1
+        comp_cats = category_counts.get("gaming", 0) + category_counts.get(
+            "promotions", 0
+        )
+        non_comp_total = sum(
+            v for k, v in category_counts.items() if k not in ("gaming", "promotions")
+        )
+        # Only override if non-comp context doesn't dominate (> 3x comp context)
+        if non_comp_total <= comp_cats * 3 + 1:
+            logger.info(
+                "R100 H9: Comp-intent detected in query, forcing comp agent "
+                "(comp_words matched, comp_cats=%d, non_comp=%d)",
+                comp_cats,
+                non_comp_total,
+            )
+            return "comp", "comp_intent_override"
 
     # --- Try structured LLM dispatch first ---
     # R15 fix (DeepSeek F-001, GPT F1): acquire CB before try block to prevent

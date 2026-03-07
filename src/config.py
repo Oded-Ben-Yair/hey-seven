@@ -57,7 +57,7 @@ class Settings(BaseSettings):
 
     # --- API ---
     API_KEY: SecretStr = SecretStr("")  # When set, /chat requires X-API-Key header
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:8080"]
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:8080", "http://localhost:3000"]
     RATE_LIMIT_CHAT: int = 20  # requests per minute
     RATE_LIMIT_MAX_CLIENTS: int = 10000  # max tracked client IPs (memory guard)
     TRUSTED_PROXIES: list[str] | None = (

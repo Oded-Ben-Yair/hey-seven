@@ -1395,20 +1395,26 @@ async def execute_specialist(
 
     # Phase 5: Wire handoff for persistent frustration (overwrites incentive handoff).
     # R98: Enhanced with structured handoff summary from HandoffOrchestrator.
-    if frustrated_count >= 3:
+    # R100 fix P9: Lowered threshold from 3 to 2 consecutive frustrated messages.
+    # Also detect repeated questions (guest asking same thing twice = agent failed).
+    _repeated = dynamics.get("repeated_question", False)
+    _handoff_trigger = frustrated_count >= 2 or (frustrated_count >= 1 and _repeated)
+    if _handoff_trigger:
         from src.agent.handoff import build_handoff_request
         from src.agent.behavior_tools.handoff import build_handoff_summary
 
+        _reason = (
+            f"Guest frustrated ({frustrated_count} consecutive) + repeated question"
+            if _repeated
+            else f"Guest frustrated across {frustrated_count}+ consecutive messages"
+        )
         handoff_req = build_handoff_request(
             department="vip_services",
-            reason="Guest frustrated across 3+ consecutive messages",
+            reason=_reason,
             extracted_fields=state.get("extracted_fields"),
             urgency="high",
         )
-        # R98: Enrich with structured summary
-        summary = build_handoff_summary(
-            state, handoff_reason="Guest frustrated across 3+ consecutive messages"
-        )
+        summary = build_handoff_summary(state, handoff_reason=_reason)
         handoff_dict = handoff_req.model_dump()
         handoff_dict["structured_summary"] = summary.model_dump()
         result["handoff_request"] = handoff_dict

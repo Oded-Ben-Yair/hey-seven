@@ -281,8 +281,9 @@ Extract ALL guest profile information from the conversation.
 {current_profile}
 
 ## Instructions
-Extract as much as you can. Be generous — it's better to capture something
-than to miss it. Even one-word mentions count.
+Extract EVERYTHING you can find. Be extremely generous — capture every hint,
+every implication, every one-word mention. When in doubt, EXTRACT IT.
+It's far better to capture a weak signal than to miss something the guest said.
 
 ### Direct mentions (extract immediately):
 - "I'm Sarah" → guest_name: "Sarah"
@@ -302,11 +303,21 @@ than to miss it. Even one-word mentions count.
 - "I'm a slots person" → gaming_preferences: "slots"
 - "just looking for something chill" → entertainment_interests: "relaxed"
 
+### More indirect signals (extract these too):
+- "we're celebrating" → occasion: "celebration" (even without specifics)
+- "nice place" / "first time" → visit_frequency: "first visit"
+- "we always come here" / "our usual" → visit_frequency: "regular"
+- "need something for the kids" → party_composition: "family with children"
+- "what's good here?" → dining_preferences: "open to suggestions"
+- "can you get us in somewhere nice?" → budget_signal: "willing to spend"
+- "looking for a deal" / "anything on special?" → budget_signal: "value-conscious"
+
 ### Do NOT extract:
 - "tired from driving" / "long day" → budget_signal: null (not budget-related)
 - Information already in the current profile (unless the guest corrects it)
 
 Return null ONLY when the field truly has no information in this exchange.
+When you're unsure, EXTRACT with your best interpretation rather than returning null.
 """
 
 

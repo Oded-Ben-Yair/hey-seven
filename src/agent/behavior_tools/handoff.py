@@ -61,6 +61,7 @@ _RISK_KEYWORDS = {
     "frustrated": "Guest expressed frustration during conversation",
     "complaint": "Guest had complaints about service or experience",
     "intoxicated": "Potential intoxication signals detected",
+    "repeated_question": "Guest repeated the same question — AI may not have answered adequately",
 }
 
 
@@ -69,6 +70,8 @@ def _detect_risk_flags(
     messages: list,
 ) -> list[str]:
     """Detect risk flags from state and conversation history."""
+    from src.agent.nodes import _normalize_content
+
     flags: list[str] = []
 
     if state.get("crisis_active"):
@@ -86,11 +89,26 @@ def _detect_risk_flags(
             "review conversation before engaging"
         )
 
+    # R100 fix P9: Check for repeated questions (same question asked twice)
+    human_msgs = [
+        _normalize_content(m.content).lower().strip()
+        for m in messages
+        if isinstance(m, HumanMessage)
+    ]
+    if len(human_msgs) >= 2:
+        # Check if any of the last 3 messages repeats an earlier one
+        recent = human_msgs[-3:]
+        earlier = human_msgs[:-3] if len(human_msgs) > 3 else []
+        for msg_text in recent:
+            if len(msg_text) > 10 and (
+                msg_text in earlier or human_msgs.count(msg_text) > 1
+            ):
+                flags.append(_RISK_KEYWORDS["repeated_question"])
+                break
+
     # Check message content for complaint signals
     for msg in messages[-6:]:
         if isinstance(msg, HumanMessage):
-            from src.agent.nodes import _normalize_content
-
             content = _normalize_content(msg.content).lower()
             if any(
                 w in content

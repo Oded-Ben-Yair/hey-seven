@@ -521,7 +521,11 @@ def get_incentive_prompt_section(
     settings = get_settings()
     property_name = settings.PROPERTY_NAME
 
-    lines: list[str] = ["## Available Incentives (offer naturally, do not force)"]
+    lines: list[str] = [
+        "## Guest Incentive — REQUIRED to mention naturally",
+        "You MUST work one of these offers into your response. "
+        "Don't lead with it — weave it in after answering the guest's question.",
+    ]
     approval_request: dict[str, Any] | None = None
 
     for rule in applicable:
@@ -549,8 +553,12 @@ def get_incentive_prompt_section(
         lines.append(f"- {offer_text}{approval_note}")
 
     lines.append(
-        "Weave these naturally into the conversation. Do NOT lead with incentives "
-        "or list them unprompted. Only mention when contextually relevant."
+        "\nExample: 'By the way, since it's your birthday, "
+        "we'd love to treat you to a dining credit — want me to set that up?'"
+    )
+    lines.append(
+        "Make it feel like a genuine gift, not a sales pitch. "
+        "Transition naturally from the current topic."
     )
 
     return "\n".join(lines), approval_request
