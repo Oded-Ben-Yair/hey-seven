@@ -314,9 +314,11 @@ It's far better to capture a weak signal than to miss something the guest said.
 ### Do NOT extract:
 - "tired from driving" / "long day" → budget_signal: null (not budget-related)
 - Information already in the current profile (unless the guest corrects it)
+- Common phrases as names: "I'm done" / "I'm good" / "I'm fine" / "I'm set" / "I'm out" → guest_name: null (these are NOT names)
+- Generic sentiments as preferences: "open to suggestions" / "whatever" / "anything" → null (too vague to act on)
 
-Return null ONLY when the field truly has no information in this exchange.
-When you're unsure, EXTRACT with your best interpretation rather than returning null.
+Return null when the field has no clear information in this exchange.
+Prefer precision over recall — a missing field is better than a wrong one.
 """
 
 

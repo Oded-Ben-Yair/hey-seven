@@ -171,8 +171,8 @@ async def main():
     parser.add_argument(
         "--timeout",
         type=float,
-        default=60.0,
-        help="Per-turn timeout in seconds (default: 60, use 120 for Pro)",
+        default=90.0,
+        help="Per-turn timeout in seconds (default: 90, use 120 for Pro)",
     )
     parser.add_argument(
         "--streaming-dir",

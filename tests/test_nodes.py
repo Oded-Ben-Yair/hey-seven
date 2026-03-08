@@ -2084,7 +2084,7 @@ class TestGreetingNodeAcknowledgment:
         assert len(content) < 150  # R88: Brief but more helpful response
 
     async def test_ack_with_domain_context(self):
-        """R89: Acknowledgment after dining suggests a specific unexplored venue."""
+        """R89/R102: Acknowledgment after dining suggests unexplored venue with host tone."""
         from src.agent.nodes import greeting_node
 
         state = _state(
@@ -2097,9 +2097,8 @@ class TestGreetingNodeAcknowledgment:
         )
         result = await greeting_node(state)
         content = result["messages"][0].content
-        # R89: Now suggests specific venue from unexplored domain instead of generic label
-        assert "Glad" in content
-        assert "What sounds good?" in content
+        # R102: Host-style suggestion with "anything else" instead of generic "What sounds good?"
+        assert "set up" in content.lower() or "anything else" in content.lower()
 
     async def test_ack_without_domain_context(self):
         """Acknowledgment without domain gives generic follow-up."""

@@ -307,9 +307,35 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
                 "ill talk to",
             )
         )
-        if (_has_safe_confirmation and _is_property_question) or _agrees_to_seek_help:
+        # R102: Also allow transition when guest sends a clear property question
+        # without any ongoing distress signals. "Anyway, what about dinner?" means
+        # the guest has moved on — keeping them in crisis mode is counterproductive.
+        _DISTRESS_SIGNALS = (
+            "kill",
+            "die",
+            "suicide",
+            "end it",
+            "hurt myself",
+            "can't go on",
+            "no point",
+            "want to die",
+            "don't want to live",
+        )
+        _has_distress = any(sig in msg_lower for sig in _DISTRESS_SIGNALS)
+        _topic_change_without_distress = _is_property_question and not _has_distress
+
+        if (
+            (_has_safe_confirmation and _is_property_question)
+            or _agrees_to_seek_help
+            or _topic_change_without_distress
+        ):
             logger.info(
-                "Crisis context: guest confirmed safe AND asked property question — allowing transition"
+                "Crisis context: allowing transition (safe_confirm=%s, property_q=%s, "
+                "seek_help=%s, topic_change=%s)",
+                _has_safe_confirmation,
+                _is_property_question,
+                _agrees_to_seek_help,
+                _topic_change_without_distress,
             )
         else:
             logger.info(
@@ -582,9 +608,26 @@ async def compliance_gate_node(state: PropertyQAState) -> dict[str, Any]:
         "for sure",
         "alright",
     )
-    # Only match if the ENTIRE message is a short confirmation (< 8 words).
-    # Longer messages like "Great, now what about dinner?" have real questions.
-    if len(user_message.split()) < 8:
+    # Only match if the ENTIRE message is a short confirmation (< 8 words)
+    # AND does not contain a follow-up question. Messages like
+    # "Sounds good. What about after dinner?" start with a confirmation
+    # but contain a real question that needs specialist routing.
+    # R102 fix: confirmation + question = NOT a pure confirmation.
+    _QUESTION_WORDS = (
+        "what ",
+        "where ",
+        "when ",
+        "how ",
+        "which ",
+        "any ",
+        "do you",
+        "can you",
+        "is there",
+    )
+    _has_followup_question = "?" in user_message or any(
+        qw in msg_lower for qw in _QUESTION_WORDS
+    )
+    if not _has_followup_question and len(user_message.split()) < 8:
         msg_stripped = msg_lower.strip().rstrip("!.?,;:")
         if msg_stripped in _CONFIRMATION_PATTERNS or any(
             msg_stripped.startswith(p)

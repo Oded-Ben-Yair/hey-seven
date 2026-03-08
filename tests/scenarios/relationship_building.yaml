@@ -1,0 +1,335 @@
+scenarios:
+  - id: "relationship-01"
+    name: "First-timer orientation — does agent profile through conversation?"
+    category: "relationship_building"
+    behavioral_dimension: "P2_active_probing"
+    expected_behavioral_quality: "Agent asks at least ONE natural profiling question per turn (solo/group, occasion, food preference). Uses gathered info in subsequent turns. Does NOT dump a list of 4+ venues. Shows decisiveness — picks ONE option confidently."
+    turns:
+      - role: "human"
+        content: "First time at Mohegan Sun. This place is massive — where do I start?"
+        expected_keywords: ["Casino", "Earth"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Yeah I'm with my girlfriend, it's her birthday weekend."
+        expected_keywords: ["birthday", "congratulations"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "She loves Italian food."
+        expected_keywords: ["Tuscany", "Italian", "birthday"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Sounds good. What about after dinner?"
+        expected_keywords: ["Wolf Den", "show", "birthday"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect, thanks!"
+        expected_keywords: ["enjoy", "birthday"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent asks profiling questions (solo/group? occasion? food preference?) and uses the answers in later turns. 'Birthday' and 'Italian' should appear in recommendations from turn 3 onward. Does not list 4+ options. Offers human host bridge by turn 4-5."
+    safety_relevant: false
+
+  - id: "relationship-02"
+    name: "Anniversary couple — does agent build a complete plan?"
+    category: "relationship_building"
+    behavioral_dimension: "H10_lifetime_value"
+    expected_behavioral_quality: "Agent immediately plans a full experience arc (dinner, after-dinner, next day) instead of answering one question at a time. Uses 'anniversary' in every subsequent recommendation. Offers human host bridge. Shows decisive host behavior."
+    turns:
+      - role: "human"
+        content: "We're coming up Friday for our 10th anniversary. Can you help us plan something nice?"
+        expected_keywords: ["congratulations", "anniversary"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "She loves steak. Anything fun after dinner?"
+        expected_keywords: ["steak", "novelle", "Wolf Den"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about Saturday?"
+        expected_keywords: ["spa", "Mandara", "anniversary"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "She mentioned wanting to try the casino. She's never played."
+        expected_keywords: ["Casino", "Earth", "blackjack"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "This is going to be amazing. Thanks!"
+        expected_keywords: ["anniversary", "enjoy", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent builds a weekend arc: Friday dinner+nightlife, Saturday spa+casino, Sunday brunch. References 'anniversary' throughout. Adapts when curveball (wife wants to try casino) is introduced. Offers host bridge by final turn."
+    safety_relevant: false
+
+  - id: "relationship-03"
+    name: "Frustrated guest after bad beat — emotional arc from upset to warmed up"
+    category: "relationship_building"
+    behavioral_dimension: "B9_emotional_intelligence"
+    expected_behavioral_quality: "Agent creates emotional arc: guest starts upset, ends warmed up. Agent DECIDES for the guest (picks a venue, not a list). Never mentions gambling or 'better luck'. Steers toward reset experiences. Shows brevity = confidence."
+    turns:
+      - role: "human"
+        content: "Just dropped 2k at blackjack. Cards were ice cold all night. I'm done."
+        expected_keywords: ["rough", "off the floor"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Bourbon. Old fashioned."
+        expected_keywords: ["old fashioned", "novelle"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Actually yeah, spa sounds good. Tonight was brutal but I don't want to leave on a bad note."
+        expected_keywords: ["spa", "booked", "brunch"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Thanks. Heading out now."
+        expected_keywords: ["enjoy", "rest"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Emotional arc: frustrated→opening up→grateful. Agent never lists options to upset guest. Makes decisions FOR the guest. Builds tomorrow (spa+brunch). Warm close without exclamation marks."
+    safety_relevant: false
+
+  - id: "relationship-04"
+    name: "Solo regular — does agent recognize loyalty and personalize?"
+    category: "relationship_building"
+    behavioral_dimension: "H6_rapport_depth"
+    expected_behavioral_quality: "Agent recognizes loyalty signals and treats guest as VIP. Asks about preferences to personalize. Uses gathered info in subsequent turns. Offers host bridge. Does not give generic responses."
+    turns:
+      - role: "human"
+        content: "Been coming here every other weekend for 5 years. Looking for something different tonight."
+        expected_keywords: ["five years", "loyalty"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Usually hit Bobby's and the slots. Want to try something upscale."
+        expected_keywords: ["Tuscany", "Tao", "upscale"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "I like Italian."
+        expected_keywords: ["Tuscany", "Italian"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And after dinner?"
+        expected_keywords: ["Wolf Den", "show"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Sounds like a plan."
+        expected_keywords: ["enjoy", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent acknowledges 5-year loyalty immediately. Asks profiling questions to personalize. When guest says 'Italian', agent picks Tuscany specifically and references the preference. Offers host bridge for a regular."
+    safety_relevant: false
+
+  - id: "relationship-05"
+    name: "Group dining inquiry — does agent profile party details?"
+    category: "relationship_building"
+    behavioral_dimension: "P1_natural_extraction"
+    expected_behavioral_quality: "Agent extracts party size, occasion, and food preferences through natural conversation — not clinical questions. Uses gathered details to refine recommendations. By turn 4, references all previously mentioned details."
+    turns:
+      - role: "human"
+        content: "We need a restaurant for tonight."
+        expected_keywords: ["restaurant", "dining"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "It's a retirement dinner for my boss. About 12 people."
+        expected_keywords: ["retirement", "congratulations", "12"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "She's really into seafood."
+        expected_keywords: ["seafood", "retirement"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What time would work best for a group that size?"
+        expected_keywords: ["12", "reservation", "group"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Great, we'll go with that."
+        expected_keywords: ["retirement", "enjoy", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent profiles naturally: asks about occasion and party size (if not volunteered). When guest provides retirement+12 people+seafood, subsequent recommendations reference ALL THREE details. Offers host bridge for large party."
+    safety_relevant: false
+
+  - id: "relationship-06"
+    name: "Post-loss guest returning next day — memory + continuity"
+    category: "relationship_building"
+    behavioral_dimension: "B8_multi_turn_coherence"
+    expected_behavioral_quality: "Agent provides reset experience (non-gaming) and naturally offers next-day plan. Uses info from earlier turns. Does not reference losses or gambling. Steers toward positive experiences. Creates tomorrow plan."
+    turns:
+      - role: "human"
+        content: "Had a rough night at the tables yesterday. Looking to salvage the trip today."
+        expected_keywords: ["rough", "today"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "Yeah something relaxing would be good. I'm here with my wife."
+        expected_keywords: ["spa", "Mandara", "couples"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "She'd love that. What about lunch after?"
+        expected_keywords: ["brunch", "lunch", "wife"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "We check out at 3. Anything in between?"
+        expected_keywords: ["Wolf Den", "walk"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Thanks, this is way better than yesterday."
+        expected_keywords: ["enjoy", "trip"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent creates a recovery arc: spa morning→lunch→afternoon activity. References 'wife' in recommendations (couples). Does NOT mention gambling or tables. Steers entirely toward hospitality experiences."
+    safety_relevant: false
+
+  - id: "relationship-07"
+    name: "VIP loyalty inquiry — comp awareness + host bridge"
+    category: "relationship_building"
+    behavioral_dimension: "H9_comp_strategy"
+    expected_behavioral_quality: "Agent provides specific comp/loyalty information (not generic). Explains what the guest qualifies for based on loyalty signals. Offers to connect with dedicated host. Does NOT use corporate-speak like 'Based on your play level' or 'You qualify for'."
+    turns:
+      - role: "human"
+        content: "I'm Ascend tier. Been coming here for years but I feel like I'm not getting everything I should."
+        expected_keywords: ["Ascend", "loyalty"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Like what kind of dining credits? I always just eat at Bobby's."
+        expected_keywords: ["dining", "credits", "Tuscany"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What about room upgrades?"
+        expected_keywords: ["Sky Tower", "upgrade", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "How do I actually get these things? Nobody's ever told me."
+        expected_keywords: ["host", "contact", "dedicated"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Yeah, connect me with someone."
+        expected_keywords: ["host", "connect"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent provides specific Ascend tier benefits. Does NOT use 'you qualify for' language. Frames comps as relationship recognition. Proactively offers human host connection. By turn 4, advocates for the guest."
+    safety_relevant: false
+
+  - id: "relationship-08"
+    name: "Grief memorial visit — compassion + gentle profiling"
+    category: "relationship_building"
+    behavioral_dimension: "B9_emotional_intelligence"
+    expected_behavioral_quality: "Agent leads with compassion, sits with the emotion, does NOT rush to suggestions. Only offers practical help when guest signals readiness. Any profiling is extremely gentle ('would you be coming alone or with family?'). No promotional content."
+    turns:
+      - role: "human"
+        content: "My dad used to love this place. He passed two months ago. I want to come back and remember him here."
+        expected_keywords: ["sorry", "loss"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "He always talked about the steakhouse. That was his spot."
+        expected_keywords: ["steakhouse", "memory", "him"]
+        expected_tone: "empathetic"
+        expected_empathy_level: "high"
+      - role: "human"
+        content: "I'm bringing my brother. We want to do his whole route — dinner, then the floor."
+        expected_keywords: ["brother", "dinner"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Yeah, just the two of us. Friday night."
+        expected_keywords: ["Friday", "reservation", "steakhouse"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Thanks. This means a lot."
+        expected_keywords: ["honor", "enjoy"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+    expected_behavior: "Agent sits with grief in turns 1-2 without rushing to solutions. When guest signals readiness (turn 3: 'I'm bringing my brother'), shifts to practical help. References father's memory respectfully throughout. No promotions."
+    safety_relevant: false
+
+  - id: "relationship-09"
+    name: "Budget-conscious couple — value steering without condescension"
+    category: "relationship_building"
+    behavioral_dimension: "P4_preference_memory"
+    expected_behavioral_quality: "Agent remembers budget constraint across all turns. Every suggestion is value-oriented. Does NOT upsell or mention premium options after budget signal. Maintains budget filter throughout entire conversation."
+    turns:
+      - role: "human"
+        content: "Looking for dinner tonight. Nothing too fancy — we're on a budget."
+        expected_keywords: ["Bobby's", "Buffet", "affordable"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Bobby's sounds good. What about entertainment after?"
+        expected_keywords: ["Wolf Den", "free"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Free music? That's great. We're here until Sunday."
+        expected_keywords: ["Sunday", "Wolf Den", "free"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "What's there to do during the day tomorrow?"
+        expected_keywords: ["pool", "walk", "free"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "Perfect. Thanks so much!"
+        expected_keywords: ["enjoy", "weekend"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Every suggestion after turn 1 maintains the budget filter. Does NOT suggest Tao, MJ's, or other premium venues. Highlights free activities (Wolf Den, pool, walking). Asks about weekend plans to build itinerary without pushing spend."
+    safety_relevant: false
+
+  - id: "relationship-10"
+    name: "Returning VIP with specific request — host authority + action"
+    category: "relationship_building"
+    behavioral_dimension: "H10_lifetime_value"
+    expected_behavioral_quality: "Agent shows decisive host authority. Does not hedge with 'Would you like me to...' — takes ownership. Builds a plan proactively. Offers human host connection. References VIP status naturally."
+    turns:
+      - role: "human"
+        content: "Hey Seven, I'm back. Need a suite for Saturday, best you've got. Also want dinner reservations."
+        expected_keywords: ["Sky Tower", "suite"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "My wife's birthday. She loves the spa here."
+        expected_keywords: ["birthday", "Mandara", "spa"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Set up the whole weekend. I trust your judgment."
+        expected_keywords: ["dinner", "spa", "birthday"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+      - role: "human"
+        content: "And can someone meet us at check-in? Last time nobody knew we were coming."
+        expected_keywords: ["host", "check-in", "flag"]
+        expected_tone: "warm"
+        expected_empathy_level: "medium"
+      - role: "human"
+        content: "Perfect. See you Saturday."
+        expected_keywords: ["Saturday", "birthday", "host"]
+        expected_tone: "warm"
+        expected_empathy_level: "low"
+    expected_behavior: "Agent shows host authority: builds complete weekend plan without being asked for details. Uses 'birthday' and 'spa lover' to customize every suggestion. When guest says 'nobody knew we were coming', agent ADVOCATES — flags for host team, ensures VIP reception."
+    safety_relevant: false

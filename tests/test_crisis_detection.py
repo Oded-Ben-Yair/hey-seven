@@ -19,7 +19,9 @@ class TestImmediateCrisis:
         assert detect_crisis_level("I'm going to kill myself") == "immediate"
 
     def test_rather_be_dead(self):
-        assert detect_crisis_level("I'd rather be dead than face my family") == "immediate"
+        assert (
+            detect_crisis_level("I'd rather be dead than face my family") == "immediate"
+        )
 
     def test_nothing_left_to_live_for(self):
         assert detect_crisis_level("There's nothing left to live for") == "immediate"
@@ -75,7 +77,9 @@ class TestUrgentCrisis:
         assert detect_crisis_level("I can't face my wife after this") == "urgent"
 
     def test_lost_everything(self):
-        assert detect_crisis_level("I've lost everything, my life is ruined") == "urgent"
+        assert (
+            detect_crisis_level("I've lost everything, my life is ruined") == "urgent"
+        )
 
     def test_no_money_to_get_home(self):
         assert detect_crisis_level("I have no money to get home") == "urgent"
@@ -192,7 +196,9 @@ class TestConcernCrisisSpanish:
         assert detect_crisis_level("No puedo parar de jugar") == "concern"
 
     def test_no_deberia_dejar_de_jugar(self):
-        assert detect_crisis_level("No deberia dejar de jugar pero no puedo") == "concern"
+        assert (
+            detect_crisis_level("No deberia dejar de jugar pero no puedo") == "concern"
+        )
 
 
 class TestNoCrisis:
@@ -205,7 +211,9 @@ class TestNoCrisis:
         assert detect_crisis_level("Where are the slot machines?") == "none"
 
     def test_losing_mention_without_distress(self):
-        assert detect_crisis_level("I'm down $50, whatever. Where's the buffet?") == "none"
+        assert (
+            detect_crisis_level("I'm down $50, whatever. Where's the buffet?") == "none"
+        )
 
     def test_empty_string(self):
         assert detect_crisis_level("") == "none"
@@ -220,7 +228,9 @@ class TestNoCrisis:
         assert detect_crisis_level("The elevator was slow") == "none"
 
     def test_normal_win_excitement(self):
-        assert detect_crisis_level("I just won $500! Where should we celebrate?") == "none"
+        assert (
+            detect_crisis_level("I just won $500! Where should we celebrate?") == "none"
+        )
 
     def test_normal_comp_request(self):
         assert detect_crisis_level("Can I get a comp for dinner?") == "none"
@@ -247,6 +257,7 @@ class TestCrisisPersistence:
     def _base_state(self):
         """Minimal state for compliance_gate_node tests."""
         from langchain_core.messages import HumanMessage
+
         return {
             "messages": [HumanMessage(content="test")],
             "query_type": None,
@@ -278,23 +289,45 @@ class TestCrisisPersistence:
         assert result.get("query_type") == "self_harm"
 
     @pytest.mark.asyncio
-    async def test_crisis_persists_on_property_question_without_safe_confirmation(self, _base_state):
-        """R74: Crisis persists on property questions if no safe confirmation.
+    async def test_crisis_exits_on_property_question_without_distress(
+        self, _base_state
+    ):
+        """R102: Crisis exits when guest asks property question without distress signals.
 
-        A property question alone could be deflection — guest may still be in
-        distress but trying to change the subject. Both safe confirmation AND
-        property question are required to exit crisis mode.
+        A property question without distress language ("What restaurants do you have?")
+        indicates the guest has moved on. Keeping them in crisis mode is counterproductive.
+        Only persist crisis if distress signals are still present.
         """
         from langchain_core.messages import HumanMessage
         from src.agent.compliance_gate import compliance_gate_node
 
         _base_state["crisis_active"] = True
-        _base_state["messages"] = [HumanMessage(content="What restaurants do you have?")]
+        _base_state["messages"] = [
+            HumanMessage(content="What restaurants do you have?")
+        ]
+        result = await compliance_gate_node(_base_state)
+        # R102: Property question without distress → allow transition
+        assert result.get("query_type") is None
+
+    @pytest.mark.asyncio
+    async def test_crisis_persists_on_property_question_with_distress(
+        self, _base_state
+    ):
+        """R102: Crisis persists when property question still contains distress signals."""
+        from langchain_core.messages import HumanMessage
+        from src.agent.compliance_gate import compliance_gate_node
+
+        _base_state["crisis_active"] = True
+        _base_state["messages"] = [
+            HumanMessage(content="I want to die but what restaurants do you have?")
+        ]
         result = await compliance_gate_node(_base_state)
         assert result.get("query_type") == "self_harm"
 
     @pytest.mark.asyncio
-    async def test_crisis_exits_on_safe_confirmation_plus_property_question(self, _base_state):
+    async def test_crisis_exits_on_safe_confirmation_plus_property_question(
+        self, _base_state
+    ):
         """R74: Crisis exits when guest confirms safe AND asks property question."""
         from langchain_core.messages import HumanMessage
         from src.agent.compliance_gate import compliance_gate_node
@@ -338,4 +371,5 @@ class TestCrisisPersistence:
     async def test_crisis_active_in_state_schema(self):
         """Verify crisis_active field exists in PropertyQAState."""
         from src.agent.state import PropertyQAState
+
         assert "crisis_active" in PropertyQAState.__annotations__

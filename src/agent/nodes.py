@@ -1033,22 +1033,43 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
                 _farewell_parts.append(_extracted["name"])
             if _extracted.get("occasion"):
                 _farewell_parts.append(f"your {_extracted['occasion']}")
-            if _farewell_parts:
-                _farewell_prefix = (
-                    f"Great chatting with you, {', '.join(_farewell_parts)}! "
+            # R102: Context-aware farewell that references the conversation
+            # and offers human host bridge when meaningful exchange happened.
+            domains_discussed = state.get("domains_discussed", [])
+            _name = _extracted.get("name", "")
+            _occasion = _extracted.get("occasion", "")
+
+            # Build personalized farewell referencing conversation content
+            if _name and _occasion:
+                _farewell_text = (
+                    f"Have a great time, {_name}. Enjoy {_occasion} — "
+                    f"I'll make sure the host team knows so they can take care of you."
+                )
+            elif _name and domains_discussed:
+                _farewell_text = (
+                    f"Enjoy your night, {_name}. If you need anything else, I'm here."
+                )
+            elif _name:
+                _farewell_text = (
+                    f"Have a great time, {_name}. I'm here if you need anything."
+                )
+            elif domains_discussed:
+                _farewell_text = (
+                    f"Enjoy your time at {settings.PROPERTY_NAME}. "
+                    "If you need anything later, I'm here."
                 )
             else:
-                _farewell_prefix = ""
+                _farewell_text = f"Enjoy {settings.PROPERTY_NAME}. I'm here anytime."
+
+            # Offer human host bridge if substantial conversation happened
+            if len(domains_discussed) >= 2 or _occasion:
+                _farewell_text += (
+                    " And if you'd like a host to check in on you in person, "
+                    "just say the word."
+                )
+
             return {
-                "messages": [
-                    AIMessage(
-                        content=(
-                            f"{_farewell_prefix}"
-                            f"Enjoy your time at {settings.PROPERTY_NAME}! "
-                            "I'm here anytime you need me."
-                        )
-                    )
-                ],
+                "messages": [AIMessage(content=_farewell_text)],
                 "sources_used": [],
                 "retrieved_context": [],
             }
@@ -1084,35 +1105,42 @@ async def greeting_node(state: PropertyQAState) -> dict[str, Any]:
         _ALL_DOMAINS = set(_DOMAIN_SUGGESTIONS.keys())
         explored = set(domains_discussed) if domains_discussed else set()
         unexplored = sorted(_ALL_DOMAINS - explored)
+        # R102: Context-aware confirmation response that feels like a host,
+        # not a help desk. References what was discussed, offers next step.
+        _extracted = state.get("extracted_fields") or {}
+        _name = _extracted.get("name", "")
+        _occasion = _extracted.get("occasion", "")
+        _name_prefix = f"{_name}, " if _name else ""
+
         if domains_discussed and unexplored:
             suggested_domain = unexplored[0]
             suggestion_text = _DOMAIN_SUGGESTIONS.get(
                 suggested_domain, f"ask me about {suggested_domain}"
             )
+            # Frame as caring about THEM, not system logistics
+            if _occasion:
+                _ack = f"{_name_prefix}I want to make sure your {_occasion} is perfect. {suggestion_text}"
+            else:
+                _ack = f"{_name_prefix}{suggestion_text}"
             return {
                 "messages": [
-                    AIMessage(
-                        content=(
-                            f"Glad I could help. {suggestion_text} What sounds good?"
-                        )
-                    )
+                    AIMessage(content=f"{_ack} Anything else I can set up for you?")
                 ],
                 "sources_used": [],
                 "retrieved_context": [],
-                # R95: Mark the suggested domain as discussed so we don't
-                # repeat the same suggestion on the next acknowledgment.
                 "domains_discussed": [suggested_domain],
             }
         if domains_discussed:
+            if _occasion:
+                _msg = f"I've got your {_occasion} covered, {_name_prefix.rstrip(', ')}. I'm here if you need anything else tonight."
+            elif _name:
+                _msg = f"I've got you, {_name}. I'm here if you need anything else tonight."
+            else:
+                _msg = (
+                    f"I've got you covered. I'm here if you need anything else tonight."
+                )
             return {
-                "messages": [
-                    AIMessage(
-                        content=(
-                            f"Happy to help with your {settings.PROPERTY_NAME} visit. "
-                            f"I'm here if you think of anything else tonight."
-                        )
-                    )
-                ],
+                "messages": [AIMessage(content=_msg)],
                 "sources_used": [],
                 "retrieved_context": [],
             }
