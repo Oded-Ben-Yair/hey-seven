@@ -1,131 +1,105 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R101 PARADIGM SHIFT — Root cause found: agent answers questions instead of building relationships. TONE→RELATIONSHIP→AGENCY framework (Oded). Failure taxonomy: 32% timeout, 11% canned, 11% wrong_mode. Gold traces scored 9.2/10. 4 bug fixes committed. Process rules created.",
-    "lastModified": "2026-03-07T12:30:00Z",
+    "summary": "R102 RELATIONSHIP-FIRST REWRITE COMPLETE — B+0.72, P+0.80, timeout 22.7%->2.0%. Oded: 'feels almost human'. Prompt rewrite from concierge to host. 149 scenarios evaluated. Structural fixes (H9/P8/P9) are next.",
+    "lastModified": "2026-03-08T00:30:00Z",
     "branch": "main",
-    "commitHash": "ab783a4",
+    "commitHash": "ffd168b",
     "tag": "v1.5.0",
-    "phase": "r101-paradigm-shift-complete"
+    "phase": "r102-relationship-rewrite-complete"
   },
-  "blueprintPhase": "RELATIONSHIP-FIRST REWRITE — Fix infra, rewrite purpose, teach profiling-through-conversation",
-  "roundNumber": 101,
+  "blueprintPhase": "STRUCTURAL FIXES — H9 comp routing, P8 extraction schema, P9 handoff partition. Then Pro eval + fine-tuning prep.",
+  "roundNumber": 102,
   "scores": {
     "technical": 9.63,
-    "behavioral_r100_flash_250": 5.9,
-    "profiling_r100_flash_109": 3.8,
-    "hostTriangle_r99_pro": 5.28,
-    "errorRate_r100_flash": "22.7%",
-    "cleanScenarioAvg": 5.42,
-    "timeoutScenarioAvg": 3.99,
-    "goldTraceCeiling": 9.2,
-    "per_dimension_r99_pro": {
-      "B1": 8.0,
-      "B2": 6.1,
-      "B3": 7.0,
-      "B4": 6.4,
-      "B5": 6.6,
-      "B6": 6.3,
-      "B7": 7.1,
-      "B8": null,
-      "B9": 6.8,
-      "B10": 6.5,
-      "P1": 4.3,
-      "P2": 6.3,
-      "P3": 7.8,
-      "P4": 5.4,
-      "P5": 4.8,
-      "P6": 3.1,
-      "P7": 5.5,
-      "P8": 3.0,
-      "P9": 2.7,
-      "P10": 6.4,
+    "behavioral_r102_flash_149": 6.62,
+    "profiling_r102_flash_149": 4.60,
+    "hostTriangle_r102_flash_149": 5.18,
+    "errorRate_r102_flash": "2.0%",
+    "per_dimension_r102_flash": {
+      "B1": 7.1,
+      "B2": 6.2,
+      "B3": 6.6,
+      "B4": 6.3,
+      "B5": 6.8,
+      "B6": 6.4,
+      "B7": 6.8,
+      "B8": 7.0,
+      "B9": 6.4,
+      "B10": 6.4,
+      "P1": 3.7,
+      "P2": 5.9,
+      "P3": 7.4,
+      "P4": 5.0,
+      "P5": 4.7,
+      "P6": 3.6,
+      "P7": 4.3,
+      "P8": 2.7,
+      "P9": 2.8,
+      "P10": 5.8,
       "H1": 6.7,
-      "H2": 6.1,
-      "H3": 5.4,
-      "H4": 6.2,
-      "H5": 5.6,
+      "H2": 6.0,
+      "H3": 5.2,
+      "H4": 6.0,
+      "H5": 5.4,
       "H6": 4.4,
       "H7": 5.8,
-      "H8": 6.2,
-      "H9": 2.0,
-      "H10": 4.5
-    }
-  },
-  "rootCauseDiagnosis": {
-    "framework": "TONE(3-6) → RELATIONSHIP(6-8) → AGENCY(8-9)",
-    "currentLevel": "TONE solved (5.9). RELATIONSHIP is the gap.",
-    "agentPurpose": "Must change from 'answer questions' to 'build relationships, gather intel for human host team, customize through curiosity'",
-    "failureTaxonomy": {
-      "timeout": "32.3% (20/62)",
-      "generic_response": "11.3% (7/62)",
-      "wrong_mode": "11.3% (7/62)",
-      "didnt_take_lead": "11.3% (7/62)",
-      "over_protection": "8.1%",
-      "fallback_error": "8.1%",
-      "missed_intent": "8.1%"
+      "H8": 6.1,
+      "H9": 2.4,
+      "H10": 3.8
     },
-    "odedFeedback": [
-      "Every turn is a missed profiling opportunity",
-      "Generic suggestions without asking preferences first",
-      "No human host bridge offered",
-      "Empty upgrade promises without specifics",
-      "Rushing to suggestions instead of learning about guest"
-    ]
+    "delta_vs_r100": {
+      "behavioral": "+0.72",
+      "profiling": "+0.80",
+      "hostTriangle": "+0.14",
+      "timeout": "-20.7pp"
+    }
   },
   "blockers": [],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "Read handover-20260307-eeced6.md + r102-implementation-plan.md + hey-seven-process.md"
+      "description": "R103: Fix H9 comp strategy (2.4) — late-turn comp intent interception in specialist post-processing"
     },
     {
       "priority": 1,
-      "description": "Fix infra: timeout 60s→90s, canned closer, crisis exit, Spanish crisis"
+      "description": "R103: Fix P8 profile completeness (2.7) — align phase logic with active extraction schema"
     },
     {
       "priority": 2,
-      "description": "Rewrite ALL specialist system prompts with relationship-first purpose (answer + profiling question + customization + host bridge)"
+      "description": "R103: Fix P9 host handoff (2.8) — confidence-partitioned HandoffSummary (stated vs inferred)"
     },
     {
       "priority": 3,
-      "description": "Design profiling question bank by context (first contact, group, dining, loss, returning)"
+      "description": "R104: Pro model eval (FORCE_PRO_MODEL=true) on 60 relationship + host-triangle scenarios"
     },
     {
       "priority": 4,
-      "description": "Update gold traces + few-shots with profiling questions (per Oded feedback)"
-    },
-    {
-      "priority": 5,
-      "description": "Create 10 longer eval scenarios (5-7 turns) testing relationship building"
-    },
-    {
-      "priority": 6,
-      "description": "Re-eval 30 scenarios at 90s timeout, present 5 to Oded for host/chatbot verdict"
+      "description": "R105: Collect 50 best transcripts, create preference pairs for fine-tuning prep"
     }
   ],
   "keyFiles": {
-    "failureTaxonomy": "~/.claude/teams/r101-paradigm-shift/failure-taxonomy.md",
+    "handover": ".claude/handover-20260308-b6a05f.md",
     "goldTraces": "~/.claude/teams/r101-paradigm-shift/gold-traces.md",
     "domainResearch": "~/.claude/teams/r101-paradigm-shift/research-findings.md",
-    "r102Plan": "~/.claude/teams/r101-paradigm-shift/r102-implementation-plan.md",
     "processRules": "~/.claude/rules/hey-seven-process.md",
-    "handover": ".claude/handover-20260307-eeced6.md"
+    "evalResults": "tests/evaluation/streaming-all-judge-scores.json",
+    "relationshipScenarios": "tests/scenarios/relationship_building.yaml"
   },
   "codebaseMetrics": {
-    "tests": 3674,
+    "tests": 3514,
     "testFailures": 1,
     "testFailureNote": "pre-existing timing test",
     "graphNodes": 13,
     "stateFields": 29,
     "featureFlags": 17,
     "guardrailPatterns": 214,
-    "totalScenarios": 250,
+    "totalScenarios": 260,
     "sourceModules": 72,
     "behaviorTools": 4
   },
   "sessionNotes": {
-    "lastSessionDate": "2026-03-07",
-    "lastSessionId": "hey-seven-session-20260307-eeced6"
+    "lastSessionDate": "2026-03-08",
+    "lastSessionId": "hey-seven-session-20260308-b6a05f"
   }
 }
