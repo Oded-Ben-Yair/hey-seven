@@ -296,6 +296,11 @@ class PropertyQAState(TypedDict):
     # Tells specialist agents to inject booking-context instructions
     # (qualifying questions, venue recommendations before phone redirect).
     booking_intent: str | None
+    # R103 fix H9: Comp intent detected but routed to non-comp specialist.
+    # When True, execute_specialist injects a lightweight comp bridge
+    # (2-3 lines about rewards eligibility + host connection offer).
+    # Ephemeral per-turn — reset by _initial_state().
+    comp_intent_detected: bool
 
 
 class RouterOutput(BaseModel):

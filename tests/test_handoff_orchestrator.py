@@ -14,7 +14,9 @@ from src.agent.behavior_tools.handoff import (
     format_handoff_for_prompt,
     _build_conversation_narrative,
     _build_recommended_actions,
+    _build_next_actions,
     _detect_risk_flags,
+    _partition_stated_inferred,
 )
 
 
@@ -206,6 +208,127 @@ class TestBuildHandoffSummary:
         assert any("complaint" in f.lower() for f in summary.risk_flags)
 
 
+class TestPartitionStatedInferred:
+    """R103 fix P9: Stated vs inferred partition."""
+
+    def test_name_is_stated(self):
+        stated, inferred = _partition_stated_inferred({"name": "Sarah"})
+        assert any("Sarah" in s for s in stated)
+        assert len(inferred) == 0
+
+    def test_party_size_is_stated(self):
+        stated, inferred = _partition_stated_inferred({"party_size": 4})
+        assert any("4" in s for s in stated)
+
+    def test_visit_purpose_is_inferred(self):
+        stated, inferred = _partition_stated_inferred({"visit_purpose": "leisure"})
+        assert len(stated) == 0
+        assert any("leisure" in s for s in inferred)
+
+    def test_mixed_fields_partitioned(self):
+        fields = {
+            "name": "Mike",
+            "occasion": "birthday",
+            "visit_purpose": "celebration",
+            "budget_signal": "willing to spend",
+        }
+        stated, inferred = _partition_stated_inferred(fields)
+        assert len(stated) == 2  # name, occasion
+        assert len(inferred) == 2  # visit_purpose, budget_signal
+
+    def test_empty_fields_skipped(self):
+        stated, inferred = _partition_stated_inferred({"name": "", "occasion": None})
+        assert len(stated) == 0
+        assert len(inferred) == 0
+
+    def test_boolean_fields_skipped(self):
+        stated, inferred = _partition_stated_inferred(
+            {"urgency": True, "fatigue": True}
+        )
+        assert len(stated) == 0
+        assert len(inferred) == 0
+
+
+class TestBuildNextActions:
+    """R103 fix P9: Conversation-specific next actions."""
+
+    def test_crisis_action_first(self):
+        state = _make_state(crisis_active=True)
+        actions = _build_next_actions(state, {}, [], [])
+        assert any("IMMEDIATE" in a for a in actions)
+
+    def test_named_guest_gets_name_action(self):
+        state = _make_state()
+        actions = _build_next_actions(state, {"name": "Sarah"}, [], [])
+        assert any("Sarah" in a for a in actions)
+
+    def test_unnamed_guest_gets_intro_action(self):
+        state = _make_state()
+        actions = _build_next_actions(state, {}, [], [])
+        assert any("Introduce" in a for a in actions)
+
+    def test_occasion_gets_comp_check(self):
+        state = _make_state()
+        actions = _build_next_actions(state, {"occasion": "anniversary"}, [], [])
+        assert any("anniversary" in a for a in actions)
+
+    def test_last_question_generates_followup(self):
+        messages = [HumanMessage(content="What time does the spa close?")]
+        state = _make_state(messages=messages)
+        actions = _build_next_actions(state, {}, [], [])
+        assert any("spa" in a.lower() for a in actions)
+
+    def test_capped_at_five(self):
+        state = _make_state(
+            crisis_active=True,
+            guest_sentiment="frustrated",
+            messages=[HumanMessage(content="What about dining?")],
+        )
+        extracted = {"name": "John", "occasion": "birthday", "loyalty_tier": "Gold"}
+        actions = _build_next_actions(state, extracted, [], ["dining", "hotel"])
+        assert len(actions) <= 5
+
+
+class TestHandoffSummaryNewFields:
+    """R103 fix P9: Verify new fields in build_handoff_summary."""
+
+    def test_stated_facts_populated(self):
+        state = _make_state(
+            extracted_fields={"name": "Sarah", "party_size": 4},
+        )
+        summary = build_handoff_summary(state)
+        assert len(summary.guest_stated_facts) == 2
+
+    def test_inferred_facts_populated(self):
+        state = _make_state(
+            extracted_fields={"visit_purpose": "leisure", "budget_signal": "high"},
+        )
+        summary = build_handoff_summary(state)
+        assert len(summary.agent_inferences) == 2
+
+    def test_next_actions_populated(self):
+        state = _make_state(
+            messages=[HumanMessage(content="Hi"), AIMessage(content="Hello")],
+            extracted_fields={"name": "Mike"},
+        )
+        summary = build_handoff_summary(state)
+        assert len(summary.next_actions) >= 1
+        assert any("Mike" in a for a in summary.next_actions)
+
+    def test_new_fields_serializable(self):
+        """New fields must survive JSON serialization."""
+        state = _make_state(
+            extracted_fields={"name": "Sarah", "visit_purpose": "business"},
+            messages=[HumanMessage(content="Help")],
+        )
+        summary = build_handoff_summary(state)
+        serialized = json.dumps(summary.model_dump())
+        data = json.loads(serialized)
+        assert "guest_stated_facts" in data
+        assert "agent_inferences" in data
+        assert "next_actions" in data
+
+
 class TestFormatHandoffForPrompt:
     """Test prompt formatting."""
 
@@ -235,6 +358,20 @@ class TestFormatHandoffForPrompt:
         )
         prompt = format_handoff_for_prompt(summary)
         assert "loyalty" in prompt.lower()
+
+    def test_stated_inferred_in_prompt(self):
+        """R103 fix P9: stated/inferred partition appears in prompt."""
+        summary = HandoffSummary(
+            guest_stated_facts=["Name: Sarah", "Party Size: 4"],
+            agent_inferences=["Visit Purpose: Leisure"],
+            next_actions=["Greet as Sarah"],
+            urgency="routine",
+        )
+        prompt = format_handoff_for_prompt(summary)
+        assert "Guest told us" in prompt
+        assert "Sarah" in prompt
+        assert "We inferred" in prompt
+        assert "Your first actions" in prompt
 
     def test_empty_summary_still_valid(self):
         summary = HandoffSummary()

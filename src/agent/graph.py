@@ -373,6 +373,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "model_used": None,
         # R92: Booking intent signal for specialist pipeline
         "booking_intent": None,
+        # R103 fix H9: Comp intent detected in non-comp specialist context
+        "comp_intent_detected": False,
     }
 
 

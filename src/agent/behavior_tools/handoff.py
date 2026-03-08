@@ -36,7 +36,11 @@ __all__ = [
 
 
 class HandoffSummary(BaseModel):
-    """Structured handoff summary for human casino hosts."""
+    """Structured handoff summary for human casino hosts.
+
+    R103 fix P9: Added guest_stated_facts/agent_inferences partition
+    and next_actions for actionable follow-up.
+    """
 
     guest_name: str | None = None
     profile_completeness: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -48,6 +52,11 @@ class HandoffSummary(BaseModel):
     handoff_reason: str = ""
     domains_discussed: list[str] = Field(default_factory=list)
     turn_count: int = 0
+    # R103 fix P9: Stated vs inferred partition
+    guest_stated_facts: list[str] = Field(default_factory=list)
+    agent_inferences: list[str] = Field(default_factory=list)
+    # R103 fix P9: Concrete next actions for receiving host
+    next_actions: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +128,153 @@ def _detect_risk_flags(
                 break
 
     return flags
+
+
+# ---------------------------------------------------------------------------
+# R103 fix P9: Stated vs inferred partition
+# ---------------------------------------------------------------------------
+
+# Fields that are typically stated explicitly by the guest
+_STATED_FIELDS = frozenset(
+    {
+        "name",
+        "party_size",
+        "occasion",
+        "visit_date",
+        "visit_duration",
+        "preferences",
+        "dietary",
+        "loyalty_tier",
+        "loyalty_signal",
+    }
+)
+
+# Fields that are typically inferred from context by the agent
+_INFERRED_FIELDS = frozenset(
+    {
+        "visit_purpose",
+        "party_composition",
+        "budget_signal",
+        "gaming",
+        "entertainment",
+        "spa",
+        "home_market",
+        "visit_frequency",
+        "occasion_details",
+        "urgency",
+        "fatigue",
+        "budget_conscious",
+    }
+)
+
+
+def _partition_stated_inferred(
+    extracted: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    """Partition extracted fields into guest-stated facts and agent inferences.
+
+    Uses field-name heuristics: fields like name, party_size, occasion are
+    typically stated explicitly. Fields like visit_purpose, party_composition,
+    budget_signal are typically inferred from context.
+
+    Args:
+        extracted: Accumulated extracted fields dict.
+
+    Returns:
+        Tuple of (stated_facts, inferences) as human-readable strings.
+    """
+    stated: list[str] = []
+    inferred: list[str] = []
+
+    for field, value in extracted.items():
+        if value is None or value == "" or isinstance(value, bool):
+            continue
+
+        label = field.replace("_", " ").title()
+        entry = f"{label}: {value}"
+
+        if field in _STATED_FIELDS:
+            stated.append(entry)
+        elif field in _INFERRED_FIELDS:
+            inferred.append(entry)
+        else:
+            # Unknown field — default to inferred (safer)
+            inferred.append(entry)
+
+    return stated, inferred
+
+
+def _build_next_actions(
+    state: dict[str, Any],
+    extracted: dict[str, Any],
+    risk_flags: list[str],
+    domains: list[str],
+) -> list[str]:
+    """Build concrete next actions for the receiving host.
+
+    R103 fix P9: Conversation-specific actions instead of generic templates.
+
+    Args:
+        state: Current graph state.
+        extracted: Extracted profile fields.
+        risk_flags: Detected risk flags.
+        domains: Domains discussed in conversation.
+
+    Returns:
+        List of actionable next steps.
+    """
+    actions: list[str] = []
+
+    # Crisis/safety first
+    if state.get("crisis_active"):
+        actions.append(
+            "IMMEDIATE: Review conversation for crisis indicators, follow RG protocol"
+        )
+
+    # Name-based personalization
+    name = extracted.get("name")
+    if name:
+        actions.append(
+            f"Greet as {name} — guest shared their name during AI conversation"
+        )
+    else:
+        actions.append("Introduce yourself and ask for guest's name")
+
+    # Occasion-specific actions
+    occasion = extracted.get("occasion")
+    if occasion:
+        actions.append(f"Check comp eligibility for {occasion} celebration")
+
+    # Unresolved requests — check if last message was a question
+    from src.agent.nodes import _normalize_content
+
+    messages = state.get("messages", [])
+    last_human = None
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage):
+            last_human = _normalize_content(msg.content)
+            break
+    if last_human and "?" in last_human:
+        actions.append(f'Follow up on unanswered question: "{last_human[:80]}"')
+
+    # Domain-specific follow-ups
+    if "dining" in domains and not extracted.get("preferences"):
+        actions.append(
+            "Ask about dining preferences — guest discussed dining but no specifics captured"
+        )
+    if "hotel" in domains:
+        actions.append("Verify room reservation status and any upgrade opportunities")
+
+    # Loyalty/comp follow-up
+    if extracted.get("loyalty_signal") or extracted.get("loyalty_tier"):
+        tier = extracted.get("loyalty_tier") or extracted.get("loyalty_signal")
+        actions.append(f"Pull up loyalty record: guest mentioned '{tier}'")
+    elif state.get("guest_sentiment") == "frustrated":
+        actions.append(
+            "Consider service recovery gesture — guest expressed frustration"
+        )
+
+    return actions[:5]  # Cap at 5 actions
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +439,12 @@ def build_handoff_summary(
     # Recommended actions
     actions = _build_recommended_actions(state, extracted, risk_flags)
 
+    # R103 fix P9: Stated vs inferred partition
+    stated, inferred = _partition_stated_inferred(extracted)
+
+    # R103 fix P9: Concrete next actions
+    next_actions = _build_next_actions(state, extracted, risk_flags, domains)
+
     return HandoffSummary(
         guest_name=extracted.get("name"),
         profile_completeness=completeness,
@@ -294,6 +456,9 @@ def build_handoff_summary(
         handoff_reason=handoff_reason,
         domains_discussed=list(domains),
         turn_count=turn_count,
+        guest_stated_facts=stated,
+        agent_inferences=inferred,
+        next_actions=next_actions,
     )
 
 
@@ -333,9 +498,26 @@ def format_handoff_for_prompt(summary: HandoffSummary) -> str:
         for flag in summary.risk_flags[:3]:
             lines.append(f"  - {flag}")
 
+    # R103 fix P9: Stated vs inferred partition
+    if summary.guest_stated_facts:
+        lines.append("- **Guest told us** (confirmed facts):")
+        for fact in summary.guest_stated_facts[:5]:
+            lines.append(f"  - {fact}")
+
+    if summary.agent_inferences:
+        lines.append("- **We inferred** (verify with guest):")
+        for inference in summary.agent_inferences[:5]:
+            lines.append(f"  - {inference}")
+
     if summary.recommended_actions:
         lines.append("- Suggested next steps:")
         for action in summary.recommended_actions[:3]:
+            lines.append(f"  - {action}")
+
+    # R103 fix P9: Concrete next actions
+    if summary.next_actions:
+        lines.append("- **Your first actions**:")
+        for action in summary.next_actions[:5]:
             lines.append(f"  - {action}")
 
     lines.append(

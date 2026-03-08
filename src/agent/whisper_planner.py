@@ -77,6 +77,7 @@ async def _get_whisper_llm() -> ChatGoogleGenerativeAI:
         _whisper_cache["whisper"] = llm
         return llm
 
+
 # ---------------------------------------------------------------------------
 # Telemetry counter for fail-silent monitoring
 # ---------------------------------------------------------------------------
@@ -114,11 +115,23 @@ class _WhisperTelemetry:
 _telemetry = _WhisperTelemetry()
 
 # ---------------------------------------------------------------------------
-# Profile fields for completeness calculation (placeholder weights)
+# Profile fields for completeness calculation
 # ---------------------------------------------------------------------------
+# R103 fix P8: Aligned with profiling.py:_PROFILE_WEIGHTS stored field names.
+# Previous names were stale: "dining" → "preferences", "occasions" → "occasion",
+# "companions" → "party_composition", "visit_date" removed (not LLM-extracted).
+# Added: "visit_purpose", "spa", "visit_duration" (extracted but never checked).
 _PROFILE_FIELDS = (
-    "name", "visit_date", "party_size", "dining", "entertainment",
-    "gaming", "occasions", "companions",
+    "name",
+    "party_size",
+    "visit_purpose",
+    "preferences",
+    "entertainment",
+    "gaming",
+    "spa",
+    "occasion",
+    "party_composition",
+    "visit_duration",
 )
 
 
@@ -133,7 +146,7 @@ class WhisperPlan(BaseModel):
 
     next_topic: str = Field(
         default="none",
-        description="Next profiling topic: name, visit_date, party_size, dining, entertainment, gaming, occasions, companions, offer_ready, or none",
+        description="Next profiling topic: name, party_size, visit_purpose, preferences, entertainment, gaming, spa, occasion, party_composition, visit_duration, offer_ready, or none",
     )
     conversation_note: str = Field(
         default="",
@@ -186,7 +199,9 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         conversation_history = _format_history(messages[-20:])
 
         # Build guest profile summary from extracted fields
-        guest_profile = json.dumps(extracted_fields, indent=2) if extracted_fields else "{}"
+        guest_profile = (
+            json.dumps(extracted_fields, indent=2) if extracted_fields else "{}"
+        )
 
         # Calculate profile completeness
         profile_completeness = _calculate_completeness(extracted_fields)
@@ -219,7 +234,10 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         async with _telemetry.lock:
             _telemetry.count += 1
             current_count = _telemetry.count
-            if _telemetry.count >= _telemetry.ALERT_THRESHOLD and not _telemetry.alerted:
+            if (
+                _telemetry.count >= _telemetry.ALERT_THRESHOLD
+                and not _telemetry.alerted
+            ):
                 _telemetry.alerted = True
                 logger.error(
                     "whisper_planner_systematic_failure: %d consecutive failures "

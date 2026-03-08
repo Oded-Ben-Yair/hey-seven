@@ -133,9 +133,20 @@ class TestWhisperPlanModel:
 
     def test_all_expected_topics(self):
         """All expected topic values are accepted (next_topic is plain str)."""
+        # R103 fix P8: Updated to match corrected _PROFILE_FIELDS
         expected_topics = [
-            "name", "visit_date", "party_size", "dining", "entertainment",
-            "gaming", "occasions", "companions", "offer_ready", "none",
+            "name",
+            "party_size",
+            "visit_purpose",
+            "preferences",
+            "entertainment",
+            "gaming",
+            "spa",
+            "occasion",
+            "party_composition",
+            "visit_duration",
+            "offer_ready",
+            "none",
         ]
         for topic in expected_topics:
             plan = WhisperPlan(
@@ -334,7 +345,8 @@ class TestCalculateCompleteness:
 
     def test_populated_profile_returns_nonzero(self):
         """Profile with fields returns a value between 0.0 and 1.0."""
-        profile = {"name": "John", "visit_date": "2026-03-01"}
+        # R103 fix P8: use corrected field names (preferences, not dining)
+        profile = {"name": "John", "preferences": "Italian"}
         result = _calculate_completeness(profile)
         assert 0.0 < result <= 1.0
 
@@ -344,6 +356,44 @@ class TestCalculateCompleteness:
         assert isinstance(_calculate_completeness(None), float)
         assert isinstance(_calculate_completeness({"name": "Jane"}), float)
 
+    def test_corrected_field_names_recognized(self):
+        """R103 fix P8: corrected field names all count toward completeness."""
+        profile = {
+            "name": "Sarah",
+            "party_size": 4,
+            "visit_purpose": "celebration",
+            "preferences": "Italian",
+            "occasion": "anniversary",
+        }
+        result = _calculate_completeness(profile)
+        assert result == 5 / 10  # 5 of 10 fields filled
+
+    def test_stale_field_names_not_counted(self):
+        """R103 fix P8: old stale field names (dining, occasions, companions) are NOT counted."""
+        profile = {
+            "dining": "Italian",  # old name
+            "occasions": "birthday",  # old name
+            "companions": "2 adults",  # old name
+        }
+        result = _calculate_completeness(profile)
+        assert result == 0.0  # None of the stale names match _PROFILE_FIELDS
+
+
+class TestWhisperFieldParity:
+    """R103 fix P8: Verify whisper _PROFILE_FIELDS align with profiling._PROFILE_WEIGHTS."""
+
+    def test_whisper_fields_subset_of_profiling_weights(self):
+        """_PROFILE_FIELDS must be a subset of _PROFILE_WEIGHTS keys."""
+        from src.agent.whisper_planner import _PROFILE_FIELDS
+        from src.agent.profiling import _PROFILE_WEIGHTS
+
+        whisper_set = set(_PROFILE_FIELDS)
+        profiling_set = set(_PROFILE_WEIGHTS.keys())
+        missing = whisper_set - profiling_set
+        assert not missing, (
+            f"Whisper _PROFILE_FIELDS contains names not in profiling._PROFILE_WEIGHTS: {missing}"
+        )
+
 
 class TestFailureCounterThreshold:
     """Tests for the _WhisperTelemetry failure counter alert threshold."""
@@ -351,14 +401,19 @@ class TestFailureCounterThreshold:
     def _reset_counter(self):
         """Reset telemetry singleton state between tests."""
         import src.agent.whisper_planner as wp
+
         wp._telemetry.count = 0
         wp._telemetry.alerted = False
 
     def _increment(self):
         """Simulate a failure increment (mirrors whisper_planner_node logic)."""
         import src.agent.whisper_planner as wp
+
         wp._telemetry.count += 1
-        if wp._telemetry.count >= wp._telemetry.ALERT_THRESHOLD and not wp._telemetry.alerted:
+        if (
+            wp._telemetry.count >= wp._telemetry.ALERT_THRESHOLD
+            and not wp._telemetry.alerted
+        ):
             wp._telemetry.alerted = True
             wp.logger.error(
                 "whisper_planner_systematic_failure: %d consecutive failures "
@@ -371,6 +426,7 @@ class TestFailureCounterThreshold:
         """After ALERT_THRESHOLD failures, an ERROR log is emitted."""
         import logging
         import src.agent.whisper_planner as wp
+
         self._reset_counter()
         original_threshold = wp._telemetry.ALERT_THRESHOLD
         wp._telemetry.ALERT_THRESHOLD = 3
@@ -387,6 +443,7 @@ class TestFailureCounterThreshold:
         """Alert only fires once, not on every subsequent failure."""
         import logging
         import src.agent.whisper_planner as wp
+
         self._reset_counter()
         original_threshold = wp._telemetry.ALERT_THRESHOLD
         wp._telemetry.ALERT_THRESHOLD = 2
@@ -403,6 +460,7 @@ class TestFailureCounterThreshold:
     def test_reset_clears_count(self):
         """Resetting the counter clears count and alert state."""
         import src.agent.whisper_planner as wp
+
         self._reset_counter()
         self._increment()
         self._increment()
@@ -414,6 +472,7 @@ class TestFailureCounterThreshold:
         """10 failures (alert) -> reset -> 9 failures: no second alert."""
         import logging
         import src.agent.whisper_planner as wp
+
         self._reset_counter()
         with caplog.at_level(logging.ERROR):
             for _ in range(10):
@@ -433,6 +492,7 @@ class TestFailureCounterThreshold:
         """After reset, reaching threshold again DOES fire a new alert."""
         import logging
         import src.agent.whisper_planner as wp
+
         self._reset_counter()
         original_threshold = wp._telemetry.ALERT_THRESHOLD
         wp._telemetry.ALERT_THRESHOLD = 3

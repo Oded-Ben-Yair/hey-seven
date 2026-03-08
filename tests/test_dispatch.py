@@ -58,6 +58,74 @@ class TestKeywordDispatch:
         assert _keyword_dispatch(chunks) == "host"
 
 
+class TestCompIntentKeywords:
+    """R103 fix H9: Comp intent word and phrase matching."""
+
+    def test_single_word_comp_intent(self):
+        """Single comp-intent words are detected via set intersection."""
+        from src.agent.dispatch import _COMP_INTENT_WORDS
+
+        query = "what rewards do I get"
+        query_words = set(query.lower().split())
+        assert query_words & _COMP_INTENT_WORDS  # "rewards" matches
+
+    def test_multi_word_phrase_detected(self):
+        """Multi-word phrases like 'free play' are detected via substring."""
+        from src.agent.dispatch import _COMP_INTENT_PHRASES
+
+        query = "how do I get free play"
+        query_lower = query.lower()
+        assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
+
+    def test_player_card_phrase_detected(self):
+        """'player card' is detected as a comp-intent phrase."""
+        from src.agent.dispatch import _COMP_INTENT_PHRASES
+
+        query = "where do I get my player card"
+        query_lower = query.lower()
+        assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
+
+    def test_rewards_program_phrase_detected(self):
+        """'rewards program' is detected as a comp-intent phrase."""
+        from src.agent.dispatch import _COMP_INTENT_PHRASES
+
+        query = "tell me about the rewards program"
+        query_lower = query.lower()
+        assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
+
+    def test_my_status_phrase_detected(self):
+        """'my status' is detected as a comp-intent phrase."""
+        from src.agent.dispatch import _COMP_INTENT_PHRASES
+
+        query = "what is my status in the program"
+        query_lower = query.lower()
+        assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
+
+    def test_non_comp_query_not_matched(self):
+        """Non-comp queries should not trigger comp intent."""
+        from src.agent.dispatch import _COMP_INTENT_WORDS, _COMP_INTENT_PHRASES
+
+        query = "what restaurants do you have"
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+        assert not (query_words & _COMP_INTENT_WORDS)
+        assert not any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
+
+
+class TestCompIntentDetectedField:
+    """R103 fix H9: comp_intent_detected state field."""
+
+    def test_field_in_state_annotations(self):
+        assert "comp_intent_detected" in PropertyQAState.__annotations__
+
+    def test_field_in_initial_state(self):
+        from src.agent.graph import _initial_state
+
+        state = _initial_state("hello")
+        assert "comp_intent_detected" in state
+        assert state["comp_intent_detected"] is False
+
+
 class TestDispatchOwnedKeys:
     def test_contains_expected_keys(self):
         assert "guest_context" in _DISPATCH_OWNED_KEYS
@@ -142,6 +210,7 @@ class TestBackwardCompatImports:
             _DISPATCH_OWNED_KEYS,
             _VALID_STATE_KEYS,
         )
+
         assert callable(_dispatch_to_specialist)
         assert callable(_keyword_dispatch)
         # MappingProxyType wraps dict but is not a dict subclass
@@ -151,27 +220,33 @@ class TestBackwardCompatImports:
 
     def test_import_extract_node_metadata_from_graph(self):
         from src.agent.graph import _extract_node_metadata
+
         assert callable(_extract_node_metadata)
 
     def test_import_route_to_specialist_from_graph(self):
         from src.agent.graph import _route_to_specialist
+
         assert callable(_route_to_specialist)
 
     def test_import_inject_guest_context_from_graph(self):
         from src.agent.graph import _inject_guest_context
+
         assert callable(_inject_guest_context)
 
     def test_import_execute_specialist_from_graph(self):
         from src.agent.graph import _execute_specialist
+
         assert callable(_execute_specialist)
 
     def test_import_dispatch_prompt_from_graph(self):
         from src.agent.graph import _DISPATCH_PROMPT
+
         # Verify it's a string.Template
         assert hasattr(_DISPATCH_PROMPT, "safe_substitute")
 
     def test_import_category_priority_from_graph(self):
         from src.agent.graph import _CATEGORY_PRIORITY
+
         # MappingProxyType wraps dict but is not a dict subclass
         assert "restaurants" in _CATEGORY_PRIORITY
         assert _CATEGORY_PRIORITY["restaurants"] == 4
@@ -220,6 +295,7 @@ class TestExecuteSpecialistErrorHandling:
 
         async def slow_agent(s):
             import asyncio
+
             await asyncio.sleep(999)
 
         with patch("src.agent.dispatch.get_agent", return_value=slow_agent):
@@ -242,6 +318,7 @@ class TestDispatchMethodInState:
 
     def test_dispatch_method_in_initial_state(self):
         from src.agent.graph import _initial_state
+
         state = _initial_state("hello")
         assert "dispatch_method" in state
         assert state["dispatch_method"] is None

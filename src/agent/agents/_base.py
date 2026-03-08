@@ -1158,8 +1158,7 @@ async def execute_specialist(
 
     # R98: CompStrategy — deterministic comp policy injection for comp agent.
     # R99 lesson: expanding to ALL agents caused 1.43-point H-avg regression
-    # (prompt pollution). Comp context stays comp-only. For H9, improve dispatch
-    # routing to send comp-related queries to comp agent instead.
+    # (prompt pollution). Full comp context stays comp-only.
     if agent_name == "comp":
         from src.agent.behavior_tools.comp_strategy import get_comp_prompt_section
 
@@ -1167,6 +1166,21 @@ async def execute_specialist(
         if comp_section:
             system_prompt += comp_section
             logger.info("R98: CompStrategy section injected (agent=%s)", agent_name)
+    elif state.get("comp_intent_detected"):
+        # R103 fix H9: Lightweight comp bridge for non-comp specialists.
+        # NOT the full CompStrategy section (R99 lesson: prompt pollution).
+        # Just 3 lines: acknowledge comp interest, brief eligibility, host offer.
+        system_prompt += (
+            "\n\n## Comp Bridge (brief — guest mentioned rewards/comp)\n"
+            "The guest mentioned rewards, comps, or loyalty. After answering their "
+            "primary question, briefly acknowledge: 'By the way, with your visit today "
+            "you're earning toward rewards — I can connect you with a host who can check "
+            "your exact tier and what comps you qualify for.' Keep it to ONE sentence. "
+            "Do NOT list tiers or comp tables. Do NOT make the comp mention the focus."
+        )
+        logger.info(
+            "R103 H9: Comp bridge injected for non-comp specialist %s", agent_name
+        )
 
     # R98: Rapport Ladder — micro-pattern retrieval for rapport building.
     # Provides context-specific conversation techniques per guest type.
@@ -1392,7 +1406,10 @@ async def execute_specialist(
     _handoff_trigger = frustrated_count >= 2 or (frustrated_count >= 1 and _repeated)
     if _handoff_trigger:
         from src.agent.handoff import build_handoff_request
-        from src.agent.behavior_tools.handoff import build_handoff_summary
+        from src.agent.behavior_tools.handoff import (
+            build_handoff_summary,
+            format_handoff_for_prompt,
+        )
 
         _reason = (
             f"Guest frustrated ({frustrated_count} consecutive) + repeated question"
@@ -1409,5 +1426,20 @@ async def execute_specialist(
         handoff_dict = handoff_req.model_dump()
         handoff_dict["structured_summary"] = summary.model_dump()
         result["handoff_request"] = handoff_dict
+
+        # R103 fix P9: Wire format_handoff_for_prompt — inject handoff context
+        # into the LLM system prompt so it can craft a natural transition message
+        # to the human host. Previously this function existed but was dead code.
+        _handoff_prompt = format_handoff_for_prompt(summary)
+        if _handoff_prompt:
+            # Inject as a late system message so it takes priority
+            from langchain_core.messages import SystemMessage as _SysMsg
+
+            llm_messages.append(_SysMsg(content=_handoff_prompt))
+            logger.info(
+                "R103 P9: Handoff prompt injected (reason=%s, urgency=%s)",
+                _reason[:60],
+                summary.urgency,
+            )
 
     return result

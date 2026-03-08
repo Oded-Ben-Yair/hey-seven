@@ -129,10 +129,10 @@ _CATEGORY_PRIORITY: dict[str, int] = _MappingProxy(
     }
 )
 
-# R100 fix H9: Comp-intent keywords for pre-dispatch detection.
-# When user message contains comp-intent words, force dispatch to comp agent
-# regardless of RAG category distribution. This fixes the routing gap where
-# "What rewards do I get?" retrieves dining context and dispatches to dining.
+# R103 fix H9: Comp-intent keywords for pre-dispatch detection.
+# Split into single-word (matched via set intersection) and multi-word phrases
+# (matched via substring search). R100 bug: multi-word entries like "free play"
+# never matched because set(query.split()) splits on spaces.
 _COMP_INTENT_WORDS: frozenset[str] = frozenset(
     {
         "comp",
@@ -143,19 +143,23 @@ _COMP_INTENT_WORDS: frozenset[str] = frozenset(
         "points",
         "budget",
         "deal",
-        "free play",
         "comps",
         "promotion",
         "momentum",
         "perks",
         "benefits",
-        "my status",
         "upgrade",
-        "player card",
-        "rewards program",
         "earn",
         "redeem",
     }
+)
+
+# Multi-word phrases checked via substring matching (can't use set intersection)
+_COMP_INTENT_PHRASES: tuple[str, ...] = (
+    "free play",
+    "my status",
+    "player card",
+    "rewards program",
 )
 
 
@@ -235,16 +239,21 @@ async def _route_to_specialist(
 
     agent_name: str | None = None
 
-    # R100 fix H9: Pre-dispatch comp-intent check.
-    # If the user message contains comp-intent keywords AND RAG didn't strongly
-    # point to another category, force dispatch to comp agent. This fixes the
-    # gap where "What rewards do I get?" or "loyalty tier" dispatches to
-    # host/dining because RAG retrieves generic property context.
+    # R103 fix H9: Pre-dispatch comp-intent check.
+    # Uses word-boundary matching for single words (set intersection) and
+    # substring matching for multi-word phrases. R100 bug: multi-word entries
+    # like "free play" never matched with set intersection.
+    # R103: Relaxed RAG suppression — comp intent always overrides unless
+    # non-comp context dominates by 5x+ (was 3x). Comp queries often retrieve
+    # mixed context (dining mentions rewards, hotel mentions upgrades).
     query_text = _get_last_human_message(state.get("messages", []))
     query_lower = query_text.lower() if query_text else ""
     query_words = set(query_lower.split())
-    if query_words & _COMP_INTENT_WORDS:
-        # Check if RAG context strongly points to a non-comp category
+    _has_comp_intent = bool(query_words & _COMP_INTENT_WORDS) or any(
+        phrase in query_lower for phrase in _COMP_INTENT_PHRASES
+    )
+    if _has_comp_intent:
+        # Check if RAG context overwhelmingly points to a non-comp category
         category_counts: dict[str, int] = {}
         for chunk in retrieved:
             cat = chunk.get("metadata", {}).get("category", "")
@@ -256,15 +265,26 @@ async def _route_to_specialist(
         non_comp_total = sum(
             v for k, v in category_counts.items() if k not in ("gaming", "promotions")
         )
-        # Only override if non-comp context doesn't dominate (> 3x comp context)
-        if non_comp_total <= comp_cats * 3 + 1:
+        # R103: Relaxed threshold from 3x to 5x — comp intent should win
+        # in most cases. Only suppress when RAG is overwhelmingly non-comp.
+        if non_comp_total <= comp_cats * 5 + 2:
             logger.info(
-                "R100 H9: Comp-intent detected in query, forcing comp agent "
+                "R103 H9: Comp-intent detected in query, forcing comp agent "
                 "(comp_words matched, comp_cats=%d, non_comp=%d)",
                 comp_cats,
                 non_comp_total,
             )
             return "comp", "comp_intent_override"
+        else:
+            # Comp intent detected but RAG overwhelmingly non-comp.
+            # Still set comp_intent_detected for comp bridge injection.
+            logger.info(
+                "R103 H9: Comp-intent detected but RAG overwhelmingly non-comp "
+                "(comp_cats=%d, non_comp=%d) — routing to RAG-dominant specialist "
+                "with comp_intent_detected flag",
+                comp_cats,
+                non_comp_total,
+            )
 
     # --- Try structured LLM dispatch first ---
     # R15 fix (DeepSeek F-001, GPT F1): acquire CB before try block to prevent
@@ -577,6 +597,25 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
         settings.COMPLEX_MODEL_NAME if model_route == "complex" else settings.MODEL_NAME
     )
 
+    # R103 fix H9: Detect comp intent for non-comp specialists.
+    # When comp intent words are present but the agent is NOT comp (e.g., dining
+    # specialist got the routing), set comp_intent_detected so execute_specialist
+    # can inject a lightweight comp bridge into the non-comp agent's prompt.
+    _comp_intent_for_bridge = False
+    if agent_name != "comp":
+        _query = _get_last_human_message(state.get("messages", []))
+        _q_lower = _query.lower() if _query else ""
+        _q_words = set(_q_lower.split())
+        if (_q_words & _COMP_INTENT_WORDS) or any(
+            phrase in _q_lower for phrase in _COMP_INTENT_PHRASES
+        ):
+            _comp_intent_for_bridge = True
+            logger.info(
+                "R103 H9: Comp intent detected for non-comp specialist %s — "
+                "will inject comp bridge",
+                agent_name,
+            )
+
     # Phase 3: Execute specialist agent
     logger.info(
         "Dispatching to %s agent (method=%s, model=%s)",
@@ -589,4 +628,7 @@ async def _dispatch_to_specialist(state: PropertyQAState) -> dict[str, Any]:
     )
     # R83: Record model routing decision in state for observability
     result["model_used"] = model_name
+    # R103 fix H9: Set comp_intent_detected for comp bridge injection
+    if _comp_intent_for_bridge:
+        result["comp_intent_detected"] = True
     return result
