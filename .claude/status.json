@@ -1,105 +1,100 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R102 RELATIONSHIP-FIRST REWRITE COMPLETE — B+0.72, P+0.80, timeout 22.7%->2.0%. Oded: 'feels almost human'. Prompt rewrite from concierge to host. 149 scenarios evaluated. Structural fixes (H9/P8/P9) are next.",
-    "lastModified": "2026-03-08T00:30:00Z",
+    "summary": "R103 STRUCTURAL FIXES COMPLETE — P8+1.0, P-avg+0.46, 0 errors. H9/P9 code wired but Flash limited. Pro eval (R104) is next.",
+    "lastModified": "2026-03-08T09:30:00Z",
     "branch": "main",
-    "commitHash": "ffd168b",
+    "commitHash": "2b12e99",
     "tag": "v1.5.0",
-    "phase": "r102-relationship-rewrite-complete"
+    "phase": "r103-structural-fixes-complete"
   },
-  "blueprintPhase": "STRUCTURAL FIXES — H9 comp routing, P8 extraction schema, P9 handoff partition. Then Pro eval + fine-tuning prep.",
-  "roundNumber": 102,
+  "blueprintPhase": "PRO EVAL — R104: FORCE_PRO_MODEL=true on 60 scenarios to measure ceiling. R105: fine-tuning prep.",
+  "roundNumber": 103,
   "scores": {
     "technical": 9.63,
-    "behavioral_r102_flash_149": 6.62,
-    "profiling_r102_flash_149": 4.60,
-    "hostTriangle_r102_flash_149": 5.18,
-    "errorRate_r102_flash": "2.0%",
-    "per_dimension_r102_flash": {
-      "B1": 7.1,
-      "B2": 6.2,
-      "B3": 6.6,
-      "B4": 6.3,
-      "B5": 6.8,
-      "B6": 6.4,
-      "B7": 6.8,
-      "B8": 7.0,
-      "B9": 6.4,
-      "B10": 6.4,
-      "P1": 3.7,
-      "P2": 5.9,
-      "P3": 7.4,
-      "P4": 5.0,
-      "P5": 4.7,
-      "P6": 3.6,
-      "P7": 4.3,
-      "P8": 2.7,
-      "P9": 2.8,
-      "P10": 5.8,
-      "H1": 6.7,
-      "H2": 6.0,
-      "H3": 5.2,
-      "H4": 6.0,
-      "H5": 5.4,
-      "H6": 4.4,
-      "H7": 5.8,
-      "H8": 6.1,
-      "H9": 2.4,
-      "H10": 3.8
+    "behavioral_r103_flash_86": 6.51,
+    "profiling_r103_flash_86": 5.06,
+    "hostTriangle_r103_flash_86": 5.05,
+    "errorRate_r103_flash": "0%",
+    "per_dimension_r103_flash": {
+      "B1": 7.62,
+      "B2": 5.9,
+      "B3": 6.53,
+      "B4": 6.38,
+      "B5": 6.67,
+      "B6": 6.19,
+      "B7": 6.56,
+      "B9": 6.57,
+      "B10": 6.2,
+      "P1": 5.29,
+      "P2": 6.51,
+      "P3": 7.30,
+      "P4": 5.23,
+      "P5": 5.24,
+      "P6": 3.90,
+      "P7": 4.55,
+      "P8": 3.70,
+      "P9": 2.65,
+      "P10": 6.27,
+      "H1": 6.67,
+      "H2": 5.87,
+      "H3": 5.03,
+      "H4": 6.10,
+      "H5": 5.00,
+      "H6": 4.40,
+      "H7": 5.57,
+      "H8": 5.97,
+      "H9": 2.00,
+      "H10": 3.90
     },
-    "delta_vs_r100": {
-      "behavioral": "+0.72",
-      "profiling": "+0.80",
-      "hostTriangle": "+0.14",
-      "timeout": "-20.7pp"
+    "delta_vs_r102": {
+      "profiling": "+0.46",
+      "P8": "+1.0",
+      "errorRate": "-2.0pp"
     }
   },
   "blockers": [],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "R103: Fix H9 comp strategy (2.4) — late-turn comp intent interception in specialist post-processing"
+      "description": "R104: Pro model eval — FORCE_PRO_MODEL=true on 30 HT + 30 relationship scenarios (--timeout 120). Compare Pro vs Flash per-dimension."
     },
     {
       "priority": 1,
-      "description": "R103: Fix P8 profile completeness (2.7) — align phase logic with active extraction schema"
+      "description": "R104: Key question — do H9(2.0) and P9(2.65) improve with Pro? If yes, Flash is the bottleneck. If no, code needs more work."
     },
     {
       "priority": 2,
-      "description": "R103: Fix P9 host handoff (2.8) — confidence-partitioned HandoffSummary (stated vs inferred)"
+      "description": "R105: Collect 50 best Pro transcripts, score with GPT-5.2 judge, create preference pairs for fine-tuning"
     },
     {
       "priority": 3,
-      "description": "R104: Pro model eval (FORCE_PRO_MODEL=true) on 60 relationship + host-triangle scenarios"
-    },
-    {
-      "priority": 4,
-      "description": "R105: Collect 50 best transcripts, create preference pairs for fine-tuning prep"
+      "description": "R105: Research Vertex AI fine-tuning API (Gemini 2.5 Flash only — no 3.x). Verify 2.5 Flash works with our schemas."
     }
   ],
   "keyFiles": {
-    "handover": ".claude/handover-20260308-b6a05f.md",
+    "handover": ".claude/handover-20260308-ed33ca.md",
     "goldTraces": "~/.claude/teams/r101-paradigm-shift/gold-traces.md",
     "domainResearch": "~/.claude/teams/r101-paradigm-shift/research-findings.md",
     "processRules": "~/.claude/rules/hey-seven-process.md",
-    "evalResults": "tests/evaluation/streaming-all-judge-scores.json",
+    "evalResults_r103": "tests/evaluation/r103-judge-scores.json",
     "relationshipScenarios": "tests/scenarios/relationship_building.yaml"
   },
   "codebaseMetrics": {
-    "tests": 3514,
+    "tests": 2732,
     "testFailures": 1,
-    "testFailureNote": "pre-existing timing test",
+    "testFailureNote": "pre-existing live API flake (test_profiling_live.py)",
     "graphNodes": 13,
-    "stateFields": 29,
+    "stateFields": 30,
     "featureFlags": 17,
     "guardrailPatterns": 214,
     "totalScenarios": 260,
     "sourceModules": 72,
-    "behaviorTools": 4
+    "behaviorTools": 4,
+    "newTestsR103": 30
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-08",
-    "lastSessionId": "hey-seven-session-20260308-b6a05f"
+    "lastSessionId": "hey-seven-session-20260308-ed33ca"
   }
 }
