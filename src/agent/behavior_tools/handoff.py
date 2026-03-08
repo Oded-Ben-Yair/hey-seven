@@ -110,12 +110,37 @@ _TRANSITION_SIGNALS: frozenset[str] = frozenset(
 )
 
 
+_FOLLOW_UP_WORDS: frozenset[str] = frozenset(
+    {
+        "what",
+        "where",
+        "when",
+        "how",
+        "which",
+        "who",
+        "why",
+        "tell",
+        "also",
+        "but",
+        "and",
+        "about",
+        "another",
+        "more",
+        "can",
+        "could",
+        "would",
+        "should",
+    }
+)
+
+
 def detect_handoff_trigger(
     user_message: str,
     turn_count: int,
     guest_sentiment: str | None = None,
     frustrated_count: int = 0,
     repeated_question: bool = False,
+    handoff_offered: bool = False,
 ) -> tuple[HandoffMode | None, str]:
     """Detect if a handoff should be triggered and why.
 
@@ -127,20 +152,21 @@ def detect_handoff_trigger(
         guest_sentiment: Current guest sentiment (may be None).
         frustrated_count: Number of consecutive frustrated messages.
         repeated_question: Whether the guest repeated a question.
+        handoff_offered: Whether a soft handoff was already offered this session.
 
     Returns:
         Tuple of (mode, reason). Returns (None, "") if no trigger.
     """
     msg_lower = user_message.lower().strip()
 
-    # Priority 1: Explicit VIP request (always trigger)
+    # Priority 1: Explicit VIP request (always trigger, even if already offered)
     if any(signal in msg_lower for signal in _VIP_REQUEST_SIGNALS):
         return (
             HandoffMode.VIP_REQUEST,
             "Guest explicitly requested to speak with a host",
         )
 
-    # Priority 2: Frustration (existing logic — backward compatible)
+    # Priority 2: Frustration (always trigger, even if already offered)
     if frustrated_count >= 2 or (frustrated_count >= 1 and repeated_question):
         reason = (
             f"Guest frustrated ({frustrated_count} consecutive) + repeated question"
@@ -148,6 +174,11 @@ def detect_handoff_trigger(
             else f"Guest frustrated across {frustrated_count}+ consecutive messages"
         )
         return HandoffMode.FRUSTRATION, reason
+
+    # R105 fix MAJOR: Don't re-trigger soft handoffs if already offered.
+    # Only VIP_REQUEST and FRUSTRATION override a previous offer.
+    if handoff_offered:
+        return None, ""
 
     # Priority 3: Transition moment (guest wants action)
     if any(signal in msg_lower for signal in _TRANSITION_SIGNALS):
@@ -157,14 +188,19 @@ def detect_handoff_trigger(
         )
 
     # Priority 4: Farewell (offer soft handoff)
-    # Only if turn_count >= 2 (don't offer on first message goodbye)
+    # R105 fix MAJOR: Add word-count guard + follow-up word check to prevent
+    # false triggers on "thanks I also want to know about the spa".
+    # Only trigger if: turn_count >= 2, message is short (<10 words),
+    # no question mark, and no follow-up indicator words.
     if turn_count >= 2 and any(signal in msg_lower for signal in _FAREWELL_SIGNALS):
-        # Check it's not just "thanks" embedded in a message with a question
         has_question = "?" in user_message
-        if not has_question:
+        msg_words = set(msg_lower.split())
+        has_follow_up = bool(msg_words & _FOLLOW_UP_WORDS)
+        is_short = len(msg_lower.split()) < 10
+        if not has_question and not has_follow_up and is_short:
             return HandoffMode.FAREWELL, "Guest wrapping up — offer host connection"
 
-    # Priority 5: Long conversation (7+ human turns)
+    # Priority 5: Long conversation (7+ human turns, fire only once)
     if turn_count >= 7:
         return (
             HandoffMode.LONG_CONVERSATION,
@@ -207,15 +243,19 @@ class HandoffSummary(BaseModel):
 # Risk flag detection
 # ---------------------------------------------------------------------------
 
-_RISK_KEYWORDS = {
-    "crisis": "Guest showed signs of crisis or emotional distress",
-    "self_harm": "Self-harm indicators detected — handle with care",
-    "responsible_gaming": "Responsible gaming concerns raised",
-    "frustrated": "Guest expressed frustration during conversation",
-    "complaint": "Guest had complaints about service or experience",
-    "intoxicated": "Potential intoxication signals detected",
-    "repeated_question": "Guest repeated the same question — AI may not have answered adequately",
-}
+from types import MappingProxyType as _MappingProxy
+
+_RISK_KEYWORDS: _MappingProxy[str, str] = _MappingProxy(
+    {
+        "crisis": "Guest showed signs of crisis or emotional distress",
+        "self_harm": "Self-harm indicators detected — handle with care",
+        "responsible_gaming": "Responsible gaming concerns raised",
+        "frustrated": "Guest expressed frustration during conversation",
+        "complaint": "Guest had complaints about service or experience",
+        "intoxicated": "Potential intoxication signals detected",
+        "repeated_question": "Guest repeated the same question — AI may not have answered adequately",
+    }
+)
 
 
 def _detect_risk_flags(

@@ -375,6 +375,8 @@ def _initial_state(message: str) -> dict[str, Any]:
         "booking_intent": None,
         # R103 fix H9: Comp intent detected in non-comp specialist context
         "comp_intent_detected": False,
+        # R105 fix P9: Sticky flag — once soft handoff offered, don't re-trigger
+        "handoff_offered": False,
     }
 
 

@@ -1274,6 +1274,46 @@ async def execute_specialist(
     window = history[-settings.MAX_HISTORY_MESSAGES :]
     llm_messages.extend(window)
 
+    # R105 fix CRITICAL: Detect handoff triggers BEFORE the LLM call so the
+    # handoff prompt reaches the model. Previously appended AFTER llm.ainvoke()
+    # — the LLM never saw handoff context, making P9 handoff prompts dead code.
+    from src.agent.behavior_tools.handoff import (
+        HandoffMode,
+        build_handoff_summary,
+        detect_handoff_trigger,
+        format_handoff_for_prompt,
+        format_soft_handoff_prompt,
+    )
+
+    _last_user = ""
+    for _m in reversed(state.get("messages", [])):
+        if isinstance(_m, HumanMessage):
+            _last_user = _normalize_content(_m.content)
+            break
+
+    _repeated = dynamics.get("repeated_question", False)
+    _handoff_mode, _handoff_reason = detect_handoff_trigger(
+        user_message=_last_user,
+        turn_count=human_turn_count,
+        guest_sentiment=guest_sentiment,
+        frustrated_count=frustrated_count,
+        repeated_question=_repeated,
+        handoff_offered=state.get("handoff_offered", False),
+    )
+
+    if _handoff_mode:
+        _summary = build_handoff_summary(state, handoff_reason=_handoff_reason)
+        if _handoff_mode == HandoffMode.FRUSTRATION:
+            _handoff_prompt = format_handoff_for_prompt(_summary)
+        else:
+            _handoff_prompt = format_soft_handoff_prompt(_handoff_mode, _summary)
+        if _handoff_prompt:
+            llm_messages.append(SystemMessage(content=_handoff_prompt))
+            logger.info(
+                "R105 P9: Handoff prompt injected BEFORE LLM call (mode=%s)",
+                _handoff_mode.value,
+            )
+
     # R83: Model routing — use Pro model when dispatch layer determined complex routing.
     # The dispatch layer sets model_used in the state dict passed to the agent.
     # If it matches COMPLEX_MODEL_NAME, use _get_complex_llm() instead.
@@ -1409,40 +1449,11 @@ async def execute_specialist(
     if _incentive_approval:
         result["handoff_request"] = _incentive_approval
 
-    # R105 W3 P9: Expanded handoff trigger detection.
-    # Frustration is still the PRIMARY trigger (urgent, existing behavior).
-    # New triggers: farewell, VIP request, transition, long conversation.
-    from src.agent.behavior_tools.handoff import (
-        HandoffMode,
-        build_handoff_summary,
-        detect_handoff_trigger,
-        format_handoff_for_prompt,
-        format_soft_handoff_prompt,
-    )
-
-    # Get the last user message for trigger detection
-    _last_user = ""
-    for _m in reversed(state.get("messages", [])):
-        if isinstance(_m, HumanMessage):
-            _last_user = _normalize_content(_m.content)
-            break
-
-    _repeated = dynamics.get("repeated_question", False)
-    _handoff_mode, _handoff_reason = detect_handoff_trigger(
-        user_message=_last_user,
-        turn_count=human_turn_count,
-        guest_sentiment=guest_sentiment,
-        frustrated_count=frustrated_count,
-        repeated_question=_repeated,
-    )
-
+    # R105: Build handoff_request for SSE stream (data already computed pre-LLM).
     if _handoff_mode:
         from src.agent.handoff import build_handoff_request
 
-        summary = build_handoff_summary(state, handoff_reason=_handoff_reason)
-
         if _handoff_mode == HandoffMode.FRUSTRATION:
-            # Existing frustration path — urgent, overwrites incentive handoff.
             handoff_req = build_handoff_request(
                 department="vip_services",
                 reason=_handoff_reason,
@@ -1450,20 +1461,9 @@ async def execute_specialist(
                 urgency="high",
             )
             handoff_dict = handoff_req.model_dump()
-            handoff_dict["structured_summary"] = summary.model_dump()
+            handoff_dict["structured_summary"] = _summary.model_dump()
             result["handoff_request"] = handoff_dict
-
-            _handoff_prompt = format_handoff_for_prompt(summary)
-            if _handoff_prompt:
-                from langchain_core.messages import SystemMessage as _SysMsg
-
-                llm_messages.append(_SysMsg(content=_handoff_prompt))
-                logger.info(
-                    "R103 P9: Frustration handoff prompt injected (reason=%s)",
-                    _handoff_reason[:60],
-                )
         else:
-            # Soft handoff — offer host connection as benefit, not escalation.
             _urgency = "high" if _handoff_mode == HandoffMode.VIP_REQUEST else "medium"
             handoff_req = build_handoff_request(
                 department="vip_services",
@@ -1472,19 +1472,11 @@ async def execute_specialist(
                 urgency=_urgency,
             )
             handoff_dict = handoff_req.model_dump()
-            handoff_dict["structured_summary"] = summary.model_dump()
+            handoff_dict["structured_summary"] = _summary.model_dump()
             handoff_dict["handoff_mode"] = _handoff_mode.value
             result["handoff_request"] = handoff_dict
 
-            _soft_prompt = format_soft_handoff_prompt(_handoff_mode, summary)
-            if _soft_prompt:
-                from langchain_core.messages import SystemMessage as _SysMsg
-
-                llm_messages.append(_SysMsg(content=_soft_prompt))
-                logger.info(
-                    "R105 P9: Soft handoff prompt injected (mode=%s, urgency=%s)",
-                    _handoff_mode.value,
-                    _urgency,
-                )
+        # R105: Set handoff_offered so LONG_CONVERSATION doesn't re-trigger
+        result["handoff_offered"] = True
 
     return result

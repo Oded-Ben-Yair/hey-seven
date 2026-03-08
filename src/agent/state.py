@@ -301,6 +301,11 @@ class PropertyQAState(TypedDict):
     # (2-3 lines about rewards eligibility + host connection offer).
     # Ephemeral per-turn — reset by _initial_state().
     comp_intent_detected: bool
+    # R105 fix P9: Sticky flag — once a soft handoff has been offered,
+    # don't re-trigger FAREWELL or LONG_CONVERSATION on subsequent turns.
+    # VIP_REQUEST and FRUSTRATION still fire (higher priority).
+    # _keep_truthy reducer: once True, stays True for the session.
+    handoff_offered: Annotated[bool, _keep_truthy]
 
 
 class RouterOutput(BaseModel):
