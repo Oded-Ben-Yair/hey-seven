@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _NAME_PATTERNS: list[re.Pattern] = [
-    re.compile(r"(?i)(?:my name is|i'm|i am|call me|this is)\s+([A-Z][a-z]+)(?:\s|,|\.|\!|\?|$)"),
+    re.compile(
+        r"(?i)(?:my name is|i'm|i am|call me|this is)\s+([A-Z][a-z]+)(?:\s|,|\.|\!|\?|$)"
+    ),
     re.compile(r"(?i)(?:^|\.\s+)([A-Z][a-z]+) here\b"),
 ]
 
@@ -43,8 +45,12 @@ _PARTY_SIZE_PATTERNS: list[re.Pattern] = [
 # ---------------------------------------------------------------------------
 
 _VISIT_DATE_PATTERNS: list[re.Pattern] = [
-    re.compile(r"(?i)(?:next|this)\s+((?:friday|saturday|sunday|monday|tuesday|wednesday|thursday|weekend))"),
-    re.compile(r"(?i)(?:visiting|arriving|coming|staying|checking in)\s+(?:on\s+)?((?:next|this)\s+\w+|\w+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?)"),
+    re.compile(
+        r"(?i)(?:next|this)\s+((?:friday|saturday|sunday|monday|tuesday|wednesday|thursday|weekend))"
+    ),
+    re.compile(
+        r"(?i)(?:visiting|arriving|coming|staying|checking in)\s+(?:on\s+)?((?:next|this)\s+\w+|\w+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?)"
+    ),
     re.compile(r"(?i)(\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)"),
 ]
 
@@ -53,9 +59,15 @@ _VISIT_DATE_PATTERNS: list[re.Pattern] = [
 # ---------------------------------------------------------------------------
 
 _PREFERENCE_PATTERNS: list[re.Pattern] = [
-    re.compile(r"(?i)(?:i'm|i am|we're|we are)\s+(vegetarian|vegan|gluten[- ]free|kosher|halal|pescatarian|dairy[- ]free)"),
-    re.compile(r"(?i)(?:allergic to|allergy to|can't eat|cannot eat)\s+(\w+(?:\s+\w+)?)"),
-    re.compile(r"(?i)(?:prefer|looking for|interested in)\s+(italian|chinese|japanese|mexican|seafood|steakhouse|sushi|thai|indian|french)"),
+    re.compile(
+        r"(?i)(?:i'm|i am|we're|we are)\s+(vegetarian|vegan|gluten[- ]free|kosher|halal|pescatarian|dairy[- ]free)"
+    ),
+    re.compile(
+        r"(?i)(?:allergic to|allergy to|can't eat|cannot eat)\s+(\w+(?:\s+\w+)?)"
+    ),
+    re.compile(
+        r"(?i)(?:prefer|looking for|interested in)\s+(italian|chinese|japanese|mexican|seafood|steakhouse|sushi|thai|indian|french)"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -63,8 +75,12 @@ _PREFERENCE_PATTERNS: list[re.Pattern] = [
 # ---------------------------------------------------------------------------
 
 _OCCASION_PATTERNS: list[re.Pattern] = [
-    re.compile(r"(?i)(?:celebrating|it's|for)\s+(?:our |my |a )?(anniversary|birthday|wedding|honeymoon|graduation|retirement|bachelor(?:ette)?\s*party|promotion|engagement)"),
-    re.compile(r"(?i)(anniversary|birthday|wedding|honeymoon|graduation|retirement|bachelor(?:ette)?\s*party|promotion|engagement)"),
+    re.compile(
+        r"(?i)(?:celebrating|it's|for)\s+(?:our |my |a )?(anniversary|birthday|wedding|honeymoon|graduation|retirement|bachelor(?:ette)?\s*party|promotion|engagement)"
+    ),
+    re.compile(
+        r"(?i)(anniversary|birthday|wedding|honeymoon|graduation|retirement|bachelor(?:ette)?\s*party|promotion|engagement)"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -73,14 +89,24 @@ _OCCASION_PATTERNS: list[re.Pattern] = [
 
 _LOYALTY_PATTERNS: list[re.Pattern] = [
     # "20 years" / "member for 10 years" / "coming here for 5 years"
-    re.compile(r"(?i)(?:member|coming here|visiting|been a (?:guest|member))\s+(?:for\s+)?(\d+)\s+years?"),
+    re.compile(
+        r"(?i)(?:member|coming here|visiting|been a (?:guest|member))\s+(?:for\s+)?(\d+)\s+years?"
+    ),
     # "Momentum member" / "Gold tier" / "Platinum member"
-    re.compile(r"(?i)(momentum|gold|platinum|silver|diamond|elite|vip)\s+(?:member|tier|status|level)"),
-    re.compile(r"(?i)(?:member|tier|status|level)\s+(?:is\s+)?(momentum|gold|platinum|silver|diamond|elite|vip)"),
+    re.compile(
+        r"(?i)(momentum|gold|platinum|silver|diamond|elite|vip)\s+(?:member|tier|status|level)"
+    ),
+    re.compile(
+        r"(?i)(?:member|tier|status|level)\s+(?:is\s+)?(momentum|gold|platinum|silver|diamond|elite|vip)"
+    ),
     # "I spend a lot" / "high roller" / "big spender"
-    re.compile(r"(?i)(?:spend\s+a\s+lot|high\s+roller|big\s+spender|whale|i\s+come\s+(?:here\s+)?every)"),
+    re.compile(
+        r"(?i)(?:spend\s+a\s+lot|high\s+roller|big\s+spender|whale|i\s+come\s+(?:here\s+)?every)"
+    ),
     # "used to be Gold" / "was a Platinum member" (with or without "member/tier" suffix)
-    re.compile(r"(?i)(?:used\s+to\s+be|was\s+(?:a\s+)?)\s*(gold|platinum|silver|diamond|elite|vip)(?:\s+(?:member|tier))?"),
+    re.compile(
+        r"(?i)(?:used\s+to\s+be|was\s+(?:a\s+)?)\s*(gold|platinum|silver|diamond|elite|vip)(?:\s+(?:member|tier))?"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -89,13 +115,19 @@ _LOYALTY_PATTERNS: list[re.Pattern] = [
 
 _URGENCY_PATTERNS: list[re.Pattern] = [
     # "checking out in an hour" / "leaving soon" / "flight in 3 hours"
-    re.compile(r"(?i)(?:checking out|leaving|departing|flight|checkout)\s+(?:in\s+)?(?:\d+\s+|an?\s+)?(?:hour|minute|soon)"),
+    re.compile(
+        r"(?i)(?:checking out|leaving|departing|flight|checkout)\s+(?:in\s+)?(?:\d+\s+|an?\s+)?(?:hour|minute|soon)"
+    ),
     # "leaving soon" without time reference
     re.compile(r"(?i)(?:checking out|leaving|departing)\s+soon"),
     # "quick" / "fast" / "hurry" / "rush"
-    re.compile(r"(?i)\b(?:quick(?:ly)?|fast|hurry|rush(?:ed|ing)?|right\s+now|immediately|asap)\b"),
+    re.compile(
+        r"(?i)\b(?:quick(?:ly)?|fast|hurry|rush(?:ed|ing)?|right\s+now|immediately|asap)\b"
+    ),
     # "don't have much time" / "limited time" / "short on time"
-    re.compile(r"(?i)(?:don'?t\s+have\s+(?:much|a\s+lot\s+of)\s+time|limited\s+time|short\s+on\s+time|running\s+late)"),
+    re.compile(
+        r"(?i)(?:don'?t\s+have\s+(?:much|a\s+lot\s+of)\s+time|limited\s+time|short\s+on\s+time|running\s+late)"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -105,9 +137,13 @@ _URGENCY_PATTERNS: list[re.Pattern] = [
 _FATIGUE_PATTERNS: list[re.Pattern] = [
     # "exhausted" / "tired" / "long day" / "on our feet all day"
     re.compile(r"(?i)\b(?:exhausted|tired|wiped(?:\s+out)?|beat|drained|fatigued)\b"),
-    re.compile(r"(?i)(?:long\s+(?:day|drive|flight|trip)|on\s+(?:our|my)\s+feet\s+all\s+day)"),
+    re.compile(
+        r"(?i)(?:long\s+(?:day|drive|flight|trip)|on\s+(?:our|my)\s+feet\s+all\s+day)"
+    ),
     re.compile(r"(?i)(?:drove|traveled|flew)\s+(?:\d+\s+)?hours?"),
-    re.compile(r"(?i)\b(?:need\s+to\s+(?:unwind|relax|rest|decompress)|want\s+to\s+(?:unwind|relax|rest))\b"),
+    re.compile(
+        r"(?i)\b(?:need\s+to\s+(?:unwind|relax|rest|decompress)|want\s+to\s+(?:unwind|relax|rest))\b"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -116,8 +152,12 @@ _FATIGUE_PATTERNS: list[re.Pattern] = [
 
 _BUDGET_PATTERNS: list[re.Pattern] = [
     re.compile(r"(?i)\b(?:cheap(?:er)?|affordable|budget|inexpensive|economical)\b"),
-    re.compile(r"(?i)(?:nothing\s+(?:too\s+)?expensive|not\s+(?:too\s+)?pricey|on\s+a\s+budget)"),
-    re.compile(r"(?i)(?:free|complimentary|no\s+(?:cover|charge)|don'?t\s+(?:want\s+to\s+)?spend\s+(?:too\s+)?much)"),
+    re.compile(
+        r"(?i)(?:nothing\s+(?:too\s+)?expensive|not\s+(?:too\s+)?pricey|on\s+a\s+budget)"
+    ),
+    re.compile(
+        r"(?i)(?:free|complimentary|no\s+(?:cover|charge)|don'?t\s+(?:want\s+to\s+)?spend\s+(?:too\s+)?much)"
+    ),
 ]
 
 
@@ -144,15 +184,20 @@ def extract_fields(text: str) -> dict[str, Any]:
     try:
         fields: dict[str, Any] = {}
 
+        # R105: Check phrase-level exclusions before name extraction
+        text_lower = text.lower()
+        _skip_name = any(phrase in text_lower for phrase in _NAME_EXCLUSION_PHRASES)
+
         # Name extraction
-        for pattern in _NAME_PATTERNS:
-            match = pattern.search(text)
-            if match:
-                name = match.group(1).strip()
-                # Basic sanity: name should be 2-30 chars and not a common word
-                if 2 <= len(name) <= 30 and name.lower() not in _COMMON_WORDS:
-                    fields["name"] = name
-                    break
+        if not _skip_name:
+            for pattern in _NAME_PATTERNS:
+                match = pattern.search(text)
+                if match:
+                    name = match.group(1).strip()
+                    # Basic sanity: name should be 2-30 chars and not a common word
+                    if 2 <= len(name) <= 30 and name.lower() not in _COMMON_WORDS:
+                        fields["name"] = name
+                        break
 
         # Party size
         for pattern in _PARTY_SIZE_PATTERNS:
@@ -220,13 +265,78 @@ def extract_fields(text: str) -> dict[str, Any]:
 
 
 # Common words to exclude from name extraction (false positives)
-_COMMON_WORDS: frozenset = frozenset({
-    "here", "there", "just", "really", "very", "please", "thanks",
-    "sorry", "sure", "okay", "hello", "help", "good", "great",
-    "looking", "visiting", "staying", "coming", "going", "wondering",
-    "vegetarian", "vegan", "pescatarian", "kosher", "halal",
-    "allergic", "interested", "celebrating", "planning",
-})
+# R105: Extended with state adjectives and emotions that commonly follow "I'm"
+_COMMON_WORDS: frozenset = frozenset(
+    {
+        "here",
+        "there",
+        "just",
+        "really",
+        "very",
+        "please",
+        "thanks",
+        "sorry",
+        "sure",
+        "okay",
+        "hello",
+        "help",
+        "good",
+        "great",
+        "looking",
+        "visiting",
+        "staying",
+        "coming",
+        "going",
+        "wondering",
+        "vegetarian",
+        "vegan",
+        "pescatarian",
+        "kosher",
+        "halal",
+        "allergic",
+        "interested",
+        "celebrating",
+        "planning",
+        # R105: State adjectives commonly parsed as names
+        "done",
+        "fine",
+        "set",
+        "ready",
+        "back",
+        "tired",
+        "hungry",
+        "late",
+        "early",
+        "lost",
+        "free",
+        "busy",
+        "crazy",
+        "excited",
+        "curious",
+        "confused",
+        "worried",
+        "happy",
+        "sad",
+        "mad",
+        "bored",
+        "nervous",
+        "afraid",
+        "alone",
+        "new",
+        "old",
+    }
+)
+
+
+# R105: Phrases that trigger name patterns but aren't names
+_NAME_EXCLUSION_PHRASES: frozenset = frozenset(
+    {
+        "call me crazy",
+        "call me back",
+        "call me later",
+        "call me when",
+    }
+)
 
 
 def get_guest_profile_summary(extracted_fields: dict[str, Any]) -> str:
@@ -308,7 +418,9 @@ class ExtractionOutput(BaseModel):
     party_size: int | None = Field(default=None, description="Number of guests")
     visit_date: str | None = Field(default=None, description="When they're visiting")
     occasion: str | None = Field(default=None, description="Special occasion")
-    preferences: str | None = Field(default=None, description="Dietary or venue preferences")
+    preferences: str | None = Field(
+        default=None, description="Dietary or venue preferences"
+    )
 
 
 async def extract_fields_augmented(
@@ -349,16 +461,27 @@ async def extract_fields_augmented(
 
         # Merge: only add non-None LLM fields that regex didn't find
         merged = dict(regex_result)
-        for field_name in ("name", "party_size", "visit_date", "occasion", "preferences"):
+        for field_name in (
+            "name",
+            "party_size",
+            "visit_date",
+            "occasion",
+            "preferences",
+        ):
             value = getattr(result, field_name, None)
             if value is not None and field_name not in merged:
                 merged[field_name] = value
 
         if merged != regex_result:
-            logger.info("LLM extraction augmented: %s new fields", len(merged) - len(regex_result))
+            logger.info(
+                "LLM extraction augmented: %s new fields",
+                len(merged) - len(regex_result),
+            )
         return merged
     except Exception:
-        logger.debug("LLM extraction augmentation failed, using regex result", exc_info=True)
+        logger.debug(
+            "LLM extraction augmentation failed, using regex result", exc_info=True
+        )
         return regex_result
 
 

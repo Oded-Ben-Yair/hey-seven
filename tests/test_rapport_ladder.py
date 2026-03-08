@@ -256,3 +256,102 @@ class TestRapportModels:
         )
         serialized = json.dumps(pattern.model_dump())
         assert json.loads(serialized)
+
+
+# ---------------------------------------------------------------------------
+# R105: Phase-aware rapport patterns
+# ---------------------------------------------------------------------------
+
+
+class TestR105PhaseAwareRapport:
+    """R105: Rapport patterns use profiling_phase from state, not just turn_count."""
+
+    def test_foundation_phase_uses_opening_patterns(self):
+        """Foundation profiling phase should map to opening conversation phase."""
+        state = {
+            "messages": [HumanMessage(content="x")]
+            * 5,  # turn_count=5 would be "deciding"
+            "extracted_fields": {},
+            "guest_sentiment": None,
+            "domains_discussed": [],
+            "guest_name": None,
+            "profiling_phase": "foundation",
+        }
+        section = get_rapport_prompt_section(state)
+        assert "opening" in section
+
+    def test_preference_phase_uses_exploring_patterns(self):
+        """Preference profiling phase should map to exploring conversation phase."""
+        state = {
+            "messages": [HumanMessage(content="x")]
+            * 1,  # turn_count=1 would be "opening"
+            "extracted_fields": {"name": "Mike", "party_size": "4"},
+            "guest_sentiment": None,
+            "domains_discussed": [],
+            "guest_name": "Mike",
+            "profiling_phase": "preference",
+        }
+        section = get_rapport_prompt_section(state)
+        assert "exploring" in section
+
+    def test_relationship_phase_uses_deciding_patterns(self):
+        """Relationship profiling phase should map to deciding conversation phase."""
+        state = {
+            "messages": [HumanMessage(content="x")]
+            * 3,  # turn_count=3 would be "exploring"
+            "extracted_fields": {"name": "Sarah", "preferences": "steak"},
+            "guest_sentiment": None,
+            "domains_discussed": ["dining"],
+            "guest_name": "Sarah",
+            "profiling_phase": "relationship",
+        }
+        section = get_rapport_prompt_section(state)
+        assert "deciding" in section
+
+    def test_behavioral_phase_uses_closing_patterns(self):
+        """Behavioral profiling phase should map to closing conversation phase."""
+        state = {
+            "messages": [HumanMessage(content="x")]
+            * 3,  # turn_count=3 would be "exploring"
+            "extracted_fields": {
+                "name": "Mike",
+                "preferences": "seafood",
+                "occasion": "birthday",
+            },
+            "guest_sentiment": None,
+            "domains_discussed": ["dining", "entertainment"],
+            "guest_name": "Mike",
+            "profiling_phase": "behavioral",
+        }
+        section = get_rapport_prompt_section(state)
+        assert "closing" in section
+
+    def test_profiling_phase_overrides_turn_count(self):
+        """Profiling phase from state should take priority over turn_count inference."""
+        state = {
+            "messages": [HumanMessage(content="x")]
+            * 10,  # turn_count=10 would be "closing"
+            "extracted_fields": {},
+            "guest_sentiment": None,
+            "domains_discussed": [],
+            "guest_name": None,
+            "profiling_phase": "foundation",  # Should override to "opening"
+        }
+        section = get_rapport_prompt_section(state)
+        # With 10 turns, turn_count would give "closing"
+        # But profiling_phase="foundation" should override to "opening"
+        assert "opening" in section
+
+    def test_fallback_to_turn_count_when_no_phase(self):
+        """Without profiling_phase in state, should fall back to turn_count."""
+        state = {
+            "messages": [HumanMessage(content="x")] * 10,
+            "extracted_fields": {},
+            "guest_sentiment": None,
+            "domains_discussed": [],
+            "guest_name": None,
+            # No profiling_phase key
+        }
+        section = get_rapport_prompt_section(state)
+        # 10 human messages = closing phase
+        assert "closing" in section

@@ -567,6 +567,129 @@ class TestProfilingEnrichmentNode:
 
 
 # ---------------------------------------------------------------------------
+# R105: Extraction prompt quality + whisper plan phase
+# ---------------------------------------------------------------------------
+
+
+class TestR105ExtractionPrompt:
+    """R105: Verify extraction prompt has no contradictions and has worked examples."""
+
+    def test_extraction_prompt_no_contradiction(self):
+        """Prompt must NOT contain both 'generous' and 'precision over recall'."""
+        from src.agent.profiling import _EXTRACTION_PROMPT
+
+        prompt_lower = _EXTRACTION_PROMPT.lower()
+        has_generous = "extremely generous" in prompt_lower
+        has_precision_over_recall = "prefer precision over recall" in prompt_lower
+        # They must NOT both be present — that's a contradiction
+        assert not (has_generous and has_precision_over_recall), (
+            "Extraction prompt contains contradictory instructions: "
+            "'extremely generous' AND 'prefer precision over recall'"
+        )
+
+    def test_extraction_prompt_has_worked_examples(self):
+        """Prompt must contain numbered worked examples."""
+        from src.agent.profiling import _EXTRACTION_PROMPT
+
+        assert "Example 1" in _EXTRACTION_PROMPT
+        assert "Example 2" in _EXTRACTION_PROMPT
+        assert "Example 3" in _EXTRACTION_PROMPT
+
+    def test_extraction_prompt_has_indirect_signal_example(self):
+        """Prompt must show extraction from indirect signals like 'kids want pool'."""
+        from src.agent.profiling import _EXTRACTION_PROMPT
+
+        assert "party_composition" in _EXTRACTION_PROMPT
+
+    def test_extraction_prompt_has_budget_signal_example(self):
+        """Prompt must show budget signal extraction."""
+        from src.agent.profiling import _EXTRACTION_PROMPT
+
+        assert "budget_signal" in _EXTRACTION_PROMPT
+
+    def test_extraction_prompt_has_multi_fact_example(self):
+        """Prompt must show multi-fact extraction from a single message."""
+        from src.agent.profiling import _EXTRACTION_PROMPT
+
+        # Must have an example that extracts 4+ fields from one message
+        assert "home_market" in _EXTRACTION_PROMPT
+        assert "gaming_preferences" in _EXTRACTION_PROMPT
+
+    def test_extraction_prompt_excludes_common_phrases(self):
+        """Prompt must tell LLM not to extract 'I'm done' as a name."""
+        from src.agent.profiling import _EXTRACTION_PROMPT
+
+        assert "I'm done" in _EXTRACTION_PROMPT
+        assert "I'm good" in _EXTRACTION_PROMPT
+
+    @pytest.mark.asyncio
+    async def test_extraction_direct_mention_example(self):
+        """'I'm Sarah, anniversary for 2' should extract all relevant fields."""
+        state = _build_state(
+            user_msg="I'm Sarah, here with my husband for our anniversary"
+        )
+        extraction = _make_mock_extraction(
+            {
+                "guest_name": "Sarah",
+                "party_size": "2",
+                "party_composition": "couple",
+                "occasion": "anniversary",
+            }
+        )
+
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=extraction,
+        )
+
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
+            result = await profiling_enrichment_node(state)
+
+        assert result["extracted_fields"]["name"] == "Sarah"
+        assert result["extracted_fields"]["party_size"] == "2"
+        assert result["extracted_fields"]["party_composition"] == "couple"
+        assert result["extracted_fields"]["occasion"] == "anniversary"
+
+    @pytest.mark.asyncio
+    async def test_profiling_phase_in_whisper_plan(self):
+        """R105: whisper_planner_node should include profiling_phase in plan dict."""
+        from src.agent.whisper_planner import whisper_planner_node, WhisperPlan
+
+        state = {
+            "messages": [HumanMessage(content="Hi there")],
+            "extracted_fields": {"name": "Sarah", "party_size": "4"},
+            "profiling_phase": "preference",
+        }
+
+        mock_plan = WhisperPlan(
+            next_topic="preferences",
+            conversation_note="Ask about dining",
+            next_profiling_question="What kind of food do you enjoy?",
+            question_technique="give_to_get",
+        )
+
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=mock_plan,
+        )
+
+        with patch(
+            "src.agent.whisper_planner._get_whisper_llm",
+            new_callable=AsyncMock,
+            return_value=mock_llm,
+        ):
+            result = await whisper_planner_node(state)
+
+        assert result["whisper_plan"] is not None
+        # R105: plan dict should include profiling_phase
+        assert "profiling_phase" in result["whisper_plan"]
+
+
+# ---------------------------------------------------------------------------
 # Profiling question injection from whisper plan
 # ---------------------------------------------------------------------------
 

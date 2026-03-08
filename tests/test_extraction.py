@@ -250,3 +250,72 @@ class TestFailSilent:
         result = extract_fields("What time does the restaurant open?")
         assert isinstance(result, dict)
         # May or may not have fields, but should not crash
+
+
+# ---------------------------------------------------------------------------
+# R105: Extended false positive prevention
+# ---------------------------------------------------------------------------
+
+
+class TestR105FalsePositivePrevention:
+    """R105: Common phrases must NOT be extracted as names."""
+
+    def test_name_false_positive_done(self):
+        """'I'm done' should NOT extract 'Done' as a name."""
+        result = extract_fields("I'm Done with dinner")
+        assert "name" not in result
+
+    def test_name_false_positive_fine(self):
+        """'I'm fine' should NOT extract 'Fine' as a name."""
+        result = extract_fields("I'm Fine, thanks")
+        assert "name" not in result
+
+    def test_name_false_positive_ready(self):
+        """'I'm ready' should NOT extract 'Ready' as a name."""
+        result = extract_fields("I'm Ready to go")
+        assert "name" not in result
+
+    def test_name_false_positive_back(self):
+        """'I'm back' should NOT extract 'Back' as a name."""
+        result = extract_fields("I'm Back from the pool")
+        assert "name" not in result
+
+    def test_name_false_positive_set(self):
+        """'I'm set' should NOT extract 'Set' as a name."""
+        result = extract_fields("I'm Set for tonight")
+        assert "name" not in result
+
+    def test_name_false_positive_crazy(self):
+        """'Call me crazy' should NOT extract 'Crazy' as a name."""
+        result = extract_fields("Call me crazy but I love this place")
+        assert "name" not in result
+
+    def test_name_false_positive_late(self):
+        """'I'm late' should NOT extract 'Late' as a name."""
+        result = extract_fields("I'm Late for my reservation")
+        assert "name" not in result
+
+    def test_name_false_positive_excited(self):
+        """'I'm excited' should NOT extract 'Excited' as a name."""
+        result = extract_fields("I'm Excited to be here")
+        assert "name" not in result
+
+    def test_real_name_still_works(self):
+        """Real names must still be extracted correctly."""
+        result = extract_fields("I'm Sarah, here for dinner")
+        assert result.get("name") == "Sarah"
+
+    def test_call_me_with_real_name(self):
+        """'Call me Mike' should extract 'Mike' as a name."""
+        result = extract_fields("Call me Mike")
+        assert result.get("name") == "Mike"
+
+    def test_phrase_exclusion_call_me_back(self):
+        """'Call me back later' should NOT extract 'Back' as a name."""
+        result = extract_fields("Call me back later")
+        assert "name" not in result
+
+    def test_phrase_exclusion_call_me_crazy(self):
+        """'Call me crazy but...' should NOT extract 'Crazy' as a name."""
+        result = extract_fields("Call me crazy but I want the biggest steak")
+        assert "name" not in result

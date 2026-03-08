@@ -377,3 +377,144 @@ class TestFormatHandoffForPrompt:
         summary = HandoffSummary()
         prompt = format_handoff_for_prompt(summary)
         assert "Handoff Preparation" in prompt
+
+
+# ---------------------------------------------------------------------------
+# R105 W3: Expanded handoff trigger tests
+# ---------------------------------------------------------------------------
+
+
+from src.agent.behavior_tools.handoff import (
+    HandoffMode,
+    detect_handoff_trigger,
+    format_soft_handoff_prompt,
+)
+
+
+class TestDetectHandoffTrigger:
+    """R105 W3: detect_handoff_trigger with expanded modes."""
+
+    def test_vip_request_real_person(self):
+        mode, reason = detect_handoff_trigger(
+            "can I talk to a real person", turn_count=3
+        )
+        assert mode == HandoffMode.VIP_REQUEST
+        assert "host" in reason.lower() or "speak" in reason.lower()
+
+    def test_vip_request_casino_host(self):
+        mode, reason = detect_handoff_trigger("get me a casino host", turn_count=2)
+        assert mode == HandoffMode.VIP_REQUEST
+
+    def test_farewell_thanks_all(self):
+        mode, reason = detect_handoff_trigger("thanks that's all", turn_count=3)
+        assert mode == HandoffMode.FAREWELL
+
+    def test_farewell_goodbye(self):
+        mode, reason = detect_handoff_trigger("goodbye", turn_count=4)
+        assert mode == HandoffMode.FAREWELL
+
+    def test_farewell_not_on_first_turn(self):
+        """Farewell on turn 1 should NOT trigger — guest just arrived."""
+        mode, _ = detect_handoff_trigger("bye", turn_count=1)
+        assert mode is None
+
+    def test_farewell_with_question_no_trigger(self):
+        """'thanks, what about dinner?' has a question — not farewell."""
+        mode, _ = detect_handoff_trigger("thanks, what about dinner?", turn_count=3)
+        assert mode != HandoffMode.FAREWELL
+
+    def test_transition_book_it(self):
+        mode, reason = detect_handoff_trigger("book it", turn_count=3)
+        assert mode == HandoffMode.TRANSITION
+
+    def test_transition_set_that_up(self):
+        mode, reason = detect_handoff_trigger("set that up for me", turn_count=2)
+        assert mode == HandoffMode.TRANSITION
+
+    def test_long_conversation_7_turns(self):
+        mode, reason = detect_handoff_trigger(
+            "tell me more about the pool", turn_count=7
+        )
+        assert mode == HandoffMode.LONG_CONVERSATION
+
+    def test_long_conversation_6_turns_no_trigger(self):
+        mode, _ = detect_handoff_trigger("tell me more about the pool", turn_count=6)
+        assert mode is None
+
+    def test_frustration_backward_compat(self):
+        """Existing frustration logic must still work."""
+        mode, reason = detect_handoff_trigger(
+            "this is ridiculous", turn_count=3, frustrated_count=2
+        )
+        assert mode == HandoffMode.FRUSTRATION
+
+    def test_frustration_with_repeated(self):
+        mode, reason = detect_handoff_trigger(
+            "I already asked this",
+            turn_count=3,
+            frustrated_count=1,
+            repeated_question=True,
+        )
+        assert mode == HandoffMode.FRUSTRATION
+        assert "repeated" in reason.lower()
+
+    def test_priority_vip_over_farewell(self):
+        """VIP request takes priority even if message also has farewell signals."""
+        mode, _ = detect_handoff_trigger(
+            "thanks, can I talk to someone real", turn_count=3
+        )
+        # "someone real" matches _VIP_REQUEST_SIGNALS
+        assert mode == HandoffMode.VIP_REQUEST
+
+    def test_priority_frustration_over_transition(self):
+        """Frustration takes priority over transition signals."""
+        mode, _ = detect_handoff_trigger(
+            "book it already", turn_count=3, frustrated_count=2
+        )
+        assert mode == HandoffMode.FRUSTRATION
+
+    def test_no_trigger_normal_message(self):
+        mode, reason = detect_handoff_trigger("tell me about restaurants", turn_count=3)
+        assert mode is None
+        assert reason == ""
+
+
+class TestFormatSoftHandoffPrompt:
+    """R105 W3: Soft handoff prompt formatting by mode."""
+
+    def test_farewell_prompt_offers_benefit(self):
+        summary = HandoffSummary(guest_name="Sarah", urgency="routine")
+        prompt = format_soft_handoff_prompt(HandoffMode.FAREWELL, summary)
+        assert "connect" in prompt.lower()
+        assert "Sarah" in prompt
+
+    def test_vip_request_prompt_immediate(self):
+        summary = HandoffSummary(guest_name="Mike", urgency="routine")
+        prompt = format_soft_handoff_prompt(HandoffMode.VIP_REQUEST, summary)
+        assert "right away" in prompt.lower() or "immediately" in prompt.lower()
+
+    def test_transition_prompt_action(self):
+        summary = HandoffSummary(urgency="routine")
+        prompt = format_soft_handoff_prompt(HandoffMode.TRANSITION, summary)
+        assert "set up" in prompt.lower() or "get that" in prompt.lower()
+
+    def test_long_conversation_prompt_notes(self):
+        summary = HandoffSummary(
+            key_preferences=["dining: Italian"],
+            urgency="routine",
+        )
+        prompt = format_soft_handoff_prompt(HandoffMode.LONG_CONVERSATION, summary)
+        assert "notes" in prompt.lower() or "preferences" in prompt.lower()
+
+    def test_soft_handoff_includes_stated_facts(self):
+        summary = HandoffSummary(
+            guest_stated_facts=["Name: Sarah", "Party Size: 6"],
+            urgency="routine",
+        )
+        prompt = format_soft_handoff_prompt(HandoffMode.FAREWELL, summary)
+        assert "Sarah" in prompt
+
+    def test_handoff_mode_enum_values(self):
+        """All HandoffMode values are strings for JSON serialization."""
+        for mode in HandoffMode:
+            assert isinstance(mode.value, str)

@@ -345,15 +345,28 @@ def get_rapport_prompt_section(
     else:
         guest_type = _infer_guest_type(extracted, sentiment, turn_count)
 
-    # Determine conversation phase
-    if turn_count <= 1:
+    # R105: Use profiling phase from state for better phase mapping,
+    # with turn-count as fallback when profiling_phase is not set.
+    profiling_phase = state.get("profiling_phase")
+
+    if profiling_phase == "foundation":
         phase = "opening"
-    elif turn_count <= 4:
+    elif profiling_phase == "preference":
         phase = "exploring"
-    elif turn_count <= 7:
+    elif profiling_phase == "relationship":
         phase = "deciding"
-    else:
+    elif profiling_phase == "behavioral":
         phase = "closing"
+    else:
+        # Fallback to turn-count-based phase detection
+        if turn_count <= 1:
+            phase = "opening"
+        elif turn_count <= 4:
+            phase = "exploring"
+        elif turn_count <= 7:
+            phase = "deciding"
+        else:
+            phase = "closing"
 
     patterns = get_rapport_patterns(
         guest_type=guest_type,

@@ -199,8 +199,9 @@ class TestGetCompStrategy:
                 property_id="mohegan_sun",
             )
         )
+        # R105: Updated talking points are more specific — mention history/coming/value
         assert any(
-            "loyalty" in p.lower() or "regular" in p.lower()
+            "history" in p.lower() or "coming" in p.lower() or "value" in p.lower()
             for p in result.talking_points
         )
 
@@ -301,3 +302,210 @@ class TestCompModels:
         """All guest tiers have ADT estimates."""
         for tier in ("new", "regular", "vip", "high_roller"):
             assert tier in _TIER_ADT_ESTIMATES
+
+    def test_comp_strategy_output_has_new_fields(self):
+        """R105: CompStrategyOutput has comp_bridge_text and conversation_openers."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="regular",
+                property_id="mohegan_sun",
+            )
+        )
+        assert hasattr(result, "comp_bridge_text")
+        assert hasattr(result, "conversation_openers")
+        assert isinstance(result.comp_bridge_text, str)
+        assert isinstance(result.conversation_openers, list)
+
+
+class TestCompBridgeText:
+    """R105: Dynamic comp bridge text generation."""
+
+    def test_comp_bridge_text_generated_for_regular_tier(self):
+        """Bridge text is non-empty for regular tier guest."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="regular",
+                visit_frequency="regular",
+                property_id="mohegan_sun",
+            )
+        )
+        assert result.comp_bridge_text != ""
+        assert len(result.comp_bridge_text) > 20
+
+    def test_comp_bridge_text_for_occasion(self):
+        """Bridge text mentions the occasion when present."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="regular",
+                property_id="mohegan_sun",
+                current_occasion="anniversary dinner",
+            )
+        )
+        assert result.comp_bridge_text != ""
+        assert "anniversary" in result.comp_bridge_text.lower()
+
+    def test_comp_bridge_text_for_new_guest(self):
+        """Bridge text for new guest mentions rewards program."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="new",
+                visit_frequency="first",
+                property_id="mohegan_sun",
+            )
+        )
+        assert result.comp_bridge_text != ""
+        assert "reward" in result.comp_bridge_text.lower()
+
+    def test_comp_bridge_text_for_frustrated_guest(self):
+        """Bridge text uses service recovery framing for frustrated guests."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="regular",
+                property_id="mohegan_sun",
+                guest_sentiment="frustrated",
+            )
+        )
+        # Should still have a bridge but with recovery framing
+        assert result.comp_bridge_text != ""
+        # Should not be aggressively sales-y
+        assert (
+            "make this right" in result.comp_bridge_text.lower()
+            or "getting the most" in result.comp_bridge_text.lower()
+        )
+
+
+class TestConversationOpeners:
+    """R105: Context-specific conversation openers for comp topics."""
+
+    def test_conversation_openers_generated(self):
+        """At least 1 opener per tier."""
+        for tier in ("new", "regular", "vip", "high_roller"):
+            result = get_comp_strategy(
+                CompStrategyInput(
+                    guest_tier=tier,
+                    property_id="mohegan_sun",
+                )
+            )
+            assert len(result.conversation_openers) >= 1, f"No openers for tier {tier}"
+
+    def test_talking_points_specific_for_occasion(self):
+        """Talking points mention the specific occasion, not generic 'the occasion'."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="regular",
+                property_id="mohegan_sun",
+                current_occasion="anniversary",
+            )
+        )
+        # At least one talking point should reference the specific occasion
+        occasion_specific = [
+            p
+            for p in result.talking_points
+            if "anniversary" in p.lower() or "celebrating" in p.lower()
+        ]
+        assert len(occasion_specific) > 0
+
+    def test_talking_points_specific_for_regular(self):
+        """Talking points for regulars mention loyalty or history."""
+        result = get_comp_strategy(
+            CompStrategyInput(
+                guest_tier="regular",
+                visit_frequency="regular",
+                property_id="mohegan_sun",
+            )
+        )
+        loyalty_points = [
+            p
+            for p in result.talking_points
+            if "loyalty" in p.lower() or "history" in p.lower() or "coming" in p.lower()
+        ]
+        assert len(loyalty_points) > 0
+
+
+class TestGetCompBridgeForNonComp:
+    """R105: Dynamic comp bridge for non-comp specialists."""
+
+    def test_bridge_returns_string(self):
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        result = get_comp_bridge_for_non_comp(
+            state={"extracted_fields": {}, "guest_sentiment": None},
+            casino_id="mohegan_sun",
+        )
+        assert isinstance(result, str)
+
+    def test_bridge_for_occasion(self):
+        """Bridge mentions the occasion when extracted."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        result = get_comp_bridge_for_non_comp(
+            state={
+                "extracted_fields": {"occasion": "birthday"},
+                "guest_sentiment": None,
+            },
+            casino_id="mohegan_sun",
+        )
+        assert result != ""
+        assert "birthday" in result.lower()
+
+    def test_bridge_for_loyalty_signal(self):
+        """Bridge uses loyalty template for guest with loyalty signal."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        result = get_comp_bridge_for_non_comp(
+            state={
+                "extracted_fields": {
+                    "loyalty_signal": "I've been coming here for years"
+                },
+                "guest_sentiment": None,
+            },
+            casino_id="mohegan_sun",
+        )
+        assert result != ""
+        # Loyalty template: "You mentioned you've been coming here for a while..."
+        assert "coming here" in result.lower() or "rewards waiting" in result.lower()
+
+    def test_bridge_for_loyalty_signal_every_week(self):
+        """R105: 'every week' triggers loyalty template, not new guest."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        result = get_comp_bridge_for_non_comp(
+            state={
+                "extracted_fields": {"loyalty_signal": "I come every week"},
+                "guest_sentiment": None,
+            },
+            casino_id="mohegan_sun",
+        )
+        assert result != ""
+        # Should use loyalty template, not "new guest" template
+        assert "coming here" in result.lower() or "rewards waiting" in result.lower()
+
+    def test_bridge_for_new_guest(self):
+        """Bridge for new guest mentions rewards program."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        result = get_comp_bridge_for_non_comp(
+            state={
+                "extracted_fields": {},
+                "guest_sentiment": None,
+            },
+            casino_id="mohegan_sun",
+        )
+        assert result != ""
+        assert "reward" in result.lower() or "host" in result.lower()
+
+    def test_bridge_returns_single_sentence(self):
+        """Bridge should be a single sentence (not multi-paragraph)."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        result = get_comp_bridge_for_non_comp(
+            state={
+                "extracted_fields": {"occasion": "birthday"},
+                "guest_sentiment": None,
+            },
+            casino_id="mohegan_sun",
+        )
+        # Should not contain multiple paragraphs
+        assert "\n\n" not in result
+        # Should be reasonably short (under 300 chars for 1 sentence)
+        assert len(result) < 300

@@ -15,6 +15,7 @@ Targets P9 (Host Handoff): 2.1 → 5.0+
 from __future__ import annotations
 
 import logging
+from enum import Enum
 from typing import Any, Literal
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -24,10 +25,153 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "HandoffMode",
     "HandoffSummary",
     "build_handoff_summary",
+    "detect_handoff_trigger",
     "format_handoff_for_prompt",
+    "format_soft_handoff_prompt",
 ]
+
+
+# ---------------------------------------------------------------------------
+# R105 W3: Handoff trigger modes
+# ---------------------------------------------------------------------------
+
+
+class HandoffMode(str, Enum):
+    """Handoff trigger modes with different urgency levels."""
+
+    FRUSTRATION = "frustration"  # Existing: frustrated guest
+    FAREWELL = "farewell"  # NEW: guest saying goodbye
+    LONG_CONVERSATION = "long_conversation"  # NEW: 7+ turns
+    VIP_REQUEST = "vip_request"  # NEW: explicit host request
+    TRANSITION = "transition"  # NEW: info -> action switch
+
+
+# Immutable signal sets (module-level, frozenset).
+_FAREWELL_SIGNALS: frozenset[str] = frozenset(
+    {
+        "thanks",
+        "thank you",
+        "that's all",
+        "that's it",
+        "goodbye",
+        "bye",
+        "have a good",
+        "i'm all set",
+        "i'm good",
+        "all set",
+        "appreciate it",
+        "perfect thanks",
+        "great thanks",
+        "nothing else",
+        "no thanks",
+        "no that's it",
+        "nope that's all",
+        "cheers",
+    }
+)
+
+_VIP_REQUEST_SIGNALS: frozenset[str] = frozenset(
+    {
+        "real person",
+        "real human",
+        "talk to someone",
+        "speak to someone",
+        "get me a host",
+        "casino host",
+        "human host",
+        "connect me",
+        "talk to a host",
+        "speak to a host",
+        "live person",
+        "live agent",
+        "actual person",
+        "someone real",
+    }
+)
+
+_TRANSITION_SIGNALS: frozenset[str] = frozenset(
+    {
+        "book that",
+        "book it",
+        "set that up",
+        "reserve that",
+        "make a reservation",
+        "i want to book",
+        "sign me up",
+        "let's do it",
+        "i'll take it",
+        "go ahead",
+        "make it happen",
+        "lock that in",
+    }
+)
+
+
+def detect_handoff_trigger(
+    user_message: str,
+    turn_count: int,
+    guest_sentiment: str | None = None,
+    frustrated_count: int = 0,
+    repeated_question: bool = False,
+) -> tuple[HandoffMode | None, str]:
+    """Detect if a handoff should be triggered and why.
+
+    Priority order: VIP request > Frustration > Transition > Farewell > Long conversation.
+
+    Args:
+        user_message: The latest user message text.
+        turn_count: Number of human turns in the conversation.
+        guest_sentiment: Current guest sentiment (may be None).
+        frustrated_count: Number of consecutive frustrated messages.
+        repeated_question: Whether the guest repeated a question.
+
+    Returns:
+        Tuple of (mode, reason). Returns (None, "") if no trigger.
+    """
+    msg_lower = user_message.lower().strip()
+
+    # Priority 1: Explicit VIP request (always trigger)
+    if any(signal in msg_lower for signal in _VIP_REQUEST_SIGNALS):
+        return (
+            HandoffMode.VIP_REQUEST,
+            "Guest explicitly requested to speak with a host",
+        )
+
+    # Priority 2: Frustration (existing logic — backward compatible)
+    if frustrated_count >= 2 or (frustrated_count >= 1 and repeated_question):
+        reason = (
+            f"Guest frustrated ({frustrated_count} consecutive) + repeated question"
+            if repeated_question
+            else f"Guest frustrated across {frustrated_count}+ consecutive messages"
+        )
+        return HandoffMode.FRUSTRATION, reason
+
+    # Priority 3: Transition moment (guest wants action)
+    if any(signal in msg_lower for signal in _TRANSITION_SIGNALS):
+        return (
+            HandoffMode.TRANSITION,
+            "Guest ready to take action — connect with host for execution",
+        )
+
+    # Priority 4: Farewell (offer soft handoff)
+    # Only if turn_count >= 2 (don't offer on first message goodbye)
+    if turn_count >= 2 and any(signal in msg_lower for signal in _FAREWELL_SIGNALS):
+        # Check it's not just "thanks" embedded in a message with a question
+        has_question = "?" in user_message
+        if not has_question:
+            return HandoffMode.FAREWELL, "Guest wrapping up — offer host connection"
+
+    # Priority 5: Long conversation (7+ human turns)
+    if turn_count >= 7:
+        return (
+            HandoffMode.LONG_CONVERSATION,
+            "Extended conversation — natural transition point to offer host",
+        )
+
+    return None, ""
 
 
 # ---------------------------------------------------------------------------
@@ -523,5 +667,67 @@ def format_handoff_for_prompt(summary: HandoffSummary) -> str:
     lines.append(
         f"\nUrgency: {summary.urgency}. Turns in conversation: {summary.turn_count}."
     )
+
+    return "\n".join(lines)
+
+
+def format_soft_handoff_prompt(
+    mode: HandoffMode,
+    summary: HandoffSummary,
+) -> str:
+    """Format a soft handoff prompt for non-frustration triggers.
+
+    Soft handoffs OFFER the host connection as a benefit, not because
+    something went wrong. The tone is "here's someone who can do more"
+    not "I'm sorry I couldn't help."
+
+    Args:
+        mode: The handoff trigger mode.
+        summary: The handoff summary.
+
+    Returns:
+        Formatted prompt section string.
+    """
+    lines: list[str] = ["\n\n## Host Connection Opportunity"]
+
+    if mode == HandoffMode.FAREWELL:
+        lines.append(
+            "The guest is wrapping up. Before they go, offer to connect them "
+            "with a host who can help with anything else during their stay. "
+            "Frame it as a VIP benefit, not a transfer. Example: "
+            "'Before you go — if you'd like, I can connect you with one of our hosts "
+            "who can help with anything from reservations to special arrangements "
+            "during your visit.'"
+        )
+    elif mode == HandoffMode.LONG_CONVERSATION:
+        lines.append(
+            "You've been chatting for a while and have learned a lot about the guest. "
+            "This is a natural point to offer a human host connection. "
+            "Frame it as: 'By the way, since we've been talking, I've put together "
+            "some notes about your preferences. Want me to connect you with a host "
+            "who can make sure everything's set for your visit?'"
+        )
+    elif mode == HandoffMode.VIP_REQUEST:
+        lines.append(
+            "The guest asked to speak with a host. Acknowledge immediately and "
+            "transition warmly: 'Absolutely — let me connect you with a host right away. "
+            "I'll share what we've discussed so they're up to speed and you won't "
+            "have to repeat anything.'"
+        )
+    elif mode == HandoffMode.TRANSITION:
+        lines.append(
+            "The guest is ready to take action (book, reserve, sign up). "
+            "Acknowledge their decision and connect with a host who can execute: "
+            "'Great choice! Let me connect you with a host who can get that set up "
+            "for you right away. I'll pass along your preferences so it's seamless.'"
+        )
+
+    # Include context from summary
+    if summary.guest_name:
+        lines.append(f"Guest name: {summary.guest_name}")
+    if summary.key_preferences:
+        lines.append(f"Key preferences: {'; '.join(summary.key_preferences[:3])}")
+    if summary.guest_stated_facts:
+        lines.append(f"Guest shared: {'; '.join(summary.guest_stated_facts[:3])}")
 
     return "\n".join(lines)

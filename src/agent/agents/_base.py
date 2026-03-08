@@ -1167,20 +1167,31 @@ async def execute_specialist(
             system_prompt += comp_section
             logger.info("R98: CompStrategy section injected (agent=%s)", agent_name)
     elif state.get("comp_intent_detected"):
-        # R103 fix H9: Lightweight comp bridge for non-comp specialists.
+        # R105 fix H9: Dynamic comp bridge based on guest profile.
         # NOT the full CompStrategy section (R99 lesson: prompt pollution).
-        # Just 3 lines: acknowledge comp interest, brief eligibility, host offer.
-        system_prompt += (
-            "\n\n## Comp Bridge (brief — guest mentioned rewards/comp)\n"
-            "The guest mentioned rewards, comps, or loyalty. After answering their "
-            "primary question, briefly acknowledge: 'By the way, with your visit today "
-            "you're earning toward rewards — I can connect you with a host who can check "
-            "your exact tier and what comps you qualify for.' Keep it to ONE sentence. "
-            "Do NOT list tiers or comp tables. Do NOT make the comp mention the focus."
-        )
-        logger.info(
-            "R103 H9: Comp bridge injected for non-comp specialist %s", agent_name
-        )
+        # Calls get_comp_bridge_for_non_comp() for profile-aware 1-sentence bridge.
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        _bridge = get_comp_bridge_for_non_comp(state, casino_id=settings.CASINO_ID)
+        if _bridge:
+            system_prompt += (
+                "\n\n## Comp Bridge (brief — guest mentioned rewards/comp)\n"
+                f"{_bridge}\n"
+                "Keep it to ONE sentence woven naturally into your response. "
+                "Do NOT list tiers or comp tables. Do NOT make the comp mention the focus."
+            )
+            logger.info("R105 H9: Dynamic comp bridge injected for %s", agent_name)
+        else:
+            # Fallback to static bridge if bridge function returns empty
+            system_prompt += (
+                "\n\n## Comp Bridge (brief — guest mentioned rewards/comp)\n"
+                "The guest mentioned rewards, comps, or loyalty. After answering their "
+                "primary question, briefly acknowledge: 'By the way, with your visit today "
+                "you're earning toward rewards — I can connect you with a host who can check "
+                "your exact tier and what comps you qualify for.' Keep it to ONE sentence. "
+                "Do NOT list tiers or comp tables. Do NOT make the comp mention the focus."
+            )
+            logger.info("R103 H9: Static comp bridge fallback for %s", agent_name)
 
     # R98: Rapport Ladder — micro-pattern retrieval for rapport building.
     # Provides context-specific conversation techniques per guest type.
@@ -1398,48 +1409,82 @@ async def execute_specialist(
     if _incentive_approval:
         result["handoff_request"] = _incentive_approval
 
-    # Phase 5: Wire handoff for persistent frustration (overwrites incentive handoff).
-    # R98: Enhanced with structured handoff summary from HandoffOrchestrator.
-    # R100 fix P9: Lowered threshold from 3 to 2 consecutive frustrated messages.
-    # Also detect repeated questions (guest asking same thing twice = agent failed).
+    # R105 W3 P9: Expanded handoff trigger detection.
+    # Frustration is still the PRIMARY trigger (urgent, existing behavior).
+    # New triggers: farewell, VIP request, transition, long conversation.
+    from src.agent.behavior_tools.handoff import (
+        HandoffMode,
+        build_handoff_summary,
+        detect_handoff_trigger,
+        format_handoff_for_prompt,
+        format_soft_handoff_prompt,
+    )
+
+    # Get the last user message for trigger detection
+    _last_user = ""
+    for _m in reversed(state.get("messages", [])):
+        if isinstance(_m, HumanMessage):
+            _last_user = _normalize_content(_m.content)
+            break
+
     _repeated = dynamics.get("repeated_question", False)
-    _handoff_trigger = frustrated_count >= 2 or (frustrated_count >= 1 and _repeated)
-    if _handoff_trigger:
+    _handoff_mode, _handoff_reason = detect_handoff_trigger(
+        user_message=_last_user,
+        turn_count=human_turn_count,
+        guest_sentiment=guest_sentiment,
+        frustrated_count=frustrated_count,
+        repeated_question=_repeated,
+    )
+
+    if _handoff_mode:
         from src.agent.handoff import build_handoff_request
-        from src.agent.behavior_tools.handoff import (
-            build_handoff_summary,
-            format_handoff_for_prompt,
-        )
 
-        _reason = (
-            f"Guest frustrated ({frustrated_count} consecutive) + repeated question"
-            if _repeated
-            else f"Guest frustrated across {frustrated_count}+ consecutive messages"
-        )
-        handoff_req = build_handoff_request(
-            department="vip_services",
-            reason=_reason,
-            extracted_fields=state.get("extracted_fields"),
-            urgency="high",
-        )
-        summary = build_handoff_summary(state, handoff_reason=_reason)
-        handoff_dict = handoff_req.model_dump()
-        handoff_dict["structured_summary"] = summary.model_dump()
-        result["handoff_request"] = handoff_dict
+        summary = build_handoff_summary(state, handoff_reason=_handoff_reason)
 
-        # R103 fix P9: Wire format_handoff_for_prompt — inject handoff context
-        # into the LLM system prompt so it can craft a natural transition message
-        # to the human host. Previously this function existed but was dead code.
-        _handoff_prompt = format_handoff_for_prompt(summary)
-        if _handoff_prompt:
-            # Inject as a late system message so it takes priority
-            from langchain_core.messages import SystemMessage as _SysMsg
-
-            llm_messages.append(_SysMsg(content=_handoff_prompt))
-            logger.info(
-                "R103 P9: Handoff prompt injected (reason=%s, urgency=%s)",
-                _reason[:60],
-                summary.urgency,
+        if _handoff_mode == HandoffMode.FRUSTRATION:
+            # Existing frustration path — urgent, overwrites incentive handoff.
+            handoff_req = build_handoff_request(
+                department="vip_services",
+                reason=_handoff_reason,
+                extracted_fields=state.get("extracted_fields"),
+                urgency="high",
             )
+            handoff_dict = handoff_req.model_dump()
+            handoff_dict["structured_summary"] = summary.model_dump()
+            result["handoff_request"] = handoff_dict
+
+            _handoff_prompt = format_handoff_for_prompt(summary)
+            if _handoff_prompt:
+                from langchain_core.messages import SystemMessage as _SysMsg
+
+                llm_messages.append(_SysMsg(content=_handoff_prompt))
+                logger.info(
+                    "R103 P9: Frustration handoff prompt injected (reason=%s)",
+                    _handoff_reason[:60],
+                )
+        else:
+            # Soft handoff — offer host connection as benefit, not escalation.
+            _urgency = "high" if _handoff_mode == HandoffMode.VIP_REQUEST else "medium"
+            handoff_req = build_handoff_request(
+                department="vip_services",
+                reason=_handoff_reason,
+                extracted_fields=state.get("extracted_fields"),
+                urgency=_urgency,
+            )
+            handoff_dict = handoff_req.model_dump()
+            handoff_dict["structured_summary"] = summary.model_dump()
+            handoff_dict["handoff_mode"] = _handoff_mode.value
+            result["handoff_request"] = handoff_dict
+
+            _soft_prompt = format_soft_handoff_prompt(_handoff_mode, summary)
+            if _soft_prompt:
+                from langchain_core.messages import SystemMessage as _SysMsg
+
+                llm_messages.append(_SysMsg(content=_soft_prompt))
+                logger.info(
+                    "R105 P9: Soft handoff prompt injected (mode=%s, urgency=%s)",
+                    _handoff_mode.value,
+                    _urgency,
+                )
 
     return result

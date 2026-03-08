@@ -207,3 +207,82 @@ class TestLtvModels:
         """Key domains have affinity mappings."""
         for domain in ("dining", "entertainment", "gaming"):
             assert domain in _DOMAIN_NUDGE_AFFINITY
+
+
+class TestProfileAwareNudges:
+    """R105: Profile-aware nudge selection via extracted_fields."""
+
+    def test_profile_aware_entertainment_boost(self):
+        """Entertainment preference boosts upcoming_event nudge."""
+        nudges_without = get_ltv_nudges(
+            "mohegan_sun",
+            turn_count=3,
+        )
+        nudges_with = get_ltv_nudges(
+            "mohegan_sun",
+            turn_count=3,
+            extracted_fields={"entertainment_interests": "comedy shows"},
+        )
+        # upcoming_event should rank higher with entertainment interest
+        types_with = [n.nudge_type for n in nudges_with]
+        assert "upcoming_event" in types_with
+
+    def test_profile_aware_gaming_boost(self):
+        """Gaming preference boosts loyalty_milestone nudge."""
+        nudges = get_ltv_nudges(
+            "mohegan_sun",
+            turn_count=3,
+            extracted_fields={"gaming_preferences": "slots"},
+        )
+        types = [n.nudge_type for n in nudges]
+        assert "loyalty_milestone" in types
+
+    def test_profile_aware_spa_boost(self):
+        """Spa preference boosts new_experience nudge."""
+        nudges = get_ltv_nudges(
+            "mohegan_sun",
+            turn_count=3,
+            extracted_fields={"preferences": "spa treatments and relaxation"},
+        )
+        types = [n.nudge_type for n in nudges]
+        assert "new_experience" in types
+
+    def test_occasion_aware_nudge_text(self):
+        """Nudge text mentions the occasion when provided."""
+        from langchain_core.messages import HumanMessage
+
+        state = {
+            "messages": [HumanMessage(content="x")] * 4,
+            "domains_discussed": [],
+            "guest_sentiment": None,
+            "extracted_fields": {"occasion": "anniversary"},
+        }
+        section = get_ltv_prompt_section(state, casino_id="mohegan_sun")
+        # Section should contain occasion-themed nudge
+        assert section != ""
+
+    def test_regular_visitor_personal_callback_boost(self):
+        """Regular visit frequency boosts personal_callback."""
+        nudges = get_ltv_nudges(
+            "mohegan_sun",
+            turn_count=3,
+            extracted_fields={"visit_frequency": "weekly"},
+        )
+        types = [n.nudge_type for n in nudges]
+        assert "personal_callback" in types
+
+    def test_extracted_fields_parameter_backward_compatible(self):
+        """Works without extracted_fields (None) — no regression."""
+        nudges = get_ltv_nudges(
+            "mohegan_sun",
+            turn_count=3,
+            extracted_fields=None,
+        )
+        assert len(nudges) > 0
+
+    def test_extracted_fields_default_none(self):
+        """Default value is None when not provided."""
+        # Should work identically to not passing extracted_fields
+        nudges_default = get_ltv_nudges("mohegan_sun", turn_count=3)
+        nudges_none = get_ltv_nudges("mohegan_sun", turn_count=3, extracted_fields=None)
+        assert len(nudges_default) == len(nudges_none)

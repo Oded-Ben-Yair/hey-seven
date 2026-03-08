@@ -30,6 +30,7 @@ __all__ = [
     "CompStrategyOutput",
     "get_comp_strategy",
     "get_comp_prompt_section",
+    "get_comp_bridge_for_non_comp",
 ]
 
 
@@ -78,6 +79,10 @@ class CompStrategyOutput(BaseModel):
     talking_points: list[str] = Field(default_factory=list)
     restrictions: list[str] = Field(default_factory=list)
     tier_name: str = "exploration"
+    # R105: Dynamic bridge text for non-comp agents
+    comp_bridge_text: str = ""
+    # R105: Specific conversation openers keyed by guest context
+    conversation_openers: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -358,23 +363,35 @@ def get_comp_strategy(input_data: CompStrategyInput) -> CompStrategyOutput:
             )
         )
 
-    # Build talking points
+    # Build talking points — R105: context-specific, not generic
     talking_points: list[str] = []
+    occasion_name = input_data.current_occasion or ""
     if occasion:
         talking_points.append(
-            f"Acknowledge the {occasion} — enhanced offers available for special occasions."
+            f"Since they're celebrating their {occasion_name.lower()}, "
+            "highlight the enhanced offers — this is a retention moment."
         )
     if input_data.visit_frequency in ("regular", "weekly"):
         talking_points.append(
-            "Recognize their loyalty and regular visits — mention how their play contributes to comp eligibility."
+            "Acknowledge their history: 'You've been coming here for a while, "
+            "and we value that — let me see what's available for you.'"
         )
     if input_data.guest_tier == "new":
         talking_points.append(
-            "Welcome them warmly. Mention the rewards program as a way to earn comps over time."
+            "Frame the rewards program as a BENEFIT, not a sales pitch: "
+            "'Just so you know, signing up is free and you'd earn toward comps "
+            "starting today.'"
+        )
+    if input_data.guest_sentiment in ("frustrated", "negative"):
+        talking_points.append(
+            "Lead with service recovery, then gently introduce: "
+            "'Let me make this right — and separately, I want to make sure "
+            "you're getting the most out of your visits.'"
         )
     if any_requires_approval:
         talking_points.append(
-            "For higher-value comps, let the guest know you'll check with their host or player services."
+            "For higher-value comps, let the guest know you'll check with their "
+            "host or player services."
         )
 
     # Build restrictions
@@ -387,12 +404,199 @@ def get_comp_strategy(input_data: CompStrategyInput) -> CompStrategyOutput:
             "New guests: focus on rewards program signup and introductory offers."
         )
 
+    # R105: Generate dynamic comp bridge text
+    comp_bridge_text = _build_comp_bridge_text(
+        tier_name=tier.tier_name,
+        occasion=occasion_name if occasion else None,
+        guest_tier=input_data.guest_tier,
+        visit_frequency=input_data.visit_frequency,
+        sentiment=input_data.guest_sentiment,
+    )
+
+    # R105: Generate conversation openers
+    conversation_openers = _build_conversation_openers(
+        tier_name=tier.tier_name,
+        guest_tier=input_data.guest_tier,
+        occasion=occasion_name if occasion else None,
+    )
+
     return CompStrategyOutput(
         eligible_comps=eligible,
         approval_required=any_requires_approval,
         talking_points=talking_points,
         restrictions=restrictions,
         tier_name=tier.tier_name,
+        comp_bridge_text=comp_bridge_text,
+        conversation_openers=conversation_openers,
+    )
+
+
+# ---------------------------------------------------------------------------
+# R105: Dynamic bridge text and conversation openers
+# ---------------------------------------------------------------------------
+
+
+# Bridge text templates keyed by (tier_category, context_signal).
+# Uses string.Template for safe substitution.
+_BRIDGE_TEMPLATES: MappingProxyType[str, Template] = MappingProxyType(
+    {
+        "occasion": Template(
+            "Since you're celebrating your $occasion, I should mention you "
+            "may qualify for some special perks — want me to check?"
+        ),
+        "loyalty": Template(
+            "You mentioned you've been coming here for a while — you may have "
+            "rewards waiting. I can have your host look into that."
+        ),
+        "new": Template(
+            "Just a heads-up — our rewards program is free to join and you'd "
+            "start earning toward dining credits and more right away."
+        ),
+        "frustrated": Template(
+            "Let me make this right — and separately, I want to make sure "
+            "you're getting the most out of your visits here."
+        ),
+        "default": Template(
+            "If you're interested in rewards or comps, I can connect you with "
+            "a host who can walk you through what's available."
+        ),
+    }
+)
+
+
+def _build_comp_bridge_text(
+    tier_name: str,
+    occasion: str | None,
+    guest_tier: str,
+    visit_frequency: str,
+    sentiment: str | None,
+) -> str:
+    """Build a 1-sentence dynamic bridge text for comp mentions.
+
+    Priority: frustrated > occasion > loyalty > new > default.
+    """
+    if sentiment in ("frustrated", "negative"):
+        return _BRIDGE_TEMPLATES["frustrated"].safe_substitute()
+
+    if occasion:
+        return _BRIDGE_TEMPLATES["occasion"].safe_substitute(occasion=occasion.lower())
+
+    if visit_frequency in ("regular", "weekly", "occasional") or guest_tier in (
+        "regular",
+        "vip",
+        "high_roller",
+    ):
+        return _BRIDGE_TEMPLATES["loyalty"].safe_substitute()
+
+    if guest_tier == "new" or visit_frequency == "first":
+        return _BRIDGE_TEMPLATES["new"].safe_substitute()
+
+    return _BRIDGE_TEMPLATES["default"].safe_substitute()
+
+
+def _build_conversation_openers(
+    tier_name: str,
+    guest_tier: str,
+    occasion: str | None,
+) -> list[str]:
+    """Build 2-3 natural conversation openers for introducing comp topics."""
+    openers: list[str] = []
+
+    if occasion:
+        openers.append(
+            f"Since it's your {occasion.lower()}, we may have some special "
+            "offers to make it even better — interested?"
+        )
+
+    if guest_tier in ("vip", "high_roller"):
+        openers.append(
+            "With your loyalty status, there are some nice perks you might "
+            "not know about — worth a quick look?"
+        )
+    elif guest_tier == "regular":
+        openers.append(
+            "By the way, regulars like you often qualify for dining credits "
+            "and show tickets — worth checking out."
+        )
+    else:
+        openers.append(
+            "Our rewards program is free to join and you start earning toward "
+            "comps right away — just thought I'd mention it."
+        )
+
+    # Always include a host connection opener
+    openers.append(
+        "If you'd like, I can connect you with a host who can go over your "
+        "exact rewards and what's available to you."
+    )
+
+    return openers
+
+
+def get_comp_bridge_for_non_comp(
+    state: dict[str, Any],
+    casino_id: str,
+) -> str:
+    """Generate a dynamic 1-sentence comp bridge for non-comp specialists.
+
+    Called by _base.py when comp_intent_detected is True but the
+    specialist is NOT the comp agent. Returns a brief, natural bridge
+    that the agent can weave into their response.
+
+    Returns empty string when no comp context is relevant.
+
+    Args:
+        state: Current graph state (for extracted_fields, sentiment).
+        casino_id: Casino identifier.
+
+    Returns:
+        A single bridge sentence, or "" if no relevant context.
+    """
+    extracted = state.get("extracted_fields") or {}
+    sentiment = state.get("guest_sentiment")
+
+    # Infer guest tier from loyalty signals (same logic as get_comp_prompt_section)
+    loyalty_signal = extracted.get("loyalty_signal", "")
+    loyalty_tier = extracted.get("loyalty_tier", "")
+    guest_tier = "new"
+    visit_frequency = "first"
+
+    if loyalty_tier:
+        lower_tier = loyalty_tier.lower()
+        if any(w in lower_tier for w in ("soar", "ascend", "platinum", "diamond")):
+            guest_tier = "high_roller"
+            visit_frequency = "regular"
+        elif any(w in lower_tier for w in ("leap", "gold")):
+            guest_tier = "vip"
+            visit_frequency = "regular"
+        elif any(w in lower_tier for w in ("ignite", "silver", "core")):
+            guest_tier = "regular"
+            visit_frequency = "occasional"
+    elif loyalty_signal:
+        lower_signal = loyalty_signal.lower()
+        if any(
+            w in lower_signal
+            for w in (
+                "regular",
+                "years",
+                "frequent",
+                "always",
+                "every",
+                "weekly",
+                "often",
+            )
+        ):
+            guest_tier = "regular"
+            visit_frequency = "occasional"
+
+    occasion = extracted.get("occasion")
+
+    return _build_comp_bridge_text(
+        tier_name=guest_tier,  # tier_name used for template selection
+        occasion=occasion,
+        guest_tier=guest_tier,
+        visit_frequency=visit_frequency,
+        sentiment=sentiment,
     )
 
 
@@ -434,7 +638,18 @@ def get_comp_prompt_section(
             guest_tier = "regular"
     elif loyalty_signal:
         lower_signal = loyalty_signal.lower()
-        if any(w in lower_signal for w in ("regular", "years", "frequent", "always")):
+        if any(
+            w in lower_signal
+            for w in (
+                "regular",
+                "years",
+                "frequent",
+                "always",
+                "every",
+                "weekly",
+                "often",
+            )
+        ):
             guest_tier = "regular"
 
     # Infer visit frequency

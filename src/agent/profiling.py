@@ -268,7 +268,7 @@ def _determine_profiling_phase(
 _EXTRACTION_PROMPT = """\
 You are a guest profiling assistant for a casino resort concierge.
 Analyze the last exchange between the guest and the AI concierge.
-Extract ALL guest profile information from the conversation.
+Extract guest profile information from what was SAID in this exchange.
 
 ## Last Guest Message
 {user_message}
@@ -279,46 +279,47 @@ Extract ALL guest profile information from the conversation.
 ## Current Profile
 {current_profile}
 
-## Instructions
-Extract EVERYTHING you can find. Be extremely generous — capture every hint,
-every implication, every one-word mention. When in doubt, EXTRACT IT.
-It's far better to capture a weak signal than to miss something the guest said.
+## What to Extract
 
-### Direct mentions (extract immediately):
-- "I'm Sarah" → guest_name: "Sarah"
-- "party of 4" / "4 of us" / "me and 3 friends" → party_size: "4"
-- "birthday" / "anniversary" / "celebrating" → occasion: the occasion
-- "we flew in from Chicago" → home_market: "Chicago"
-- "checking in Friday for 2 nights" → visit_duration: "2 nights"
-- "I love seafood" / "something Italian" → dining_preferences: the preference
-- "been coming here 10 years" / "Gold member" → loyalty_tier or visit_frequency
+Extract facts that the guest STATED or STRONGLY IMPLIED in THIS exchange.
+Capture both direct mentions and indirect signals. If the guest clearly
+conveyed information — even indirectly — extract it.
 
-### Indirect signals (also extract):
-- "the kids want the pool" → party_composition: "family with children"
-- "my wife and I" → party_size: "2", party_composition: "couple"
-- "we're here for the weekend" → visit_duration: "weekend"
-- "I need something quick" → dining_preferences: "quick/casual"
-- "we come every month" → visit_frequency: "monthly"
-- "I'm a slots person" → gaming_preferences: "slots"
-- "just looking for something chill" → entertainment_interests: "relaxed"
+### Worked Examples:
 
-### More indirect signals (extract these too):
-- "we're celebrating" → occasion: "celebration" (even without specifics)
-- "nice place" / "first time" → visit_frequency: "first visit"
-- "we always come here" / "our usual" → visit_frequency: "regular"
-- "need something for the kids" → party_composition: "family with children"
-- "what's good here?" → dining_preferences: "open to suggestions"
-- "can you get us in somewhere nice?" → budget_signal: "willing to spend"
-- "looking for a deal" / "anything on special?" → budget_signal: "value-conscious"
+Example 1 — Direct mention:
+Guest: "I'm Sarah, here with my husband for our anniversary"
+→ guest_name: "Sarah", party_size: "2", party_composition: "couple", occasion: "anniversary"
+
+Example 2 — Indirect signal:
+Guest: "The kids have been begging to go swimming"
+→ party_composition: "family with children"
+(Don't extract party_size — "kids" could mean 1 or 4)
+
+Example 3 — Preference from context:
+Guest: "Is there anything gluten-free on the menu?"
+→ dietary_restrictions: "gluten-free"
+(Also extract dining_preferences: "gluten-free options" since they're clearly food-focused)
+
+Example 4 — Budget signal:
+Guest: "Can you get us in somewhere nice? Money's not an issue"
+→ budget_signal: "premium/luxury"
+
+Example 5 — Loyalty signal:
+Guest: "I've been a Gold member for 3 years"
+→ loyalty_tier: "Gold", visit_frequency: "regular (3+ years)"
+
+Example 6 — Multi-fact message:
+Guest: "We drove up from Philly yesterday, checking out Sunday. Just the two of us, here to relax and play some blackjack."
+→ home_market: "Philadelphia", visit_duration: "weekend (2 nights)", party_size: "2", gaming_preferences: "blackjack", visit_purpose: "leisure/relaxation"
 
 ### Do NOT extract:
-- "tired from driving" / "long day" → budget_signal: null (not budget-related)
-- Information already in the current profile (unless the guest corrects it)
-- Common phrases as names: "I'm done" / "I'm good" / "I'm fine" / "I'm set" / "I'm out" → guest_name: null (these are NOT names)
-- Generic sentiments as preferences: "open to suggestions" / "whatever" / "anything" → null (too vague to act on)
+- "I'm done" / "I'm good" / "I'm fine" / "I'm set" / "I'm out" / "I'm back" / "I'm ready" → guest_name: null (NOT names)
+- Information already in the current profile (unless guest CORRECTS it)
+- Vague sentiments: "whatever" / "anything" / "I don't care" → null
+- AI agent's suggestions as guest preferences (only extract what the GUEST said)
 
-Return null when the field has no clear information in this exchange.
-Prefer precision over recall — a missing field is better than a wrong one.
+Return null for fields with no clear information in this exchange.
 """
 
 

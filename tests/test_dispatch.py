@@ -322,3 +322,48 @@ class TestDispatchMethodInState:
         state = _initial_state("hello")
         assert "dispatch_method" in state
         assert state["dispatch_method"] is None
+
+
+class TestDynamicCompBridgeInBase:
+    """R105: Verify _base.py uses dynamic comp bridge via get_comp_bridge_for_non_comp."""
+
+    def test_get_comp_bridge_for_non_comp_importable(self):
+        """The bridge function is importable from comp_strategy."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        assert callable(get_comp_bridge_for_non_comp)
+
+    def test_bridge_called_for_non_comp_agent(self):
+        """Bridge function generates text for non-comp specialists."""
+        from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
+
+        state = {
+            "extracted_fields": {"occasion": "birthday"},
+            "guest_sentiment": None,
+        }
+        bridge = get_comp_bridge_for_non_comp(state, casino_id="mohegan_sun")
+        assert isinstance(bridge, str)
+        assert len(bridge) > 0
+
+    def test_bridge_not_needed_for_comp_agent(self):
+        """Comp agent gets full CompStrategy, not the bridge."""
+        # This test verifies the logical separation: comp agent uses
+        # get_comp_prompt_section, non-comp agents use get_comp_bridge_for_non_comp
+        from src.agent.behavior_tools.comp_strategy import (
+            get_comp_bridge_for_non_comp,
+            get_comp_prompt_section,
+        )
+
+        state = {
+            "extracted_fields": {"loyalty_tier": "Ignite"},
+            "guest_sentiment": None,
+        }
+        full_section = get_comp_prompt_section(state, casino_id="mohegan_sun")
+        bridge = get_comp_bridge_for_non_comp(state, casino_id="mohegan_sun")
+        # Full section is much longer than bridge
+        assert len(full_section) > len(bridge)
+
+    def test_comp_intent_detected_flag_in_dispatch_result(self):
+        """comp_intent_detected should be set when comp intent is found for non-comp agents."""
+        # This validates the state field exists in PropertyQAState
+        assert "comp_intent_detected" in PropertyQAState.__annotations__

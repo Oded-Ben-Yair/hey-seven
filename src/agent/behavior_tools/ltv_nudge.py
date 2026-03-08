@@ -237,11 +237,17 @@ def get_ltv_nudges(
     guest_sentiment: str | None = None,
     occasion: str | None = None,
     turn_count: int = 0,
+    extracted_fields: dict[str, Any] | None = None,
 ) -> list[LTVNudge]:
-    """Select relevant LTV nudges based on context.
+    """Select relevant LTV nudges based on context and guest profile.
 
     Returns up to 2 nudges ranked by relevance to current conversation.
     Returns empty list for suppressed sentiments or very short conversations.
+
+    R105: Profile-aware nudge selection. Uses extracted_fields to boost
+    nudges matching guest interests (entertainment, gaming, spa, visit
+    frequency). Occasion-specific nudge text is generated when occasion
+    is present.
 
     Args:
         casino_id: Casino identifier.
@@ -249,6 +255,7 @@ def get_ltv_nudges(
         guest_sentiment: Current guest sentiment.
         occasion: Guest's occasion (birthday, anniversary, etc.).
         turn_count: Number of human turns in conversation.
+        extracted_fields: Guest profile data from extraction (R105).
 
     Returns:
         List of up to 2 relevant LTVNudge instances.
@@ -263,6 +270,7 @@ def get_ltv_nudges(
 
     catalog = NUDGE_CATALOG.get(casino_id, _DEFAULT_NUDGES)
     domains = domains_discussed or []
+    profile = extracted_fields or {}
 
     # Score nudges by relevance to conversation context
     scored: list[tuple[float, LTVNudge]] = []
@@ -284,11 +292,70 @@ def get_ltv_nudges(
         if occasion and nudge.nudge_type in ("seasonal_offer", "upcoming_event"):
             score += 0.15
 
+        # R105: Profile-aware boosts from extracted_fields
+        score += _profile_boost(nudge.nudge_type, profile)
+
         scored.append((score, nudge))
 
     # Sort by score descending, take top 2
     scored.sort(key=lambda x: x[0], reverse=True)
     return [nudge for _, nudge in scored[:2]]
+
+
+# R105: Keywords that indicate spa/relaxation interest in preferences
+_SPA_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "spa",
+        "massage",
+        "relax",
+        "relaxation",
+        "wellness",
+        "treatment",
+        "sauna",
+        "facial",
+    }
+)
+
+# R105: Keywords for regular/frequent visit patterns
+_REGULAR_VISIT_KEYWORDS: frozenset[str] = frozenset(
+    {"weekly", "regular", "every week", "frequent", "often", "all the time", "always"}
+)
+
+
+def _profile_boost(nudge_type: str, profile: dict[str, Any]) -> float:
+    """Calculate score boost from guest profile data.
+
+    Pure deterministic. Returns 0.0 when no relevant profile data exists.
+    """
+    boost = 0.0
+
+    # Entertainment interest boosts upcoming_event
+    if nudge_type == "upcoming_event":
+        entertainment = profile.get("entertainment_interests") or profile.get(
+            "entertainment"
+        )
+        if entertainment:
+            boost += 0.4
+
+    # Gaming preference boosts loyalty_milestone
+    if nudge_type == "loyalty_milestone":
+        gaming = profile.get("gaming_preferences") or profile.get("gaming")
+        if gaming:
+            boost += 0.4
+
+    # Spa/relaxation preference boosts new_experience
+    if nudge_type == "new_experience":
+        preferences = str(profile.get("preferences", "")).lower()
+        if preferences and any(kw in preferences for kw in _SPA_KEYWORDS):
+            boost += 0.3
+
+    # Regular visitor boosts personal_callback
+    if nudge_type == "personal_callback":
+        visit_freq = str(profile.get("visit_frequency", "")).lower()
+        if visit_freq and any(kw in visit_freq for kw in _REGULAR_VISIT_KEYWORDS):
+            boost += 0.3
+
+    return boost
 
 
 # ---------------------------------------------------------------------------
@@ -328,6 +395,7 @@ def get_ltv_prompt_section(
         guest_sentiment=sentiment,
         occasion=occasion,
         turn_count=turn_count,
+        extracted_fields=extracted,  # R105: pass profile data for profile-aware nudges
     )
 
     if not nudges:

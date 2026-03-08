@@ -527,3 +527,111 @@ class TestR78LowerThresholdTriggers:
             assert "profile_completeness_50" in triggers, (
                 f"{casino_id} missing profile_completeness_50"
             )
+
+
+# ---------------------------------------------------------------------------
+# R105: Conversational incentive framing
+# ---------------------------------------------------------------------------
+
+
+class TestR105ConversationalFraming:
+    """R105: Incentive prompt section uses conversational, not imperative framing."""
+
+    def test_incentive_framing_not_imperative(self, monkeypatch):
+        """Prompt section must NOT contain 'REQUIRED' or 'You MUST'."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, _ = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"birthday": "March 15"}
+        )
+        assert "REQUIRED" not in result
+        assert "You MUST" not in result
+
+    def test_incentive_framing_conversational(self, monkeypatch):
+        """Prompt section should use conversational language."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, _ = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"birthday": "March 15"}
+        )
+        assert "naturally" in result.lower()
+
+    def test_incentive_example_not_sales_pitch(self, monkeypatch):
+        """Example text should use 'pleasantly surprised' or similar, not 'sales pitch'."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, _ = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"birthday": "March 15"}
+        )
+        # Should explicitly say "not sold to" or "pleasantly surprised"
+        assert "sold to" in result.lower() or "pleasantly surprised" in result.lower()
+
+    def test_birthday_incentive_still_triggers(self, monkeypatch):
+        """Birthday occasion must still trigger with new framing."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, _ = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"occasion": "birthday"}
+        )
+        assert result != ""
+        assert "Guest Incentive" in result
+
+    def test_completeness_50_still_triggers(self, monkeypatch):
+        """Profile completeness at 50% must still trigger incentive section."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, _ = get_incentive_prompt_section("mohegan_sun", 0.50, {})
+        assert result != ""
+
+    def test_incentive_approval_request_unchanged(self, monkeypatch):
+        """Approval request format must be unchanged (API stability)."""
+        monkeypatch.setenv("PROPERTY_NAME", "Test Casino")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        engine = IncentiveEngine("mohegan_sun")
+        rule = IncentiveRule(
+            trigger_field="birthday",
+            incentive_type="dining_credit",
+            incentive_value=100.0,
+            auto_approve_threshold=50.0,
+            framing_template="test",
+        )
+        request = engine.build_host_approval_request(rule, {"name": "Alice"})
+        assert request["requires_approval"] is True
+        assert request["casino_id"] == "mohegan_sun"
+
+    def test_incentive_section_structure(self, monkeypatch):
+        """Section should start with '## Guest Incentive Opportunity'."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, _ = get_incentive_prompt_section(
+            "mohegan_sun", 0.0, {"birthday": "March 15"}
+        )
+        assert "## Guest Incentive Opportunity" in result
+
+    def test_empty_when_no_incentives(self, monkeypatch):
+        """No applicable incentives should return ('', None)."""
+        monkeypatch.setenv("PROPERTY_NAME", "Mohegan Sun")
+        from src.config import get_settings
+
+        get_settings.cache_clear()
+        result, approval = get_incentive_prompt_section(
+            "mohegan_sun",
+            0.20,
+            {},  # Below 25% threshold, no occasions
+        )
+        assert result == ""
+        assert approval is None

@@ -224,7 +224,11 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
         # it stays fired to prevent alert fatigue under intermittent failures.
         async with _telemetry.lock:
             _telemetry.count = 0
-        return {"whisper_plan": plan.model_dump()}
+
+        plan_dict = plan.model_dump()
+        # R105: Include profiling phase for phase-aware formatting
+        plan_dict["profiling_phase"] = state.get("profiling_phase", "foundation")
+        return {"whisper_plan": plan_dict}
 
     except Exception as exc:
         # Broad catch is intentional: ValueError/TypeError from structured
@@ -289,6 +293,30 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
     # in _base.py with proper sentiment gating and max-1 enforcement.
     # Do NOT duplicate here — the dedicated section has better framing and
     # guards. This function only formats the planning data.
+
+    # R105: Include profiling phase for phase-aware guidance
+    profiling_phase = plan.get("profiling_phase", "foundation")
+    lines.append(f"Profiling phase: {profiling_phase}")
+
+    # Phase-specific guidance
+    if profiling_phase == "foundation":
+        lines.append(
+            "Priority: Learn name, party size, visit purpose. Use direct questions."
+        )
+    elif profiling_phase == "preference":
+        lines.append(
+            "Priority: Discover dining, entertainment, gaming preferences. "
+            "Use give-to-get technique."
+        )
+    elif profiling_phase == "relationship":
+        lines.append(
+            "Priority: Uncover occasion, visit frequency, loyalty. "
+            "Use assumptive bridge."
+        )
+    elif profiling_phase == "behavioral":
+        lines.append(
+            "Priority: Deepen connection. Use reflective confirm and callbacks."
+        )
 
     # Profiling Intelligence guidance section
     next_question = plan.get("next_profiling_question")
