@@ -1159,7 +1159,10 @@ async def execute_specialist(
     # R98: CompStrategy — deterministic comp policy injection for comp agent.
     # R99 lesson: expanding to ALL agents caused 1.43-point H-avg regression
     # (prompt pollution). Full comp context stays comp-only.
-    if agent_name == "comp":
+    # R106: Skip comp prompt section when tool_use_enabled — the LLM will call
+    # check_comp_eligibility/check_tier_status tools instead of reading prompt data.
+    _tool_use_flag = _DEFAULT_FEATURES.get("tool_use_enabled", False)
+    if agent_name == "comp" and not _tool_use_flag:
         from src.agent.behavior_tools.comp_strategy import get_comp_prompt_section
 
         comp_section = get_comp_prompt_section(state, casino_id=settings.CASINO_ID)
@@ -1326,6 +1329,31 @@ async def execute_specialist(
     else:
         llm = await get_llm_fn()
 
+    # R106: Bind tools to LLM when tool_use_enabled feature flag is on.
+    # bind_tools_to_llm returns a NEW RunnableBinding — doesn't mutate the singleton.
+    # Lazy import: module only exists when T1 delivers casino_tools.py + tool_binding.py.
+    _tools_bound = False
+    _bound_tools: list = []
+    if _tool_use_flag:
+        try:
+            from src.agent.agents.tool_binding import (
+                bind_tools_to_llm as _bind_tools_to_llm,
+            )
+
+            llm, _bound_tools, _tools_bound = _bind_tools_to_llm(
+                llm, agent_name, tool_use_enabled=True
+            )
+            if _tools_bound:
+                logger.info(
+                    "R106: Tools bound for %s agent (%d tools)",
+                    agent_name,
+                    len(_bound_tools),
+                )
+        except ImportError:
+            logger.warning(
+                "R106: tool_binding module not available — running without tools"
+            )
+
     # R46 D8: Semaphore acquisition with timeout for backpressure.
     # If all 20 LLM slots are busy, return a fallback instead of
     # queueing indefinitely. Prevents request pile-up during LLM slowdowns.
@@ -1355,6 +1383,56 @@ async def execute_specialist(
 
         try:
             response = await llm.ainvoke(llm_messages)
+
+            # R106: Tool-call loop — execute tool calls and re-invoke LLM (max 1 round).
+            # Tool functions are pure business logic (no I/O) — synchronous invoke is safe.
+            # Max 1 round: the second LLM call should produce content, not more tool calls.
+            if _tools_bound and hasattr(response, "tool_calls") and response.tool_calls:
+                from langchain_core.messages import ToolMessage
+
+                tool_results: list[ToolMessage] = []
+                _tool_map = {t.name: t for t in _bound_tools}
+                for tc in response.tool_calls:
+                    tool_fn = _tool_map.get(tc["name"])
+                    if tool_fn:
+                        try:
+                            result_str = tool_fn.invoke(tc["args"])
+                            tool_results.append(
+                                ToolMessage(
+                                    content=str(result_str),
+                                    tool_call_id=tc["id"],
+                                )
+                            )
+                        except Exception as tool_err:
+                            logger.warning(
+                                "R106: Tool %s failed: %s", tc["name"], tool_err
+                            )
+                            tool_results.append(
+                                ToolMessage(
+                                    content=f"Tool error: {tool_err}",
+                                    tool_call_id=tc["id"],
+                                )
+                            )
+                    else:
+                        logger.warning("R106: Unknown tool requested: %s", tc["name"])
+                        tool_results.append(
+                            ToolMessage(
+                                content="Tool not available",
+                                tool_call_id=tc.get("id", "unknown"),
+                            )
+                        )
+
+                if tool_results:
+                    # Append AI response with tool_calls + tool results, re-invoke
+                    llm_messages.append(response)
+                    llm_messages.extend(tool_results)
+                    logger.info(
+                        "R106: Executing %d tool calls for %s, re-invoking LLM",
+                        len(tool_results),
+                        agent_name,
+                    )
+                    response = await llm.ainvoke(llm_messages)
+
         except (ValueError, TypeError) as exc:
             await cb.record_failure()
             logger.warning(

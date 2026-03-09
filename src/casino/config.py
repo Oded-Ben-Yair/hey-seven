@@ -134,6 +134,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "incentives_enabled": True,
         "few_shot_examples_enabled": True,
         "model_routing_enabled": True,
+        "tool_use_enabled": False,
     },
     "prompts": {
         "system_prompt_override": None,
@@ -219,6 +220,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "incentives_enabled": True,
             "few_shot_examples_enabled": True,
             "model_routing_enabled": True,
+            "tool_use_enabled": False,
         },
         "branding": {
             "persona_name": "Seven",
@@ -317,6 +319,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "incentives_enabled": True,
             "few_shot_examples_enabled": True,
             "model_routing_enabled": True,
+            "tool_use_enabled": False,
         },
         "branding": {
             "persona_name": "Foxy",
@@ -414,6 +417,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "incentives_enabled": True,
             "few_shot_examples_enabled": True,
             "model_routing_enabled": True,
+            "tool_use_enabled": False,
         },
         "branding": {
             "persona_name": "Lucky",
@@ -506,6 +510,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "incentives_enabled": True,
             "few_shot_examples_enabled": True,
             "model_routing_enabled": True,
+            "tool_use_enabled": False,
         },
         "branding": {
             "persona_name": "Wynn Host",
@@ -597,6 +602,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "incentives_enabled": True,
             "few_shot_examples_enabled": True,
             "model_routing_enabled": True,
+            "tool_use_enabled": False,
         },
         "branding": {
             "persona_name": "Ace",

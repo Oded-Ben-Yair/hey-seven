@@ -83,3 +83,11 @@ tests/evaluation/*-streaming/
 # v2-results (per-scenario JSON — large, regeneratable)
 tests/evaluation/v2-results/
 tests/evaluation/v2-results-*/
+# R106+ streaming results (per-scenario, regeneratable)
+tests/evaluation/results/
+# One-off judging data files (regeneratable)
+tests/evaluation/*-for-judging.json
+
+# External review text files (not source code)
+chatgpt*.txt
+codex-*.txt

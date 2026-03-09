@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
-"""Streaming Judge — Score eval results as they arrive.
+"""Streaming Judge — Score eval results as they arrive with multi-model support.
 
 Watches an output directory for new/updated scenario result files and
-judges them immediately using GPT-5.2 (or GPT-5.3-chat) via Azure AI
-Foundry. Prints rolling aggregates after each scored scenario.
+judges them immediately using 1-3 LLM judges. Supports consensus mode
+(median of GPT-5.4 + Grok 4 + DeepSeek).
 
 Architecture:
     Eval runner (run_live_eval.py) writes results →
     Streaming judge watches dir, judges in parallel batches →
     Rolling dashboard shows B-avg, H-avg, P-avg, safety %
 
-Benefits:
-    - Wall-clock time cut 40-60% vs sequential eval→judge pipeline
-    - Real-time feedback — spot regressions after 5 scenarios, not 80
-    - Fail-fast — halt eval early if dimension scores collapse
-    - Batch-parallel judging (5 at a time) for throughput
+Judges:
+    gpt54     — GPT-5.4 via Azure AI Foundry (default)
+    grok4     — Grok 4 via XAI API
+    deepseek  — DeepSeek-V3.2-Speciale via Azure AI Foundry
+    consensus — Median of all available judges (requires 2+)
 
 Usage:
-    # Watch v2-results for new files and judge them
     export AZURE_AI_ENDPOINT=$(az keyvault secret show --vault-name kv-seekapa-apps --name AzureAIFoundry-Endpoint -o tsv --query value)
     export AZURE_AI_KEY=$(az keyvault secret show --vault-name kv-seekapa-apps --name AzureAIFoundry-ApiKey -o tsv --query value)
+    export XAI_API_KEY=<key>
 
-    # Mode 1: Watch directory for new files (live eval running)
-    python tests/evaluation/streaming_judge.py --watch tests/evaluation/v2-results-r99 --category behavioral
+    # Watch with GPT-5.4 (default)
+    python tests/evaluation/streaming_judge.py --watch <dir> --category host-triangle
 
-    # Mode 2: Judge existing files (eval already completed)
-    python tests/evaluation/streaming_judge.py --batch tests/evaluation/r98-host-triangle-responses.json --category host-triangle
+    # Watch with 3-model consensus
+    python tests/evaluation/streaming_judge.py --watch <dir> --category host-triangle --judges consensus
 
-    # Mode 3: Concurrent eval + judge (single command)
-    python tests/evaluation/streaming_judge.py --eval --pattern "host_triangle_*.yaml" --round r99 --category host-triangle
+    # Judge existing files with DeepSeek
+    python tests/evaluation/streaming_judge.py --batch <file> --category host-triangle --judges deepseek
 """
 
 import asyncio
@@ -51,10 +51,56 @@ logger = logging.getLogger("streaming_judge")
 from tests.evaluation.run_r95_judge import (
     build_extended_judge_prompt,
     judge_with_gpt52,
+    judge_with_gpt54,
+    judge_with_grok4,
+    judge_with_deepseek,
+    compute_consensus,
     CATEGORY_PREFIXES,
     H_DIMS,
 )
 from tests.evaluation.run_judge_panel import B_DIMS, P_DIMS
+
+
+# Judge registry: name -> (type, function)
+# type: "azure" (needs endpoint+key) or "xai" (needs xai_key)
+JUDGE_REGISTRY = {
+    "gpt54": ("azure", judge_with_gpt54),
+    "gpt52": ("azure", judge_with_gpt52),
+    "grok4": ("xai", judge_with_grok4),
+    "deepseek": ("azure", judge_with_deepseek),
+}
+
+
+def resolve_judges(
+    judge_arg: str,
+    endpoint: str,
+    azure_key: str,
+    xai_key: str,
+) -> dict[str, tuple[str, object]]:
+    """Resolve --judges argument to available judge functions.
+
+    consensus = GPT-5.4 + Grok 4 (fast, reliable pair)
+    all = GPT-5.4 + Grok 4 + DeepSeek (slow, use for disagreement mining)
+    """
+    if judge_arg == "consensus":
+        # DeepSeek excluded from consensus — too slow (~3-5 min/scenario)
+        requested = ["gpt54", "grok4"]
+    elif judge_arg == "all":
+        requested = ["gpt54", "grok4", "deepseek"]
+    else:
+        requested = [judge_arg]
+
+    available = {}
+    for name in requested:
+        jtype, jfn = JUDGE_REGISTRY[name]
+        if jtype == "azure" and endpoint and azure_key:
+            available[name] = (jtype, jfn)
+        elif jtype == "xai" and xai_key:
+            available[name] = (jtype, jfn)
+        else:
+            logger.warning("Judge %s: UNAVAILABLE (missing credentials)", name)
+
+    return available
 
 
 # ---------------------------------------------------------------------------
@@ -137,39 +183,72 @@ class RollingAggregator:
 
 async def judge_batch(
     scenarios: list[dict],
+    judge_fns: dict[str, tuple[str, object]],
     endpoint: str,
-    key: str,
+    azure_key: str,
+    xai_key: str,
+    use_consensus: bool = False,
     batch_size: int = 5,
 ) -> list[tuple[str, dict | None]]:
-    """Judge a batch of scenarios concurrently.
+    """Judge a batch of scenarios concurrently with 1+ judges.
 
     Args:
         scenarios: List of scenario result dicts.
+        judge_fns: {name: (type, fn)} from resolve_judges.
         endpoint: Azure AI endpoint.
-        key: Azure AI API key.
-        batch_size: Max concurrent judge calls.
+        azure_key: Azure AI API key.
+        xai_key: XAI API key.
+        use_consensus: If True, compute median consensus from all judges.
+        batch_size: Max concurrent judge calls per batch.
 
     Returns:
         List of (scenario_id, scores_or_none) tuples.
+        When consensus is enabled, returns consensus scores.
     """
     results = []
 
     for i in range(0, len(scenarios), batch_size):
         batch = scenarios[i : i + batch_size]
         tasks = []
+
         for scenario in batch:
             prompt = build_extended_judge_prompt(scenario)
-            tasks.append(judge_with_gpt52(prompt, endpoint, key))
-
-        batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for scenario, result in zip(batch, batch_results):
             sid = scenario.get("id", scenario.get("scenario_id", "unknown"))
+
+            # Create one task per judge per scenario
+            for jname, (jtype, jfn) in judge_fns.items():
+                if jtype == "azure":
+                    tasks.append((sid, jname, jfn(prompt, endpoint, azure_key)))
+                else:
+                    tasks.append((sid, jname, jfn(prompt, xai_key)))
+
+        # Gather all judge calls
+        coros = [t[2] for t in tasks]
+        raw_results = await asyncio.gather(*coros, return_exceptions=True)
+
+        # Group by scenario
+        scenario_judges: dict[str, dict[str, dict]] = {}
+        for (sid, jname, _), result in zip(tasks, raw_results):
+            if sid not in scenario_judges:
+                scenario_judges[sid] = {}
             if isinstance(result, Exception):
-                logger.warning("Judge error for %s: %s", sid, result)
+                logger.warning("Judge %s error for %s: %s", jname, sid, result)
+            elif result:
+                scenario_judges[sid][jname] = result
+
+        # Build results
+        for scenario in batch:
+            sid = scenario.get("id", scenario.get("scenario_id", "unknown"))
+            jscores = scenario_judges.get(sid, {})
+            if not jscores:
                 results.append((sid, None))
+            elif use_consensus and len(jscores) >= 2:
+                results.append((sid, compute_consensus(jscores)))
+            elif len(jscores) == 1:
+                results.append((sid, next(iter(jscores.values()))))
             else:
-                results.append((sid, result))
+                # Multiple judges, no consensus — use first
+                results.append((sid, next(iter(jscores.values()))))
 
         # Brief delay between batches
         if i + batch_size < len(scenarios):
@@ -186,8 +265,11 @@ async def judge_batch(
 async def watch_and_judge(
     watch_dir: Path,
     category: str,
+    judge_fns: dict[str, tuple[str, object]],
     endpoint: str,
-    key: str,
+    azure_key: str,
+    xai_key: str,
+    use_consensus: bool,
     output_path: Path,
     poll_interval: float = 10.0,
     early_stop_threshold: float = 3.0,
@@ -198,8 +280,11 @@ async def watch_and_judge(
     Args:
         watch_dir: Directory to watch for *.json result files.
         category: Category filter (behavioral, profiling, host-triangle).
+        judge_fns: {name: (type, fn)} from resolve_judges.
         endpoint: Azure AI endpoint.
-        key: Azure AI API key.
+        azure_key: Azure AI API key.
+        xai_key: XAI API key.
+        use_consensus: If True, compute median across judges.
         output_path: Where to write cumulative judge scores.
         poll_interval: Seconds between directory polls.
         early_stop_threshold: If rolling overall avg drops below this, warn.
@@ -211,12 +296,15 @@ async def watch_and_judge(
     all_scores: list[dict] = []
 
     prefixes = CATEGORY_PREFIXES.get(category, [])
+    judge_names = list(judge_fns.keys())
 
     logger.info(
-        "Watching %s for new %s results (poll every %.0fs)",
+        "Watching %s for new %s results (poll every %.0fs, judges=%s, consensus=%s)",
         watch_dir,
         category,
         poll_interval,
+        judge_names,
+        use_consensus,
     )
 
     while True:
@@ -247,7 +335,14 @@ async def watch_and_judge(
 
         if new_scenarios:
             logger.info("Found %d new scenarios to judge", len(new_scenarios))
-            batch_results = await judge_batch(new_scenarios, endpoint, key)
+            batch_results = await judge_batch(
+                new_scenarios,
+                judge_fns,
+                endpoint,
+                azure_key,
+                xai_key,
+                use_consensus=use_consensus,
+            )
 
             for sid, scores in batch_results:
                 scored_ids.add(sid)
@@ -264,7 +359,7 @@ async def watch_and_judge(
                     agg.failed_count += 1
 
             # Write cumulative results
-            _write_scores(output_path, agg, all_scores)
+            _write_scores(output_path, agg, all_scores, judge_names, use_consensus)
 
             # Early stop warning
             if len(recent_overalls) >= early_stop_window:
@@ -282,12 +377,19 @@ async def watch_and_judge(
         await asyncio.sleep(poll_interval)
 
 
-def _write_scores(path: Path, agg: RollingAggregator, scores: list[dict]) -> None:
+def _write_scores(
+    path: Path,
+    agg: RollingAggregator,
+    scores: list[dict],
+    judge_names: list[str] | None = None,
+    use_consensus: bool = False,
+) -> None:
     """Write cumulative judge scores to output file."""
     output = {
         "metadata": {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "judge": "gpt-5.2",
+            "judges": judge_names or ["gpt54"],
+            "consensus": use_consensus,
             "scored": agg.scored_count,
             "failed": agg.failed_count,
         },
@@ -305,8 +407,11 @@ def _write_scores(path: Path, agg: RollingAggregator, scores: list[dict]) -> Non
 async def judge_response_file(
     response_file: Path,
     category: str,
+    judge_fns: dict[str, tuple[str, object]],
     endpoint: str,
-    key: str,
+    azure_key: str,
+    xai_key: str,
+    use_consensus: bool,
     output_path: Path,
 ):
     """Judge all scenarios in an existing response file."""
@@ -334,14 +439,26 @@ async def judge_response_file(
             r["completed"] = bool(r.get("turns"))
 
     completed = [r for r in results if r.get("completed")]
+    judge_names = list(judge_fns.keys())
     logger.info(
-        "Judging %d completed scenarios from %s", len(completed), response_file.name
+        "Judging %d completed scenarios from %s (judges=%s, consensus=%s)",
+        len(completed),
+        response_file.name,
+        judge_names,
+        use_consensus,
     )
 
     agg = RollingAggregator()
     all_scores: list[dict] = []
 
-    batch_results = await judge_batch(completed, endpoint, key)
+    batch_results = await judge_batch(
+        completed,
+        judge_fns,
+        endpoint,
+        azure_key,
+        xai_key,
+        use_consensus=use_consensus,
+    )
     for sid, scores in batch_results:
         if scores:
             agg.add_score(scores)
@@ -350,7 +467,7 @@ async def judge_response_file(
         else:
             agg.failed_count += 1
 
-    _write_scores(output_path, agg, all_scores)
+    _write_scores(output_path, agg, all_scores, judge_names, use_consensus)
     logger.info("Final: %s", json.dumps(agg.get_summary(), indent=2))
 
 
@@ -363,7 +480,7 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Streaming Judge — score results as they arrive"
+        description="Streaming Judge — multi-model scoring as results arrive"
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--watch", type=str, help="Watch directory for new result files")
@@ -375,6 +492,12 @@ async def main():
         choices=["behavioral", "profiling", "host-triangle", "all"],
     )
     parser.add_argument("--output", default=None, help="Output JSON path")
+    parser.add_argument(
+        "--judges",
+        default="gpt54",
+        choices=["gpt52", "gpt54", "grok4", "deepseek", "consensus", "all"],
+        help="Judge mode (default: gpt54)",
+    )
     parser.add_argument(
         "--batch-size", type=int, default=5, help="Concurrent judge calls per batch"
     )
@@ -388,10 +511,23 @@ async def main():
     args = parser.parse_args()
 
     endpoint = os.environ.get("AZURE_AI_ENDPOINT", "")
-    key = os.environ.get("AZURE_AI_KEY", "")
-    if not endpoint or not key:
-        logger.error("AZURE_AI_ENDPOINT and AZURE_AI_KEY must be set")
+    azure_key = os.environ.get("AZURE_AI_KEY", "")
+    xai_key = os.environ.get("XAI_API_KEY", "")
+
+    judge_fns = resolve_judges(args.judges, endpoint, azure_key, xai_key)
+    if not judge_fns:
+        logger.error(
+            "No judges available. Set AZURE_AI_ENDPOINT+AZURE_AI_KEY and/or XAI_API_KEY"
+        )
         sys.exit(1)
+
+    use_consensus = args.judges == "consensus" and len(judge_fns) >= 2
+    if args.judges == "consensus" and len(judge_fns) < 2:
+        logger.warning(
+            "Consensus requires 2+ judges, only %d available", len(judge_fns)
+        )
+
+    logger.info("Judges: %s (consensus=%s)", list(judge_fns.keys()), use_consensus)
 
     output_path = (
         Path(args.output)
@@ -408,8 +544,11 @@ async def main():
         await watch_and_judge(
             Path(args.watch),
             args.category,
+            judge_fns,
             endpoint,
-            key,
+            azure_key,
+            xai_key,
+            use_consensus,
             output_path,
             poll_interval=args.poll_interval,
         )
@@ -417,8 +556,11 @@ async def main():
         await judge_response_file(
             Path(args.batch),
             args.category,
+            judge_fns,
             endpoint,
-            key,
+            azure_key,
+            xai_key,
+            use_consensus,
             output_path,
         )
 

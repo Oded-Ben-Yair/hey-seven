@@ -49,6 +49,7 @@ class FeatureFlags(TypedDict, total=False):
     incentives_enabled: bool
     few_shot_examples_enabled: bool
     model_routing_enabled: bool
+    tool_use_enabled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +86,7 @@ DEFAULT_FEATURES: types.MappingProxyType[str, bool] = types.MappingProxyType(
         "incentives_enabled": True,  # Incentive engine for proactive offers
         "few_shot_examples_enabled": True,  # R83: Inject behavioral examples into specialist prompts
         "model_routing_enabled": True,  # R97: Flash->Pro routing per casino (was global MODEL_ROUTING_ENABLED)
+        "tool_use_enabled": False,  # R106: LangGraph tool-use for specialist agents (off by default, enable per-casino)
     }
 )
 

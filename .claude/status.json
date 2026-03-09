@@ -1,15 +1,15 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R105 PROMPT CEILING CONFIRMED — 85 scenarios scored. B:6.62 P:5.18 H:5.09. 7 prompt-level fixes all ±0.3. CRITICAL handoff dead-code fixed. Architecture change needed for sub-5.0 dims.",
-    "lastModified": "2026-03-09T02:00:00Z",
+    "summary": "R106 ARCHITECTURE SHIFT — LangGraph tool-use for specialist agents. 4 @tool functions (comp, tier, events, incentives). Tool-call loop in _base.py. 3-model judge panel (GPT-5.4 + Grok 4 + DeepSeek). 51 gold traces for fine-tuning. P9 re-eval in progress.",
+    "lastModified": "2026-03-09T08:00:00Z",
     "branch": "main",
-    "commitHash": "c8b0cbc",
-    "tag": "v1.5.0",
-    "phase": "r105-prompt-ceiling-confirmed"
+    "commitHash": "pending-r106",
+    "tag": "v1.6.0",
+    "phase": "r106-tool-use-architecture"
   },
-  "blueprintPhase": "ARCHITECTURE SHIFT — Tool-use, RAG-grounded comp data, fine-tuning, pre-LLM handoff. No more prompt engineering for sub-5.0 dims.",
-  "roundNumber": 105,
+  "blueprintPhase": "TOOL-USE ACTIVE — 4 casino tools callable mid-conversation. Fine-tuning data ready (51 gold traces). Next: enable tool_use_enabled per-casino, run R106 eval, Gemini 2.5 Flash fine-tuning.",
+  "roundNumber": 106,
   "scores": {
     "technical": 9.63,
     "behavioral_r105_pro_85": 6.62,
@@ -47,61 +47,62 @@
       "H9": 2.35,
       "H10": 3.87
     },
-    "delta_vs_r104_pro": {
-      "B_avg": "-0.16 (within noise)",
-      "P_avg": "+0.03 (stable)",
-      "H_avg": "-0.33 (regression)",
-      "note": "All 7 target dims ±0.3 — prompt ceiling confirmed"
-    }
+    "r106_status": "P9 re-eval running. R106 tool eval pending after merge."
   },
   "blockers": [],
   "nextSteps": [
     {
-      "priority": 0,
-      "description": "RE-EVAL P9: Run 30 HT scenarios on commit c8b0cbc (CRITICAL handoff fix). P9 should improve significantly since handoff prompts now reach the LLM."
-    },
-    {
       "priority": 1,
-      "description": "ARCHITECTURE: Add LangGraph tool_node for comp lookup — agent calls get_comp_strategy() as a TOOL mid-conversation instead of injecting into system prompt. H9 target: 5.0+"
+      "description": "Complete P9 re-eval, commit R106 changes"
     },
     {
       "priority": 2,
-      "description": "ARCHITECTURE: RAG-grounded comp data — ingest real tier benefits per casino into vector store, retrieve during comp queries instead of policy templates."
+      "description": "Run R106 eval with tool_use_enabled=true (30 HT scenarios)"
     },
     {
       "priority": 3,
-      "description": "FINE-TUNING PREP: Collect 50+ gold trace conversations (3/6/9 scored), format as Gemini fine-tuning dataset. Target: P8 extraction quality."
+      "description": "Enable tool_use_enabled for Mohegan Sun profile"
     },
     {
       "priority": 4,
-      "description": "REVERT P6: Restore 'MUST mention' incentive framing — conversational framing produced identical results but risks the LLM skipping incentives in production."
+      "description": "Fine-tune Gemini 2.5 Flash with 51 gold traces via Vertex AI"
+    },
+    {
+      "priority": 5,
+      "description": "External multi-model audit with R106 tool-use code"
     }
   ],
   "keyFiles": {
-    "r105Handover": ".claude/handover-20260309-r105.md",
-    "r105JudgeScoresHT": "tests/evaluation/results/r105-ht-pro-judge-scores.json",
-    "r105JudgeScoresProf": "tests/evaluation/results/r105-prof-pro-judge-scores.json",
-    "goldTraces": "~/.claude/teams/r101-paradigm-shift/gold-traces.md",
-    "processRules": "~/.claude/rules/hey-seven-process.md",
-    "promptCeilingRule": "~/.claude/rules/langgraph-patterns.md (Prompt Engineering Ceiling section)"
+    "r106Coordination": ".claude/teams/r106-multi-terminal/status.md",
+    "casinoTools": "src/agent/casino_tools.py",
+    "toolBinding": "src/agent/agents/tool_binding.py",
+    "toolCallLoop": "src/agent/agents/_base.py (lines 1332-1434)",
+    "goldTraces": "data/training/gold-traces-r106.jsonl",
+    "tuningResearch": ".claude/teams/r106-multi-terminal/t4-gemini-tuning-research.md",
+    "goldTracesManual": "~/.claude/teams/r101-paradigm-shift/gold-traces.md",
+    "processRules": "~/.claude/rules/hey-seven-process.md"
   },
   "codebaseMetrics": {
-    "tests": 3789,
+    "tests": 3880,
     "testFailures": 1,
     "testFailureNote": "pre-existing flake (test_sweep_evicts_expired_entries)",
     "graphNodes": 13,
     "stateFields": 31,
-    "featureFlags": 17,
+    "featureFlags": 19,
     "guardrailPatterns": 214,
-    "totalScenarios": 260,
-    "sourceModules": 72,
+    "totalScenarios": 275,
+    "sourceModules": 74,
     "behaviorTools": 4,
+    "casinoTools": 4,
     "handoffModes": 5,
-    "newTestsR105": 252,
-    "linesChanged": "+1734/-152 (commit 1) + +111/-72 (commit 2)"
+    "goldTraces": 51,
+    "b8Scenarios": 15,
+    "judgeModels": 3,
+    "newTestsR106": 79
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-09",
-    "lastSessionId": "hey-seven-session-20260309-r105"
+    "lastSessionId": "r106-architecture-shift",
+    "orchestration": "4-terminal parallel (T1=tools, T2=integration, T3=eval+judge, T4=research+prep)"
   }
 }

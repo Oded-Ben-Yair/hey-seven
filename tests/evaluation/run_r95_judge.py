@@ -1,24 +1,40 @@
 #!/usr/bin/env python3
-"""R95 Judge — Score v2-results with GPT-5.2 via Azure AI Foundry.
+"""R106 Judge — Multi-model scoring with GPT-5.4, Grok 4, DeepSeek consensus.
 
-Reads individual scenario JSON files from v2-results/, builds judge prompts,
-calls GPT-5.2 for each, and writes aggregated scores.
+Reads individual scenario JSON files from a results directory, builds judge
+prompts, calls 1-3 LLM judges, and writes aggregated scores with optional
+consensus (median) scoring.
+
+Judges:
+  - GPT-5.4 (via Azure AI Foundry) — primary, structure/completeness
+  - Grok 4 (via XAI API) — genuineness/anti-chatbot detection
+  - DeepSeek-V3.2-Speciale (via Azure AI Foundry) — outcomes/guest lens
+  - GPT-5.2 (via Azure AI Foundry) — legacy fallback
 
 Usage:
     export AZURE_AI_ENDPOINT="https://brn-azai.cognitiveservices.azure.com/"
     export AZURE_AI_KEY="<key>"
-    python tests/evaluation/run_r95_judge.py --results-dir tests/evaluation/v2-results
-    python tests/evaluation/run_r95_judge.py --results-dir tests/evaluation/v2-results --category profiling
-    python tests/evaluation/run_r95_judge.py --results-dir tests/evaluation/v2-results --category host-triangle
+    export XAI_API_KEY="<key>"
+
+    # Single judge
+    python tests/evaluation/run_r95_judge.py --results-dir <dir> --judge gpt53
+
+    # 3-model consensus (median per dimension)
+    python tests/evaluation/run_r95_judge.py --results-dir <dir> --judge consensus
+
+    # All judges separately (no median)
+    python tests/evaluation/run_r95_judge.py --results-dir <dir> --judge all
 """
 
 import asyncio
 import json
 import logging
+import math
 import os
 import sys
 import time
 from pathlib import Path
+from statistics import median
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -132,7 +148,12 @@ def load_v2_results(results_dir: str | Path, category: str = "all") -> list[dict
                 continue
 
         # Adapt field names for build_judge_prompt compatibility
-        data["scenario_name"] = data.get("name", data.get("id", "Unknown"))
+        data["scenario_name"] = data.get(
+            "scenario_name", data.get("name", data.get("id", "Unknown"))
+        )
+        # Normalize id field (streaming uses scenario_id, batch uses id)
+        if "id" not in data or data["id"] is None:
+            data["id"] = data.get("scenario_id", p.stem)
         results.append(data)
 
     return results
@@ -160,25 +181,102 @@ def build_extended_judge_prompt(scenario_result: dict) -> str:
     return base_prompt
 
 
-async def judge_with_gpt52(prompt: str, endpoint: str, key: str) -> dict | None:
-    """Score using GPT-5.2 via Azure AI Foundry."""
+# Reasoning models (o1-style) don't support temperature or top_p
+_REASONING_DEPLOYMENTS = frozenset({"gpt-5.3-chat", "gpt-5.3-chat-2026-03-03"})
+
+
+async def _call_azure_judge(
+    prompt: str, endpoint: str, key: str, deployment: str, timeout: float = 90.0
+) -> dict | None:
+    """Call an Azure AI Foundry deployment and parse judge response."""
     import httpx
+
+    body: dict = {
+        "messages": [{"role": "user", "content": prompt}],
+        "max_completion_tokens": 2000,
+    }
+    # Reasoning models don't support temperature — omit it
+    if deployment not in _REASONING_DEPLOYMENTS:
+        body["temperature"] = 0.1
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{endpoint.rstrip('/')}/openai/deployments/gpt-5.2/chat/completions?api-version=2024-10-21",
+            f"{endpoint.rstrip('/')}/openai/deployments/{deployment}/chat/completions?api-version=2024-10-21",
             headers={"api-key": key, "Content-Type": "application/json"},
-            json={
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.1,
-                "max_completion_tokens": 2000,
-            },
-            timeout=90.0,
+            json=body,
+            timeout=timeout,
         )
         response.raise_for_status()
         data = response.json()
         text = data["choices"][0]["message"]["content"]
-        return parse_judge_response(text)
+
+        # Strip reasoning model tags — DeepSeek includes </think>, some models use other tags
+        if "</think>" in text:
+            text = text.split("</think>", 1)[-1].strip()
+
+        result = parse_judge_response(text)
+        if result is None:
+            logger.debug(
+                "Parse failed for %s. First 300 chars: %s",
+                deployment,
+                text[:300].replace("\n", " "),
+            )
+        return result
+
+
+async def judge_with_gpt54(prompt: str, endpoint: str, key: str) -> dict | None:
+    """Score using GPT-5.4 via Azure AI Foundry."""
+    return await _call_azure_judge(prompt, endpoint, key, "gpt-5.4")
+
+
+async def judge_with_gpt52(prompt: str, endpoint: str, key: str) -> dict | None:
+    """Score using GPT-5.2 via Azure AI Foundry (legacy fallback)."""
+    return await _call_azure_judge(prompt, endpoint, key, "gpt-5.2")
+
+
+async def judge_with_deepseek(prompt: str, endpoint: str, key: str) -> dict | None:
+    """Score using DeepSeek-V3.2-Speciale via Azure AI Foundry.
+
+    WARNING: DeepSeek is very slow (~3-5 min per scenario). Not recommended
+    for full panel runs. Use for targeted disagreement mining only.
+
+    Uses a system message to force JSON-only output since DeepSeek tends to
+    produce prose analysis instead of structured JSON.
+    """
+    import httpx
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{endpoint.rstrip('/')}/openai/deployments/DeepSeek-V3.2-Speciale/chat/completions?api-version=2024-10-21",
+            headers={"api-key": key, "Content-Type": "application/json"},
+            json={
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a JSON scoring engine. Output ONLY valid JSON. No prose, no analysis, no markdown. Just the JSON object.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": 0.1,
+                "max_completion_tokens": 2000,
+            },
+            timeout=300.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data["choices"][0]["message"]["content"]
+
+        # Strip reasoning tags if present
+        if "</think>" in text:
+            text = text.split("</think>", 1)[-1].strip()
+
+        result = parse_judge_response(text)
+        if result is None:
+            logger.debug(
+                "DeepSeek parse failed. First 300 chars: %s",
+                text[:300].replace("\n", " "),
+            )
+        return result
 
 
 async def judge_with_grok4(prompt: str, api_key: str) -> dict | None:
@@ -203,11 +301,56 @@ async def judge_with_grok4(prompt: str, api_key: str) -> dict | None:
         return parse_judge_response(text)
 
 
+def compute_consensus(judge_scores: dict[str, dict]) -> dict:
+    """Compute consensus (median) across multiple judges per dimension.
+
+    Args:
+        judge_scores: {judge_name: {dim: score, ...}, ...}
+
+    Returns:
+        Consensus dict with median scores, spread, and per-judge breakdown.
+    """
+    all_dims = ALL_DIMS + H_DIMS + ["overall"]
+    consensus = {}
+
+    for dim in all_dims:
+        values = []
+        for jname, scores in judge_scores.items():
+            val = scores.get(dim, -1)
+            if isinstance(val, (int, float)) and val >= 0:
+                values.append(float(val))
+        if values:
+            consensus[dim] = round(median(values), 1)
+
+    # Safety: majority vote
+    safety_votes = []
+    for jname, scores in judge_scores.items():
+        sp = scores.get("safety_pass")
+        if sp is not None:
+            safety_votes.append(bool(sp))
+    if safety_votes:
+        consensus["safety_pass"] = sum(safety_votes) > len(safety_votes) / 2
+
+    # Reasoning: concatenate
+    reasonings = []
+    for jname, scores in judge_scores.items():
+        r = scores.get("reasoning", "")
+        if r:
+            reasonings.append(f"[{jname}] {r}")
+    consensus["reasoning"] = " | ".join(reasonings)
+
+    # Spread metadata
+    consensus["_judge_count"] = len(judge_scores)
+    consensus["_judges"] = list(judge_scores.keys())
+
+    return consensus
+
+
 async def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="R95 Judge — Score v2-results with LLM judges"
+        description="R106 Judge — Multi-model scoring with consensus"
     )
     parser.add_argument(
         "--results-dir",
@@ -223,13 +366,13 @@ async def main():
     parser.add_argument(
         "--output",
         default=None,
-        help="Output JSON file path. Defaults to tests/evaluation/r95-{category}-judge-scores.json",
+        help="Output JSON file path",
     )
     parser.add_argument(
         "--judge",
-        default="gpt52",
-        choices=["gpt52", "grok4", "both"],
-        help="Which judge(s) to use (default: gpt52)",
+        default="gpt54",
+        choices=["gpt52", "gpt54", "grok4", "deepseek", "consensus", "all"],
+        help="Judge mode: single model, 'consensus' (median of 3), or 'all' (default: gpt53)",
     )
     args = parser.parse_args()
 
@@ -238,22 +381,51 @@ async def main():
     azure_key = os.environ.get("AZURE_AI_KEY", "")
     xai_key = os.environ.get("XAI_API_KEY", "")
 
-    use_gpt = args.judge in ("gpt52", "both") and endpoint and azure_key
-    use_grok = args.judge in ("grok4", "both") and xai_key
+    # Build list of requested judges
+    # consensus = GPT-5.4 + Grok 4 (fast, reliable pair)
+    # all = GPT-5.4 + Grok 4 + DeepSeek (slow, use for disagreement mining)
+    judge_map = {}
+    if args.judge in ("gpt54", "consensus", "all"):
+        if endpoint and azure_key:
+            judge_map["gpt54"] = ("azure", judge_with_gpt54)
+            logger.info("GPT-5.4 judge: AVAILABLE")
+        else:
+            logger.warning("GPT-5.4 judge: UNAVAILABLE (no AZURE_AI_ENDPOINT)")
+    if args.judge in ("gpt52",):
+        if endpoint and azure_key:
+            judge_map["gpt52"] = ("azure", judge_with_gpt52)
+            logger.info("GPT-5.2 judge: AVAILABLE")
+        else:
+            logger.warning("GPT-5.2 judge: UNAVAILABLE")
+    if args.judge in ("grok4", "consensus", "all"):
+        if xai_key:
+            judge_map["grok4"] = ("xai", judge_with_grok4)
+            logger.info("Grok 4 judge: AVAILABLE")
+        else:
+            logger.warning("Grok 4 judge: UNAVAILABLE (no XAI_API_KEY)")
+    if args.judge in ("deepseek", "all"):
+        # DeepSeek excluded from consensus (too slow: ~3-5 min/scenario)
+        if endpoint and azure_key:
+            judge_map["deepseek"] = ("azure", judge_with_deepseek)
+            logger.info("DeepSeek-V3.2-Speciale judge: AVAILABLE (slow — 300s timeout)")
+        else:
+            logger.warning("DeepSeek judge: UNAVAILABLE (no AZURE_AI_ENDPOINT)")
 
-    if not use_gpt and not use_grok:
+    if not judge_map:
         logger.error(
-            "No judges available. Set AZURE_AI_ENDPOINT+AZURE_AI_KEY or XAI_API_KEY"
+            "No judges available. Set AZURE_AI_ENDPOINT+AZURE_AI_KEY and/or XAI_API_KEY"
         )
         sys.exit(1)
 
-    judges = []
-    if use_gpt:
-        judges.append("gpt52")
-        logger.info("GPT-5.2 judge: AVAILABLE")
-    if use_grok:
-        judges.append("grok4")
-        logger.info("Grok 4 judge: AVAILABLE")
+    use_consensus = args.judge == "consensus" and len(judge_map) >= 2
+    if args.judge == "consensus" and len(judge_map) < 2:
+        logger.warning(
+            "Consensus requires 2+ judges, only %d available. Running without consensus.",
+            len(judge_map),
+        )
+
+    judges = list(judge_map.keys())
+    logger.info("Active judges: %s (consensus=%s)", judges, use_consensus)
 
     # Load results
     results = load_v2_results(args.results_dir, category=args.category)
@@ -273,7 +445,7 @@ async def main():
             PROJECT_ROOT
             / "tests"
             / "evaluation"
-            / f"r95-{args.category}-judge-scores.json"
+            / f"r106-{args.category}-judge-scores.json"
         )
 
     # Score all scenarios
@@ -290,32 +462,40 @@ async def main():
         prompt = build_extended_judge_prompt(result)
         scenario_scores = {}
 
-        # Run judges
-        if use_gpt:
+        # Run all judges in parallel
+        async def _run_judge(jname, jtype, jfn):
             try:
-                scores = await judge_with_gpt52(prompt, endpoint, azure_key)
-                if scores:
-                    scenario_scores["gpt52"] = scores
-                    overall = scores.get("overall", 0)
-                    safety = scores.get("safety_pass", "n/a")
-                    logger.info("  gpt52: overall=%s safety=%s", overall, safety)
-                else:
-                    logger.warning("  gpt52: FAILED (no valid scores)")
+                if jtype == "azure":
+                    return jname, await jfn(prompt, endpoint, azure_key)
+                else:  # xai
+                    return jname, await jfn(prompt, xai_key)
             except Exception as e:
-                logger.warning("  gpt52: ERROR %s", str(e)[:80])
+                logger.warning("  %s: ERROR %s", jname, str(e)[:80])
+                return jname, None
 
-        if use_grok:
-            try:
-                scores = await judge_with_grok4(prompt, xai_key)
-                if scores:
-                    scenario_scores["grok4"] = scores
-                    overall = scores.get("overall", 0)
-                    safety = scores.get("safety_pass", "n/a")
-                    logger.info("  grok4: overall=%s safety=%s", overall, safety)
-                else:
-                    logger.warning("  grok4: FAILED (no valid scores)")
-            except Exception as e:
-                logger.warning("  grok4: ERROR %s", str(e)[:80])
+        tasks = [
+            _run_judge(jname, jtype, jfn) for jname, (jtype, jfn) in judge_map.items()
+        ]
+        judge_results = await asyncio.gather(*tasks)
+
+        for jname, scores in judge_results:
+            if scores:
+                scenario_scores[jname] = scores
+                overall = scores.get("overall", 0)
+                safety = scores.get("safety_pass", "n/a")
+                logger.info("  %s: overall=%s safety=%s", jname, overall, safety)
+            else:
+                logger.warning("  %s: FAILED (no valid scores)", jname)
+
+        # Add consensus if enabled and 2+ judges succeeded
+        if use_consensus and len(scenario_scores) >= 2:
+            scenario_scores["consensus"] = compute_consensus(scenario_scores)
+            c = scenario_scores["consensus"]
+            logger.info(
+                "  consensus: overall=%s (from %d judges)",
+                c.get("overall", "?"),
+                c.get("_judge_count", 0),
+            )
 
         if scenario_scores:
             all_scores[sid] = scenario_scores
@@ -327,15 +507,25 @@ async def main():
         if i < total - 1:
             await asyncio.sleep(1.0)
 
-    # Calculate aggregates
+    # Determine which judge to aggregate (consensus if available, else all)
+    agg_judge_key = "consensus" if use_consensus else None
+
+    # Calculate aggregates — use consensus scores when available, else average all judges
     dim_aggregates = {}
     for dim in ALL_DIMS + H_DIMS + ["overall"]:
         values = []
         for sid, judges_data in all_scores.items():
-            for judge_name, scores in judges_data.items():
-                val = scores.get(dim, -1)
+            if agg_judge_key and agg_judge_key in judges_data:
+                val = judges_data[agg_judge_key].get(dim, -1)
                 if isinstance(val, (int, float)) and val >= 0:
                     values.append(float(val))
+            else:
+                for judge_name, scores in judges_data.items():
+                    if judge_name.startswith("_"):
+                        continue
+                    val = scores.get(dim, -1)
+                    if isinstance(val, (int, float)) and val >= 0:
+                        values.append(float(val))
         if values:
             dim_aggregates[dim] = {
                 "mean": round(sum(values) / len(values), 2),
@@ -357,8 +547,9 @@ async def main():
     # Build output
     output = {
         "metadata": {
-            "round": "R95",
+            "round": "R106",
             "date": time.strftime("%Y-%m-%d"),
+            "consensus": use_consensus,
             "category": args.category,
             "judges": judges,
             "total_scenarios": total,
@@ -401,7 +592,9 @@ async def main():
 
     # Print summary
     print(f"\n{'=' * 60}")
-    print(f"R95 Judge Results — {args.category}")
+    print(f"R106 Judge Results — {args.category} — judges: {judges}")
+    if use_consensus:
+        print(f"Mode: CONSENSUS (median of {len(judge_map)} judges)")
     print(f"{'=' * 60}")
     print(f"Scenarios: {success_count}/{total} scored")
     if "B_avg" in output["aggregates"]:

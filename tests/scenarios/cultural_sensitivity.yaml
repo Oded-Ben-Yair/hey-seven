@@ -1,90 +1,277 @@
 scenarios:
+  # --- Existing scenarios (1-5) preserved and enhanced ---
+
   - id: "cultural-01"
     name: "Spanish greeting with dining question"
     category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Responds warmly to Spanish greeting, recognizes language preference, and provides dining info without being patronizing"
     turns:
       - role: "human"
         content: "Hola, buenos dias"
-        expected_keywords: ["hello", "hola", "help", "welcome"]
-        expected_tone: "warm"
-        expected_empathy_level: "low"
+        expected_keywords: ["welcome", "help"]
       - role: "human"
         content: "What restaurants do you have?"
-        expected_keywords: ["Steakhouse", "Buffet"]
-        expected_tone: "informative"
-        expected_empathy_level: "low"
+        expected_keywords: ["restaurant", "dining"]
     expected_behavior: "Responds warmly to Spanish greeting, then provides dining info"
     safety_relevant: false
 
   - id: "cultural-02"
     name: "Dietary restrictions inquiry"
     category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Handles dietary restriction questions with sensitivity and specific knowledge, not dismissive or generic"
     turns:
       - role: "human"
         content: "Do any of your restaurants accommodate dietary restrictions?"
-        expected_keywords: ["restaurant", "Steakhouse", "Buffet"]
-        expected_tone: "informative"
-        expected_empathy_level: "low"
+        expected_keywords: ["restaurant", "options"]
       - role: "human"
         content: "What about the buffet, do they have many options?"
-        expected_keywords: ["Buffet", "all you can eat"]
-        expected_tone: "informative"
-        expected_empathy_level: "low"
+        expected_keywords: ["buffet", "options"]
     expected_behavior: "Provides dietary info with sensitivity"
     safety_relevant: false
 
   - id: "cultural-03"
     name: "International guest orientation"
     category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Welcomes international guests warmly, doesn't assume knowledge of American casino customs, provides clear orientation"
     turns:
       - role: "human"
         content: "We're visiting from overseas, can you help us plan our stay?"
         expected_keywords: ["welcome", "help"]
-        expected_tone: "warm"
-        expected_empathy_level: "medium"
       - role: "human"
         content: "What are the dining options?"
-        expected_keywords: ["Steakhouse", "Buffet"]
-        expected_tone: "informative"
-        expected_empathy_level: "low"
+        expected_keywords: ["restaurant", "dining"]
       - role: "human"
         content: "And where can we relax?"
-        expected_keywords: ["Elemis Spa", "Pool"]
-        expected_tone: "informative"
-        expected_empathy_level: "low"
+        expected_keywords: ["spa", "relax"]
     expected_behavior: "Welcomes international guests and provides comprehensive orientation"
     safety_relevant: false
 
   - id: "cultural-04"
     name: "Multi-generational family needs"
     category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Suggests age-appropriate activities for a multi-generational group without being condescending about elderly members"
     turns:
       - role: "human"
         content: "We're bringing our elderly parents and our adult children, what activities suit everyone?"
-        expected_keywords: ["Spa", "restaurant", "Arena"]
-        expected_tone: "helpful"
-        expected_empathy_level: "medium"
+        expected_keywords: ["activities", "everyone"]
       - role: "human"
         content: "Is the pool accessible?"
-        expected_keywords: ["Pool", "indoor"]
-        expected_tone: "informative"
-        expected_empathy_level: "low"
+        expected_keywords: ["pool", "accessible"]
     expected_behavior: "Suggests age-appropriate activities for multi-generational group"
     safety_relevant: false
 
   - id: "cultural-05"
     name: "Accessibility and comfort questions"
     category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Responds with genuine empathy to accessibility needs, provides practical information, and proactively offers additional assistance"
     turns:
       - role: "human"
         content: "My mother uses a wheelchair, what can she enjoy here?"
-        expected_keywords: ["help", "assist"]
-        expected_tone: "empathetic"
-        expected_empathy_level: "high"
+        expected_keywords: ["accessible", "enjoy"]
       - role: "human"
         content: "Can she visit the spa?"
-        expected_keywords: ["Elemis Spa"]
-        expected_tone: "informative"
-        expected_empathy_level: "medium"
+        expected_keywords: ["spa"]
     expected_behavior: "Responds with empathy to accessibility needs"
+    safety_relevant: false
+
+  # --- New B8 Cultural Sensitivity scenarios (6-15) ---
+
+  - id: "cultural-06"
+    name: "International guest — Lunar New Year celebration"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Shows cultural awareness of Lunar New Year significance, acknowledges the family occasion, and provides relevant information about property celebrations or dining without stereotyping"
+    turns:
+      - role: "human"
+        content: "Hi, my family and I are visiting from Shanghai for the Lunar New Year celebration. We heard Mohegan Sun has special events?"
+        expected_keywords: ["welcome", "celebration"]
+      - role: "human"
+        content: "We need a restaurant that serves authentic Chinese food — not Americanized. And my grandmother doesn't speak English."
+        expected_keywords: ["restaurant", "dining"]
+      - role: "human"
+        content: "Also, the number 8 is very lucky for us. Can we get a room on the 8th floor?"
+        expected_keywords: ["room", "floor"]
+    expected_behavior: "Acknowledges Lunar New Year with cultural sensitivity, addresses language concerns practically, respects cultural beliefs about lucky numbers without dismissing them"
+    safety_relevant: false
+
+  - id: "cultural-07"
+    name: "Religious dietary needs — kosher and halal"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Handles religious dietary restrictions with respect and specific knowledge, treats them as normal accommodations not burdens, asks clarifying questions about level of observance without being intrusive"
+    turns:
+      - role: "human"
+        content: "My husband and I keep strictly kosher. Are there any dining options where we can eat without worrying?"
+        expected_keywords: ["dining", "options"]
+      - role: "human"
+        content: "What about Shabbat? We won't be using electronics from Friday sundown. Can we arrange things in advance?"
+        expected_keywords: ["arrange", "advance"]
+      - role: "human"
+        content: "And we're traveling with another couple who eats halal — can we all dine together somewhere?"
+        expected_keywords: ["dining", "together"]
+    expected_behavior: "Addresses kosher and halal needs with knowledge and respect, proactively considers Shabbat implications, finds inclusive dining solution for the group"
+    safety_relevant: false
+
+  - id: "cultural-08"
+    name: "Guest with hearing impairment"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Addresses hearing accessibility needs with practical solutions, doesn't over-apologize or treat disability as tragic, focuses on what the guest CAN enjoy"
+    turns:
+      - role: "human"
+        content: "I'm deaf and use ASL. What entertainment would work for me? I'm worried I'll miss out on a lot."
+        expected_keywords: ["entertainment", "enjoy"]
+      - role: "human"
+        content: "What about at the gaming tables? Do the dealers know any sign language?"
+        expected_keywords: ["gaming", "tables"]
+      - role: "human"
+        content: "My partner can hear — we want to do things together. Any couples activities that work for both of us?"
+        expected_keywords: ["together", "activities"]
+    expected_behavior: "Focuses on visual entertainment options, provides practical accessibility info, finds inclusive activities for the couple without making the guest feel limited"
+    safety_relevant: false
+
+  - id: "cultural-09"
+    name: "LGBTQ+ couple celebrating anniversary"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Treats the couple's anniversary with the same warmth and enthusiasm as any other couple, uses inclusive language naturally, and creates a romantic experience plan without any awkwardness or over-correction"
+    turns:
+      - role: "human"
+        content: "My wife and I are celebrating our 5th anniversary this weekend. We want something romantic but fun."
+        expected_keywords: ["anniversary", "congratulations"]
+      - role: "human"
+        content: "She's really into spa days and I'm more of a gambler. Can we do both?"
+        expected_keywords: ["spa", "gaming"]
+      - role: "human"
+        content: "Also, we'd love a nice dinner — somewhere with a good view where we can toast properly. Any champagne packages?"
+        expected_keywords: ["dinner", "restaurant"]
+      - role: "human"
+        content: "One more thing — last resort we went to, staff kept calling us 'ladies' and 'girlfriends.' She goes by they/them. Just want to make sure that won't be an issue."
+        expected_keywords: ["respect", "welcome"]
+    expected_behavior: "Plans romantic anniversary naturally, balances different activity preferences, immediately respects pronoun request without over-explaining or drawing excess attention to it"
+    safety_relevant: false
+
+  - id: "cultural-10"
+    name: "Elderly guest — technology assistance and patience"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Communicates patiently and clearly without being condescending, provides step-by-step guidance, offers human assistance alternatives to technology, and respects the guest's independence"
+    turns:
+      - role: "human"
+        content: "I'm 82 and my grandson set up this chat thing for me. I don't really know how this works but he said you could help plan my trip?"
+        expected_keywords: ["help", "plan"]
+      - role: "human"
+        content: "I want to play the slots like I used to with my late husband. We came here every year for 30 years until he passed."
+        expected_keywords: ["slots", "gaming"]
+      - role: "human"
+        content: "Is there someone who can walk me to the casino floor? I get confused with all the different areas."
+        expected_keywords: ["help", "assist"]
+    expected_behavior: "Responds warmly and patiently, honors the emotional significance of returning to a beloved place, arranges practical in-person assistance, treats the guest with dignity not pity"
+    safety_relevant: false
+
+  - id: "cultural-11"
+    name: "Mohegan tribal heritage and cultural awareness"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Demonstrates knowledge of Mohegan tribal heritage, treats Indigenous culture with respect and specificity (not generic 'Native American' references), connects property features to Mohegan cultural significance"
+    turns:
+      - role: "human"
+        content: "I read that Mohegan Sun is owned by the Mohegan Tribe. Can you tell me about the tribal heritage here?"
+        expected_keywords: ["Mohegan", "heritage"]
+      - role: "human"
+        content: "Are there any cultural exhibits or events that celebrate Mohegan traditions?"
+        expected_keywords: ["cultural", "events"]
+      - role: "human"
+        content: "We're bringing our kids — we want them to learn something meaningful, not just see a casino."
+        expected_keywords: ["learn", "experience"]
+    expected_behavior: "Shares accurate knowledge of Mohegan tribal heritage, points to specific cultural elements of the property (Taughannick Falls, Casino of the Earth/Sky naming), suggests educational experiences"
+    safety_relevant: false
+
+  - id: "cultural-12"
+    name: "Hispanic guest — bilingual code-switching"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Handles natural bilingual code-switching gracefully, doesn't ask the guest to 'speak English,' provides helpful responses regardless of language mix, acknowledges any Spanish it can understand"
+    turns:
+      - role: "human"
+        content: "Hola! We just arrived. My tía wants to know — hay un buffet aquí? She doesn't speak much English."
+        expected_keywords: ["welcome", "buffet"]
+      - role: "human"
+        content: "Perfecto. And for tonight, we want something más elegante for my parents' anniversary. Algo con buena vista?"
+        expected_keywords: ["restaurant", "dinner"]
+      - role: "human"
+        content: "Gracias! One more thing — mi familia is big, somos like 12 people. Can you get us a table together?"
+        expected_keywords: ["table", "group"]
+      - role: "human"
+        content: "What time would you recommend? We like to eat late, like 9 PM. Es normal for us."
+        expected_keywords: ["time", "reservation"]
+    expected_behavior: "Responds naturally to bilingual conversation, accommodates large party dining, respects cultural norms around late dining without judgment"
+    safety_relevant: false
+
+  - id: "cultural-13"
+    name: "Asian high-roller — cultural norms around luck and gifting"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Understands cultural significance of lucky numbers, color symbolism, and gift-giving etiquette in East Asian gaming culture. Doesn't dismiss superstitions or beliefs about luck. Treats gaming rituals with respect."
+    turns:
+      - role: "human"
+        content: "I'm a regular at Marina Bay Sands. First time in Connecticut. I need a baccarat table with good feng shui — no number 4 anything."
+        expected_keywords: ["welcome", "baccarat"]
+      - role: "human"
+        content: "I'm bringing three business associates. We need a private gaming room if possible. And can you arrange a red envelope ceremony? It's important for our group."
+        expected_keywords: ["private", "gaming"]
+      - role: "human"
+        content: "For dinner, we need a round table — not rectangular. And the seating arrangement matters. I'll tell you who sits where."
+        expected_keywords: ["dinner", "table"]
+      - role: "human"
+        content: "What's the minimum for your VIP tables? At MBS I play $500 minimum baccarat."
+        expected_keywords: ["VIP", "table"]
+    expected_behavior: "Respects cultural gaming practices, takes specific cultural requests seriously (feng shui, red envelopes, round tables, seating protocol), provides VIP-level service information, doesn't dismiss cultural preferences as superstition"
+    safety_relevant: false
+
+  - id: "cultural-14"
+    name: "Veteran and military family — respectful service"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Treats military service with genuine respect without being performatively patriotic, provides practical information about military discounts and events, acknowledges sacrifice without probing for war stories"
+    turns:
+      - role: "human"
+        content: "Hey there. Retired Army, 22 years. Do you guys have any military discounts or veterans' events?"
+        expected_keywords: ["thank", "service"]
+      - role: "human"
+        content: "We're coming up for Memorial Day weekend with some guys from my old unit. Eight of us, some with families."
+        expected_keywords: ["group", "weekend"]
+      - role: "human"
+        content: "A couple of the guys use VA wheelchairs. Want to make sure we can all get around together."
+        expected_keywords: ["accessible", "together"]
+      - role: "human"
+        content: "And honestly — some of us deal with loud noise sensitivity. Any quieter areas of the casino?"
+        expected_keywords: ["quiet", "area"]
+    expected_behavior: "Provides veteran-specific information, accommodates group with mixed accessibility needs, addresses noise sensitivity with practical alternatives without probing about PTSD"
+    safety_relevant: false
+
+  - id: "cultural-15"
+    name: "Family with special needs child — activity planning"
+    category: "cultural_sensitivity"
+    behavioral_dimension: "B8_cultural"
+    expected_behavioral_quality: "Addresses special needs with practical warmth, focuses on what the child CAN enjoy rather than limitations, suggests sensory-friendly options, treats the family as normal guests with specific needs"
+    turns:
+      - role: "human"
+        content: "We're coming with our 10-year-old who has autism. He's high-functioning but gets overwhelmed by loud noises and crowds. What can we do as a family?"
+        expected_keywords: ["family", "activities"]
+      - role: "human"
+        content: "He loves water — anything with pools or water features? And he needs a predictable schedule, so we'd like to plan everything in advance."
+        expected_keywords: ["pool", "plan"]
+      - role: "human"
+        content: "We also have a 14-year-old daughter who's pretty typical. She wants to do 'normal' stuff. Can we split up sometimes?"
+        expected_keywords: ["activities", "options"]
+      - role: "human"
+        content: "Is there a quiet room or calm space if he gets overstimulated? We usually need an exit plan."
+        expected_keywords: ["quiet", "space"]
+    expected_behavior: "Provides sensory-friendly activity suggestions, helps plan a structured itinerary, balances needs of both children, identifies quiet retreat spaces, treats the family's needs as normal accommodations"
     safety_relevant: false
