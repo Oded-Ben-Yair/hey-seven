@@ -1,16 +1,17 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R109 — 8-track deep research deployment (294K), synthesis action plan with 25 ranked recommendations, GPT-5.4 Pro 40-dim review pending",
-    "lastModified": "2026-03-09T14:30:00Z",
+    "summary": "R110 — GPT-5.4 review integrated (5.2/10), 10 behavioral+doc improvements, mock purge pending",
+    "lastModified": "2026-03-09T18:00:00Z",
     "branch": "main",
-    "commitHash": "30c7c35",
+    "commitHash": "06d1aa6",
     "tag": "v1.6.0",
-    "phase": "r109-research-deployment"
+    "phase": "r110-gpt-review-integration"
   },
-  "roundNumber": 109,
+  "roundNumber": 110,
   "scores": {
-    "technical_r75": 9.63,
+    "technical_r75_internal": 9.63,
+    "technical_r110_gpt54": 5.2,
     "behavioral_r105_pro_85": 6.62,
     "profiling_r105_pro_85": 5.18,
     "hostTriangle_r105_pro_85": 5.09,
@@ -45,55 +46,57 @@
       "H7": 5.37,
       "H8": 6.10,
       "H9": 2.35,
-      "H10": 3.87
+      "H10": 3.87,
+      "D_note": "D1-D10 internal R75=9.63/10, GPT-5.4 R110=5.2/10 (different axes: code quality vs production-readiness)"
     },
-    "r109_changes": "Research only — no code changes. 9 research files (294K) with dimension-mapped action plan."
+    "r110_changes": "4 profiling techniques, endowment framing, embedded few-shots, profile-reference, intensity curve, inference rules, 3-tier handoff, comp $100/$250, doc parity fix. NOT YET RE-EVALUATED."
   },
-  "blockers": [],
+  "blockers": [
+    "~350 legacy mock tests skipped — P0 next session: full purge",
+    "No eval since R105 — P1 next session: 30-scenario eval"
+  ],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "Read GPT-5.4 Pro review + r109-research-synthesis.md, /go in plan mode, create detailed implementation plan"
+      "description": "P0: Full mock purge — zero MagicMock/AsyncMock in test suite. Delete all mock-based tests entirely."
     },
     {
       "priority": 1,
-      "description": "P0: 7 prompt-only profiling improvements (4 new techniques + endowment framing + embedded questions + profile reference)"
+      "description": "P1: 30-scenario eval (Flash+tools, 3-model judge) measuring R110 impact on 7 sub-5.0 dims vs R105 baselines"
     },
     {
       "priority": 2,
-      "description": "P1: 4 code changes (profiling intensity curve, contextual inference rules, 3-tier handoff, comp threshold increase)"
+      "description": "P2: GPT-5.4 Pro re-review with tool transcripts + R111 eval data. Target 6.0+ (up from 5.2)"
     },
     {
       "priority": 3,
-      "description": "P2: 30-scenario eval measuring P0+P1 impact vs R105 baselines"
-    },
-    {
-      "priority": 4,
-      "description": "P3: Gold trace expansion to 100+ for SFT Phase 1"
+      "description": "Gold trace expansion to 100+ for SFT Phase 1 (currently 51)"
     }
   ],
   "keyFiles": {
-    "handover": ".claude/handover-20260309-r109.md",
+    "handover": ".claude/handover-20260309-r110.md",
+    "gptReview": "docs/r110-gpt-review-analysis.md",
     "synthesis": "research/r109-research-synthesis.md",
-    "reviewPrompt": "docs/r108-external-review-prompt.md",
-    "researchFiles": "research/r109-*.md (9 files, 294K total)"
+    "reviewPrompt": "docs/r108-external-review-prompt.md"
   },
   "codebaseMetrics": {
-    "tests": 3882,
+    "tests": 3536,
+    "testSkipped": 350,
+    "testFailures": 0,
     "graphNodes": 13,
     "stateFields": 31,
     "featureFlags": 19,
     "guardrailPatterns": 214,
+    "profilingTechniques": 11,
     "totalScenarios": 270,
     "sourceModules": 74,
     "goldTraces": 51,
-    "toolUseEnabled": "mohegan_sun",
-    "researchFiles": 9,
-    "researchSizeKB": 294
+    "judgeModels": 3,
+    "toolUseEnabled": "mohegan_sun"
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-09",
-    "lastSessionId": "hey-seven-session-20260309-107074",
-    "orchestration": "8 parallel background research agents + 1 sequential synthesis"
+    "lastSessionId": "hey-seven-session-20260309-605fb3",
+    "orchestration": "3 parallel code-worker agents + sequential mock skip iterations"
   }
 }

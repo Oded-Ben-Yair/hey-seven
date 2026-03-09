@@ -117,3 +117,9 @@
 [2026-03-09] R109 DECISION: 3-tier handoff model (Marriott/Four Seasons pattern) for P9 restructuring. Tier 1 (3-sec context) + Tier 2 (5-sec prefs) + Tier 3 (10-sec relationship).
 [2026-03-09] R109 DECISION: SAFE Bet Act requires architectural separation of HOST (concierge) from GAMING (personalized promotions) use cases — design proactively.
 [2026-03-09] R109 DECISION: TCPA "any reasonable means" revocation already law — need NLP-based intent detection beyond fixed STOP_KEYWORDS.
+[2026-03-09] R110 DECISION: Implemented 10 changes from GPT-5.4 Pro review + R109 research synthesis. Behavioral-first strategy: prompt/architecture improvements before infrastructure hardening.
+[2026-03-09] R110 DECISION: Endowment framing ("you've earned") replaces transactional ("we'd like to offer") in Mohegan Sun only. Validate before cascading to other casinos.
+[2026-03-09] R110 DECISION: Comp auto-approve raised $50→$100 regular, $250 VIP per T2 industry benchmark ($100-150 norm for regular, $200-300 for VIP).
+[2026-03-09] R110 DECISION: ~350 mock tests skipped (not fixed) per ground rule. Full purge scheduled P0 next session — zero MagicMock/AsyncMock in test suite.
+[2026-03-09] R110 DECISION: GPT-5.4 infrastructure findings (typed failure states, SRP refactor, staging env) deferred to R112+. Behavioral quality for Mohegan pilot is the immediate priority.
+[2026-03-09] R110 DECISION: Doc parity fix addresses GPT's worst single score (D9=3/10). ARCHITECTURE.md corrected: 12→13 nodes, 204→214 patterns.
