@@ -110,3 +110,10 @@
 [2026-03-09] DECISION: R108 — Config fallback chain fixed: Firestore → CASINO_PROFILES → DEFAULT_CONFIG. Previous chain (Firestore → DEFAULT_CONFIG) caused per-casino feature flags (tool_use_enabled) to be invisible in local dev.
 [2026-03-09] DECISION: R108 — Gold trace quality threshold lowered back to 7.0 for auto-promotion (was raised to 8.0 in R107). At 8.0: only 11 traces. At 7.0: 51 traces. Manual CCD rewrite pass provides quality control.
 [2026-03-09] DECISION: R108 — 40-dimension hostile review prompt created for GPT-5.4 Pro Deep Research. Covers code architecture (D1-D10), behavioral (B1-B10), profiling (P1-P10), host triangle (H1-H10). Product review, not just code review.
+[2026-03-09] R109 DECISION: Fine-tuning target confirmed as Gemini 2.5 Flash SFT+DPO ($225-370 total). 3.x does NOT support fine-tuning. Tool calls supported in training data format.
+[2026-03-09] R109 DECISION: 4 new profiling techniques to add (P0 prompt-only): assumption_probe, anchor_expand, soft_binary, open_anchor. Based on Ritz-Carlton/Four Seasons/Les Clefs d'Or research.
+[2026-03-09] R109 DECISION: Comp auto-approve should increase to $100 regular / $250 VIP — current $50 is 2-3x below industry norms per T2 research.
+[2026-03-09] R109 DECISION: Flash-first for tool-calling — T6 research shows Flash outperforms Pro for tools (~20% Pro crash rate in tool loops). A/B test before assuming Pro needed.
+[2026-03-09] R109 DECISION: 3-tier handoff model (Marriott/Four Seasons pattern) for P9 restructuring. Tier 1 (3-sec context) + Tier 2 (5-sec prefs) + Tier 3 (10-sec relationship).
+[2026-03-09] R109 DECISION: SAFE Bet Act requires architectural separation of HOST (concierge) from GAMING (personalized promotions) use cases — design proactively.
+[2026-03-09] R109 DECISION: TCPA "any reasonable means" revocation already law — need NLP-based intent detection beyond fixed STOP_KEYWORDS.
