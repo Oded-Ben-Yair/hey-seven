@@ -106,3 +106,7 @@
 [2026-03-09] DECISION: R107 — Production fail-hard: RuntimeError at startup for empty API_KEY, missing Redis, missing Firestore in production. Silent degradation hid config errors for weeks in other projects.
 [2026-03-09] DECISION: R107 — Fine-tune quality threshold raised 7.0→8.0. Need 100+ examples (have 51). SFT+DPO confirmed available for Gemini 2.5 Flash. Deadline: June 17, 2026.
 [2026-03-09] DECISION: R107 — Unified profile completeness: whisper_planner delegates to profiling._calculate_profile_completeness_weighted(). Eliminated 3-way divergence (whisper=10 fields, profiling=16 weighted, models=19 nested).
+[2026-03-09] DECISION: R108 — NO MOCKING ground rule. Oded directive: do NOT add/modify/fix mock-based tests. All validation via live LLM evaluation framework. Legacy mocks broken by config changes are skipped, not fixed.
+[2026-03-09] DECISION: R108 — Config fallback chain fixed: Firestore → CASINO_PROFILES → DEFAULT_CONFIG. Previous chain (Firestore → DEFAULT_CONFIG) caused per-casino feature flags (tool_use_enabled) to be invisible in local dev.
+[2026-03-09] DECISION: R108 — Gold trace quality threshold lowered back to 7.0 for auto-promotion (was raised to 8.0 in R107). At 8.0: only 11 traces. At 7.0: 51 traces. Manual CCD rewrite pass provides quality control.
+[2026-03-09] DECISION: R108 — 40-dimension hostile review prompt created for GPT-5.4 Pro Deep Research. Covers code architecture (D1-D10), behavioral (B1-B10), profiling (P1-P10), host triangle (H1-H10). Product review, not just code review.
