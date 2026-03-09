@@ -1,14 +1,15 @@
 """Integration tests for profiling in the full graph pipeline.
 
 Tests profiling_enrichment_node wired into the 13-node StateGraph:
-topology verification, feature flag gating, multi-turn accumulation,
-and coexistence with the validate retry loop.
+topology verification, feature flag gating, and state schema parity.
+
+Mock-based pipeline integration tests removed per NO-MOCK ground rule.
+Validate profiling via live eval (tests/evaluation/).
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+import types
 
-from langchain_core.messages import AIMessage, HumanMessage
+import pytest
 
 from src.agent.constants import (
     NODE_GENERATE,
@@ -16,16 +17,8 @@ from src.agent.constants import (
     NODE_VALIDATE,
     _KNOWN_NODES,
 )
-from src.agent.graph import build_graph, chat
-from src.agent.profiling import (
-    ProfileExtractionOutput,
-)
-from src.agent.state import (
-    DispatchOutput,
-    PropertyQAState,
-    RouterOutput,
-    ValidationResult,
-)
+from src.agent.graph import build_graph
+from src.agent.state import PropertyQAState
 from src.casino.feature_flags import DEFAULT_FEATURES
 
 
@@ -73,137 +66,30 @@ class TestProfilingGraphTopology:
             f"profiling should connect to validate. Targets: {adj.get(NODE_PROFILING)}"
         )
 
-    def test_profiling_disabled_removes_node_from_edges(self):
+    def test_profiling_disabled_removes_node_from_edges(self, monkeypatch):
         """When profiling_enabled=False, generate connects directly to validate."""
-        import types
+        import src.agent.graph as graph_mod
 
         disabled = types.MappingProxyType(
             {**DEFAULT_FEATURES, "profiling_enabled": False}
         )
-        with patch("src.agent.graph.DEFAULT_FEATURES", disabled):
-            graph = build_graph()
-            graph_data = graph.get_graph()
-            adj: dict[str, set[str]] = {}
-            for edge in graph_data.edges:
-                adj.setdefault(edge.source, set()).add(edge.target)
+        monkeypatch.setattr(graph_mod, "DEFAULT_FEATURES", disabled)
+        graph = build_graph()
+        graph_data = graph.get_graph()
+        adj: dict[str, set[str]] = {}
+        for edge in graph_data.edges:
+            adj.setdefault(edge.source, set()).add(edge.target)
 
-            # generate -> validate directly (no profiling)
-            assert NODE_VALIDATE in adj.get(NODE_GENERATE, set()), (
-                "When profiling disabled, generate should connect directly to validate"
-            )
+        # generate -> validate directly (no profiling)
+        assert NODE_VALIDATE in adj.get(NODE_GENERATE, set()), (
+            "When profiling disabled, generate should connect directly to validate"
+        )
 
     def test_profiling_node_in_known_nodes(self):
         """NODE_PROFILING is registered in _KNOWN_NODES constant."""
         assert NODE_PROFILING in _KNOWN_NODES
 
-
-# ---------------------------------------------------------------------------
-# Full pipeline integration with mock LLM
-# ---------------------------------------------------------------------------
-
-
-def _make_smart_mock_llm():
-    """Build a mock LLM that dispatches by structured output schema.
-
-    Handles RouterOutput, DispatchOutput, ValidationResult,
-    and ProfileExtractionOutput.
-    """
-    mock_llm = AsyncMock()
-
-    def _with_structured_output(schema, **kwargs):
-        inner_mock = AsyncMock()
-        if schema == RouterOutput:
-            inner_mock.ainvoke = AsyncMock(
-                return_value=RouterOutput(
-                    query_type="property_qa",
-                    confidence=0.95,
-                    detected_language="en",
-                )
-            )
-        elif schema == DispatchOutput:
-            inner_mock.ainvoke = AsyncMock(
-                return_value=DispatchOutput(
-                    specialist="dining",
-                    confidence=0.9,
-                    reasoning="food query",
-                )
-            )
-        elif schema == ValidationResult:
-            inner_mock.ainvoke = AsyncMock(
-                return_value=ValidationResult(
-                    status="PASS",
-                    reason="Response meets criteria",
-                )
-            )
-        elif schema == ProfileExtractionOutput:
-            inner_mock.ainvoke = AsyncMock(
-                return_value=ProfileExtractionOutput(
-                    guest_name="Mike",
-                    party_size="4",
-                )
-            )
-        else:
-            # Default: return a mock that works
-            inner_mock.ainvoke = AsyncMock(return_value=MagicMock())
-        return inner_mock
-
-    mock_llm.with_structured_output = _with_structured_output
-
-    # For direct ainvoke (generate node)
-    mock_llm.ainvoke = AsyncMock(
-        return_value=AIMessage(
-            content="Here are our restaurant options.",
-        )
-    )
-
-    return mock_llm
-
-
-class TestProfilingPipelineIntegration:
-    """Integration tests running profiling through the full graph."""
-
-    @pytest.mark.asyncio
-    async def test_profiling_state_populated_after_node_call(self):
-        """Direct call to profiling_enrichment_node populates state fields."""
-        from src.agent.profiling import (
-            profiling_enrichment_node,
-            ProfileExtractionOutput,
-        )
-
-        mock_llm = MagicMock()
-        mock_extraction = ProfileExtractionOutput(
-            guest_name="Mike",
-            party_size="4",
-        )
-        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
-            return_value=mock_extraction,
-        )
-
-        state = {
-            "messages": [
-                HumanMessage(content="I'm Mike, party of 4 for dinner"),
-                AIMessage(
-                    content="Welcome Mike! Let me find dining options for your group."
-                ),
-            ],
-            "extracted_fields": {},
-            "whisper_plan": None,
-        }
-
-        with patch(
-            "src.agent.whisper_planner._get_whisper_llm",
-            new_callable=AsyncMock,
-            return_value=mock_llm,
-        ):
-            result = await profiling_enrichment_node(state)
-
-        assert result["profiling_phase"] is not None
-        assert isinstance(result["profile_completeness_score"], float)
-        assert result["profile_completeness_score"] > 0.0
-        assert result["extracted_fields"].get("name") == "Mike"
-
-    @pytest.mark.asyncio
-    async def test_profiling_does_not_break_retry_loop(self):
+    def test_profiling_does_not_break_retry_loop(self):
         """Validation RETRY still routes back to generate even with profiling in between."""
         graph = build_graph()
         graph_data = graph.get_graph()
@@ -216,24 +102,22 @@ class TestProfilingPipelineIntegration:
             "validate should still have retry edge to generate with profiling present"
         )
 
-    def test_profiling_disabled_graph_has_11_connected_nodes(self):
+    def test_profiling_disabled_graph_has_correct_topology(self, monkeypatch):
         """With profiling disabled, graph still has correct topology."""
-        import types
+        import src.agent.graph as graph_mod
 
         disabled = types.MappingProxyType(
             {**DEFAULT_FEATURES, "profiling_enabled": False}
         )
-        with patch("src.agent.graph.DEFAULT_FEATURES", disabled):
-            graph = build_graph()
-            graph_data = graph.get_graph()
+        monkeypatch.setattr(graph_mod, "DEFAULT_FEATURES", disabled)
+        graph = build_graph()
+        graph_data = graph.get_graph()
 
-            # Even disabled, the node might still be in the graph
-            # but the edge should go directly generate -> validate
-            adj: dict[str, set[str]] = {}
-            for edge in graph_data.edges:
-                adj.setdefault(edge.source, set()).add(edge.target)
+        adj: dict[str, set[str]] = {}
+        for edge in graph_data.edges:
+            adj.setdefault(edge.source, set()).add(edge.target)
 
-            assert NODE_VALIDATE in adj.get(NODE_GENERATE, set())
+        assert NODE_VALIDATE in adj.get(NODE_GENERATE, set())
 
 
 # ---------------------------------------------------------------------------

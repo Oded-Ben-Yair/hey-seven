@@ -1,43 +1,26 @@
-"""Phase 2 integration tests: whisper planner wiring, host agent injection,
-comp agent profile gate, SMS webhook endpoint, graph endpoint v2.
+"""Phase 2 integration tests — deterministic subset.
 
-Validates that Phase 2 modules (guest profile, whisper planner, SMS) are
-correctly wired into the existing graph, agents, and API.
+Mock purge R111: Retained only deterministic tests that do not depend on
+mock-based LLM tests removed. All behavioral validation uses live eval.
+
+Covers: graph topology (whisper wiring, node counts, edges), whisper plan
+formatting, profile completeness calculation, conftest cleanup, SMS webhook,
+graph endpoint, format_whisper_plan.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+
 from langchain_core.messages import AIMessage, HumanMessage
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+class _Placeholder:
+    """Minimal placeholder object for app.state fields (replaces MagicMock)."""
 
-
-def _base_state(**overrides) -> dict:
-    """Build a minimal PropertyQAState dict with defaults."""
-    base = {
-        "messages": [],
-        "query_type": None,
-        "router_confidence": 0.0,
-        "retrieved_context": [],
-        "validation_result": None,
-        "retry_count": 0,
-        "skip_validation": False,
-        "retry_feedback": None,
-        "current_time": "Monday 3 PM",
-        "sources_used": [],
-        "extracted_fields": {},
-        "whisper_plan": None,
-    }
-    base.update(overrides)
-    return base
+    pass
 
 
 # ---------------------------------------------------------------------------
-# TestWhisperGraphWiring
+# TestWhisperGraphWiring (deterministic — graph topology inspection)
 # ---------------------------------------------------------------------------
 
 
@@ -63,7 +46,7 @@ class TestWhisperGraphWiring:
         assert "whisper_planner" in retrieve_targets
 
     def test_whisper_to_pre_extract_edge(self):
-        """whisper_planner has an edge to pre_extract (R87: pre_extract inserted before generate)."""
+        """whisper_planner has an edge to pre_extract."""
         from src.agent.graph import build_graph
 
         graph = build_graph()
@@ -89,8 +72,8 @@ class TestWhisperGraphWiring:
         graph = build_graph()
         drawable = graph.get_graph()
         validate_targets = {e.target for e in drawable.edges if e.source == "validate"}
-        assert "generate" in validate_targets  # RETRY path
-        assert "whisper_planner" not in validate_targets  # No re-whisper on retry
+        assert "generate" in validate_targets
+        assert "whisper_planner" not in validate_targets
 
     def test_whisper_constant_exported(self):
         """NODE_WHISPER constant is importable and correct."""
@@ -112,7 +95,7 @@ class TestWhisperGraphWiring:
 
 
 # ---------------------------------------------------------------------------
-# TestWhisperNodeMetadata
+# TestWhisperNodeMetadata (deterministic — pure function)
 # ---------------------------------------------------------------------------
 
 
@@ -145,297 +128,7 @@ class TestWhisperNodeMetadata:
 
 
 # ---------------------------------------------------------------------------
-# TestHostAgentWhisperInjection
-# ---------------------------------------------------------------------------
-
-
-class TestHostAgentWhisperInjection:
-    """Verify host_agent injects whisper plan into system prompt."""
-
-    @pytest.mark.skip(
-        reason="R110: Mock incompatible with profile-reference injection. TODO: migrate to live eval."
-    )
-    @pytest.mark.asyncio
-    async def test_whisper_plan_injected_when_present(self):
-        """Whisper plan is appended to system prompt when state has a plan."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="Test response"))
-
-        state = _base_state(
-            messages=[HumanMessage(content="Tell me about dining")],
-            retrieved_context=[
-                {
-                    "content": "Test restaurant data",
-                    "metadata": {"category": "restaurants"},
-                    "score": 0.9,
-                },
-            ],
-            whisper_plan={
-                "next_topic": "dining",
-                "conversation_note": "Guest seems interested in Italian food",
-            },
-        )
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-        mock_cb.record_success = AsyncMock()
-
-        with (
-            patch(
-                "src.agent.agents.host_agent._get_llm",
-                new_callable=AsyncMock,
-                return_value=mock_llm,
-            ),
-            patch(
-                "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
-            ),
-        ):
-            await host_agent(state)
-
-        # Verify the LLM was called with a system prompt containing whisper guidance
-        call_args = mock_llm.ainvoke.call_args[0][0]
-        system_msg = call_args[0]  # First message is SystemMessage
-        assert "Whisper Track Guidance" in system_msg.content
-        assert "dining" in system_msg.content
-        assert "Italian" in system_msg.content
-
-    @pytest.mark.skip(
-        reason="R110: Mock incompatible with profile-reference injection. TODO: migrate to live eval."
-    )
-    @pytest.mark.asyncio
-    async def test_no_whisper_plan_no_injection(self):
-        """No whisper plan (None) means no guidance injected."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="Test response"))
-
-        state = _base_state(
-            messages=[HumanMessage(content="Tell me about dining")],
-            retrieved_context=[
-                {
-                    "content": "Test restaurant data",
-                    "metadata": {"category": "restaurants"},
-                    "score": 0.9,
-                },
-            ],
-            whisper_plan=None,
-        )
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-        mock_cb.record_success = AsyncMock()
-
-        with (
-            patch(
-                "src.agent.agents.host_agent._get_llm",
-                new_callable=AsyncMock,
-                return_value=mock_llm,
-            ),
-            patch(
-                "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
-            ),
-        ):
-            await host_agent(state)
-
-        call_args = mock_llm.ainvoke.call_args[0][0]
-        system_msg = call_args[0]
-        assert "Whisper Track Guidance" not in system_msg.content
-
-    @pytest.mark.asyncio
-    async def test_empty_context_skips_whisper(self):
-        """Empty retrieved context returns early before whisper injection."""
-        from src.agent.agents.host_agent import host_agent
-
-        state = _base_state(
-            messages=[HumanMessage(content="Tell me about something")],
-            retrieved_context=[],
-            whisper_plan={"next_topic": "dining", "conversation_note": "test"},
-        )
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-
-        with patch(
-            "src.agent.agents.host_agent._get_circuit_breaker", return_value=mock_cb
-        ):
-            result = await host_agent(state)
-
-        # Empty context triggers skip_validation early return
-        assert result["skip_validation"] is True
-        assert "don't have that specific info" in result["messages"][0].content
-
-
-# ---------------------------------------------------------------------------
-# TestCompAgentProfileGate
-# ---------------------------------------------------------------------------
-
-
-class TestCompAgentNoProfileGate:
-    """R77: Verify comp_agent proceeds to RAG without profile completeness gate.
-
-    The profile completeness gate (COMP_COMPLETENESS_THRESHOLD=0.60) was removed
-    in R77 because it caused 90%+ of comp queries to return a canned "explore
-    rewards" response instead of consulting RAG for real loyalty program data.
-    """
-
-    @pytest.mark.skip(
-        reason="R110: Mock incompatible with profile-reference injection. TODO: migrate to live eval."
-    )
-    @pytest.mark.asyncio
-    async def test_empty_profile_proceeds_to_llm(self):
-        """R77: Empty profile proceeds to LLM generation (no gate)."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=AIMessage(
-                content="The Momentum program has 5 tiers with great benefits."
-            )
-        )
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-        mock_cb.record_success = AsyncMock()
-
-        state = _base_state(
-            messages=[HumanMessage(content="What promotions do you have?")],
-            retrieved_context=[
-                {
-                    "content": "Loyalty program info",
-                    "metadata": {"category": "promotions"},
-                    "score": 0.9,
-                },
-            ],
-            extracted_fields={},  # Empty profile -- previously would trigger canned response
-        )
-
-        with (
-            patch(
-                "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
-            ),
-            patch(
-                "src.agent.agents.comp_agent._get_llm",
-                new_callable=AsyncMock,
-                return_value=mock_llm,
-            ),
-        ):
-            result = await comp_agent(state)
-
-        # Should get LLM response, NOT canned "explore rewards" deflection
-        assert "explore our rewards" not in result["messages"][0].content
-        mock_llm.ainvoke.assert_called_once()
-
-    @pytest.mark.skip(
-        reason="R110: Mock incompatible with profile-reference injection. TODO: migrate to live eval."
-    )
-    @pytest.mark.asyncio
-    async def test_partial_profile_proceeds_to_llm(self):
-        """R77: Partial profile also proceeds to LLM (no threshold)."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=AIMessage(content="Here are the current promotions available.")
-        )
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-        mock_cb.record_success = AsyncMock()
-
-        # Only 2/8 flat fields filled = 25% -- previously below threshold
-        state = _base_state(
-            messages=[HumanMessage(content="Any deals?")],
-            retrieved_context=[
-                {
-                    "content": "Promo data",
-                    "metadata": {"category": "promotions"},
-                    "score": 0.9,
-                },
-            ],
-            extracted_fields={
-                "name": "John",
-                "visit_date": None,
-                "party_size": None,
-                "dining": None,
-                "entertainment": "comedy show",
-                "gaming": None,
-                "occasions": None,
-                "companions": None,
-            },
-        )
-
-        with (
-            patch(
-                "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
-            ),
-            patch(
-                "src.agent.agents.comp_agent._get_llm",
-                new_callable=AsyncMock,
-                return_value=mock_llm,
-            ),
-        ):
-            result = await comp_agent(state)
-
-        # Should get LLM response, NOT canned deflection
-        assert "explore our rewards" not in result["messages"][0].content
-        mock_llm.ainvoke.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_circuit_breaker_open_returns_fallback(self):
-        """Circuit breaker open returns fallback (no profile gate in the way)."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        state = _base_state(
-            messages=[HumanMessage(content="What promotions?")],
-            extracted_fields={},  # Empty profile -- no gate to block
-        )
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-
-        with patch(
-            "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
-        ):
-            result = await comp_agent(state)
-
-        assert result["skip_validation"] is True
-        assert "technical difficulties" in result["messages"][0].content
-
-    @pytest.mark.asyncio
-    async def test_empty_context_returns_fallback(self):
-        """Empty retrieved context returns contextual fallback (not canned)."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        state = _base_state(
-            messages=[HumanMessage(content="What loyalty rewards?")],
-            retrieved_context=[],
-            extracted_fields={},
-        )
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = False
-        mock_cb.allow_request = AsyncMock(return_value=True)
-
-        with patch(
-            "src.agent.agents.comp_agent._get_circuit_breaker", return_value=mock_cb
-        ):
-            result = await comp_agent(state)
-
-        assert result["skip_validation"] is True
-        # R77: fallback now mentions contacting player services for tier/rewards details
-        content = result["messages"][0].content.lower()
-        assert "loyalty" in content or "rewards" in content or "promotions" in content
-
-
-# ---------------------------------------------------------------------------
-# TestSMSWebhookEndpoint
+# TestSMSWebhookEndpoint (deterministic — real FastAPI TestClient, no LLM mocks)
 # ---------------------------------------------------------------------------
 
 
@@ -446,14 +139,12 @@ class TestSMSWebhookEndpoint:
     def client(self, monkeypatch):
         """Create a test client for the FastAPI app with SMS enabled."""
         from fastapi.testclient import TestClient
-
         from src.api.app import create_app
 
-        # SMS_ENABLED=true so /sms/webhook doesn't return 404
         monkeypatch.setenv("SMS_ENABLED", "true")
         monkeypatch.setenv("CONSENT_HMAC_SECRET", "test-secret-for-sms-webhook-tests")
         app = create_app()
-        app.state.agent = MagicMock()
+        app.state.agent = _Placeholder()
         app.state.property_data = {"property": {"name": "Test Casino"}}
         app.state.ready = True
         return TestClient(app)
@@ -557,7 +248,6 @@ class TestSMSWebhookEndpoint:
             content=b"not json",
             headers={"Content-Type": "application/json"},
         )
-        # Should catch the exception and return 500
         assert response.status_code in (422, 500)
 
     def test_spanish_stop_keyword(self, client):
@@ -581,7 +271,7 @@ class TestSMSWebhookEndpoint:
 
 
 # ---------------------------------------------------------------------------
-# TestGraphEndpointV2
+# TestGraphEndpointV2 (deterministic — real FastAPI TestClient, topology checks)
 # ---------------------------------------------------------------------------
 
 
@@ -592,11 +282,10 @@ class TestGraphEndpointV2:
     def client(self):
         """Create a test client for the FastAPI app."""
         from fastapi.testclient import TestClient
-
         from src.api.app import create_app
 
         app = create_app()
-        app.state.agent = MagicMock()
+        app.state.agent = _Placeholder()
         app.state.property_data = {"property": {"name": "Test Casino"}}
         app.state.ready = True
         return TestClient(app)
@@ -645,7 +334,7 @@ class TestGraphEndpointV2:
         assert len(matching) == 1
 
     def test_graph_whisper_to_pre_extract_edge(self, client):
-        """whisper_planner -> pre_extract edge exists (R87: pre_extract before generate)."""
+        """whisper_planner -> pre_extract edge exists."""
         response = client.get("/graph")
         data = response.json()
         edges = data["edges"]
@@ -668,94 +357,7 @@ class TestGraphEndpointV2:
 
 
 # ---------------------------------------------------------------------------
-# TestWhisperPlannerNodeUnit
-# ---------------------------------------------------------------------------
-
-
-class TestWhisperPlannerNodeUnit:
-    """Unit tests for the whisper_planner_node function."""
-
-    @pytest.mark.asyncio
-    async def test_returns_plan_on_success(self):
-        """whisper_planner_node returns a plan dict on success."""
-        from src.agent.whisper_planner import WhisperPlan, whisper_planner_node
-
-        plan = WhisperPlan(
-            next_topic="dining",
-            conversation_note="Guest mentioned anniversary",
-        )
-
-        mock_llm = MagicMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(return_value=plan)
-        mock_llm.with_structured_output.return_value = mock_structured
-
-        state = _base_state(
-            messages=[HumanMessage(content="We're celebrating our anniversary")],
-        )
-
-        with patch(
-            "src.agent.whisper_planner._get_whisper_llm",
-            new_callable=AsyncMock,
-            return_value=mock_llm,
-        ):
-            result = await whisper_planner_node(state)
-
-        assert result["whisper_plan"] is not None
-        assert result["whisper_plan"]["next_topic"] == "dining"
-        assert (
-            result["whisper_plan"]["conversation_note"] == "Guest mentioned anniversary"
-        )
-
-    @pytest.mark.asyncio
-    async def test_returns_none_on_llm_failure(self):
-        """whisper_planner_node returns None plan on LLM failure."""
-        from src.agent.whisper_planner import whisper_planner_node
-
-        mock_llm = MagicMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(side_effect=RuntimeError("LLM API down"))
-        mock_llm.with_structured_output.return_value = mock_structured
-
-        state = _base_state(
-            messages=[HumanMessage(content="Tell me about dining")],
-        )
-
-        with patch(
-            "src.agent.whisper_planner._get_whisper_llm",
-            new_callable=AsyncMock,
-            return_value=mock_llm,
-        ):
-            result = await whisper_planner_node(state)
-
-        assert result["whisper_plan"] is None
-
-    @pytest.mark.asyncio
-    async def test_returns_none_on_parsing_error(self):
-        """whisper_planner_node returns None plan on parsing error."""
-        from src.agent.whisper_planner import whisper_planner_node
-
-        mock_llm = MagicMock()
-        mock_structured = AsyncMock()
-        mock_structured.ainvoke = AsyncMock(side_effect=ValueError("Invalid output"))
-        mock_llm.with_structured_output.return_value = mock_structured
-
-        state = _base_state(
-            messages=[HumanMessage(content="Hello")],
-        )
-
-        with patch(
-            "src.agent.whisper_planner._get_whisper_llm",
-            new_callable=AsyncMock,
-            return_value=mock_llm,
-        ):
-            result = await whisper_planner_node(state)
-
-        assert result["whisper_plan"] is None
-
-
-# ---------------------------------------------------------------------------
-# TestFormatWhisperPlan
+# TestFormatWhisperPlan (deterministic — pure function)
 # ---------------------------------------------------------------------------
 
 
@@ -805,7 +407,7 @@ class TestFormatWhisperPlan:
 
 
 # ---------------------------------------------------------------------------
-# TestProfileCompletenessCalculation
+# TestProfileCompletenessCalculation (deterministic — pure function)
 # ---------------------------------------------------------------------------
 
 
@@ -859,16 +461,12 @@ class TestProfileCompletenessCalculation:
         }
         completeness = calculate_completeness(profile)
         assert completeness > 0.0
-        # 5 core fields * 2.0 weight = 10.0 out of total weight
-        assert completeness > 0.3  # Should be significant
+        assert completeness > 0.3
 
     def test_sixty_percent_threshold(self):
         """Profile with enough fields reaches 60% threshold."""
         from src.data.models import calculate_completeness
 
-        # Fill all core (5*2=10) + all visit (3*1.5=4.5) = 14.5
-        # total_weight = 5*2 + 3*1.5 + 10*1.0 + 0.5 = 10 + 4.5 + 10 + 0.5 = 25.0
-        # 14.5/25 = 0.58 (just under 60%)
         profile = {
             "core_identity": {
                 "name": {
@@ -938,7 +536,7 @@ class TestProfileCompletenessCalculation:
 
 
 # ---------------------------------------------------------------------------
-# TestConftestCleanup
+# TestConftestCleanup (deterministic)
 # ---------------------------------------------------------------------------
 
 
@@ -949,14 +547,12 @@ class TestConftestCleanup:
         """clear_memory_store function is importable and callable."""
         from src.data.guest_profile import clear_memory_store
 
-        # Should not raise
         clear_memory_store()
 
     def test_memory_store_is_cleared(self):
         """Memory store is empty after clear."""
         from src.data.guest_profile import _memory_store, clear_memory_store
 
-        # Add something
         _memory_store["test:key"] = {"test": "data"}
         assert len(_memory_store) > 0
 

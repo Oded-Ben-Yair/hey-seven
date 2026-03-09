@@ -1,17 +1,15 @@
 """Tests for R5 scalability fixes.
 
-Covers: BoundedMemorySaver eviction, rate limiter deque bounds,
-circuit breaker maxlen removal, cache race condition prevention,
-ApiKeyMiddleware atomic tuple, PII buffer max-size guard, LLM semaphore,
-guest profile memory store bounds.
+Covers: BoundedMemorySaver eviction, circuit breaker maxlen removal,
+PII buffer max-size guard, LLM semaphore, guest profile memory store bounds.
+
+Mock-based tests (rate limiter deque, feature flag cache lock, casino config
+cache lock, ApiKeyMiddleware atomic tuple) removed per NO-MOCK ground rule.
 """
 
 import asyncio
-import collections
-import time
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +69,11 @@ class TestBoundedMemorySaver:
     @pytest.mark.asyncio
     async def test_get_checkpointer_returns_bounded(self):
         """get_checkpointer returns BoundedMemorySaver for dev mode."""
-        from src.agent.memory import BoundedMemorySaver, clear_checkpointer_cache, get_checkpointer
+        from src.agent.memory import (
+            BoundedMemorySaver,
+            clear_checkpointer_cache,
+            get_checkpointer,
+        )
 
         clear_checkpointer_cache()
         cp = await get_checkpointer()
@@ -88,72 +90,6 @@ class TestBoundedMemorySaver:
         cp2 = await get_checkpointer()
         assert cp1 is cp2
         clear_checkpointer_cache()
-
-
-# ---------------------------------------------------------------------------
-# Rate Limiter Deque Bounds
-# ---------------------------------------------------------------------------
-
-
-class TestRateLimiterDequeBounds:
-    """R5 fix: per-client deque bounded to max_tokens (DeepSeek F2)."""
-
-    @pytest.mark.asyncio
-    async def test_deque_has_maxlen(self):
-        """Per-client deque is created with maxlen=max_tokens."""
-        from src.api.middleware import RateLimitMiddleware
-
-        with patch("src.api.middleware.get_settings") as mock_settings:
-            mock_settings.return_value.RATE_LIMIT_CHAT = 10
-            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 100
-            mock_settings.return_value.TRUSTED_PROXIES = None
-
-            from starlette.applications import Starlette
-            from starlette.routing import Route
-            from starlette.requests import Request
-            from starlette.responses import JSONResponse
-
-            def handler(r: Request) -> JSONResponse:
-                return JSONResponse({"ok": True})
-
-            app = Starlette(routes=[Route("/chat", handler, methods=["POST"])])
-            middleware = RateLimitMiddleware(app)
-
-            # Trigger a request to create a deque
-            await middleware._is_allowed("test-ip")
-
-            # Check maxlen on the created deque
-            bucket = middleware._requests["test-ip"]
-            assert bucket.maxlen == 10
-
-    @pytest.mark.asyncio
-    async def test_rejected_requests_not_recorded(self):
-        """Requests over the limit do not add timestamps to the deque."""
-        from src.api.middleware import RateLimitMiddleware
-
-        with patch("src.api.middleware.get_settings") as mock_settings:
-            mock_settings.return_value.RATE_LIMIT_CHAT = 2
-            mock_settings.return_value.RATE_LIMIT_MAX_CLIENTS = 100
-            mock_settings.return_value.TRUSTED_PROXIES = None
-
-            from starlette.applications import Starlette
-            from starlette.routing import Route
-            from starlette.requests import Request
-            from starlette.responses import JSONResponse
-
-            def handler(r: Request) -> JSONResponse:
-                return JSONResponse({"ok": True})
-
-            app = Starlette(routes=[Route("/chat", handler, methods=["POST"])])
-            middleware = RateLimitMiddleware(app)
-
-            # Allow 2 requests
-            assert await middleware._is_allowed("test-ip") is True
-            assert await middleware._is_allowed("test-ip") is True
-            # 3rd should be rejected
-            assert await middleware._is_allowed("test-ip") is False
-            # Deque should have exactly 2 entries (rejected not recorded)
-            assert len(middleware._requests["test-ip"]) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +190,11 @@ class TestCircuitBreakerTTLCache:
     @pytest.mark.asyncio
     async def test_cb_factory_returns_circuit_breaker(self):
         """_get_circuit_breaker returns a CircuitBreaker instance."""
-        from src.agent.circuit_breaker import CircuitBreaker, _cb_cache, _get_circuit_breaker
+        from src.agent.circuit_breaker import (
+            CircuitBreaker,
+            _cb_cache,
+            _get_circuit_breaker,
+        )
 
         _cb_cache.clear()
         cb = await _get_circuit_breaker()
@@ -295,105 +235,6 @@ class TestCBRollingWindowConfigurable:
 
 
 # ---------------------------------------------------------------------------
-# Feature Flag Cache Lock
-# ---------------------------------------------------------------------------
-
-
-class TestFeatureFlagCacheLock:
-    """R5 fix: asyncio.Lock prevents thundering herd (DeepSeek F3, GPT F6)."""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_reads_single_fetch(self):
-        """Multiple concurrent cache misses result in a single Firestore fetch."""
-        from src.casino.feature_flags import _flag_cache, get_feature_flags
-
-        _flag_cache.clear()
-
-        fetch_count = {"n": 0}
-        original_get_config = None
-
-        async def counting_get_config(casino_id):
-            fetch_count["n"] += 1
-            await asyncio.sleep(0.01)  # Simulate network latency
-            return {"features": {"ai_disclosure_enabled": True}}
-
-        with patch("src.casino.feature_flags.get_casino_config", side_effect=counting_get_config):
-            # Launch 10 concurrent reads
-            tasks = [get_feature_flags("mohegan_sun") for _ in range(10)]
-            results = await asyncio.gather(*tasks)
-
-        # Due to lock, only 1 fetch should have occurred (not 10)
-        assert fetch_count["n"] == 1
-        # All results should be identical
-        for r in results:
-            assert r["ai_disclosure_enabled"] is True
-
-        _flag_cache.clear()
-
-
-# ---------------------------------------------------------------------------
-# Casino Config Cache Lock
-# ---------------------------------------------------------------------------
-
-
-class TestCasinoConfigCacheLock:
-    """R5 fix: asyncio.Lock prevents thundering herd (DeepSeek F4, GPT F6)."""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_reads_single_fetch(self):
-        """Multiple concurrent cache misses produce only one Firestore read."""
-        from src.casino.config import _config_cache, get_casino_config
-
-        _config_cache.clear()
-
-        with patch("src.casino.config._get_firestore_client", return_value=None):
-            tasks = [get_casino_config("test_casino") for _ in range(10)]
-            results = await asyncio.gather(*tasks)
-
-        # All should return the same config
-        for r in results:
-            assert r["_id"] == "test_casino"
-
-        # Cache should have exactly 1 entry
-        assert len(_config_cache) == 1
-        _config_cache.clear()
-
-
-# ---------------------------------------------------------------------------
-# ApiKeyMiddleware Atomic Tuple
-# ---------------------------------------------------------------------------
-
-
-class TestApiKeyAtomicTuple:
-    """R5 fix: atomic tuple prevents torn pair reads (DeepSeek F5)."""
-
-    def test_initial_state_is_tuple(self):
-        """ApiKeyMiddleware._cached is a tuple (key, timestamp)."""
-        from src.api.middleware import ApiKeyMiddleware
-
-        with patch("src.api.middleware.get_settings"):
-            middleware = ApiKeyMiddleware(MagicMock())
-            assert isinstance(middleware._cached, tuple)
-            assert len(middleware._cached) == 2
-            assert middleware._cached == ("", 0.0)
-
-    def test_get_api_key_updates_tuple_atomically(self):
-        """_get_api_key updates both key and timestamp in a single assignment."""
-        from src.api.middleware import ApiKeyMiddleware
-
-        with patch("src.api.middleware.get_settings") as mock_settings:
-            mock_settings.return_value.API_KEY = MagicMock(
-                get_secret_value=lambda: "test-key"
-            )
-            middleware = ApiKeyMiddleware(MagicMock())
-
-            key = middleware._get_api_key()
-            assert key == "test-key"
-            assert middleware._cached[0] == "test-key"
-            assert middleware._cached[1] > 0
-
-
-# ---------------------------------------------------------------------------
 # PII Buffer Max Size
 # ---------------------------------------------------------------------------
 
@@ -416,6 +257,7 @@ class TestPIIBufferMaxSize:
         # Verify chat_stream creates a StreamingPIIRedactor
         import inspect
         import src.agent.graph as graph_module
+
         source = inspect.getsource(graph_module.chat_stream)
         assert "StreamingPIIRedactor" in source
 
@@ -455,36 +297,6 @@ class TestGuestProfileMemoryBounds:
         from src.data.guest_profile import _MEMORY_STORE_MAX
 
         assert _MEMORY_STORE_MAX == 10_000
-
-    @pytest.mark.asyncio
-    async def test_memory_store_evicts_at_capacity(self):
-        """Memory store evicts oldest entries when at capacity."""
-        from src.data.guest_profile import _memory_store, clear_memory_store
-
-        clear_memory_store()
-
-        # Temporarily set a small max for testing
-        import src.data.guest_profile as gp
-        original_max = gp._MEMORY_STORE_MAX
-        gp._MEMORY_STORE_MAX = 3
-
-        try:
-            with patch("src.data.guest_profile._get_firestore_client", return_value=None):
-                from src.data.guest_profile import update_guest_profile
-
-                await update_guest_profile("+10001", "casino1", {"core_identity": {"phone": "+10001"}})
-                await update_guest_profile("+10002", "casino1", {"core_identity": {"phone": "+10002"}})
-                await update_guest_profile("+10003", "casino1", {"core_identity": {"phone": "+10003"}})
-                assert len(_memory_store) == 3
-
-                # 4th should trigger eviction of oldest
-                await update_guest_profile("+10004", "casino1", {"core_identity": {"phone": "+10004"}})
-                assert len(_memory_store) == 3
-                assert "casino1:+10001" not in _memory_store
-                assert "casino1:+10004" in _memory_store
-        finally:
-            gp._MEMORY_STORE_MAX = original_max
-            clear_memory_store()
 
 
 # ---------------------------------------------------------------------------
@@ -541,4 +353,6 @@ class TestCasinoIdCacheKeying:
 
         # After any retrieval, the cache key should contain casino_id
         for key in _retriever_cache:
-            assert key != "default", "Cache key should include casino_id, not be 'default'"
+            assert key != "default", (
+                "Cache key should include casino_id, not be 'default'"
+            )

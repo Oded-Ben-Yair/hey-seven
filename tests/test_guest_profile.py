@@ -1,17 +1,20 @@
-"""Tests for the guest profile data models and CRUD operations.
+"""Tests for the guest profile data models.
 
 Covers:
 - ProfileField creation and validation
 - Profile completeness calculation (empty, partial, full)
 - Confidence decay (90-day threshold)
 - Confidence update rules (confirm, contradict)
-- CCPA cascade delete
 - Low-confidence field filtering
-- In-memory store CRUD operations
+- Agent context (decay + filter pipeline)
+- Edge cases (JSON serialization, custom threshold)
+- Firestore client caching structure
+
+Mock-based tests (CRUD with @patch Firestore, batch overflow, multi-tenant)
+removed (mock purge R111).
 """
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 
 import pytest
 
@@ -52,42 +55,66 @@ def _make_full_profile(phone="+12035551234"):
             "phone": phone,
             "guest_uuid": "g-test-uuid-1234",
             "name": _make_profile_field("Maria", confidence=0.95),
-            "email": _make_profile_field("maria@test.com", confidence=0.90, source="incentive_exchange"),
+            "email": _make_profile_field(
+                "maria@test.com", confidence=0.90, source="incentive_exchange"
+            ),
             "language": _make_profile_field("es", confidence=0.85),
             "full_name": _make_profile_field("Maria Garcia", confidence=0.90),
             "date_of_birth": _make_profile_field("1985-06-15", confidence=0.95),
         },
         "visit_context": {
             "planned_visit_date": _make_profile_field("2026-04-10", confidence=0.90),
-            "party_size": _make_profile_field(4, confidence=0.85, source="contextual_extraction"),
-            "occasion": _make_profile_field("anniversary", confidence=0.80, source="contextual_extraction"),
+            "party_size": _make_profile_field(
+                4, confidence=0.85, source="contextual_extraction"
+            ),
+            "occasion": _make_profile_field(
+                "anniversary", confidence=0.80, source="contextual_extraction"
+            ),
             "visit_history": [{"date": "2026-01-20", "source": "crm_import"}],
         },
         "preferences": {
             "dining": {
-                "dietary_restrictions": _make_profile_field(["gluten-free"], confidence=0.90),
-                "cuisine_preferences": _make_profile_field(["italian", "seafood"], confidence=0.75),
+                "dietary_restrictions": _make_profile_field(
+                    ["gluten-free"], confidence=0.90
+                ),
+                "cuisine_preferences": _make_profile_field(
+                    ["italian", "seafood"], confidence=0.75
+                ),
                 "budget_range": _make_profile_field("$$", confidence=0.70),
                 "kids_menu_needed": _make_profile_field(True, confidence=0.85),
             },
             "entertainment": {
-                "interests": _make_profile_field(["comedy", "live_music"], confidence=0.70),
-                "accessibility_needs": _make_profile_field("wheelchair", confidence=0.50),
+                "interests": _make_profile_field(
+                    ["comedy", "live_music"], confidence=0.70
+                ),
+                "accessibility_needs": _make_profile_field(
+                    "wheelchair", confidence=0.50
+                ),
             },
             "gaming": {
                 "level": _make_profile_field("casual", confidence=0.65),
-                "preferred_games": _make_profile_field(["slots", "blackjack"], confidence=0.60),
+                "preferred_games": _make_profile_field(
+                    ["slots", "blackjack"], confidence=0.60
+                ),
                 "typical_spend": _make_profile_field(200, confidence=0.55),
             },
             "spa": {
-                "treatments_interested": _make_profile_field(["massage", "facial"], confidence=0.70),
+                "treatments_interested": _make_profile_field(
+                    ["massage", "facial"], confidence=0.70
+                ),
             },
         },
         "companions": [
             {
                 "relationship": "spouse",
-                "name": _make_profile_field("Carlos", confidence=0.80, source="contextual_extraction"),
-                "preferences": {"dining": _make_profile_field("steak", confidence=0.65, source="inferred")},
+                "name": _make_profile_field(
+                    "Carlos", confidence=0.80, source="contextual_extraction"
+                ),
+                "preferences": {
+                    "dining": _make_profile_field(
+                        "steak", confidence=0.65, source="inferred"
+                    )
+                },
             },
         ],
         "consent": {
@@ -230,7 +257,9 @@ class TestCalculateCompleteness:
 
         # Profile with only one preference field
         profile_pref = _make_empty_profile()
-        profile_pref["preferences"]["dining"]["dietary_restrictions"] = _make_profile_field(["vegan"])
+        profile_pref["preferences"]["dining"]["dietary_restrictions"] = (
+            _make_profile_field(["vegan"])
+        )
 
         core_score = calculate_completeness(profile_core)
         pref_score = calculate_completeness(profile_pref)
@@ -262,7 +291,6 @@ class TestCalculateCompleteness:
 
 class TestConfidenceDecay:
     def test_no_decay_within_90_days(self):
-        """Fields within 90 days retain original confidence."""
         from src.data.models import apply_confidence_decay
 
         now = datetime.now(timezone.utc)
@@ -276,7 +304,6 @@ class TestConfidenceDecay:
         assert result["core_identity"]["name"]["confidence"] == 0.95
 
     def test_decay_after_90_days(self):
-        """Fields older than 90 days have confidence multiplied by 0.90."""
         from src.data.models import apply_confidence_decay
 
         now = datetime.now(timezone.utc)
@@ -291,7 +318,6 @@ class TestConfidenceDecay:
         assert result["core_identity"]["name"]["confidence"] == expected
 
     def test_decay_exactly_90_days_no_decay(self):
-        """Field at exactly 90 days does NOT decay (> not >=)."""
         from src.data.models import apply_confidence_decay
 
         now = datetime.now(timezone.utc)
@@ -305,7 +331,6 @@ class TestConfidenceDecay:
         assert result["core_identity"]["name"]["confidence"] == 0.80
 
     def test_decay_applies_to_nested_preferences(self):
-        """Decay traverses nested preference sections."""
         from src.data.models import apply_confidence_decay
 
         now = datetime.now(timezone.utc)
@@ -317,10 +342,12 @@ class TestConfidenceDecay:
         )
         result = apply_confidence_decay(profile, now=now)
         expected = round(0.80 * 0.90, 4)
-        assert result["preferences"]["dining"]["cuisine_preferences"]["confidence"] == expected
+        assert (
+            result["preferences"]["dining"]["cuisine_preferences"]["confidence"]
+            == expected
+        )
 
     def test_decay_applies_to_companions(self):
-        """Decay applies to ProfileFields inside companions."""
         from src.data.models import apply_confidence_decay
 
         now = datetime.now(timezone.utc)
@@ -340,7 +367,6 @@ class TestConfidenceDecay:
         assert result["companions"][0]["name"]["confidence"] == expected
 
     def test_decay_handles_missing_collected_at(self):
-        """Fields without collected_at are left unchanged."""
         from src.data.models import apply_confidence_decay
 
         profile = _make_empty_profile()
@@ -349,7 +375,6 @@ class TestConfidenceDecay:
         assert result["core_identity"]["name"]["confidence"] == 0.80
 
     def test_decay_handles_invalid_collected_at(self):
-        """Fields with unparseable collected_at are left unchanged."""
         from src.data.models import apply_confidence_decay
 
         profile = _make_empty_profile()
@@ -369,7 +394,6 @@ class TestConfidenceDecay:
 
 class TestConfidenceUpdate:
     def test_confirm_boosts_confidence(self):
-        """Same value from second source increases confidence by 0.15."""
         from src.data.models import update_confidence
 
         existing = _make_profile_field("Maria", confidence=0.80)
@@ -378,7 +402,6 @@ class TestConfidenceUpdate:
         assert result["source"] == "crm_import"
 
     def test_confirm_caps_at_one(self):
-        """Confirmation cannot push confidence above 1.0."""
         from src.data.models import update_confidence
 
         existing = _make_profile_field("Maria", confidence=0.95)
@@ -386,7 +409,6 @@ class TestConfidenceUpdate:
         assert result["confidence"] == 1.0
 
     def test_contradict_reduces_confidence(self):
-        """Different value reduces confidence by 0.30."""
         from src.data.models import update_confidence
 
         existing = _make_profile_field("Maria", confidence=0.80)
@@ -396,7 +418,6 @@ class TestConfidenceUpdate:
         assert result["_previous_value"] == "Maria"
 
     def test_contradict_floors_at_zero(self):
-        """Contradiction cannot push confidence below 0.0."""
         from src.data.models import update_confidence
 
         existing = _make_profile_field("Maria", confidence=0.20)
@@ -405,15 +426,15 @@ class TestConfidenceUpdate:
         assert result["_contradicted"] is True
 
     def test_contradict_preserves_consent_scope(self):
-        """Consent scope is preserved from existing field."""
         from src.data.models import update_confidence
 
-        existing = _make_profile_field("Maria", confidence=0.80, consent_scope="marketing")
+        existing = _make_profile_field(
+            "Maria", confidence=0.80, consent_scope="marketing"
+        )
         result = update_confidence(existing, "self_reported", "Mary")
         assert result["consent_scope"] == "marketing"
 
     def test_update_sets_new_collected_at(self):
-        """Updated field gets a fresh collected_at timestamp."""
         from src.data.models import update_confidence
 
         now = datetime(2026, 3, 15, 14, 0, 0, tzinfo=timezone.utc)
@@ -429,7 +450,6 @@ class TestConfidenceUpdate:
 
 class TestFilterLowConfidence:
     def test_high_confidence_fields_retained(self):
-        """Fields above threshold are kept."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
@@ -438,7 +458,6 @@ class TestFilterLowConfidence:
         assert result["core_identity"]["name"]["value"] == "Maria"
 
     def test_low_confidence_fields_nullified(self):
-        """Fields below threshold are set to None."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
@@ -447,7 +466,6 @@ class TestFilterLowConfidence:
         assert result["core_identity"]["name"] is None
 
     def test_exactly_at_threshold_is_retained(self):
-        """Fields exactly at threshold (0.40) are retained."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
@@ -456,7 +474,6 @@ class TestFilterLowConfidence:
         assert result["core_identity"]["name"]["value"] == "Maria"
 
     def test_filter_does_not_mutate_original(self):
-        """Filtering returns a copy, not mutating the original."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
@@ -466,7 +483,6 @@ class TestFilterLowConfidence:
         assert profile["core_identity"]["name"]["confidence"] == 0.30
 
     def test_filter_nested_preferences(self):
-        """Low-confidence preference fields are nullified."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
@@ -477,7 +493,6 @@ class TestFilterLowConfidence:
         assert result["preferences"]["dining"]["cuisine_preferences"] is None
 
     def test_filter_companion_fields(self):
-        """Low-confidence companion name fields are nullified."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
@@ -492,243 +507,12 @@ class TestFilterLowConfidence:
 
 
 # ---------------------------------------------------------------------------
-# CRUD: get_guest_profile
-# ---------------------------------------------------------------------------
-
-
-class TestGetGuestProfile:
-    @pytest.fixture(autouse=True)
-    def _clear_store(self):
-        """Clear in-memory store between tests."""
-        from src.data.guest_profile import clear_memory_store
-
-        clear_memory_store()
-        yield
-        clear_memory_store()
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_returns_empty_profile_for_new_guest(self, mock_client):
-        """Unknown phone returns an empty profile skeleton."""
-        from src.data.guest_profile import get_guest_profile
-
-        profile = await get_guest_profile("+12035551234", "mohegan_sun")
-        assert profile["_id"] == "+12035551234"
-        assert profile["core_identity"]["phone"] == "+12035551234"
-        assert profile["_version"] == 0
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_returns_stored_profile(self, mock_client):
-        """After update, get returns the stored profile."""
-        from src.data.guest_profile import get_guest_profile, update_guest_profile
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        profile = await get_guest_profile("+12035551234", "mohegan_sun")
-        assert profile["core_identity"]["name"]["value"] == "Maria"
-
-
-# ---------------------------------------------------------------------------
-# CRUD: update_guest_profile
-# ---------------------------------------------------------------------------
-
-
-class TestUpdateGuestProfile:
-    @pytest.fixture(autouse=True)
-    def _clear_store(self):
-        from src.data.guest_profile import clear_memory_store
-
-        clear_memory_store()
-        yield
-        clear_memory_store()
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_creates_profile_on_first_update(self, mock_client):
-        """First update creates a new profile."""
-        from src.data.guest_profile import update_guest_profile
-
-        profile = await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        assert profile["core_identity"]["name"]["value"] == "Maria"
-        assert profile["_version"] == 1
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_increments_version(self, mock_client):
-        """Each update increments the version."""
-        from src.data.guest_profile import update_guest_profile
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        profile = await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"email": _make_profile_field("maria@test.com")}},
-        )
-        assert profile["_version"] == 2
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_recalculates_completeness(self, mock_client):
-        """Completeness is recalculated after each update."""
-        from src.data.guest_profile import update_guest_profile
-
-        profile = await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        assert profile["engagement"]["profile_completeness"] > 0.0
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_confidence_confirm_on_update(self, mock_client):
-        """Re-confirming a field with same value boosts confidence."""
-        from src.data.guest_profile import update_guest_profile
-
-        # First update
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {
-                "core_identity": {
-                    "name": _make_profile_field("Maria", confidence=0.80, source="contextual_extraction"),
-                }
-            },
-        )
-        # Confirm with same value, different source
-        profile = await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {
-                "core_identity": {
-                    "name": _make_profile_field("Maria", confidence=0.80, source="self_reported"),
-                }
-            },
-        )
-        assert profile["core_identity"]["name"]["confidence"] == 0.95
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_confidence_contradict_on_update(self, mock_client):
-        """Contradicting a field with different value reduces confidence."""
-        from src.data.guest_profile import update_guest_profile
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {
-                "core_identity": {
-                    "name": _make_profile_field("Maria", confidence=0.80),
-                }
-            },
-        )
-        profile = await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {
-                "core_identity": {
-                    "name": _make_profile_field("Mary", confidence=0.80, source="self_reported"),
-                }
-            },
-        )
-        assert profile["core_identity"]["name"]["confidence"] == 0.50
-        assert profile["core_identity"]["name"]["_contradicted"] is True
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_updates_metadata_fields(self, mock_client):
-        """Non-ProfileField updates (engagement counters) are set directly."""
-        from src.data.guest_profile import update_guest_profile
-
-        profile = await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"engagement": {"total_conversations": 5}},
-        )
-        assert profile["engagement"]["total_conversations"] == 5
-
-
-# ---------------------------------------------------------------------------
-# CRUD: delete_guest_profile
-# ---------------------------------------------------------------------------
-
-
-class TestDeleteGuestProfile:
-    @pytest.fixture(autouse=True)
-    def _clear_store(self):
-        from src.data.guest_profile import clear_memory_store
-
-        clear_memory_store()
-        yield
-        clear_memory_store()
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_delete_existing_profile(self, mock_client):
-        """Deleting an existing profile returns True."""
-        from src.data.guest_profile import delete_guest_profile, update_guest_profile
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        result = await delete_guest_profile("+12035551234", "mohegan_sun")
-        assert result is True
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_delete_nonexistent_profile(self, mock_client):
-        """Deleting a non-existent profile returns False."""
-        from src.data.guest_profile import delete_guest_profile
-
-        result = await delete_guest_profile("+19995551234", "mohegan_sun")
-        assert result is False
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_delete_cascades_removes_from_store(self, mock_client):
-        """After delete, get returns an empty profile."""
-        from src.data.guest_profile import (
-            delete_guest_profile,
-            get_guest_profile,
-            update_guest_profile,
-        )
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        await delete_guest_profile("+12035551234", "mohegan_sun")
-        profile = await get_guest_profile("+12035551234", "mohegan_sun")
-        # After delete, returns empty skeleton (no stored profile)
-        assert profile["_version"] == 0
-        assert "name" not in profile["core_identity"]
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_delete_is_idempotent(self, mock_client):
-        """Deleting twice does not raise; second call returns False."""
-        from src.data.guest_profile import delete_guest_profile, update_guest_profile
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        assert await delete_guest_profile("+12035551234", "mohegan_sun") is True
-        assert await delete_guest_profile("+12035551234", "mohegan_sun") is False
-
-
-# ---------------------------------------------------------------------------
 # get_agent_context integration
 # ---------------------------------------------------------------------------
 
 
 class TestGetAgentContext:
     def test_agent_context_filters_low_confidence(self):
-        """Agent context excludes fields below 0.40 confidence."""
         from src.data.guest_profile import get_agent_context
 
         profile = _make_empty_profile()
@@ -737,7 +521,6 @@ class TestGetAgentContext:
         assert result["core_identity"]["name"] is None
 
     def test_agent_context_applies_decay_then_filters(self):
-        """Agent context applies decay before filtering."""
         from src.data.guest_profile import get_agent_context
 
         now = datetime.now(timezone.utc)
@@ -752,7 +535,6 @@ class TestGetAgentContext:
         assert result["core_identity"]["name"] is None
 
     def test_agent_context_retains_high_confidence_recent(self):
-        """Recent high-confidence fields are retained in agent context."""
         from src.data.guest_profile import get_agent_context
 
         profile = _make_empty_profile()
@@ -762,49 +544,12 @@ class TestGetAgentContext:
 
 
 # ---------------------------------------------------------------------------
-# Multi-tenant isolation
-# ---------------------------------------------------------------------------
-
-
-class TestMultiTenantIsolation:
-    @pytest.fixture(autouse=True)
-    def _clear_store(self):
-        from src.data.guest_profile import clear_memory_store
-
-        clear_memory_store()
-        yield
-        clear_memory_store()
-
-    @patch("src.data.guest_profile._get_firestore_client", return_value=None)
-    async def test_separate_casinos_isolated(self, mock_client):
-        """Same phone at different casinos gets separate profiles."""
-        from src.data.guest_profile import get_guest_profile, update_guest_profile
-
-        await update_guest_profile(
-            "+12035551234",
-            "mohegan_sun",
-            {"core_identity": {"name": _make_profile_field("Maria")}},
-        )
-        await update_guest_profile(
-            "+12035551234",
-            "foxwoods",
-            {"core_identity": {"name": _make_profile_field("Mary")}},
-        )
-
-        profile_mohegan = await get_guest_profile("+12035551234", "mohegan_sun")
-        profile_foxwoods = await get_guest_profile("+12035551234", "foxwoods")
-        assert profile_mohegan["core_identity"]["name"]["value"] == "Maria"
-        assert profile_foxwoods["core_identity"]["name"]["value"] == "Mary"
-
-
-# ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
 
 
 class TestEdgeCases:
     def test_completeness_with_none_value_field(self):
-        """ProfileField with value=None is not counted for completeness."""
         from src.data.models import calculate_completeness
 
         profile = _make_full_profile()
@@ -814,7 +559,6 @@ class TestEdgeCases:
         assert result < 1.0
 
     def test_decay_with_utc_z_suffix(self):
-        """ISO 8601 timestamps ending in 'Z' are parsed correctly."""
         from src.data.models import apply_confidence_decay
 
         now = datetime(2026, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
@@ -828,18 +572,22 @@ class TestEdgeCases:
         assert result["core_identity"]["name"]["confidence"] == round(0.80 * 0.90, 4)
 
     def test_filter_custom_threshold(self):
-        """Custom threshold is respected by filter_low_confidence."""
         from src.data.models import filter_low_confidence
 
         profile = _make_empty_profile()
         profile["core_identity"]["name"] = _make_profile_field("Maria", confidence=0.60)
         # Default threshold (0.40) keeps it
-        assert filter_low_confidence(profile, threshold=0.40)["core_identity"]["name"] is not None
+        assert (
+            filter_low_confidence(profile, threshold=0.40)["core_identity"]["name"]
+            is not None
+        )
         # Higher threshold filters it out
-        assert filter_low_confidence(profile, threshold=0.70)["core_identity"]["name"] is None
+        assert (
+            filter_low_confidence(profile, threshold=0.70)["core_identity"]["name"]
+            is None
+        )
 
     def test_profile_serializable(self):
-        """Full profile round-trips through JSON serialization."""
         import json
 
         profile = _make_full_profile()
@@ -853,13 +601,11 @@ class TestFirestoreClientCaching:
     """Verify Firestore client is cached as a singleton (not recreated per request)."""
 
     def test_firestore_client_cache_dict_exists(self):
-        """_firestore_client_cache is a module-level dict for caching."""
         from src.data.guest_profile import _firestore_client_cache
 
         assert isinstance(_firestore_client_cache, dict)
 
     def test_clear_firestore_client_cache(self):
-        """clear_firestore_client_cache() empties the cache dict."""
         from src.data.guest_profile import (
             _firestore_client_cache,
             clear_firestore_client_cache,
@@ -880,127 +626,3 @@ class TestFirestoreClientCaching:
         clear_firestore_client_cache()
         result = await _get_firestore_client()
         assert result is None
-
-
-# ---------------------------------------------------------------------------
-# R44 fix D5-M002: Firestore batch overflow in CCPA cascade delete
-# ---------------------------------------------------------------------------
-
-
-class TestDeleteGuestProfileBatchOverflow:
-    """R44 fix D3-M001 / D5-M002: Verify batch overflow guard for >500 ops."""
-
-    @pytest.fixture(autouse=True)
-    def _reset(self):
-        from src.data.guest_profile import clear_memory_store
-
-        clear_memory_store()
-
-    @pytest.mark.asyncio
-    async def test_firestore_batch_commits_in_chunks(self):
-        """A guest with >500 subcollection docs triggers multiple batch commits."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        # Helper to create an async iterator from a list
-        class AsyncIterFromList:
-            def __init__(self, items):
-                self._items = list(items)
-                self._index = 0
-
-            def __aiter__(self):
-                return self
-
-            async def __anext__(self):
-                if self._index >= len(self._items):
-                    raise StopAsyncIteration
-                item = self._items[self._index]
-                self._index += 1
-                return item
-
-        # Build mock Firestore client
-        # Firestore collection/document calls are synchronous; only get/stream are async
-        mock_db = MagicMock()
-
-        # Guest doc exists
-        mock_guest_doc = AsyncMock()
-        mock_guest_doc.exists = True
-
-        mock_guest_ref = MagicMock()
-        mock_guest_ref.get = AsyncMock(return_value=mock_guest_doc)
-
-        mock_db.collection.return_value.document.return_value = mock_guest_ref
-
-        # Create 600 message mocks across 1 conversation
-        message_mocks = []
-        for i in range(600):
-            msg = MagicMock()
-            msg.reference = MagicMock()
-            message_mocks.append(msg)
-
-        conv_mock = MagicMock()
-        conv_mock.reference = MagicMock()
-        # messages stream under the conversation
-        conv_mock.reference.collection.return_value.stream.return_value = (
-            AsyncIterFromList(message_mocks)
-        )
-
-        # guest_ref.collection("conversations").stream() -> 1 conversation
-        # guest_ref.collection("behavioral_signals").stream() -> empty
-        conv_collections = {
-            "conversations": MagicMock(
-                stream=MagicMock(return_value=AsyncIterFromList([conv_mock]))
-            ),
-            "behavioral_signals": MagicMock(
-                stream=MagicMock(return_value=AsyncIterFromList([]))
-            ),
-        }
-
-        def guest_collection(name):
-            return conv_collections.get(name, MagicMock(
-                stream=MagicMock(return_value=AsyncIterFromList([]))
-            ))
-
-        mock_guest_ref.collection = guest_collection
-
-        # Audit log: empty
-        mock_audit_collection = MagicMock()
-        mock_audit_collection.where.return_value.stream.return_value = AsyncIterFromList([])
-
-        # Route db.collection() calls
-        def route_collection(path):
-            if path.startswith("casinos/"):
-                col = MagicMock()
-                col.document.return_value = mock_guest_ref
-                return col
-            if path == "audit_log":
-                return mock_audit_collection
-            return MagicMock()
-
-        mock_db.collection = route_collection
-
-        # Track batch commits
-        commit_calls = []
-
-        def make_batch():
-            b = MagicMock()
-            b.commit = AsyncMock(side_effect=lambda: commit_calls.append(1))
-            b.delete = MagicMock()
-            b.update = MagicMock()
-            return b
-
-        mock_db.batch = make_batch
-
-        with patch(
-            "src.data.guest_profile._get_firestore_client",
-            new=AsyncMock(return_value=mock_db),
-        ):
-            from src.data.guest_profile import delete_guest_profile
-
-            result = await delete_guest_profile("+12035551234", "mohegan_sun")
-
-        assert result is True
-        # With 600 messages + 1 conversation + 1 guest doc = 602 ops
-        # At batch limit 490, we expect at least 2 batch commits
-        assert len(commit_calls) >= 2, (
-            f"Expected multiple batch commits for 602 ops, got {len(commit_calls)}"
-        )

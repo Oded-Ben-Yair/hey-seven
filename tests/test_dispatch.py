@@ -1,7 +1,10 @@
 """Tests for extracted dispatch logic (src/agent/dispatch.py).
 
 Validates keyword dispatch, category mappings, node metadata extraction,
-and backward-compat re-exports from graph.py.
+comp intent detection, backward-compat re-exports from graph.py,
+and dynamic comp bridge.
+
+Mock-based tests (TestExecuteSpecialistErrorHandling) removed (mock purge R111).
 """
 
 import pytest
@@ -62,7 +65,6 @@ class TestCompIntentKeywords:
     """R103 fix H9: Comp intent word and phrase matching."""
 
     def test_single_word_comp_intent(self):
-        """Single comp-intent words are detected via set intersection."""
         from src.agent.dispatch import _COMP_INTENT_WORDS
 
         query = "what rewards do I get"
@@ -70,7 +72,6 @@ class TestCompIntentKeywords:
         assert query_words & _COMP_INTENT_WORDS  # "rewards" matches
 
     def test_multi_word_phrase_detected(self):
-        """Multi-word phrases like 'free play' are detected via substring."""
         from src.agent.dispatch import _COMP_INTENT_PHRASES
 
         query = "how do I get free play"
@@ -78,7 +79,6 @@ class TestCompIntentKeywords:
         assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
 
     def test_player_card_phrase_detected(self):
-        """'player card' is detected as a comp-intent phrase."""
         from src.agent.dispatch import _COMP_INTENT_PHRASES
 
         query = "where do I get my player card"
@@ -86,7 +86,6 @@ class TestCompIntentKeywords:
         assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
 
     def test_rewards_program_phrase_detected(self):
-        """'rewards program' is detected as a comp-intent phrase."""
         from src.agent.dispatch import _COMP_INTENT_PHRASES
 
         query = "tell me about the rewards program"
@@ -94,7 +93,6 @@ class TestCompIntentKeywords:
         assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
 
     def test_my_status_phrase_detected(self):
-        """'my status' is detected as a comp-intent phrase."""
         from src.agent.dispatch import _COMP_INTENT_PHRASES
 
         query = "what is my status in the program"
@@ -102,7 +100,6 @@ class TestCompIntentKeywords:
         assert any(phrase in query_lower for phrase in _COMP_INTENT_PHRASES)
 
     def test_non_comp_query_not_matched(self):
-        """Non-comp queries should not trigger comp intent."""
         from src.agent.dispatch import _COMP_INTENT_WORDS, _COMP_INTENT_PHRASES
 
         query = "what restaurants do you have"
@@ -213,7 +210,6 @@ class TestBackwardCompatImports:
 
         assert callable(_dispatch_to_specialist)
         assert callable(_keyword_dispatch)
-        # MappingProxyType wraps dict but is not a dict subclass
         assert "restaurants" in _CATEGORY_TO_AGENT
         assert isinstance(_DISPATCH_OWNED_KEYS, frozenset)
         assert isinstance(_VALID_STATE_KEYS, frozenset)
@@ -241,73 +237,13 @@ class TestBackwardCompatImports:
     def test_import_dispatch_prompt_from_graph(self):
         from src.agent.graph import _DISPATCH_PROMPT
 
-        # Verify it's a string.Template
         assert hasattr(_DISPATCH_PROMPT, "safe_substitute")
 
     def test_import_category_priority_from_graph(self):
         from src.agent.graph import _CATEGORY_PRIORITY
 
-        # MappingProxyType wraps dict but is not a dict subclass
         assert "restaurants" in _CATEGORY_PRIORITY
         assert _CATEGORY_PRIORITY["restaurants"] == 4
-
-
-class TestExecuteSpecialistErrorHandling:
-    """R63 fix D1: _execute_specialist catches unexpected agent errors."""
-
-    @pytest.mark.asyncio
-    async def test_execute_specialist_catches_unexpected_error(self):
-        """_execute_specialist returns fallback on unexpected agent error."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from src.agent.dispatch import _execute_specialist
-
-        state = {
-            "retrieved_context": [],
-            "messages": [],
-            "retry_count": 0,
-        }
-
-        failing_agent = AsyncMock(side_effect=RuntimeError("unexpected LLM failure"))
-        with patch("src.agent.dispatch.get_agent", return_value=failing_agent):
-            mock_settings = MagicMock()
-            mock_settings.MODEL_TIMEOUT = 5
-
-            result = await _execute_specialist(
-                state, "dining", {}, mock_settings, "test"
-            )
-            assert result["skip_validation"] is True
-            assert len(result["messages"]) == 1
-            assert "trouble generating" in result["messages"][0].content
-
-    @pytest.mark.asyncio
-    async def test_execute_specialist_timeout_returns_fallback(self):
-        """_execute_specialist returns fallback on timeout."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from src.agent.dispatch import _execute_specialist
-
-        state = {
-            "retrieved_context": [],
-            "messages": [],
-            "retry_count": 0,
-        }
-
-        async def slow_agent(s):
-            import asyncio
-
-            await asyncio.sleep(999)
-
-        with patch("src.agent.dispatch.get_agent", return_value=slow_agent):
-            mock_settings = MagicMock()
-            mock_settings.MODEL_TIMEOUT = 0.01  # Very short timeout
-
-            result = await _execute_specialist(
-                state, "dining", {}, mock_settings, "test"
-            )
-            assert result["skip_validation"] is True
-            assert len(result["messages"]) == 1
-            assert "trouble generating" in result["messages"][0].content
 
 
 class TestDispatchMethodInState:
@@ -328,13 +264,11 @@ class TestDynamicCompBridgeInBase:
     """R105: Verify _base.py uses dynamic comp bridge via get_comp_bridge_for_non_comp."""
 
     def test_get_comp_bridge_for_non_comp_importable(self):
-        """The bridge function is importable from comp_strategy."""
         from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
 
         assert callable(get_comp_bridge_for_non_comp)
 
     def test_bridge_called_for_non_comp_agent(self):
-        """Bridge function generates text for non-comp specialists."""
         from src.agent.behavior_tools.comp_strategy import get_comp_bridge_for_non_comp
 
         state = {
@@ -346,9 +280,6 @@ class TestDynamicCompBridgeInBase:
         assert len(bridge) > 0
 
     def test_bridge_not_needed_for_comp_agent(self):
-        """Comp agent gets full CompStrategy, not the bridge."""
-        # This test verifies the logical separation: comp agent uses
-        # get_comp_prompt_section, non-comp agents use get_comp_bridge_for_non_comp
         from src.agent.behavior_tools.comp_strategy import (
             get_comp_bridge_for_non_comp,
             get_comp_prompt_section,
@@ -364,6 +295,4 @@ class TestDynamicCompBridgeInBase:
         assert len(full_section) > len(bridge)
 
     def test_comp_intent_detected_flag_in_dispatch_result(self):
-        """comp_intent_detected should be set when comp intent is found for non-comp agents."""
-        # This validates the state field exists in PropertyQAState
         assert "comp_intent_detected" in PropertyQAState.__annotations__

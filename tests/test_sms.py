@@ -1,20 +1,22 @@
-"""Tests for the SMS package: Telnyx client, webhook handling, and TCPA compliance.
+"""Tests for the SMS package: TCPA compliance, formatting, and webhook handling.
 
 Covers GSM-7/UCS-2 encoding detection, message segmentation, keyword handling
 (EN + ES), quiet hours with timezone support, consent hash chain integrity,
-consent level checking, webhook signature verification, delivery receipts,
-and idempotency tracking.
+consent level checking, Ed25519 webhook signature verification, delivery receipts,
+inbound SMS parsing, idempotency tracking, and config fields.
+
+Mock-based tests (TelnyxSMSClient.send_message, check_delivery_status,
+InboundSmsIdempotency with mock tracker) removed (mock purge R111).
 """
 
 import time
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 
 # ============================================================================
-# TelnyxSMSClient tests
+# TelnyxSMSClient encoding tests
 # ============================================================================
 
 
@@ -31,7 +33,9 @@ class TestTelnyxSMSClientEncoding:
     def test_basic_punctuation_is_gsm7(self):
         from src.sms.telnyx_client import TelnyxSMSClient
 
-        encoding, _ = TelnyxSMSClient.detect_encoding("Price: $50 (call 1-800-555-1234)")
+        encoding, _ = TelnyxSMSClient.detect_encoding(
+            "Price: $50 (call 1-800-555-1234)"
+        )
         assert encoding == "gsm7"
 
     def test_emoji_triggers_ucs2(self):
@@ -42,16 +46,14 @@ class TestTelnyxSMSClientEncoding:
         assert max_chars == 70
 
     def test_spanish_accents_trigger_ucs2(self):
-        """Spanish n-tilde and inverted punctuation are NOT in GSM-7 basic."""
         from src.sms.telnyx_client import TelnyxSMSClient
 
-        encoding, _ = TelnyxSMSClient.detect_encoding("\u00bf Hola, c\u00f3mo est\u00e1s?")
-        # inverted question mark is in GSM-7 (\u00bf), but accented o (\u00f3) is not standard GSM
-        # Actually \u00f3 is not in GSM-7 basic set
+        encoding, _ = TelnyxSMSClient.detect_encoding(
+            "\u00bf Hola, c\u00f3mo est\u00e1s?"
+        )
         assert encoding == "ucs2"
 
     def test_gsm7_extended_chars(self):
-        """GSM-7 extension characters: {, }, [, ], \\, |, ^, ~."""
         from src.sms.telnyx_client import TelnyxSMSClient
 
         encoding, _ = TelnyxSMSClient.detect_encoding("code: {test}")
@@ -134,80 +136,8 @@ class TestTelnyxSMSClientSegmentation:
             assert len(seg) <= 30
 
 
-class TestTelnyxSMSClientSend:
-    """send_message with mocked httpx."""
-
-    @pytest.mark.asyncio
-    async def test_send_message_success(self):
-        from src.sms.telnyx_client import TelnyxSMSClient
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "data": {
-                "id": "msg-uuid-123",
-                "to": [{"phone_number": "+12125551234", "status": "queued"}],
-                "from": {"phone_number": "+18605559999"},
-                "text": "Hello!",
-                "record_type": "message",
-            }
-        }
-
-        mock_client = AsyncMock()
-        mock_client.post = AsyncMock(return_value=mock_response)
-        mock_client.is_closed = False
-        mock_client.aclose = AsyncMock()
-
-        client = TelnyxSMSClient(
-            api_key="test-key",
-            messaging_profile_id="profile-123",
-            http_client=mock_client,
-        )
-        result = await client.send_message(
-            to="+12125551234",
-            from_="+18605559999",
-            text="Hello!",
-        )
-        assert result["id"] == "msg-uuid-123"
-        mock_client.post.assert_called_once()
-        call_kwargs = mock_client.post.call_args
-        assert call_kwargs[0][0] == "/messages"
-        payload = call_kwargs[1]["json"]
-        assert payload["to"] == "+12125551234"
-        assert payload["from"] == "+18605559999"
-        assert payload["text"] == "Hello!"
-        assert payload["messaging_profile_id"] == "profile-123"
-
-    @pytest.mark.asyncio
-    async def test_check_delivery_status(self):
-        from src.sms.telnyx_client import TelnyxSMSClient
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "data": {
-                "id": "msg-uuid-123",
-                "to": [{"phone_number": "+12125551234", "status": "delivered"}],
-            }
-        }
-
-        mock_client = AsyncMock()
-        mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.is_closed = False
-
-        client = TelnyxSMSClient(
-            api_key="test-key",
-            messaging_profile_id="profile-123",
-            http_client=mock_client,
-        )
-        status = await client.check_delivery_status("msg-uuid-123")
-        assert status == "delivered"
-
-
 # ============================================================================
-# Webhook tests
+# Webhook tests (deterministic)
 # ============================================================================
 
 
@@ -216,7 +146,6 @@ class TestWebhookSignatureVerification:
 
     @pytest.mark.asyncio
     async def test_verify_webhook_signature_valid_ed25519(self):
-        """Generate a real Ed25519 key pair, sign a payload, verify it passes."""
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         from src.sms.webhook import verify_webhook_signature
@@ -231,12 +160,13 @@ class TestWebhookSignatureVerification:
         signature_bytes = private_key.sign(signed_payload)
         signature_hex = signature_bytes.hex()
 
-        result = await verify_webhook_signature(body, signature_hex, timestamp, public_key_hex)
+        result = await verify_webhook_signature(
+            body, signature_hex, timestamp, public_key_hex
+        )
         assert result is True
 
     @pytest.mark.asyncio
     async def test_verify_webhook_signature_invalid_signature(self):
-        """Valid key but wrong signature returns False."""
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         from src.sms.webhook import verify_webhook_signature
@@ -248,16 +178,16 @@ class TestWebhookSignatureVerification:
         body = b'{"data": "test"}'
         timestamp = str(int(time.time()))
 
-        # Sign a DIFFERENT payload to produce an invalid signature for the actual body
         wrong_payload = b"wrong-payload"
         wrong_sig = private_key.sign(wrong_payload).hex()
 
-        result = await verify_webhook_signature(body, wrong_sig, timestamp, public_key_hex)
+        result = await verify_webhook_signature(
+            body, wrong_sig, timestamp, public_key_hex
+        )
         assert result is False
 
     @pytest.mark.asyncio
     async def test_verify_webhook_signature_expired_timestamp(self):
-        """Timestamp older than 5 minutes returns False."""
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
         from src.sms.webhook import verify_webhook_signature
@@ -266,16 +196,17 @@ class TestWebhookSignatureVerification:
         public_key_hex = private_key.public_key().public_bytes_raw().hex()
 
         body = b'{"data": "test"}'
-        old_timestamp = str(int(time.time()) - 600)  # 10 minutes ago
+        old_timestamp = str(int(time.time()) - 600)
         signed_payload = f"{old_timestamp}.{body.decode()}".encode()
         signature_hex = private_key.sign(signed_payload).hex()
 
-        result = await verify_webhook_signature(body, signature_hex, old_timestamp, public_key_hex)
+        result = await verify_webhook_signature(
+            body, signature_hex, old_timestamp, public_key_hex
+        )
         assert result is False
 
     @pytest.mark.asyncio
     async def test_verify_webhook_signature_missing_params(self):
-        """Empty signature/timestamp/public_key returns False."""
         from src.sms.webhook import verify_webhook_signature
 
         result = await verify_webhook_signature(b"body", "", "123", "aabbcc")
@@ -289,17 +220,18 @@ class TestWebhookSignatureVerification:
 
     @pytest.mark.asyncio
     async def test_verify_webhook_signature_invalid_hex(self):
-        """Malformed hex in signature or key returns False."""
         from src.sms.webhook import verify_webhook_signature
 
         timestamp = str(int(time.time()))
 
-        # Invalid hex in public_key
-        result = await verify_webhook_signature(b"body", "aa" * 32, timestamp, "not-hex!")
+        result = await verify_webhook_signature(
+            b"body", "aa" * 32, timestamp, "not-hex!"
+        )
         assert result is False
 
-        # Invalid hex in signature
-        result = await verify_webhook_signature(b"body", "not-hex!", timestamp, "aa" * 32)
+        result = await verify_webhook_signature(
+            b"body", "not-hex!", timestamp, "aa" * 32
+        )
         assert result is False
 
     @pytest.mark.asyncio
@@ -396,7 +328,6 @@ class TestDeliveryReceipts:
         assert get_delivery_status("nonexistent-id") is None
 
     def test_delivery_log_is_bounded(self):
-        """_DELIVERY_LOG is a TTLCache with bounded size (not an unbounded dict)."""
         from cachetools import TTLCache
 
         from src.sms.webhook import _DELIVERY_LOG
@@ -448,39 +379,6 @@ class TestIdempotencyTracker:
         assert tracker.size == 1  # Only msg-006
 
 
-class TestInboundSmsIdempotency:
-    """handle_inbound_sms deduplicates retries via idempotency tracker."""
-
-    @pytest.mark.asyncio
-    async def test_duplicate_message_returns_duplicate_type(self):
-        from unittest.mock import patch
-
-        from src.sms.webhook import handle_inbound_sms
-
-        payload = {
-            "from": {"phone_number": "+12125551234"},
-            "to": [{"phone_number": "+18605559999"}],
-            "text": "Hello",
-            "id": "msg-dedup-001",
-        }
-        # First call — not a duplicate
-        with patch("src.sms.webhook._get_idempotency_tracker") as mock_tracker:
-            mock_t = MagicMock()
-            mock_t.is_duplicate = AsyncMock(return_value=False)
-            mock_tracker.return_value = mock_t
-            result = await handle_inbound_sms(payload)
-        assert result["type"] == "message"
-
-        # Second call — duplicate
-        with patch("src.sms.webhook._get_idempotency_tracker") as mock_tracker:
-            mock_t = MagicMock()
-            mock_t.is_duplicate = AsyncMock(return_value=True)
-            mock_tracker.return_value = mock_t
-            result = await handle_inbound_sms(payload)
-        assert result["type"] == "duplicate"
-        assert result["message_id"] == "msg-dedup-001"
-
-
 # ============================================================================
 # Compliance tests
 # ============================================================================
@@ -528,7 +426,9 @@ class TestMandatoryKeywords:
         assert result is not None
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("keyword", ["start", "START", "subscribe", "iniciar", "comenzar"])
+    @pytest.mark.parametrize(
+        "keyword", ["start", "START", "subscribe", "iniciar", "comenzar"]
+    )
     async def test_start_keywords(self, keyword):
         from src.sms.compliance import handle_mandatory_keywords
 
@@ -540,7 +440,9 @@ class TestMandatoryKeywords:
     async def test_non_keyword_returns_none(self):
         from src.sms.compliance import handle_mandatory_keywords
 
-        result = await handle_mandatory_keywords("What restaurants are open?", "+12125551234")
+        result = await handle_mandatory_keywords(
+            "What restaurants are open?", "+12125551234"
+        )
         assert result is None
 
     @pytest.mark.asyncio
@@ -553,7 +455,6 @@ class TestMandatoryKeywords:
 
     @pytest.mark.asyncio
     async def test_partial_keyword_not_matched(self):
-        """'stopping' should NOT match 'stop'."""
         from src.sms.compliance import handle_mandatory_keywords
 
         result = await handle_mandatory_keywords("stopping by tonight", "+12125551234")
@@ -564,54 +465,45 @@ class TestQuietHours:
     """Quiet hours enforcement with timezone support."""
 
     def test_during_quiet_hours_night(self):
-        """10 PM Eastern should be quiet."""
         from src.sms.compliance import is_quiet_hours
 
-        # Create a datetime at 10 PM UTC (which is 10 PM in UTC context)
         now = datetime(2026, 3, 15, 22, 0, 0, tzinfo=timezone.utc)
         assert is_quiet_hours("UTC", now=now) is True
 
     def test_during_business_hours(self):
-        """2 PM Eastern should NOT be quiet."""
         from src.sms.compliance import is_quiet_hours
 
         now = datetime(2026, 3, 15, 14, 0, 0, tzinfo=timezone.utc)
         assert is_quiet_hours("UTC", now=now) is False
 
     def test_quiet_hours_boundary_start(self):
-        """Exactly 9 PM = quiet."""
         from src.sms.compliance import is_quiet_hours
 
         now = datetime(2026, 3, 15, 21, 0, 0, tzinfo=timezone.utc)
         assert is_quiet_hours("UTC", now=now) is True
 
     def test_quiet_hours_boundary_end(self):
-        """Exactly 8 AM = NOT quiet (end is exclusive)."""
         from src.sms.compliance import is_quiet_hours
 
         now = datetime(2026, 3, 15, 8, 0, 0, tzinfo=timezone.utc)
         assert is_quiet_hours("UTC", now=now) is False
 
     def test_early_morning_is_quiet(self):
-        """3 AM should be quiet (after midnight wrap)."""
         from src.sms.compliance import is_quiet_hours
 
         now = datetime(2026, 3, 15, 3, 0, 0, tzinfo=timezone.utc)
         assert is_quiet_hours("UTC", now=now) is True
 
     def test_timezone_conversion(self):
-        """5 PM UTC = 12 PM Eastern = NOT quiet."""
         from src.sms.compliance import is_quiet_hours
 
         now = datetime(2026, 3, 15, 17, 0, 0, tzinfo=timezone.utc)
         assert is_quiet_hours("America/New_York", now=now) is False
 
     def test_invalid_timezone_defaults_safely(self):
-        """Unknown timezone should default to America/New_York."""
         from src.sms.compliance import is_quiet_hours
 
         now = datetime(2026, 3, 15, 14, 0, 0, tzinfo=timezone.utc)
-        # 14:00 UTC = 10:00 AM Eastern -> not quiet
         result = is_quiet_hours("Invalid/Timezone", now=now)
         assert result is False
 
@@ -645,7 +537,6 @@ class TestAreaCodeTimezone:
         assert _get_timezone_from_area_code("+17025551234") == "America/Los_Angeles"
 
     def test_connecticut_area_code(self):
-        """860 is Mohegan Sun's area."""
         from src.sms.compliance import _get_timezone_from_area_code
 
         assert _get_timezone_from_area_code("+18605551234") == "America/New_York"
@@ -689,9 +580,11 @@ class TestConsentHashChain:
         from src.sms.compliance import ConsentHashChain
 
         chain = ConsentHashChain()
-        h = chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
+        h = chain.add_event(
+            "opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form"
+        )
         assert isinstance(h, str)
-        assert len(h) == 64  # SHA-256 hex
+        assert len(h) == 64
         assert chain.verify_chain() is True
 
     def test_multi_event_chain(self):
@@ -699,8 +592,12 @@ class TestConsentHashChain:
 
         chain = ConsentHashChain()
         chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
-        chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword")
-        chain.add_event("opt_in", "+12125551234", "2026-03-17T09:00:00Z", "START keyword")
+        chain.add_event(
+            "opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword"
+        )
+        chain.add_event(
+            "opt_in", "+12125551234", "2026-03-17T09:00:00Z", "START keyword"
+        )
         assert chain.verify_chain() is True
         assert len(chain.events) == 3
         assert len(chain.hashes) == 3
@@ -710,21 +607,22 @@ class TestConsentHashChain:
 
         chain = ConsentHashChain()
         chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
-        chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword")
+        chain.add_event(
+            "opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword"
+        )
 
-        # Tamper with the first event
         chain._events[0]["evidence"] = "tampered_evidence"
         assert chain.verify_chain() is False
 
     def test_chain_links_are_dependent(self):
-        """Each hash depends on the previous hash."""
         from src.sms.compliance import ConsentHashChain
 
         chain = ConsentHashChain()
-        h1 = chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
+        h1 = chain.add_event(
+            "opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form"
+        )
         h2 = chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP")
 
-        # h2 should incorporate h1 as previous_hash
         assert chain.events[1]["previous_hash"] == h1
         assert h1 != h2
 
@@ -739,7 +637,12 @@ class TestConsentHashChain:
         from src.sms.compliance import ConsentHashChain
 
         chain = ConsentHashChain()
-        chain.add_event("scope_change", "+12125551234", "2026-03-15T14:00:00Z", "upgraded to marketing")
+        chain.add_event(
+            "scope_change",
+            "+12125551234",
+            "2026-03-15T14:00:00Z",
+            "upgraded to marketing",
+        )
         assert chain.verify_chain() is True
         assert chain.events[0]["event_type"] == "scope_change"
 
@@ -748,49 +651,51 @@ class TestConsentHashChainHMAC:
     """HMAC-SHA256 tamper-evident consent hash chain (production mode)."""
 
     def test_hmac_chain_verifies(self):
-        """HMAC chain with secret verifies successfully."""
         from src.sms.compliance import ConsentHashChain
 
         chain = ConsentHashChain(hmac_secret="test-secret-key")
         chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
-        chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword")
+        chain.add_event(
+            "opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword"
+        )
         assert chain.verify_chain() is True
 
     def test_hmac_produces_different_hashes_than_plain(self):
-        """HMAC hashes differ from plain SHA-256 hashes for same input."""
         from src.sms.compliance import ConsentHashChain
 
         plain_chain = ConsentHashChain()
         hmac_chain = ConsentHashChain(hmac_secret="secret")
 
-        h_plain = plain_chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web")
-        h_hmac = hmac_chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web")
+        h_plain = plain_chain.add_event(
+            "opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web"
+        )
+        h_hmac = hmac_chain.add_event(
+            "opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web"
+        )
 
         assert h_plain != h_hmac, "HMAC hash must differ from plain SHA-256"
 
     def test_hmac_tampered_chain_detected(self):
-        """Tampering with HMAC chain is detected."""
         from src.sms.compliance import ConsentHashChain
 
         chain = ConsentHashChain(hmac_secret="secret-key")
         chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
-        chain.add_event("opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword")
+        chain.add_event(
+            "opt_out", "+12125551234", "2026-03-16T10:00:00Z", "STOP keyword"
+        )
         chain._events[0]["evidence"] = "tampered"
         assert chain.verify_chain() is False
 
     def test_hmac_wrong_secret_fails_verification(self):
-        """Chain built with one secret cannot be verified with another."""
         from src.sms.compliance import ConsentHashChain
 
         chain = ConsentHashChain(hmac_secret="correct-secret")
         chain.add_event("opt_in", "+12125551234", "2026-03-15T14:00:00Z", "web_form")
 
-        # Swap secret and verify — should fail
         chain._hmac_secret = "wrong-secret"
         assert chain.verify_chain() is False
 
     def test_settings_consent_hmac_secret_exists(self):
-        """CONSENT_HMAC_SECRET field exists in settings."""
         from src.config import Settings
 
         s = Settings()
@@ -814,7 +719,6 @@ class TestConsentChecking:
         from src.sms.compliance import check_consent
 
         profile = {"consent": {"sms_opt_in": False}}
-        # Transactional = response to guest inquiry, always allowed
         assert check_consent(profile, "transactional") is True
 
     def test_informational_requires_consent(self):
@@ -831,16 +735,12 @@ class TestConsentChecking:
     def test_marketing_requires_written_consent(self):
         from src.sms.compliance import check_consent
 
-        # Text keyword = express consent, not sufficient for marketing
         profile_keyword = {
             "consent": {"sms_opt_in": True, "sms_opt_in_method": "text_keyword"}
         }
         assert check_consent(profile_keyword, "marketing") is False
 
-        # Web form = written consent, sufficient for marketing
-        profile_web = {
-            "consent": {"sms_opt_in": True, "sms_opt_in_method": "web_form"}
-        }
+        profile_web = {"consent": {"sms_opt_in": True, "sms_opt_in_method": "web_form"}}
         assert check_consent(profile_web, "marketing") is True
 
     def test_opted_out_blocks_non_transactional(self):
@@ -886,12 +786,9 @@ class TestSMSConfigFields:
         assert s.QUIET_HOURS_END == 8
         assert s.SMS_FROM_NUMBER == ""
 
-    def test_sms_api_key_is_secret(self):
-        import os
-        from unittest.mock import patch
-
+    def test_sms_api_key_is_secret(self, monkeypatch):
         from src.config import Settings
 
-        with patch.dict(os.environ, {"TELNYX_API_KEY": "test-telnyx-key"}):
-            s = Settings()
-            assert s.TELNYX_API_KEY.get_secret_value() == "test-telnyx-key"
+        monkeypatch.setenv("TELNYX_API_KEY", "test-telnyx-key")
+        s = Settings()
+        assert s.TELNYX_API_KEY.get_secret_value() == "test-telnyx-key"

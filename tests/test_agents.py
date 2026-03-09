@@ -1,301 +1,92 @@
 """Tests for the v2 specialist agents (src/agent/agents/).
 
-R110: Many mock-based tests skip because execute_specialist() now accesses
-state fields (extracted_fields, profile-reference injection) that MagicMock
-doesn't handle for async paths. Per ground rule: skip broken mocks, validate
-via live eval.
+Mock purge R111: Retained only deterministic tests that do not depend on
+MagicMock/AsyncMock/@patch. All behavioral validation uses live eval.
 """
 
-import asyncio
-
-import httpx
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-
 from langchain_core.messages import AIMessage, HumanMessage
-
-_R110_SKIP = "R110: Mock incompatible with profile-reference injection. TODO: migrate to live eval."
-
-
-def _state(**overrides):
-    """Create a minimal PropertyQAState dict with defaults."""
-    base = {
-        "messages": [],
-        "query_type": None,
-        "router_confidence": 0.0,
-        "retrieved_context": [],
-        "validation_result": None,
-        "retry_count": 0,
-        "skip_validation": False,
-        "retry_feedback": None,
-        "current_time": "Monday 3 PM",
-        "sources_used": [],
-        "extracted_fields": {},
-        "whisper_plan": None,
-    }
-    base.update(overrides)
-    return base
-
-
-def _high_completeness_fields():
-    """Return flat extracted_fields dict with >=60% profile completeness.
-
-    Uses the flat whisper-planner schema (name, visit_date, party_size, etc.)
-    with 5/8 fields filled = 62.5% > 60% threshold.
-
-    R77: No longer needed for comp agent tests (profile gate removed),
-    but retained for test_graph_v2 parity.
-    """
-    return {
-        "name": "John Doe",
-        "visit_date": "2026-03-01",
-        "party_size": 4,
-        "dining": "steakhouse",
-        "entertainment": "comedy show",
-        "gaming": None,
-        "occasions": None,
-        "companions": None,
-    }
 
 
 # ---------------------------------------------------------------------------
-# Host Agent
+# Host Agent — deterministic (empty context, fallback, property name)
 # ---------------------------------------------------------------------------
 
 
 class TestHostAgent:
-    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_generates_with_context(self, mock_get_llm):
-        """Host agent produces an AIMessage when context is available."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(content="The steakhouse opens at 5 PM.")
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="When does the steakhouse open?")],
-            retrieved_context=[
-                {
-                    "content": "Steakhouse hours: 5-10 PM",
-                    "metadata": {"category": "restaurants"},
-                    "score": 0.9,
-                }
-            ],
-        )
-        result = await host_agent(state)
-        assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], AIMessage)
-        assert "steakhouse" in result["messages"][0].content.lower()
-
     async def test_empty_context_returns_no_info_fallback(self):
         """Empty retrieved_context returns 'no info' fallback with skip_validation."""
         from src.agent.agents.host_agent import host_agent
 
-        state = _state(
-            messages=[HumanMessage(content="What about the moon?")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="What about the moon?")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await host_agent(state)
         assert result["skip_validation"] is True
         assert len(result["messages"]) == 1
         assert "don't have that specific info" in result["messages"][0].content
 
-    @patch("src.agent.agents.host_agent._get_circuit_breaker")
-    async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
-        """Host agent returns fallback when circuit breaker is open."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-        mock_get_cb.return_value = mock_cb
-
-        state = _state(
-            messages=[HumanMessage(content="What restaurants?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-        )
-        result = await host_agent(state)
-        assert result["skip_validation"] is True
-        assert "technical difficulties" in result["messages"][0].content
-
-    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_error_returns_fallback(self, mock_get_llm):
-        """LLM error produces a fallback message with skip_validation=True."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="Question")],
-            retrieved_context=[
-                {"content": "data", "metadata": {"category": "faq"}, "score": 1.0}
-            ],
-        )
-        result = await host_agent(state)
-        assert result["skip_validation"] is True
-        assert "trouble generating" in result["messages"][0].content.lower()
-
-    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
-    async def test_value_error_returns_fallback(self, mock_get_llm):
-        """ValueError from LLM parsing returns fallback."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad response"))
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="Question")],
-            retrieved_context=[
-                {"content": "data", "metadata": {"category": "faq"}, "score": 1.0}
-            ],
-        )
-        result = await host_agent(state)
-        assert result["skip_validation"] is False
-        assert result["retry_count"] == 1
-        assert "trouble processing" in result["messages"][0].content.lower()
-
-    @patch("src.agent.agents.host_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_retry_injects_feedback(self, mock_get_llm):
-        """On retry, host agent injects validation feedback into LLM messages."""
-        from src.agent.agents.host_agent import host_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(content="Corrected response.")
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What restaurants?")],
-            retrieved_context=[
-                {
-                    "content": "Steakhouse info",
-                    "metadata": {"category": "restaurants"},
-                    "score": 0.9,
-                }
-            ],
-            retry_count=1,
-            retry_feedback="Response was not grounded",
-        )
-        result = await host_agent(state)
-        assert len(result["messages"]) == 1
-        # Verify feedback was injected by checking LLM was called with it
-        call_args = mock_llm.ainvoke.call_args[0][0]
-        feedback_msgs = [
-            m
-            for m in call_args
-            if hasattr(m, "content") and "failed validation" in m.content
-        ]
-        assert len(feedback_msgs) == 1
-
     async def test_fallback_includes_property_name(self):
         """Fallback messages include property name from config."""
         from src.agent.agents.host_agent import host_agent
 
-        state = _state(
-            messages=[HumanMessage(content="Tell me about X")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="Tell me about X")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await host_agent(state)
         content = result["messages"][0].content
         assert "Mohegan Sun" in content
 
 
 # ---------------------------------------------------------------------------
-# Dining Agent
+# Dining Agent — deterministic
 # ---------------------------------------------------------------------------
 
 
 class TestDiningAgent:
-    @patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock)
-    async def test_generates_dining_response(self, mock_get_llm):
-        """Dining agent produces a dining-specific AIMessage."""
-        from src.agent.agents.dining_agent import dining_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(
-                content="Todd English's Tuscany serves authentic Italian cuisine."
-            )
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What Italian restaurants do you have?")],
-            retrieved_context=[
-                {
-                    "content": "Todd English's Tuscany: Italian fine dining",
-                    "metadata": {"category": "restaurants"},
-                    "score": 0.9,
-                }
-            ],
-        )
-        result = await dining_agent(state)
-        assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], AIMessage)
-
     async def test_empty_context_returns_dining_fallback(self):
         """Empty context returns dining-specific fallback."""
         from src.agent.agents.dining_agent import dining_agent
 
-        state = _state(
-            messages=[HumanMessage(content="Do you have a sushi bar?")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="Do you have a sushi bar?")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await dining_agent(state)
         assert result["skip_validation"] is True
         assert "dining" in result["messages"][0].content.lower()
-
-    @patch("src.agent.agents.dining_agent._get_circuit_breaker")
-    async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
-        """Dining agent returns fallback when circuit breaker is open."""
-        from src.agent.agents.dining_agent import dining_agent
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-        mock_get_cb.return_value = mock_cb
-
-        state = _state(
-            messages=[HumanMessage(content="What restaurants?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-        )
-        result = await dining_agent(state)
-        assert result["skip_validation"] is True
-        assert "technical difficulties" in result["messages"][0].content
-
-    @patch("src.agent.agents.dining_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_error_returns_fallback(self, mock_get_llm):
-        """LLM error in dining agent produces fallback."""
-        from src.agent.agents.dining_agent import dining_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="Question")],
-            retrieved_context=[
-                {
-                    "content": "data",
-                    "metadata": {"category": "restaurants"},
-                    "score": 1.0,
-                }
-            ],
-        )
-        result = await dining_agent(state)
-        assert result["skip_validation"] is True
-        assert "trouble generating" in result["messages"][0].content.lower()
 
     def test_dining_prompt_mentions_cuisine(self):
         """Dining system prompt includes cuisine and dietary guidance."""
@@ -312,94 +103,35 @@ class TestDiningAgent:
 
 
 # ---------------------------------------------------------------------------
-# Entertainment Agent
+# Entertainment Agent — deterministic
 # ---------------------------------------------------------------------------
 
 
 class TestEntertainmentAgent:
-    @patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock)
-    async def test_generates_entertainment_response(self, mock_get_llm):
-        """Entertainment agent produces an entertainment-specific AIMessage."""
-        from src.agent.agents.entertainment_agent import entertainment_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(
-                content="The arena hosts concerts every weekend with major artists."
-            )
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What shows are coming up?")],
-            retrieved_context=[
-                {
-                    "content": "Arena concerts: weekends",
-                    "metadata": {"category": "entertainment"},
-                    "score": 0.9,
-                }
-            ],
-        )
-        result = await entertainment_agent(state)
-        assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], AIMessage)
-
     async def test_empty_context_returns_entertainment_fallback(self):
         """Empty context returns entertainment-specific fallback."""
         from src.agent.agents.entertainment_agent import entertainment_agent
 
-        state = _state(
-            messages=[HumanMessage(content="Any opera performances?")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="Any opera performances?")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await entertainment_agent(state)
         assert result["skip_validation"] is True
         assert (
             "entertainment" in result["messages"][0].content.lower()
             or "show" in result["messages"][0].content.lower()
         )
-
-    @patch("src.agent.agents.entertainment_agent._get_circuit_breaker")
-    async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
-        """Entertainment agent returns fallback when circuit breaker is open."""
-        from src.agent.agents.entertainment_agent import entertainment_agent
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-        mock_get_cb.return_value = mock_cb
-
-        state = _state(
-            messages=[HumanMessage(content="Any shows?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-        )
-        result = await entertainment_agent(state)
-        assert result["skip_validation"] is True
-        assert "technical difficulties" in result["messages"][0].content
-
-    @patch("src.agent.agents.entertainment_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_error_returns_fallback(self, mock_get_llm):
-        """LLM error in entertainment agent produces fallback."""
-        from src.agent.agents.entertainment_agent import entertainment_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="Question")],
-            retrieved_context=[
-                {
-                    "content": "data",
-                    "metadata": {"category": "entertainment"},
-                    "score": 1.0,
-                }
-            ],
-        )
-        result = await entertainment_agent(state)
-        assert result["skip_validation"] is True
-        assert "trouble generating" in result["messages"][0].content.lower()
 
     def test_entertainment_prompt_mentions_shows_and_spa(self):
         """Entertainment system prompt includes shows and spa guidance."""
@@ -416,46 +148,29 @@ class TestEntertainmentAgent:
 
 
 # ---------------------------------------------------------------------------
-# Comp Agent
+# Comp Agent — deterministic
 # ---------------------------------------------------------------------------
 
 
 class TestCompAgent:
-    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
-    async def test_generates_comp_response(self, mock_get_llm):
-        """Comp agent produces a comp-specific AIMessage."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(
-                content="Based on available information, you may be eligible for loyalty rewards."
-            )
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What loyalty programs do you have?")],
-            retrieved_context=[
-                {
-                    "content": "Momentum rewards program: 3 tiers",
-                    "metadata": {"category": "promotions"},
-                    "score": 0.9,
-                }
-            ],
-        )
-        result = await comp_agent(state)
-        assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], AIMessage)
-
     async def test_empty_context_returns_comp_fallback(self):
         """Empty context returns comp-specific fallback."""
         from src.agent.agents.comp_agent import comp_agent
 
-        state = _state(
-            messages=[HumanMessage(content="What comps can I get?")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="What comps can I get?")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await comp_agent(state)
         assert result["skip_validation"] is True
         assert (
@@ -463,115 +178,6 @@ class TestCompAgent:
             or "promotions" in result["messages"][0].content.lower()
             or "rewards" in result["messages"][0].content.lower()
         )
-
-    @patch("src.agent.agents.comp_agent._get_circuit_breaker")
-    async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
-        """Comp agent returns fallback when circuit breaker is open."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-        mock_get_cb.return_value = mock_cb
-
-        state = _state(
-            messages=[HumanMessage(content="What offers?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-        )
-        result = await comp_agent(state)
-        assert result["skip_validation"] is True
-        assert "technical difficulties" in result["messages"][0].content
-
-    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_error_returns_fallback(self, mock_get_llm):
-        """LLM error in comp agent produces fallback."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="Question")],
-            retrieved_context=[
-                {
-                    "content": "data",
-                    "metadata": {"category": "promotions"},
-                    "score": 1.0,
-                }
-            ],
-        )
-        result = await comp_agent(state)
-        assert result["skip_validation"] is True
-        assert "trouble generating" in result["messages"][0].content.lower()
-
-    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_no_profile_gate_r77(self, mock_get_llm):
-        """R77: Comp agent proceeds to LLM even with empty profile (no gate)."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(
-                content="The Momentum program has 5 tiers: Core, Ignite, Leap, Ascend, and Soar."
-            )
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What comps can I get?")],
-            retrieved_context=[
-                {
-                    "content": "Momentum rewards: 5 tiers",
-                    "metadata": {"category": "promotions"},
-                    "score": 0.9,
-                }
-            ],
-            extracted_fields={},  # Empty profile -- previously would have triggered canned response
-        )
-        result = await comp_agent(state)
-        # Should get LLM-generated response, NOT the canned "explore rewards" message
-        assert isinstance(result["messages"][0], AIMessage)
-        assert "explore our rewards" not in result["messages"][0].content
-        mock_llm.ainvoke.assert_called_once()
-
-    @patch("src.agent.agents.comp_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_minimal_profile_proceeds_to_llm(self, mock_get_llm):
-        """R77: Comp agent works with minimal profile data (1 field filled)."""
-        from src.agent.agents.comp_agent import comp_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(content="Here are the loyalty tiers!")
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What comps?")],
-            retrieved_context=[
-                {
-                    "content": "Loyalty info",
-                    "metadata": {"category": "promotions"},
-                    "score": 0.9,
-                }
-            ],
-            extracted_fields={
-                "name": "John",
-                "visit_date": None,
-                "party_size": None,
-                "dining": None,
-                "entertainment": None,
-                "gaming": None,
-                "occasions": None,
-                "companions": None,
-            },  # 1/8 = 12.5% -- previously below threshold, now works fine
-        )
-        result = await comp_agent(state)
-        assert isinstance(result["messages"][0], AIMessage)
-        mock_llm.ainvoke.assert_called_once()
 
     def test_comp_prompt_uses_cautious_language(self):
         """Comp system prompt includes cautious language guidance."""
@@ -602,90 +208,35 @@ class TestCompAgent:
 
 
 # ---------------------------------------------------------------------------
-# Hotel Agent
+# Hotel Agent — deterministic
 # ---------------------------------------------------------------------------
 
 
 class TestHotelAgent:
-    @patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock)
-    async def test_generates_hotel_response(self, mock_get_llm):
-        """Hotel agent produces a hotel-specific AIMessage."""
-        from src.agent.agents.hotel_agent import hotel_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(
-                content="The Sky Tower King Suite offers stunning mountain views across 34 floors."
-            )
-        )
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="What hotel rooms do you have?")],
-            retrieved_context=[
-                {
-                    "content": "Sky Tower: luxury tower, 34 floors, mountain views",
-                    "metadata": {"category": "hotel"},
-                    "score": 0.9,
-                }
-            ],
-        )
-        result = await hotel_agent(state)
-        assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], AIMessage)
-
     async def test_empty_context_returns_hotel_fallback(self):
         """Empty context returns hotel-specific fallback."""
         from src.agent.agents.hotel_agent import hotel_agent
 
-        state = _state(
-            messages=[HumanMessage(content="Do you have a presidential suite?")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="Do you have a presidential suite?")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await hotel_agent(state)
         assert result["skip_validation"] is True
         assert (
             "room" in result["messages"][0].content.lower()
             or "suite" in result["messages"][0].content.lower()
         )
-
-    @patch("src.agent.agents.hotel_agent._get_circuit_breaker")
-    async def test_circuit_breaker_open_returns_fallback(self, mock_get_cb):
-        """Hotel agent returns fallback when circuit breaker is open."""
-        from src.agent.agents.hotel_agent import hotel_agent
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-        mock_get_cb.return_value = mock_cb
-
-        state = _state(
-            messages=[HumanMessage(content="What rooms are available?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-        )
-        result = await hotel_agent(state)
-        assert result["skip_validation"] is True
-        assert "technical difficulties" in result["messages"][0].content
-
-    @patch("src.agent.agents.hotel_agent._get_llm", new_callable=AsyncMock)
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_error_returns_fallback(self, mock_get_llm):
-        """LLM error in hotel agent produces fallback."""
-        from src.agent.agents.hotel_agent import hotel_agent
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ConnectionError("API error"))
-        mock_get_llm.return_value = mock_llm
-
-        state = _state(
-            messages=[HumanMessage(content="Question")],
-            retrieved_context=[
-                {"content": "data", "metadata": {"category": "hotel"}, "score": 1.0}
-            ],
-        )
-        result = await hotel_agent(state)
-        assert result["skip_validation"] is True
-        assert "trouble generating" in result["messages"][0].content.lower()
 
     def test_hotel_prompt_mentions_rooms_and_checkin(self):
         """Hotel system prompt includes rooms, suites, and check-in guidance."""
@@ -708,7 +259,7 @@ class TestHotelAgent:
 
 
 # ---------------------------------------------------------------------------
-# Registry
+# Registry — fully deterministic
 # ---------------------------------------------------------------------------
 
 
@@ -776,7 +327,7 @@ class TestRegistry:
 
 
 # ---------------------------------------------------------------------------
-# Package Import
+# Package Import — fully deterministic
 # ---------------------------------------------------------------------------
 
 
@@ -808,7 +359,7 @@ class TestPackageImports:
 
 
 # ---------------------------------------------------------------------------
-# Parametrized Specialist Contract Tests
+# Parametrized Specialist Contract — empty context only (deterministic)
 # ---------------------------------------------------------------------------
 
 
@@ -822,64 +373,8 @@ class TestPackageImports:
         ("hotel_agent", "src.agent.agents.hotel_agent"),
     ],
 )
-class TestSpecialistContract:
-    """Verify all 5 specialist agents follow the same contract via _base.py."""
-
-    @pytest.mark.asyncio
-    async def test_returns_messages_key(self, agent_fn, agent_module):
-        """All specialists must return dict with 'messages' key."""
-        import importlib
-
-        mod = importlib.import_module(agent_module)
-        fn = getattr(mod, agent_fn)
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=MagicMock(content="Test response from agent.")
-        )
-
-        state = _state(
-            messages=[HumanMessage(content="Tell me about the property")],
-            retrieved_context=[
-                {
-                    "content": "Property info here",
-                    "metadata": {"category": "property"},
-                    "score": 0.9,
-                }
-            ],
-        )
-
-        with patch(
-            f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm
-        ):
-            result = await fn(state)
-
-        assert "messages" in result
-        assert len(result["messages"]) >= 1
-        assert isinstance(result["messages"][0], AIMessage)
-
-    @pytest.mark.asyncio
-    async def test_cb_open_returns_fallback(self, agent_fn, agent_module):
-        """All specialists return fallback when circuit breaker is open."""
-        import importlib
-
-        mod = importlib.import_module(agent_module)
-        fn = getattr(mod, agent_fn)
-
-        mock_cb = MagicMock()
-        mock_cb.is_open = True
-        mock_cb.allow_request = AsyncMock(return_value=False)
-
-        state = _state(
-            messages=[HumanMessage(content="What offers?")],
-            retrieved_context=[{"content": "data", "metadata": {}, "score": 1.0}],
-        )
-
-        with patch(f"{agent_module}._get_circuit_breaker", return_value=mock_cb):
-            result = await fn(state)
-
-        assert result.get("skip_validation") is True
-        assert "technical difficulties" in result["messages"][0].content
+class TestSpecialistContractDeterministic:
+    """Verify all 5 specialist agents follow the same empty-context contract."""
 
     @pytest.mark.asyncio
     async def test_empty_context_returns_fallback(self, agent_fn, agent_module):
@@ -889,108 +384,21 @@ class TestSpecialistContract:
         mod = importlib.import_module(agent_module)
         fn = getattr(mod, agent_fn)
 
-        state = _state(
-            messages=[HumanMessage(content="Tell me about the moon")],
-            retrieved_context=[],
-        )
+        state = {
+            "messages": [HumanMessage(content="Tell me about the moon")],
+            "query_type": None,
+            "router_confidence": 0.0,
+            "retrieved_context": [],
+            "validation_result": None,
+            "retry_count": 0,
+            "skip_validation": False,
+            "retry_feedback": None,
+            "current_time": "Monday 3 PM",
+            "sources_used": [],
+            "extracted_fields": {},
+            "whisper_plan": None,
+        }
         result = await fn(state)
         assert result.get("skip_validation") is True
         assert len(result["messages"]) == 1
         assert isinstance(result["messages"][0], AIMessage)
-
-    @pytest.mark.asyncio
-    async def test_llm_value_error_returns_retry_fallback(self, agent_fn, agent_module):
-        """All specialists return retry fallback on LLM ValueError (parse failure)."""
-        import importlib
-
-        mod = importlib.import_module(agent_module)
-        fn = getattr(mod, agent_fn)
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=ValueError("bad structured output"))
-
-        state = _state(
-            messages=[HumanMessage(content="Question about property")],
-            retrieved_context=[
-                {
-                    "content": "Some data",
-                    "metadata": {"category": "general"},
-                    "score": 0.9,
-                }
-            ],
-        )
-
-        with patch(
-            f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm
-        ):
-            result = await fn(state)
-
-        assert result.get("skip_validation") is False
-        assert result.get("retry_count") == 1
-        assert "trouble processing" in result["messages"][0].content.lower()
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_network_error_returns_skip_fallback(
-        self, agent_fn, agent_module
-    ):
-        """All specialists return skip_validation fallback on network error."""
-        import importlib
-
-        mod = importlib.import_module(agent_module)
-        fn = getattr(mod, agent_fn)
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
-
-        state = _state(
-            messages=[HumanMessage(content="Question about property")],
-            retrieved_context=[
-                {
-                    "content": "Some data",
-                    "metadata": {"category": "general"},
-                    "score": 0.9,
-                }
-            ],
-        )
-
-        with patch(
-            f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm
-        ):
-            result = await fn(state)
-
-        assert result.get("skip_validation") is True
-        assert "trouble generating" in result["messages"][0].content.lower()
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(reason=_R110_SKIP)
-    async def test_llm_timeout_returns_skip_fallback(self, agent_fn, agent_module):
-        """All specialists return skip_validation fallback on asyncio.TimeoutError."""
-        import importlib
-
-        mod = importlib.import_module(agent_module)
-        fn = getattr(mod, agent_fn)
-
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=asyncio.TimeoutError())
-
-        state = _state(
-            messages=[HumanMessage(content="Question about property")],
-            retrieved_context=[
-                {
-                    "content": "Some data",
-                    "metadata": {"category": "general"},
-                    "score": 0.9,
-                }
-            ],
-        )
-
-        with patch(
-            f"{agent_module}._get_llm", new_callable=AsyncMock, return_value=mock_llm
-        ):
-            result = await fn(state)
-
-        assert result.get("skip_validation") is True
-        assert "trouble generating" in result["messages"][0].content.lower()

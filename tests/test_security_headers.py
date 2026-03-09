@@ -7,9 +7,10 @@ RequestBodyLimitMiddleware all include the shared security headers.
 """
 
 import json
+import os
 import sys
+import types
 from contextlib import asynccontextmanager
-from unittest.mock import MagicMock, patch
 
 import pytest
 from starlette.testclient import TestClient
@@ -27,7 +28,7 @@ SECURITY_HEADERS = {
 
 def _make_test_app(property_data=None):
     """Create a test app with mocked agent and property data."""
-    mock_agent = MagicMock()
+    stub_agent = types.SimpleNamespace(name="stub-agent")
     default_data = {
         "property": {"name": "Test Casino", "location": "Test City"},
         "restaurants": [{"name": "Steakhouse"}],
@@ -36,7 +37,7 @@ def _make_test_app(property_data=None):
 
     @asynccontextmanager
     async def test_lifespan(app):
-        app.state.agent = mock_agent
+        app.state.agent = stub_agent
         app.state.property_data = data
         app.state.ready = True
         yield
@@ -73,18 +74,18 @@ def _assert_security_headers(response, context: str):
 class TestSecurityHeadersOnErrors:
     """Security headers must appear on ALL error responses, not just 200s."""
 
-    def test_401_has_security_headers(self):
+    def test_401_has_security_headers(self, monkeypatch):
         """401 from ApiKeyMiddleware includes security headers."""
-        with patch.dict("os.environ", {"API_KEY": "secret123"}):
-            get_settings.cache_clear()
-            app = _make_test_app()
-            with TestClient(app) as client:
-                resp = client.post(
-                    "/chat",
-                    json={"message": "test"},
-                )
-                assert resp.status_code == 401
-                _assert_security_headers(resp, "401 Unauthorized")
+        monkeypatch.setenv("API_KEY", "secret123")
+        get_settings.cache_clear()
+        app = _make_test_app()
+        with TestClient(app) as client:
+            resp = client.post(
+                "/chat",
+                json={"message": "test"},
+            )
+            assert resp.status_code == 401
+            _assert_security_headers(resp, "401 Unauthorized")
 
     def test_413_has_security_headers(self):
         """413 from RequestBodyLimitMiddleware includes security headers."""
@@ -109,18 +110,18 @@ class TestSecurityHeadersOnErrors:
             assert resp.status_code == 200
             _assert_security_headers(resp, "200 Health OK")
 
-    def test_429_has_security_headers(self):
+    def test_429_has_security_headers(self, monkeypatch):
         """429 from RateLimitMiddleware includes security headers."""
-        with patch.dict("os.environ", {"RATE_LIMIT_CHAT": "1"}):
-            get_settings.cache_clear()
-            app = _make_test_app()
-            with TestClient(app) as client:
-                # First request allowed
-                client.post("/chat", json={"message": "test1"})
-                # Second request rate limited
-                resp = client.post("/chat", json={"message": "test2"})
-                assert resp.status_code == 429
-                _assert_security_headers(resp, "429 Rate Limited")
+        monkeypatch.setenv("RATE_LIMIT_CHAT", "1")
+        get_settings.cache_clear()
+        app = _make_test_app()
+        with TestClient(app) as client:
+            # First request allowed
+            client.post("/chat", json={"message": "test1"})
+            # Second request rate limited
+            resp = client.post("/chat", json={"message": "test2"})
+            assert resp.status_code == 429
+            _assert_security_headers(resp, "429 Rate Limited")
 
 
 class TestContentEncodingRejection:

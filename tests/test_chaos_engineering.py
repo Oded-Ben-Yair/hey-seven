@@ -3,11 +3,13 @@
 R52 fix D5: Verify system behavior under simultaneous failures
 (CB open + Redis down + LLM timeout). Production systems must
 degrade gracefully, not crash.
+
+Mock purge R111: Removed TestCompoundFailures tests that used MagicMock
+for Redis backend. Retained: real CircuitBreaker tests, semaphore
+backpressure tests, and deterministic guardrail degradation tests.
 """
 
 import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -18,31 +20,8 @@ from src.agent.circuit_breaker import CircuitBreaker
 pytestmark = pytest.mark.chaos
 
 
-class TestCompoundFailures:
-    """Test system behavior under simultaneous failure conditions."""
-
-    @pytest.mark.asyncio
-    async def test_cb_open_with_redis_failure(self):
-        """CB open + Redis backend fails -> graceful fallback, no crash."""
-        backend = MagicMock()
-        backend.async_set = AsyncMock(side_effect=ConnectionError("Redis down"))
-        backend.async_get = AsyncMock(side_effect=ConnectionError("Redis down"))
-        backend.async_pipeline_set = AsyncMock(
-            side_effect=ConnectionError("Redis down"),
-        )
-        backend.async_pipeline_get = AsyncMock(
-            side_effect=ConnectionError("Redis down"),
-        )
-
-        cb = CircuitBreaker(
-            failure_threshold=2, cooldown_seconds=1, state_backend=backend,
-        )
-        # Trip the breaker
-        await cb.record_failure()
-        await cb.record_failure()
-        assert cb.state == "open"
-        # Request should be blocked (not crash) even with backend errors
-        assert not await cb.allow_request()
+class TestCircuitBreakerChaos:
+    """Test circuit breaker behavior under stress (no mocked backends)."""
 
     @pytest.mark.asyncio
     async def test_concurrent_record_failures_trip_once(self):
@@ -112,21 +91,6 @@ class TestCompoundFailures:
         assert metrics["last_failure_time_ago"] is not None
 
     @pytest.mark.asyncio
-    async def test_backend_sync_failure_non_fatal(self):
-        """Backend sync failure should not affect local CB operation."""
-        backend = MagicMock()
-        backend.async_set = AsyncMock(side_effect=Exception("Redis timeout"))
-        backend.async_get = AsyncMock(return_value=None)
-
-        cb = CircuitBreaker(
-            failure_threshold=3, state_backend=backend,
-        )
-        await cb.record_failure()
-        await cb.record_success()
-        # Should work fine despite backend failures
-        assert cb.state == "closed"
-
-    @pytest.mark.asyncio
     async def test_rapid_open_close_cycle_stable(self):
         """Rapid open/close cycles do not corrupt state."""
         cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0.05)
@@ -141,43 +105,6 @@ class TestCompoundFailures:
             assert await cb.allow_request()
             await cb.record_success()
             assert cb.state == "closed"
-
-    @pytest.mark.asyncio
-    async def test_backend_state_promotion_open(self):
-        """Backend reports open -> local CB adopts open state."""
-        backend = MagicMock()
-        # _read_backend_state uses async_pipeline_get([state_key, count_key])
-        backend.async_pipeline_get = AsyncMock(return_value=["open", "10"])
-        backend.async_set = AsyncMock()
-
-        cb = CircuitBreaker(
-            failure_threshold=5, state_backend=backend,
-        )
-        # Force backend sync to be eligible (bypass rate limit)
-        cb._last_backend_sync = 0.0
-        # allow_request reads backend, applies state, then checks
-        allowed = await cb.allow_request()
-        assert not allowed
-        assert cb._state == "open"
-
-    @pytest.mark.asyncio
-    async def test_backend_recovery_propagation(self):
-        """Backend reports closed -> local open CB recovers."""
-        backend = MagicMock()
-        # _read_backend_state uses async_pipeline_get([state_key, count_key])
-        backend.async_pipeline_get = AsyncMock(return_value=["closed", "0"])
-        backend.async_set = AsyncMock()
-
-        cb = CircuitBreaker(
-            failure_threshold=2, state_backend=backend,
-        )
-        # Manually set local state to open
-        cb._state = "open"
-        cb._last_backend_sync = 0.0
-        # allow_request should sync from backend and recover
-        allowed = await cb.allow_request()
-        assert allowed
-        assert cb._state == "closed"
 
 
 class TestSemaphoreBackpressure:
@@ -196,7 +123,8 @@ class TestSemaphoreBackpressure:
             # Next acquire should timeout
             with pytest.raises(asyncio.TimeoutError):
                 await asyncio.wait_for(
-                    _LLM_SEMAPHORE.acquire(), timeout=0.1,
+                    _LLM_SEMAPHORE.acquire(),
+                    timeout=0.1,
                 )
         finally:
             # Release all

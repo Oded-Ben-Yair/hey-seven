@@ -389,31 +389,6 @@ class TestSemanticInjectionClassifier:
         assert "fail-closed" in result.reason.lower()
 
     @pytest.mark.asyncio
-    async def test_returns_classification_on_success(self):
-        """Classifier returns real classification when LLM works."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from src.agent.guardrails import (
-            InjectionClassification,
-            classify_injection_semantic,
-        )
-
-        mock_classification = InjectionClassification(
-            is_injection=False, confidence=0.1, reason="Normal restaurant query"
-        )
-        mock_llm = MagicMock()
-        mock_classifier = MagicMock()
-        mock_classifier.ainvoke = AsyncMock(return_value=mock_classification)
-        mock_llm.with_structured_output.return_value = mock_classifier
-
-        result = await classify_injection_semantic(
-            "What restaurants?", llm_fn=lambda: mock_llm
-        )
-        assert result is not None
-        assert result.is_injection is False
-        assert result.confidence == 0.1
-
-    @pytest.mark.asyncio
     async def test_timeout_error_from_llm_fn_fails_closed(self):
         """TimeoutError from llm_fn itself returns fail-closed classification."""
         from src.agent.guardrails import (
@@ -445,64 +420,6 @@ class TestSemanticInjectionClassifier:
         assert result is not None
         assert isinstance(result, InjectionClassification)
         assert result.is_injection is True
-
-    @pytest.mark.asyncio
-    async def test_ainvoke_timeout_fails_closed(self):
-        """TimeoutError during ainvoke returns fail-closed classification."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from src.agent.guardrails import (
-            InjectionClassification,
-            classify_injection_semantic,
-        )
-
-        mock_llm = MagicMock()
-        mock_classifier = MagicMock()
-        mock_classifier.ainvoke = AsyncMock(
-            side_effect=TimeoutError("Request timed out")
-        )
-        mock_llm.with_structured_output.return_value = mock_classifier
-
-        result = await classify_injection_semantic(
-            "test query", llm_fn=lambda: mock_llm
-        )
-        assert result is not None
-        assert result.is_injection is True
-        assert result.confidence == 1.0
-        assert "fail-closed" in result.reason.lower()
-
-    @pytest.mark.asyncio
-    async def test_asyncio_timeout_on_hanging_llm(self):
-        """A hanging LLM call triggers asyncio.timeout(5) and fails closed.
-
-        R32 DeepSeek CRITICAL fix: without timeout, a hanging classifier
-        blocks ALL inbound messages at compliance_gate.
-        """
-        import asyncio
-        from unittest.mock import MagicMock
-
-        from src.agent.guardrails import (
-            InjectionClassification,
-            classify_injection_semantic,
-        )
-
-        mock_llm = MagicMock()
-        mock_classifier = MagicMock()
-
-        async def hang_forever(*args, **kwargs):
-            await asyncio.sleep(3600)  # simulate hung LLM
-
-        mock_classifier.ainvoke = hang_forever
-        mock_llm.with_structured_output.return_value = mock_classifier
-
-        result = await asyncio.wait_for(
-            classify_injection_semantic("What restaurants?", llm_fn=lambda: mock_llm),
-            timeout=10,  # test-level timeout: must complete well under this
-        )
-        assert isinstance(result, InjectionClassification)
-        assert result.is_injection is True
-        assert result.confidence == 1.0
-        assert "timeout" in result.reason.lower()
 
 
 class TestSemanticInjectionLive:

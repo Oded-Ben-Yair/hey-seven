@@ -7,9 +7,9 @@ and security hardening for production deployment.
 
 import re
 import sys
+import types
 from contextlib import asynccontextmanager
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -31,7 +31,7 @@ def _make_test_app(agent=True, property_data=None):
 
     @asynccontextmanager
     async def test_lifespan(app):
-        app.state.agent = MagicMock() if agent else None
+        app.state.agent = types.SimpleNamespace(name="stub-agent") if agent else None
         app.state.property_data = data
         app.state.ready = True
         yield
@@ -70,9 +70,7 @@ class TestDependencyPinning:
             assert "~=" not in stripped, (
                 f"Approximately-pinned dependency in requirements-prod.txt: {stripped}"
             )
-            assert "==" in stripped, (
-                f"Dependency without exact pin: {stripped}"
-            )
+            assert "==" in stripped, f"Dependency without exact pin: {stripped}"
 
     def test_dev_requirements_all_pinned(self):
         """Every dependency in requirements.txt uses == (no >= or ~=)."""
@@ -236,7 +234,9 @@ class TestCloudBuild:
 
     def test_rollback_on_failure(self):
         """Pipeline includes rollback to previous revision on smoke failure."""
-        assert "Rolling back" in self.cloudbuild or "rollback" in self.cloudbuild.lower()
+        assert (
+            "Rolling back" in self.cloudbuild or "rollback" in self.cloudbuild.lower()
+        )
 
     def test_version_in_env_vars(self):
         """VERSION is set from COMMIT_SHA (not hardcoded)."""
@@ -453,7 +453,10 @@ class TestCosignSigning:
 
     def test_cosign_sign_uses_kms_key(self):
         """Cosign sign step references GCP KMS key path."""
-        assert "gcpkms://projects/$PROJECT_ID/locations/us-central1/keyRings/hey-seven-signing/cryptoKeys/cosign-key" in self.cloudbuild
+        assert (
+            "gcpkms://projects/$PROJECT_ID/locations/us-central1/keyRings/hey-seven-signing/cryptoKeys/cosign-key"
+            in self.cloudbuild
+        )
 
     def test_cosign_attest_references_sbom(self):
         """Cosign attest step references the SBOM file."""
@@ -491,7 +494,9 @@ class TestCanaryDeployment:
 
     def test_rollback_on_error_threshold(self):
         """Pipeline rolls back if error rate exceeds threshold."""
-        assert "Rolling back" in self.cloudbuild or "rollback" in self.cloudbuild.lower()
+        assert (
+            "Rolling back" in self.cloudbuild or "rollback" in self.cloudbuild.lower()
+        )
 
     def test_multiple_traffic_stages(self):
         """Pipeline has at least 2 canary stages before 100% traffic."""
@@ -529,21 +534,26 @@ class TestSecretRotation:
         """Script verifies health after rotation."""
         script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
         content = script.read_text()
-        assert "/health" in content, "Rotation script must verify health after secret update"
+        assert "/health" in content, (
+            "Rotation script must verify health after secret update"
+        )
 
     def test_rotate_script_disables_old_versions(self):
         """Script disables (not deletes) old secret versions."""
         script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
         content = script.read_text()
-        assert "disable" in content, "Script must disable old versions for rollback safety"
+        assert "disable" in content, (
+            "Script must disable old versions for rollback safety"
+        )
 
     def test_rotate_script_no_delete(self):
         """Script never deletes secret versions (keep for rollback)."""
         script = PROJECT_ROOT / "scripts" / "rotate-secret.sh"
         content = script.read_text()
         # "delete" should not appear as a gcloud command (only in comments)
-        lines = [line for line in content.splitlines()
-                 if not line.strip().startswith("#")]
+        lines = [
+            line for line in content.splitlines() if not line.strip().startswith("#")
+        ]
         code_only = "\n".join(lines)
         assert "versions delete" not in code_only, (
             "Script must NOT delete secret versions — disable for rollback safety"
@@ -565,7 +575,7 @@ class TestDockerComposeHealthcheck:
     def test_healthcheck_no_curl(self):
         """Healthcheck does not depend on curl (not in production image)."""
         # Only check the healthcheck section, not the entire file
-        assert 'curl' not in self.compose, (
+        assert "curl" not in self.compose, (
             "docker-compose healthcheck should use python, not curl"
         )
 
@@ -590,7 +600,9 @@ class TestPipAuditAndRequireHashes:
 
     def test_pip_audit_in_cloudbuild(self):
         """Pipeline includes pip-audit step targeting requirements-prod.txt."""
-        assert "pip-audit" in self.cloudbuild, "pip-audit step missing from cloudbuild.yaml"
+        assert "pip-audit" in self.cloudbuild, (
+            "pip-audit step missing from cloudbuild.yaml"
+        )
         assert "pip-audit -r requirements-prod.txt" in self.cloudbuild, (
             "pip-audit must target requirements-prod.txt (not requirements.txt)"
         )

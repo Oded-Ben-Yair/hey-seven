@@ -1,7 +1,10 @@
-"""Tests for centralized configuration (src/config.py)."""
+"""Tests for centralized configuration (src/config.py).
 
-import os
-from unittest.mock import patch
+Mock purge R111: Replaced all patch.dict(os.environ) with monkeypatch.setenv.
+Zero unittest.mock references.
+"""
+
+import pytest
 
 
 class TestSettings:
@@ -18,14 +21,15 @@ class TestSettings:
         assert s.RATE_LIMIT_CHAT == 20
         assert s.VERSION == "1.5.0"
 
-    def test_env_var_overrides(self):
+    def test_env_var_overrides(self, monkeypatch):
         """Environment variables override default settings."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {"MODEL_NAME": "gemini-3.1-pro-preview", "RAG_TOP_K": "10"}):
-            s = Settings()
-            assert s.MODEL_NAME == "gemini-3.1-pro-preview"
-            assert s.RAG_TOP_K == 10
+        monkeypatch.setenv("MODEL_NAME", "gemini-3.1-pro-preview")
+        monkeypatch.setenv("RAG_TOP_K", "10")
+        s = Settings()
+        assert s.MODEL_NAME == "gemini-3.1-pro-preview"
+        assert s.RAG_TOP_K == 10
 
     def test_settings_are_reusable(self):
         """get_settings returns a working Settings instance each time."""
@@ -51,13 +55,13 @@ class TestSettings:
         s = Settings()
         assert hasattr(s, "GOOGLE_API_KEY")
 
-    def test_google_api_key_from_env(self):
+    def test_google_api_key_from_env(self, monkeypatch):
         """GOOGLE_API_KEY can be set via environment variable."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key-123"}):
-            s = Settings()
-            assert s.GOOGLE_API_KEY.get_secret_value() == "test-key-123"
+        monkeypatch.setenv("GOOGLE_API_KEY", "test-key-123")
+        s = Settings()
+        assert s.GOOGLE_API_KEY.get_secret_value() == "test-key-123"
 
     def test_llm_safety_params_exist(self):
         """LLM safety parameters exist with correct defaults."""
@@ -87,54 +91,50 @@ class TestSettings:
         s = Settings()
         assert s.GRAPH_RECURSION_LIMIT == 10
 
-    def test_graph_recursion_limit_overridable(self):
+    def test_graph_recursion_limit_overridable(self, monkeypatch):
         """GRAPH_RECURSION_LIMIT can be overridden via env var."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {"GRAPH_RECURSION_LIMIT": "20"}):
-            s = Settings()
-            assert s.GRAPH_RECURSION_LIMIT == 20
+        monkeypatch.setenv("GRAPH_RECURSION_LIMIT", "20")
+        s = Settings()
+        assert s.GRAPH_RECURSION_LIMIT == 20
 
-    def test_chunk_overlap_must_be_less_than_chunk_size(self):
+    def test_chunk_overlap_must_be_less_than_chunk_size(self, monkeypatch):
         """RAG_CHUNK_OVERLAP >= RAG_CHUNK_SIZE raises ValueError."""
-        import pytest
-
         from src.config import Settings
 
-        with patch.dict(os.environ, {"RAG_CHUNK_OVERLAP": "800", "RAG_CHUNK_SIZE": "800"}):
-            with pytest.raises(ValueError, match="RAG_CHUNK_OVERLAP"):
-                Settings()
+        monkeypatch.setenv("RAG_CHUNK_OVERLAP", "800")
+        monkeypatch.setenv("RAG_CHUNK_SIZE", "800")
+        with pytest.raises(ValueError, match="RAG_CHUNK_OVERLAP"):
+            Settings()
 
-    def test_valid_chunk_params_pass(self):
+    def test_valid_chunk_params_pass(self, monkeypatch):
         """RAG_CHUNK_OVERLAP < RAG_CHUNK_SIZE validates successfully."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {"RAG_CHUNK_OVERLAP": "100", "RAG_CHUNK_SIZE": "800"}):
-            s = Settings()
-            assert s.RAG_CHUNK_OVERLAP == 100
-            assert s.RAG_CHUNK_SIZE == 800
+        monkeypatch.setenv("RAG_CHUNK_OVERLAP", "100")
+        monkeypatch.setenv("RAG_CHUNK_SIZE", "800")
+        s = Settings()
+        assert s.RAG_CHUNK_OVERLAP == 100
+        assert s.RAG_CHUNK_SIZE == 800
 
-    def test_consent_hmac_rejects_default_when_sms_enabled(self):
+    def test_consent_hmac_rejects_default_when_sms_enabled(self, monkeypatch):
         """SMS_ENABLED=True with default HMAC secret raises ValueError."""
-        import pytest
-
         from src.config import Settings
 
-        with patch.dict(os.environ, {"SMS_ENABLED": "true"}):
-            with pytest.raises(ValueError, match="CONSENT_HMAC_SECRET must be set"):
-                Settings()
+        monkeypatch.setenv("SMS_ENABLED", "true")
+        with pytest.raises(ValueError, match="CONSENT_HMAC_SECRET must be set"):
+            Settings()
 
-    def test_consent_hmac_accepts_custom_when_sms_enabled(self):
+    def test_consent_hmac_accepts_custom_when_sms_enabled(self, monkeypatch):
         """SMS_ENABLED=True with custom HMAC secret passes validation."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {
-            "SMS_ENABLED": "true",
-            "CONSENT_HMAC_SECRET": "my-secure-production-secret",
-        }):
-            s = Settings()
-            assert s.SMS_ENABLED is True
-            assert s.CONSENT_HMAC_SECRET.get_secret_value() == "my-secure-production-secret"
+        monkeypatch.setenv("SMS_ENABLED", "true")
+        monkeypatch.setenv("CONSENT_HMAC_SECRET", "my-secure-production-secret")
+        s = Settings()
+        assert s.SMS_ENABLED is True
+        assert s.CONSENT_HMAC_SECRET.get_secret_value() == "my-secure-production-secret"
 
     def test_consent_hmac_allows_default_when_sms_disabled(self):
         """SMS_ENABLED=False (default) allows the default HMAC secret."""
@@ -148,58 +148,46 @@ class TestSettings:
 class TestProductionSecretValidation:
     """Tests for production secret hard-fail validation (R2 security fix)."""
 
-    def test_production_rejects_empty_api_key(self):
+    def test_production_rejects_empty_api_key(self, monkeypatch):
         """ENVIRONMENT=production with empty API_KEY raises ValueError."""
-        import pytest
-
         from src.config import Settings
 
-        with patch.dict(os.environ, {"ENVIRONMENT": "production"}):
-            with pytest.raises(ValueError, match="API_KEY must be set"):
-                Settings()
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        with pytest.raises(ValueError, match="API_KEY must be set"):
+            Settings()
 
-    def test_production_rejects_empty_cms_webhook_secret(self):
+    def test_production_rejects_empty_cms_webhook_secret(self, monkeypatch):
         """ENVIRONMENT=production with empty CMS_WEBHOOK_SECRET raises ValueError."""
-        import pytest
-
         from src.config import Settings
 
-        with patch.dict(os.environ, {
-            "ENVIRONMENT": "production",
-            "API_KEY": "test-api-key",
-        }):
-            with pytest.raises(ValueError, match="CMS_WEBHOOK_SECRET must be set"):
-                Settings()
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("API_KEY", "test-api-key")
+        with pytest.raises(ValueError, match="CMS_WEBHOOK_SECRET must be set"):
+            Settings()
 
-    def test_production_rejects_missing_telnyx_key_when_sms_enabled(self):
+    def test_production_rejects_missing_telnyx_key_when_sms_enabled(self, monkeypatch):
         """ENVIRONMENT=production with SMS_ENABLED=True but no TELNYX_PUBLIC_KEY raises ValueError."""
-        import pytest
-
         from src.config import Settings
 
-        with patch.dict(os.environ, {
-            "ENVIRONMENT": "production",
-            "API_KEY": "test-api-key",
-            "CMS_WEBHOOK_SECRET": "test-cms-secret",
-            "SMS_ENABLED": "true",
-            "CONSENT_HMAC_SECRET": "secure-hmac-secret",
-        }):
-            with pytest.raises(ValueError, match="TELNYX_PUBLIC_KEY must be set"):
-                Settings()
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("API_KEY", "test-api-key")
+        monkeypatch.setenv("CMS_WEBHOOK_SECRET", "test-cms-secret")
+        monkeypatch.setenv("SMS_ENABLED", "true")
+        monkeypatch.setenv("CONSENT_HMAC_SECRET", "secure-hmac-secret")
+        with pytest.raises(ValueError, match="TELNYX_PUBLIC_KEY must be set"):
+            Settings()
 
-    def test_production_passes_with_all_secrets_set(self):
+    def test_production_passes_with_all_secrets_set(self, monkeypatch):
         """ENVIRONMENT=production with all required secrets passes validation."""
         from src.config import Settings
 
-        with patch.dict(os.environ, {
-            "ENVIRONMENT": "production",
-            "API_KEY": "prod-api-key",
-            "CMS_WEBHOOK_SECRET": "prod-cms-secret",
-        }):
-            s = Settings()
-            assert s.ENVIRONMENT == "production"
-            assert s.API_KEY.get_secret_value() == "prod-api-key"
-            assert s.CMS_WEBHOOK_SECRET.get_secret_value() == "prod-cms-secret"
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        monkeypatch.setenv("API_KEY", "prod-api-key")
+        monkeypatch.setenv("CMS_WEBHOOK_SECRET", "prod-cms-secret")
+        s = Settings()
+        assert s.ENVIRONMENT == "production"
+        assert s.API_KEY.get_secret_value() == "prod-api-key"
+        assert s.CMS_WEBHOOK_SECRET.get_secret_value() == "prod-cms-secret"
 
     def test_development_allows_empty_secrets(self):
         """ENVIRONMENT=development (default) allows empty secrets for local testing."""

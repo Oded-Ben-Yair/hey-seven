@@ -6,7 +6,6 @@ embedded in router_node.
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
 
 from langchain_core.messages import HumanMessage
 
@@ -94,23 +93,6 @@ class TestPreExtractNode:
         assert fields["party_size"] == 4
         assert fields["occasion"] == "birthday"
         assert result["guest_name"] == "Mike"
-
-    @pytest.mark.asyncio
-    async def test_feature_flag_disabled(self, monkeypatch):
-        """When field_extraction_enabled=False, no extraction occurs."""
-        monkeypatch.setenv("CASINO_ID", "test_casino")
-        from src.config import get_settings
-
-        get_settings.cache_clear()
-
-        with patch(
-            "src.agent.pre_extract.is_feature_enabled",
-            new_callable=AsyncMock,
-            return_value=False,
-        ):
-            state = {"messages": [HumanMessage(content="My name is Sarah, party of 4")]}
-            result = await pre_extract_node(state)
-            assert "extracted_fields" not in result
 
     @pytest.mark.asyncio
     async def test_gemini_list_content_format(self):

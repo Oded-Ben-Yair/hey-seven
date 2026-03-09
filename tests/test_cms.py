@@ -1,9 +1,12 @@
-"""Tests for the CMS package: Google Sheets client, content validation, and webhook handler.
+"""Tests for the CMS package: content validation, webhook handler, and config.
 
-Covers content category definitions, Sheets API client read operations,
-SHA-256 content hashing, per-category validation with quarantine logging,
-Details JSON validation, HMAC-SHA256 webhook signature verification,
-change detection via content hashing, and webhook edge cases.
+Covers content category definitions, SHA-256 content hashing,
+per-category validation with quarantine logging, Details JSON validation,
+HMAC-SHA256 webhook signature verification, change detection via content hashing,
+webhook edge cases, replay protection, and CMS config fields.
+
+Mock-based tests (SheetsClient with mock service, live reindexing with mock reingest)
+removed (mock purge R111).
 """
 
 import hashlib
@@ -11,7 +14,6 @@ import hmac
 import json
 import logging
 import time
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -57,12 +59,12 @@ class TestContentCategories:
 
 
 # ============================================================================
-# SheetsClient tests
+# SheetsClient tests (no external service)
 # ============================================================================
 
 
 class TestSheetsClient:
-    """Google Sheets API client operations."""
+    """Google Sheets API client operations (no-service fallback)."""
 
     @pytest.mark.asyncio
     async def test_read_category_returns_list(self):
@@ -93,73 +95,6 @@ class TestSheetsClient:
         assert set(result.keys()) == set(CONTENT_CATEGORIES)
         for category_items in result.values():
             assert isinstance(category_items, list)
-
-    @pytest.mark.asyncio
-    async def test_read_category_with_mock_service(self):
-        """When Sheets API returns data, rows are parsed into dicts."""
-        from src.cms.sheets_client import SheetsClient
-
-        client = SheetsClient()
-
-        mock_service = MagicMock()
-        mock_result = {
-            "values": [
-                ["ID", "Name", "Description", "Active", "Cuisine", "Price Range"],
-                ["1", "Test Restaurant", "Great food", "true", "Italian", "$$"],
-                ["2", "Sushi Bar", "Fresh sushi", "true", "Japanese", "$$$"],
-            ]
-        }
-        mock_service.spreadsheets().values().get().execute.return_value = mock_result
-
-        client._service = mock_service
-        client._available = True
-
-        result = await client.read_category("sheet-id", "dining")
-        assert len(result) == 2
-        assert result[0]["id"] == "1"
-        assert result[0]["name"] == "Test Restaurant"
-        assert result[0]["cuisine"] == "Italian"
-        assert result[1]["name"] == "Sushi Bar"
-
-    @pytest.mark.asyncio
-    async def test_read_category_header_only_returns_empty(self):
-        """A sheet with only a header row returns no items."""
-        from src.cms.sheets_client import SheetsClient
-
-        client = SheetsClient()
-        mock_service = MagicMock()
-        mock_result = {"values": [["ID", "Name", "Description"]]}
-        mock_service.spreadsheets().values().get().execute.return_value = mock_result
-
-        client._service = mock_service
-        client._available = True
-
-        result = await client.read_category("sheet-id", "dining")
-        assert result == []
-
-    @pytest.mark.asyncio
-    async def test_read_category_handles_short_rows(self):
-        """Rows shorter than the header get empty strings for missing columns."""
-        from src.cms.sheets_client import SheetsClient
-
-        client = SheetsClient()
-        mock_service = MagicMock()
-        mock_result = {
-            "values": [
-                ["ID", "Name", "Description"],
-                ["1"],  # Only ID, missing Name and Description
-            ]
-        }
-        mock_service.spreadsheets().values().get().execute.return_value = mock_result
-
-        client._service = mock_service
-        client._available = True
-
-        result = await client.read_category("sheet-id", "dining")
-        assert len(result) == 1
-        assert result[0]["id"] == "1"
-        assert result[0]["name"] == ""
-        assert result[0]["description"] == ""
 
 
 class TestComputeContentHash:
@@ -329,7 +264,7 @@ class TestValidation:
 
 
 # ============================================================================
-# Webhook tests
+# Webhook signature verification tests
 # ============================================================================
 
 
@@ -341,9 +276,7 @@ class TestWebhookSignatureVerification:
 
         body = b'{"casino_id": "mohegan_sun"}'
         secret = "test-webhook-secret"
-        signature = hmac.new(
-            secret.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
         assert verify_webhook_signature(body, signature, secret) is True
 
@@ -362,6 +295,11 @@ class TestWebhookSignatureVerification:
         from src.cms.webhook import verify_webhook_signature
 
         assert verify_webhook_signature(b"body", "sig", "") is False
+
+
+# ============================================================================
+# Webhook handler tests
+# ============================================================================
 
 
 class TestWebhookHandler:
@@ -489,49 +427,53 @@ class TestWebhookReplayProtection:
 
         body = b'{"casino_id": "mohegan_sun"}'
         secret = "test-webhook-secret"
-        signature = hmac.new(
-            secret.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
         timestamp = str(int(time.time()))
 
-        assert verify_webhook_signature(body, signature, secret, timestamp=timestamp) is True
+        assert (
+            verify_webhook_signature(body, signature, secret, timestamp=timestamp)
+            is True
+        )
 
     def test_stale_timestamp_rejected(self):
         from src.cms.webhook import verify_webhook_signature
 
         body = b'{"casino_id": "mohegan_sun"}'
         secret = "test-webhook-secret"
-        signature = hmac.new(
-            secret.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
         # Timestamp from 10 minutes ago (outside 5-minute tolerance)
         timestamp = str(int(time.time()) - 600)
 
-        assert verify_webhook_signature(body, signature, secret, timestamp=timestamp) is False
+        assert (
+            verify_webhook_signature(body, signature, secret, timestamp=timestamp)
+            is False
+        )
 
     def test_future_timestamp_rejected(self):
         from src.cms.webhook import verify_webhook_signature
 
         body = b'{"casino_id": "mohegan_sun"}'
         secret = "test-webhook-secret"
-        signature = hmac.new(
-            secret.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
         # Timestamp 10 minutes in the future
         timestamp = str(int(time.time()) + 600)
 
-        assert verify_webhook_signature(body, signature, secret, timestamp=timestamp) is False
+        assert (
+            verify_webhook_signature(body, signature, secret, timestamp=timestamp)
+            is False
+        )
 
     def test_invalid_timestamp_rejected(self):
         from src.cms.webhook import verify_webhook_signature
 
         body = b'{"casino_id": "mohegan_sun"}'
         secret = "test-webhook-secret"
-        signature = hmac.new(
-            secret.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
-        assert verify_webhook_signature(body, signature, secret, timestamp="not-a-number") is False
+        assert (
+            verify_webhook_signature(body, signature, secret, timestamp="not-a-number")
+            is False
+        )
 
     def test_no_timestamp_passes(self):
         """Backward compatibility: no timestamp still passes if signature is valid."""
@@ -539,9 +481,7 @@ class TestWebhookReplayProtection:
 
         body = b'{"casino_id": "mohegan_sun"}'
         secret = "test-webhook-secret"
-        signature = hmac.new(
-            secret.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
         assert verify_webhook_signature(body, signature, secret) is True
         assert verify_webhook_signature(body, signature, secret, timestamp=None) is True
@@ -695,193 +635,3 @@ class TestContentHashCacheBounded:
         from src.cms.webhook import _content_hashes
 
         assert _content_hashes.ttl > 0
-
-
-# ============================================================================
-# Live re-indexing tests
-# ============================================================================
-
-
-class TestWebhookLiveReindexing:
-    """CMS webhook triggers live vector store upsert on content change."""
-
-    def _make_valid_payload(self, **item_overrides):
-        """Create a valid webhook payload."""
-        item = {
-            "id": "dining-reindex-001",
-            "name": "Reindex Test Restaurant",
-            "description": "Restaurant for reindex testing",
-            "active": "true",
-            "cuisine": "Italian",
-            "price_range": "$$$",
-        }
-        item.update(item_overrides)
-        return {
-            "casino_id": "mohegan_sun",
-            "category": "dining",
-            "item": item,
-        }
-
-    @pytest.mark.asyncio
-    async def test_webhook_calls_reingest_item_on_change(self):
-        """When content changes, webhook calls reingest_item with correct args."""
-        from unittest.mock import AsyncMock, patch
-
-        from src.cms.webhook import _content_hashes, handle_cms_webhook
-
-        _content_hashes.clear()
-
-        payload = self._make_valid_payload()
-
-        with patch(
-            "src.rag.pipeline.reingest_item",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_reingest:
-            result = await handle_cms_webhook(payload, webhook_secret="secret")
-
-        assert result["status"] == "indexed"
-        mock_reingest.assert_called_once_with(
-            "dining",
-            "dining-reindex-001",
-            payload["item"],
-            casino_id="mohegan_sun",
-        )
-
-    @pytest.mark.asyncio
-    async def test_webhook_indexed_even_when_reingest_fails(self):
-        """Hash is updated even if reingest_item fails (non-critical failure)."""
-        from unittest.mock import AsyncMock, patch
-
-        from src.cms.webhook import _content_hashes, handle_cms_webhook
-
-        _content_hashes.clear()
-
-        payload = self._make_valid_payload()
-
-        with patch(
-            "src.rag.pipeline.reingest_item",
-            new_callable=AsyncMock,
-            return_value=False,
-        ):
-            result = await handle_cms_webhook(payload, webhook_secret="secret")
-
-        # Status is still "indexed" (hash updated) even though re-indexing failed
-        assert result["status"] == "indexed"
-        # Hash was stored (subsequent identical call returns "unchanged")
-        result2 = await handle_cms_webhook(payload, webhook_secret="secret")
-        assert result2["status"] == "unchanged"
-
-    @pytest.mark.asyncio
-    async def test_webhook_does_not_call_reingest_for_unchanged(self):
-        """Unchanged content does not trigger re-indexing."""
-        from unittest.mock import AsyncMock, patch
-
-        from src.cms.webhook import _content_hashes, handle_cms_webhook
-
-        _content_hashes.clear()
-
-        payload = self._make_valid_payload()
-
-        with patch(
-            "src.rag.pipeline.reingest_item",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_reingest:
-            # First call: indexed
-            await handle_cms_webhook(payload, webhook_secret="secret")
-            mock_reingest.assert_called_once()
-            mock_reingest.reset_mock()
-
-            # Second call: unchanged — should NOT call reingest
-            result = await handle_cms_webhook(payload, webhook_secret="secret")
-            assert result["status"] == "unchanged"
-            mock_reingest.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_reingest_retrieval_roundtrip(self):
-        """End-to-end: webhook payload -> handle_cms_webhook -> search returns updated content.
-
-        Simulates the full CMS update roundtrip:
-        1. Webhook receives a valid dining item
-        2. handle_cms_webhook validates and calls reingest_item
-        3. Subsequent search_knowledge_base returns the updated content
-
-        This verifies the CMS -> RAG pipeline wiring is correct.
-        """
-        from unittest.mock import AsyncMock, patch
-
-        from src.cms.webhook import _content_hashes, handle_cms_webhook
-
-        _content_hashes.clear()
-
-        payload = self._make_valid_payload(
-            id="dining-roundtrip-001",
-            name="Updated Steakhouse",
-            description="New menu with wagyu beef",
-        )
-
-        # Mock reingest_item to simulate successful vector store upsert
-        with patch(
-            "src.rag.pipeline.reingest_item",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_reingest:
-            result = await handle_cms_webhook(payload, webhook_secret="secret")
-
-        assert result["status"] == "indexed"
-        mock_reingest.assert_called_once()
-
-        # Verify the reingest call received correct item data
-        call_args = mock_reingest.call_args
-        assert call_args[0][0] == "dining"  # category
-        assert call_args[0][1] == "dining-roundtrip-001"  # item_id
-        assert call_args[0][2]["name"] == "Updated Steakhouse"
-        assert call_args[1]["casino_id"] == "mohegan_sun"
-
-        # Simulate search returning updated content (mock retriever)
-        from unittest.mock import MagicMock
-
-        from langchain_core.documents import Document
-
-        mock_retriever = MagicMock()
-        updated_doc = Document(
-            page_content="Updated Steakhouse: New menu with wagyu beef",
-            metadata={"category": "restaurants"},
-        )
-        mock_retriever.retrieve_with_scores.return_value = [(updated_doc, 0.92)]
-
-        with patch("src.agent.tools.get_retriever", return_value=mock_retriever):
-            from src.agent.tools import search_knowledge_base
-
-            results = await search_knowledge_base("steakhouse wagyu")
-
-        assert len(results) >= 1
-        assert "wagyu" in results[0]["content"].lower()
-
-    @pytest.mark.asyncio
-    async def test_webhook_does_not_call_reingest_for_quarantined(self):
-        """Quarantined items do not trigger re-indexing."""
-        from unittest.mock import AsyncMock, patch
-
-        from src.cms.webhook import handle_cms_webhook
-
-        payload = {
-            "casino_id": "mohegan_sun",
-            "category": "dining",
-            "item": {
-                "id": "bad-item",
-                "name": "Bad Item",
-                # Missing required fields -> quarantined
-            },
-        }
-
-        with patch(
-            "src.rag.pipeline.reingest_item",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_reingest:
-            result = await handle_cms_webhook(payload, webhook_secret="secret")
-
-        assert result["status"] == "quarantined"
-        mock_reingest.assert_not_called()

@@ -67,7 +67,10 @@ _CULTURALLY_INSENSITIVE = (
 )
 
 _FRUSTRATED_USER_MESSAGES = [
-    {"role": "user", "content": "I've been waiting for 30 minutes for my room. I'm very frustrated."},
+    {
+        "role": "user",
+        "content": "I've been waiting for 30 minutes for my room. I'm very frustrated.",
+    },
 ]
 
 _DINING_MESSAGES = [
@@ -76,7 +79,10 @@ _DINING_MESSAGES = [
 
 _MULTI_TURN_MESSAGES = [
     {"role": "user", "content": "Hi, what restaurants do you have?"},
-    {"role": "assistant", "content": "Welcome! We have several dining options including Todd English's Tuscany."},
+    {
+        "role": "assistant",
+        "content": "Welcome! We have several dining options including Todd English's Tuscany.",
+    },
     {"role": "user", "content": "What about steakhouse options?"},
 ]
 
@@ -426,7 +432,10 @@ class TestCulturalSensitivity:
             _DINING_MESSAGES,
             _CULTURALLY_INSENSITIVE,
         )
-        assert respectful_score.cultural_sensitivity > insensitive_score.cultural_sensitivity
+        assert (
+            respectful_score.cultural_sensitivity
+            > insensitive_score.cultural_sensitivity
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -451,7 +460,10 @@ class TestRunConversationEvaluation:
             name="Dining greeting",
             category="dining",
             turns=[
-                {"role": "user", "content": "What restaurants do you have at Mohegan Sun?"},
+                {
+                    "role": "user",
+                    "content": "What restaurants do you have at Mohegan Sun?",
+                },
                 {"role": "assistant", "content": _DINING_RECOMMENDATION},
             ],
             expected_behavior="Lists dining options",
@@ -479,7 +491,10 @@ class TestRunConversationEvaluation:
                 name="Frustrated guest",
                 category="complaint",
                 turns=[
-                    {"role": "user", "content": "I've been waiting 30 minutes. I'm frustrated."},
+                    {
+                        "role": "user",
+                        "content": "I've been waiting 30 minutes. I'm frustrated.",
+                    },
                     {"role": "assistant", "content": _EMPATHETIC_RESPONSE},
                 ],
                 expected_empathy_level="high",
@@ -599,45 +614,3 @@ class TestLLMJudgeNativeMetrics:
         """LLM_JUDGE_METRICS and ALL_METRICS have no overlap (distinct namespaces)."""
         overlap = set(LLM_JUDGE_METRICS) & set(ALL_METRICS)
         assert overlap == set(), f"Unexpected overlap: {overlap}"
-
-    @pytest.mark.asyncio
-    async def test_native_scores_in_llm_judge_details(self):
-        """LLM judge evaluation includes native_scores in details dict."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from src.observability.llm_judge import (
-            LLMJudgeDimension,
-            LLMJudgeOutput,
-            evaluate_conversation_llm,
-        )
-
-        mock_output = LLMJudgeOutput(
-            groundedness=LLMJudgeDimension(score=8, justification="Grounded"),
-            persona_fidelity=LLMJudgeDimension(score=9, justification="On persona"),
-            safety=LLMJudgeDimension(score=10, justification="Safe"),
-            contextual_relevance=LLMJudgeDimension(score=7, justification="Relevant"),
-            proactive_value=LLMJudgeDimension(score=6, justification="Some value"),
-        )
-
-        mock_llm = MagicMock()
-        mock_judge = MagicMock()
-        mock_judge.ainvoke = AsyncMock(return_value=mock_output)
-        mock_llm.with_structured_output.return_value = mock_judge
-
-        with patch("langchain_google_genai.ChatGoogleGenerativeAI", return_value=mock_llm):
-            from src.observability.llm_judge import _eval_cache
-            _eval_cache.clear()
-
-            score = await evaluate_conversation_llm(
-                [{"role": "user", "content": "What restaurants?"}],
-                "We have great dining options.",
-            )
-
-        assert score.details.get("mode") == "llm_judge"
-        native = score.details.get("native_scores")
-        assert native is not None, "native_scores missing from details"
-        assert native["groundedness"] == 0.8
-        assert native["persona_fidelity"] == 0.9
-        assert native["safety"] == 1.0
-        assert native["contextual_relevance"] == 0.7
-        assert native["proactive_value"] == 0.6

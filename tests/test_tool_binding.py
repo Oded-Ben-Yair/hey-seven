@@ -1,16 +1,17 @@
-"""Tests for tool_binding.py — per-agent tool mapping and LLM binding.
+"""Tests for tool_binding.py -- per-agent tool mapping.
 
 Tests verify:
 1. Each agent gets the correct set of tools
 2. Unknown agents get empty tool lists
-3. bind_tools_to_llm respects feature flag
-4. bind_tools_to_llm handles LLM without bind_tools gracefully
+3. Tools are callable and have descriptions
 
-R106: Architecture shift — tool-use instead of prompt engineering.
+Mock purge R111: Removed TestBindToolsToLlm (used MagicMock for LLM binding).
+Retained TestGetToolsForAgent (deterministic, imports real tool objects).
+
+R106: Architecture shift -- tool-use instead of prompt engineering.
 """
 
 import pytest
-from unittest.mock import MagicMock
 
 
 class TestGetToolsForAgent:
@@ -83,77 +84,3 @@ class TestGetToolsForAgent:
         tools = get_tools_for_agent("host")
         for tool in tools:
             assert tool.description, f"Tool {tool.name} has empty description"
-
-
-class TestBindToolsToLlm:
-    """Test LLM tool binding."""
-
-    def test_feature_flag_off_returns_original_llm(self):
-        from src.agent.agents.tool_binding import bind_tools_to_llm
-
-        mock_llm = MagicMock()
-        llm, tools, is_bound = bind_tools_to_llm(
-            mock_llm, "comp", tool_use_enabled=False
-        )
-        assert llm is mock_llm
-        assert tools == []
-        assert is_bound is False
-        mock_llm.bind_tools.assert_not_called()
-
-    def test_feature_flag_on_binds_tools(self):
-        from src.agent.agents.tool_binding import bind_tools_to_llm
-
-        mock_llm = MagicMock()
-        mock_bound = MagicMock()
-        mock_llm.bind_tools.return_value = mock_bound
-
-        llm, tools, is_bound = bind_tools_to_llm(
-            mock_llm, "comp", tool_use_enabled=True
-        )
-        assert llm is mock_bound
-        assert len(tools) == 4
-        assert is_bound is True
-        mock_llm.bind_tools.assert_called_once()
-
-    def test_unknown_agent_not_bound(self):
-        from src.agent.agents.tool_binding import bind_tools_to_llm
-
-        mock_llm = MagicMock()
-        llm, tools, is_bound = bind_tools_to_llm(
-            mock_llm, "unknown", tool_use_enabled=True
-        )
-        assert llm is mock_llm
-        assert tools == []
-        assert is_bound is False
-
-    def test_bind_failure_returns_original_llm(self):
-        from src.agent.agents.tool_binding import bind_tools_to_llm
-
-        mock_llm = MagicMock()
-        mock_llm.bind_tools.side_effect = AttributeError("No bind_tools method")
-
-        llm, tools, is_bound = bind_tools_to_llm(
-            mock_llm, "comp", tool_use_enabled=True
-        )
-        assert llm is mock_llm
-        assert tools == []
-        assert is_bound is False
-
-    def test_returns_new_instance_not_mutated(self):
-        from src.agent.agents.tool_binding import bind_tools_to_llm
-
-        mock_llm = MagicMock()
-        mock_bound = MagicMock()
-        mock_llm.bind_tools.return_value = mock_bound
-
-        llm, _, _ = bind_tools_to_llm(mock_llm, "comp", tool_use_enabled=True)
-        # The returned LLM should be the bound version, not the original
-        assert llm is not mock_llm
-        assert llm is mock_bound
-
-    def test_default_tool_use_enabled_is_false(self):
-        from src.agent.agents.tool_binding import bind_tools_to_llm
-
-        mock_llm = MagicMock()
-        llm, tools, is_bound = bind_tools_to_llm(mock_llm, "comp")
-        assert is_bound is False

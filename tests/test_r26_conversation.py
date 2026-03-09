@@ -1,21 +1,16 @@
-"""R26 conversation quality tests: topic switching, context retention, sentiment transitions.
+"""R26 conversation quality tests: context retention, sentiment transitions, routing flow.
 
-Tests verify conversation-level behavior: correct handling of topic
-transitions, multi-turn context persistence, and sentiment state
-management. All LLM calls are mocked; deterministic functions
-(detect_sentiment, extract_fields) are tested directly.
+Deterministic tests for extract_fields, detect_sentiment, route_from_router,
+and _count_consecutive_frustrated. Mock-based router_node tests removed
+per NO-MOCK ground rule.
 """
 
-from string import Template
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agent.extraction import extract_fields
 from src.agent.nodes import route_from_router
 from src.agent.sentiment import detect_sentiment
-from src.agent.state import PropertyQAState, RouterOutput
 
 
 # ---------------------------------------------------------------------------
@@ -46,116 +41,6 @@ def _state(**overrides) -> dict:
     }
     base.update(overrides)
     return base
-
-
-def _mock_router_result(query_type: str, confidence: float = 0.9):
-    """Create a mock that returns a RouterOutput for a given query_type."""
-    mock_llm = MagicMock()
-    mock_structured = MagicMock()
-    mock_structured.ainvoke = AsyncMock(
-        return_value=RouterOutput(query_type=query_type, confidence=confidence)
-    )
-    mock_llm.with_structured_output.return_value = mock_structured
-    return mock_llm
-
-
-# ---------------------------------------------------------------------------
-# 1. Topic Switching Tests
-# ---------------------------------------------------------------------------
-
-
-class TestTopicSwitching:
-    """Tests for topic transition handling across conversation turns."""
-
-    @pytest.mark.asyncio()
-    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
-    async def test_dining_to_entertainment_routing(self, mock_get_llm):
-        """Guest asks about dining, then entertainment -- each routed correctly."""
-        from src.agent.nodes import router_node
-
-        # Turn 1: Dining query
-        mock_get_llm.return_value = _mock_router_result("property_qa")
-        state_turn1 = _state(
-            messages=[HumanMessage(content="What restaurants do you have?")]
-        )
-        result1 = await router_node(state_turn1)
-        assert result1["query_type"] == "property_qa"
-
-        # Turn 2: Entertainment query (different topic)
-        mock_get_llm.return_value = _mock_router_result("property_qa", 0.92)
-        state_turn2 = _state(
-            messages=[
-                HumanMessage(content="What restaurants do you have?"),
-                AIMessage(content="We have several great restaurants..."),
-                HumanMessage(content="What shows are playing this weekend?"),
-            ]
-        )
-        result2 = await router_node(state_turn2)
-        assert result2["query_type"] == "property_qa"
-
-    @pytest.mark.asyncio()
-    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
-    async def test_dining_to_entertainment_to_hotel(self, mock_get_llm):
-        """Three consecutive topic switches route correctly."""
-        from src.agent.nodes import router_node
-
-        topics = [
-            ("What are the best restaurants?", "property_qa"),
-            ("Any concerts this weekend?", "property_qa"),
-            ("What room types do you have?", "property_qa"),
-        ]
-        messages = []
-        for query, expected_type in topics:
-            messages.append(HumanMessage(content=query))
-            mock_get_llm.return_value = _mock_router_result(expected_type)
-            state = _state(messages=list(messages))
-            result = await router_node(state)
-            assert result["query_type"] == expected_type
-            messages.append(AIMessage(content=f"Here is info about {query}..."))
-
-    @pytest.mark.asyncio()
-    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
-    async def test_property_qa_to_greeting(self, mock_get_llm):
-        """Mid-conversation greeting routes to greeting node."""
-        from src.agent.nodes import router_node
-
-        mock_get_llm.return_value = _mock_router_result("greeting")
-        state = _state(
-            messages=[
-                HumanMessage(content="What restaurants do you have?"),
-                AIMessage(content="We have Todd English's Tuscany..."),
-                HumanMessage(content="Thanks! Hello again!"),
-            ]
-        )
-        result = await router_node(state)
-        assert result["query_type"] == "greeting"
-
-    @pytest.mark.asyncio()
-    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
-    async def test_property_qa_to_off_topic(self, mock_get_llm):
-        """Guest switches from property question to off-topic."""
-        from src.agent.nodes import router_node
-
-        mock_get_llm.return_value = _mock_router_result("off_topic")
-        state = _state(
-            messages=[
-                HumanMessage(content="What restaurants do you have?"),
-                AIMessage(content="We have several options..."),
-                HumanMessage(content="What is the weather like today?"),
-            ]
-        )
-        result = await router_node(state)
-        assert result["query_type"] == "off_topic"
-
-    def test_route_from_router_property_qa(self):
-        """property_qa with high confidence routes to retrieve."""
-        state = _state(query_type="property_qa", router_confidence=0.9)
-        assert route_from_router(state) == "retrieve"
-
-    def test_route_from_router_greeting(self):
-        """greeting routes to greeting node."""
-        state = _state(query_type="greeting", router_confidence=0.99)
-        assert route_from_router(state) == "greeting"
 
 
 # ---------------------------------------------------------------------------
@@ -322,12 +207,12 @@ class TestSentimentTransitions:
 
 
 # ---------------------------------------------------------------------------
-# 4. Routing Flow Tests
+# 4. Routing Flow Tests (deterministic route_from_router only)
 # ---------------------------------------------------------------------------
 
 
 class TestRoutingFlow:
-    """Tests for greeting -> property_qa -> off_topic flow transitions."""
+    """Tests for route_from_router deterministic routing logic."""
 
     def test_greeting_routes_to_greeting_node(self):
         """greeting query_type routes to greeting node."""
@@ -368,32 +253,6 @@ class TestRoutingFlow:
         """hours_schedule routes to retrieve node."""
         state = _state(query_type="hours_schedule", router_confidence=0.85)
         assert route_from_router(state) == "retrieve"
-
-    @pytest.mark.asyncio()
-    @patch("src.agent.nodes._get_llm", new_callable=AsyncMock)
-    async def test_greeting_then_property_qa_sequence(self, mock_get_llm):
-        """Verify sequential routing: greeting first, then property_qa."""
-        from src.agent.nodes import router_node
-
-        # Turn 1: greeting
-        mock_get_llm.return_value = _mock_router_result("greeting")
-        state1 = _state(messages=[HumanMessage(content="Hello!")])
-        r1 = await router_node(state1)
-        assert r1["query_type"] == "greeting"
-        assert route_from_router({**state1, **r1}) == "greeting"
-
-        # Turn 2: property_qa
-        mock_get_llm.return_value = _mock_router_result("property_qa")
-        state2 = _state(
-            messages=[
-                HumanMessage(content="Hello!"),
-                AIMessage(content="Welcome to Mohegan Sun!"),
-                HumanMessage(content="What restaurants do you have?"),
-            ]
-        )
-        r2 = await router_node(state2)
-        assert r2["query_type"] == "property_qa"
-        assert route_from_router({**state2, **r2}) == "retrieve"
 
 
 # ---------------------------------------------------------------------------

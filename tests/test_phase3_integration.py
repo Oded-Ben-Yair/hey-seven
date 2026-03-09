@@ -7,7 +7,7 @@ wired into the API and that feature flag machinery works end-to-end.
 import hashlib
 import hmac
 import json
-from unittest.mock import MagicMock
+import types
 
 import pytest
 
@@ -56,7 +56,7 @@ class TestCMSWebhookEndpoint:
         from src.api.app import create_app
 
         app = create_app()
-        app.state.agent = MagicMock()
+        app.state.agent = types.SimpleNamespace(name="stub-agent")
         app.state.property_data = {"property": {"name": "Test Casino"}}
         app.state.ready = True
         return TestClient(app)
