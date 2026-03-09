@@ -151,6 +151,27 @@ PROFILING_TECHNIQUE_PROMPTS: dict[str, str] = {
         "Reflect back what you've learned and confirm. Example: 'So it sounds "
         "like a romantic dinner for two on Saturday — is that right?'"
     ),
+    "assumption_probe": (
+        "Make a plausible positive assumption the guest can correct. "
+        "Corrections yield 3x the information of direct questions. "
+        "Example: 'Sounds like a special celebration?' — guest corrects "
+        "with occasion, party size, companion context."
+    ),
+    "anchor_expand": (
+        "Use one confirmed fact to discover 2-3 related facts. Chain from "
+        "what you already know. Example: if guest mentioned anniversary, "
+        "ask 'How many years? That changes which restaurant I'd pick.'"
+    ),
+    "soft_binary": (
+        "Offer two options that segment preference direction without "
+        "overwhelming. Example: 'Are you thinking more upscale or relaxed "
+        "tonight?' or 'Indoor or outdoor seating?'"
+    ),
+    "open_anchor": (
+        "One broad empowering question tied to context. Invites the guest "
+        "to share on their own terms. Example: 'What would make this visit "
+        "special for you?' or 'How'd you get into poker?'"
+    ),
     "none": "Do not ask any profiling questions this turn.",
 }
 

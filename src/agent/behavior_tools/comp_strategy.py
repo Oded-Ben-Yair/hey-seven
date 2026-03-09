@@ -281,7 +281,9 @@ _TIER_ADT_ESTIMATES: MappingProxyType[str, float] = MappingProxyType(
 )
 
 # Auto-approve threshold (comps above this require host approval)
-_AUTO_APPROVE_THRESHOLD = 50.0
+# R110: Raised from $50 to $100 per industry research (T2: $100-$150 norm)
+_AUTO_APPROVE_THRESHOLD = 100.0
+_VIP_AUTO_APPROVE_THRESHOLD = 250.0
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +350,9 @@ def get_comp_strategy(input_data: CompStrategyInput) -> CompStrategyOutput:
         if skip_high_value and adjusted_value > _AUTO_APPROVE_THRESHOLD:
             continue
 
-        auto = adjusted_value <= _AUTO_APPROVE_THRESHOLD
+        is_vip = input_data.guest_tier in ("vip", "high_roller")
+        threshold = _VIP_AUTO_APPROVE_THRESHOLD if is_vip else _AUTO_APPROVE_THRESHOLD
+        auto = adjusted_value <= threshold
         if not auto:
             any_requires_approval = True
 

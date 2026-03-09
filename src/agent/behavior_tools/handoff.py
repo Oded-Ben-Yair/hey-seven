@@ -237,6 +237,9 @@ class HandoffSummary(BaseModel):
     agent_inferences: list[str] = Field(default_factory=list)
     # R103 fix P9: Concrete next actions for receiving host
     next_actions: list[str] = Field(default_factory=list)
+    # R110: 3-tier handoff model
+    handoff_tier: Literal["quick", "standard", "full"] = "standard"
+    hero_moment: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -629,6 +632,33 @@ def build_handoff_summary(
     # R103 fix P9: Concrete next actions
     next_actions = _build_next_actions(state, extracted, risk_flags, domains)
 
+    # R110: 3-tier handoff model
+    # Tier 1 (quick, 3-sec): Name, occasion, immediate need
+    # Tier 2 (standard, 5-sec): + preferences, companions, emotional state
+    # Tier 3 (full, 10-sec): + full relationship context, hero moment
+    known_field_count = sum(
+        1 for v in extracted.values() if v and not isinstance(v, bool)
+    )
+    if known_field_count <= 3:
+        handoff_tier: Literal["quick", "standard", "full"] = "quick"
+    elif known_field_count <= 7:
+        handoff_tier = "standard"
+    else:
+        handoff_tier = "full"
+
+    # Hero moment: the ONE thing that makes the host look brilliant
+    hero_moment = ""
+    if extracted.get("occasion"):
+        hero_moment = f"Guest is celebrating {extracted['occasion']}"
+        if extracted.get("name"):
+            hero_moment = f"{extracted['name']} is celebrating {extracted['occasion']}"
+    elif extracted.get("name") and extracted.get("preferences"):
+        hero_moment = (
+            f"{extracted['name']} mentioned they love {extracted['preferences']}"
+        )
+    elif extracted.get("loyalty_signal"):
+        hero_moment = f"Guest signaled loyalty: {extracted['loyalty_signal']}"
+
     return HandoffSummary(
         guest_name=extracted.get("name"),
         profile_completeness=completeness,
@@ -643,6 +673,8 @@ def build_handoff_summary(
         guest_stated_facts=stated,
         agent_inferences=inferred,
         next_actions=next_actions,
+        handoff_tier=handoff_tier,
+        hero_moment=hero_moment,
     )
 
 
@@ -703,6 +735,9 @@ def format_handoff_for_prompt(summary: HandoffSummary) -> str:
         lines.append("- **Your first actions**:")
         for action in summary.next_actions[:5]:
             lines.append(f"  - {action}")
+
+    if summary.hero_moment:
+        lines.append(f"\n**Hero moment** (use this first): {summary.hero_moment}")
 
     lines.append(
         f"\nUrgency: {summary.urgency}. Turns in conversation: {summary.turn_count}."
@@ -769,5 +804,7 @@ def format_soft_handoff_prompt(
         lines.append(f"Key preferences: {'; '.join(summary.key_preferences[:3])}")
     if summary.guest_stated_facts:
         lines.append(f"Guest shared: {'; '.join(summary.guest_stated_facts[:3])}")
+    if summary.hero_moment:
+        lines.append(f"Hero moment: {summary.hero_moment}")
 
     return "\n".join(lines)

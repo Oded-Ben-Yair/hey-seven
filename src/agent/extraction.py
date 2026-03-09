@@ -257,6 +257,22 @@ def extract_fields(text: str) -> dict[str, Any]:
                 fields["budget_conscious"] = True
                 break
 
+        # R110: Contextual inference rules
+        # "we" = 2+ people (when party_size not already extracted)
+        if "party_size" not in fields:
+            if re.search(r"(?i)\b(?:we(?:'re|are)?|us|our)\b", text):
+                fields["party_composition_hint"] = "group (2+ people)"
+
+        # "just" before time reference = time pressure
+        if "urgency" not in fields:
+            if re.search(r"(?i)\bjust\s+(?:got|arrived|checked|flew|drove)\b", text):
+                fields["urgency"] = True
+
+        # "the kids" / "my kids" / "our kids" = family
+        if "party_composition" not in fields:
+            if re.search(r"(?i)\b(?:the|my|our)\s+kids?\b", text):
+                fields["party_composition"] = "family with children"
+
         return fields
 
     except Exception:

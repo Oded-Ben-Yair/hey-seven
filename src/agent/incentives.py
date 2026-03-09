@@ -77,8 +77,8 @@ _MOHEGAN_SUN_RULES: tuple[IncentiveRule, ...] = (
         max_per_guest=1,
         auto_approve_threshold=50.0,
         framing_template=(
-            "Since your birthday is coming up, $property_name would love to "
-            "treat you to a $$$value dining credit at any of our restaurants."
+            "Your birthday's coming up — you've earned a $$$value dining credit "
+            "at any of our restaurants at $property_name. Where would you like to go?"
         ),
     ),
     IncentiveRule(
@@ -88,8 +88,8 @@ _MOHEGAN_SUN_RULES: tuple[IncentiveRule, ...] = (
         max_per_guest=1,
         auto_approve_threshold=50.0,
         framing_template=(
-            "As a thank you for sharing your preferences, here's a $$$value "
-            "free play bonus to enjoy on the gaming floor at $property_name."
+            "Your play here earned you a $$$value free play bonus on the gaming "
+            "floor at $property_name. Want to use it now or save it?"
         ),
     ),
     IncentiveRule(
@@ -99,8 +99,8 @@ _MOHEGAN_SUN_RULES: tuple[IncentiveRule, ...] = (
         max_per_guest=1,
         auto_approve_threshold=50.0,
         framing_template=(
-            "Happy anniversary! Let me see about upgrading your experience "
-            "at $property_name to make it extra special."
+            "Congratulations on your anniversary — you've earned an experience "
+            "upgrade at $property_name. Let me check what's available."
         ),
     ),
     # R78 fix: Lower threshold tier for early engagement
@@ -111,8 +111,8 @@ _MOHEGAN_SUN_RULES: tuple[IncentiveRule, ...] = (
         max_per_guest=1,
         auto_approve_threshold=50.0,
         framing_template=(
-            "Thanks for chatting with us! Here are $$$value bonus tier points "
-            "to use at $property_name."
+            "Your time with us earned you $$$value bonus tier points at "
+            "$property_name — they're already on your account."
         ),
     ),
 )
@@ -554,10 +554,10 @@ def get_incentive_prompt_section(
         lines.append(f"- {offer_text}{approval_note}")
 
     lines.append(
-        "\nIntegration style: Weave it in as an afterthought, not a pitch. "
-        "Example: 'Oh, and since it's your birthday — we'd love to treat you "
-        "to a dining credit. Want me to set that up?' "
-        "The guest should feel pleasantly surprised, not sold to."
+        "\nIntegration style: Frame as earned, not offered. "
+        "Example: 'Your birthday's coming up — you've earned a dining credit. "
+        "Where would you like to use it?' "
+        "The guest should feel recognized for their patronage, not sold to."
     )
 
     return "\n".join(lines), approval_request

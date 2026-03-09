@@ -194,6 +194,29 @@ async def whisper_planner_node(state: PropertyQAState) -> dict[str, Any]:
             profile_completeness=f"{profile_completeness:.0%}",
         )
 
+        # R110: Profiling intensity curve — reduce profiling pressure over turns.
+        # T1-2: any technique, heavy profiling
+        # T3: inference/expand only
+        # T4: none or need_payoff only
+        # T5+: reflective_confirm only
+        human_turn_count = sum(1 for m in messages if isinstance(m, HumanMessage))
+        if human_turn_count >= 5:
+            prompt_text += (
+                "\n\nIMPORTANT: This is turn 5+. Use ONLY reflective_confirm "
+                "technique or none. Do NOT ask new profiling questions. "
+                "Confirm what you already know."
+            )
+        elif human_turn_count >= 4:
+            prompt_text += (
+                "\n\nIMPORTANT: This is turn 4. Use ONLY need_payoff technique "
+                "or none. Only ask if it directly benefits the guest."
+            )
+        elif human_turn_count >= 3:
+            prompt_text += (
+                "\n\nIMPORTANT: This is turn 3. Use ONLY contextual_inference, "
+                "anchor_expand, or assumption_probe. Do NOT ask direct questions."
+            )
+
         # Call LLM with structured output (separate lower-temperature instance)
         llm = await _get_whisper_llm()
         planner_llm = llm.with_structured_output(WhisperPlan)

@@ -38,7 +38,7 @@ Gemini 2.5 Flash               Knowledge Base              LangFuse
 
 ## Custom StateGraph
 
-The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 12 nodes with three conditional routing points.
+The agent is a hand-built `StateGraph` (not `create_react_agent`). Every request flows through an explicit graph of 13 nodes with three conditional routing points.
 
 ```mermaid
 graph LR
@@ -102,7 +102,7 @@ Priority order (first match wins):
 7. Patron privacy (`detect_patron_privacy()`): 18 patterns incl. Spanish/Tagalog — routes to `patron_privacy`.
 8. All pass: `query_type=None` signals the downstream router to classify via LLM.
 
-All guardrail patterns are defined in `src/agent/guardrails.py` (204 compiled regex patterns across 11 languages: EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
+All guardrail patterns are defined in `src/agent/guardrails.py` (214 compiled regex patterns across 11 languages: EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog). The compliance gate centralizes all deterministic checks that previously ran inside `router_node`, ensuring they execute before any LLM call.
 
 ### 2. router (`src/agent/nodes.py`)
 
@@ -372,7 +372,7 @@ Used by the `whisper_planner` node to produce structured guidance for the speaki
 
 ## Guardrails
 
-Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **204 compiled regex patterns** across 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).
+Five layers: four deterministic (pre-LLM, centralized in `compliance_gate` node using functions from `src/agent/guardrails.py`) and one LLM-based (post-generation, in `src/agent/nodes.py`). Total: **214 compiled regex patterns** across 11 languages (EN, ES, PT, ZH, FR, VI, AR, JP, KO, Hindi, Tagalog).
 
 ### Deterministic: audit_input (`src/agent/guardrails.py`)
 

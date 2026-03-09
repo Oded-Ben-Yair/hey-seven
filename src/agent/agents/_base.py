@@ -912,6 +912,20 @@ async def execute_specialist(
                     + "\n".join(profile_parts)
                 )
 
+    # R110: Profile-reference requirement — specialists should reference
+    # what they know about the guest in their recommendations.
+    _profile_fields = state.get("extracted_fields") or {}
+    if _profile_fields and any(
+        _profile_fields.get(k)
+        for k in ("name", "occasion", "party_size", "preferences")
+    ):
+        system_prompt += (
+            "\n\n## Profile Usage Requirement\n"
+            "Reference what you know about this guest in your response. "
+            "Use their name if known. Tie recommendations to their stated "
+            "occasion, preferences, or party size. Show you've been listening."
+        )
+
     # Inject whisper planner guidance
     if include_whisper:
         whisper_guidance = format_whisper_plan(state.get("whisper_plan"))

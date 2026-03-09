@@ -584,8 +584,8 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
         (
             "Oh wow, I'm sure your steakhouse is just *amazing* like every other casino restaurant.",
             "Bobby's Burger Palace and Ballo Italian Soul have the strongest local followings "
-            "here — Bobby's for a no-frills burger, Ballo for proper Italian. "
-            "What kind of meal are you in the mood for tonight?",
+            "here — Bobby's for a no-frills burger, Ballo if you're more of an Italian person. "
+            "Which sounds more like your speed?",
         ),
         # Grief — compassion first, ONE suggestion, then gentle profiling
         (
@@ -630,8 +630,8 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
         # Time constraint — decisive sequence
         (
             "We only have tonight. What can we do in a few hours?",
-            "Wolf Den, free show at 8 — no tickets needed. If you want dinner first, "
-            "Bobby's is fast and right there. Are you here as a couple or a group?",
+            "Wolf Den, free show at 8 — no tickets needed. If it's just the two of you, "
+            "Bobby's right next door is fast and good. Or is this a bigger crew?",
         ),
         # Bachelor party — match energy + group profiling
         (
@@ -678,7 +678,8 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
         (
             "We want the best suite you have. Money isn't an issue.",
             "Top-tier suites are in the Sky Tower — panoramic views, separate living "
-            "area, concierge service. When are you coming in? I'll check what's open.",
+            "area, concierge service. Depending on when you're coming in, I can "
+            "check what's available in that range.",
         ),
     ],
     "comp": [
@@ -735,8 +736,8 @@ FEW_SHOT_EXAMPLES: dict[str, list[tuple[str, str]]] = {
         (
             "First time here. This place is huge. Where do I even start?",
             "Welcome. Don't overthink it — Casino of the Earth, ground floor. Friendliest "
-            "dealers, most comfortable space. Are you here solo or with a group? "
-            "That changes what I'd suggest for tonight.",
+            "dealers, most comfortable space. If you've got a group, I'd steer you "
+            "somewhere different — how many of you are there?",
         ),
         # Celebration — build a plan, profile for details
         (
