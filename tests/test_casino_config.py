@@ -70,7 +70,14 @@ class TestCasinoConfig:
     async def test_config_has_all_sections(self, mock_client):
         """Returned config includes all defined sections."""
         config = await get_casino_config("mohegan_sun")
-        for section in ("features", "prompts", "branding", "regulations", "operational", "rag"):
+        for section in (
+            "features",
+            "prompts",
+            "branding",
+            "regulations",
+            "operational",
+            "rag",
+        ):
             assert section in config, f"Missing section: {section}"
 
     @patch("src.casino.config._get_firestore_client", return_value=None)
@@ -176,7 +183,9 @@ class TestCasinoConfig:
 
         for key in ("greeting_template", "greeting_template_es"):
             template = DEFAULT_CONFIG["prompts"][key]
-            assert "{" not in template, f"{key} uses unsafe .format() placeholder syntax"
+            assert "{" not in template, (
+                f"{key} uses unsafe .format() placeholder syntax"
+            )
             assert "$" in template, f"{key} missing $placeholder for safe_substitute"
 
     def test_default_config_features_parity_with_default_features(self):
@@ -200,8 +209,9 @@ class TestCasinoConfig:
 class TestFeatureFlags:
     @patch("src.casino.config._get_firestore_client", return_value=None)
     async def test_default_flags_all_present(self, mock_client):
-        """All default feature flags are returned."""
-        flags = await get_feature_flags("mohegan_sun")
+        """All default feature flags are returned for unknown casino."""
+        # Use unknown casino_id to test DEFAULT_CONFIG fallback (not CASINO_PROFILES)
+        flags = await get_feature_flags("unknown_casino")
         for flag_name, flag_value in DEFAULT_FEATURES.items():
             assert flag_name in flags
             assert flags[flag_name] == flag_value
@@ -453,7 +463,10 @@ class TestCasinoConfigEdgeCases:
         await get_casino_config("casino_a")
         await get_casino_config("casino_b")
         # DEFAULT_CONFIG unchanged (deepcopy is used internally)
-        assert DEFAULT_CONFIG["branding"]["persona_name"] == original_default["branding"]["persona_name"]
+        assert (
+            DEFAULT_CONFIG["branding"]["persona_name"]
+            == original_default["branding"]["persona_name"]
+        )
         assert DEFAULT_CONFIG["_id"] == original_default["_id"]
 
     @patch("src.casino.config._get_firestore_client", return_value=None)
@@ -532,7 +545,14 @@ class TestCasinoProfiles:
 
     def test_all_profiles_have_required_sections(self):
         """All 5 casino profiles have required top-level config sections."""
-        required_sections = {"regulations", "branding", "operational", "features", "prompts", "rag"}
+        required_sections = {
+            "regulations",
+            "branding",
+            "operational",
+            "features",
+            "prompts",
+            "rag",
+        }
         for casino_id, profile in CASINO_PROFILES.items():
             for section in required_sections:
                 assert section in profile, (
@@ -544,4 +564,6 @@ class TestCasinoProfiles:
         profile = get_casino_profile("unknown_casino")
         # R36: returns deepcopy, not identity reference (prevents mutation of global)
         assert profile == DEFAULT_CONFIG
-        assert profile is not DEFAULT_CONFIG, "Should return deepcopy, not direct reference"
+        assert profile is not DEFAULT_CONFIG, (
+            "Should return deepcopy, not direct reference"
+        )

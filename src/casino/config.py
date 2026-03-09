@@ -899,10 +899,19 @@ async def get_casino_config(casino_id: str) -> dict:
                     exc_info=True,
                 )
 
-        # Fallback to defaults
+        # Fallback: CASINO_PROFILES first (per-casino overrides like tool_use_enabled),
+        # then DEFAULT_CONFIG. Without this, per-casino feature flags set in
+        # CASINO_PROFILES are invisible in local dev (no Firestore).
         import copy
 
-        config = copy.deepcopy(DEFAULT_CONFIG)
+        profile = CASINO_PROFILES.get(casino_id)
+        if profile is not None:
+            config = copy.deepcopy(profile)
+            logger.debug(
+                "Using CASINO_PROFILES config for %s (no Firestore)", casino_id
+            )
+        else:
+            config = copy.deepcopy(DEFAULT_CONFIG)
         config["_id"] = casino_id
         _config_cache[casino_id] = config
         return config

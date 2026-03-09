@@ -31,6 +31,8 @@ RESPONSE_FILES = [
     "r104-ht-pro-responses.json",
     "r105-ht-pro-responses.json",
     "r105-prof-pro-responses.json",
+    "r99-pro-ht-responses.json",
+    "r98-host-triangle-responses.json",
 ]
 
 # Streaming result directories (individual JSON files per scenario)
@@ -41,6 +43,7 @@ STREAMING_DIRS = [
     "r105-ht-pro-streaming",
     "r105-prof-pro-streaming",
     "r103-streaming",
+    "r108-tools-streaming",
 ]
 
 # Judge score files (map scenario_id -> dimension scores)
@@ -48,6 +51,8 @@ JUDGE_FILES = [
     "r105-ht-pro-judge-scores.json",
     "r105-prof-pro-judge-scores.json",
     "r104-ht-pro-judge-scores.json",
+    "r99-pro-ht-judge-scores.json",
+    "r98-host-triangle-judge-scores.json",
 ]
 
 # System prompt placeholder — the actual system prompt from the agent

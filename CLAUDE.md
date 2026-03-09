@@ -12,7 +12,7 @@ Production MVP for Hey Seven (heyseven.ai) — "The Autonomous Casino Host That 
 5. **NO mock data**: All demos use real casino domain data from knowledge-base/
 6. **API keys**: From Azure Key Vault (kv-seekapa-apps) for development. GCP service accounts for deployment.
 7. **QUALITY BAR**: Every file, every function, every decision must be production-grade. No shortcuts, no "good enough".
-8. **TESTING STRATEGY**: Unit tests mock LLM calls for speed and CI reliability. Deterministic components (guardrails, sentiment, crisis, slang, incentives) are tested without mocks. Live LLM behavior is validated through the evaluation framework (`tests/evaluation/`). Schema compatibility is spot-checked via `@pytest.mark.live` tests. New `with_structured_output()` schemas require at least one live integration test.
+8. **NO NEW MOCKS**: Do NOT add, modify, or fix mock-based tests. All behavioral validation uses live LLM calls through the evaluation framework (`tests/evaluation/`). Existing mock tests are legacy — do not extend them. When a code change breaks a mock test, skip it (`@pytest.mark.skip`) with a TODO, do NOT fix the mock. Deterministic components (guardrails, sentiment, crisis, slang, incentives) are tested without mocks. Schema compatibility is spot-checked via `@pytest.mark.live` tests.
 
 ## Current State (Updated 2026-03-06)
 
