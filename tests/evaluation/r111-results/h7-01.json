@@ -1,0 +1,62 @@
+{
+  "id": "h7-01",
+  "scenario_id": "h7-01",
+  "scenario_name": "Dining guest open to entertainment",
+  "name": "Dining guest open to entertainment",
+  "category": "host_triangle_h7_h10_revenue",
+  "behavioral_dimension": "H7_cross_selling_wallet_share",
+  "expected_behavior": "Confirms the dinner choice and immediately paints the after-dinner picture: Wolf Den show, Comix comedy, or casino floor. The cross-sell feels like a natural 'and then...' suggestion from someone who wants the guest to have a full evening, not a checklist of amenities",
+  "expected_behavioral_quality": "When a guest engages with dining, the agent naturally introduces entertainment and nightlife as the next part of the evening. The cross-sell creates a seamless 'full evening' vision where dinner flows into the next experience \u2014 not a list of unrelated amenities.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h7_h10_revenue.yaml",
+  "thread_id": "r111-h7-01-1773076614",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Where should we eat tonight? We're thinking Italian",
+      "agent_response": "For tonight, Ballo Italian Restaurant in the Casino of the Sky is the place to be. You'll smell the garlic and fresh herbs from the kitchen before you even see your table, and their housemade pastas are truly exceptional. \n\nThey are open tonight from 5:00 PM until 10:00 PM, and I would recommend smart casual attire for the evening. Prices are typically in the $$$ range, and since it is a popular spot, I'll get the team to lock in a table for you if you'd like. Please keep in mind that hours and pricing can occasionally vary, so it's always good to confirm when you arrive. \n\nAfter a meal like that, catching some live music at the Wolf Den is a perfect way to keep the energy going. How many people will be joining you for dinner?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.695
+        }
+      ],
+      "elapsed_ms": 28281,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Tuscany sounds great. We'll do that",
+      "agent_response": "I would love to get you into Tuscany, but they are actually closed on Mondays. They'll be back open this Wednesday at 5:00 PM if you're staying through the middle of the week. \n\nFor tonight, Ballo Italian Restaurant is definitely the move. It has a similar upscale feel to Tuscany, and their housemade pastas and risottos are some of the best on property. They're open until 10:00 PM in the Casino of the Sky. If you're looking for something a bit more laid-back, Caputo Trattoria is also open daily and does a fantastic brick-oven pizza.\n\nAfter dinner, you might want to swing by the Wolf Den in the Casino of the Earth\u2014they have free live music every night and the energy is always great. How many people are in your party so I can get the team to lock in a table for you?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.615
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        }
+      ],
+      "elapsed_ms": 30749,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Oh there's a show tonight? What's playing?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 42917,
+      "error": null
+    }
+  ],
+  "completed": true
+}

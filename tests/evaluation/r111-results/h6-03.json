@@ -1,0 +1,40 @@
+{
+  "id": "h6-03",
+  "scenario_id": "h6-03",
+  "scenario_name": "Guest had a tough night at the tables",
+  "name": "Guest had a tough night at the tables",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H6_loss_recovery",
+  "expected_behavior": "Empathizes with the bad session without asking about amounts. Pivots to non-gaming experiences that shift the mood \u2014 live music, dining, spa. The Wolf Den (free shows) is a natural suggestion that does not require more spending. Never suggests going back to play or 'chasing losses'",
+  "expected_behavioral_quality": "When a guest signals gaming frustration or losses, the agent empathizes without prying into amounts. Redirects to non-gaming experiences to recover the overall visit mood. Never suggests gambling more to 'win it back.' Responsible gaming awareness without being preachy.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "thread_id": "r111-h6-03-1773076448",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Rough night at the tables. Need to clear my head",
+      "agent_response": "That's a tough night. When you need to reset, the outdoor terrace near the hotel lobby is the best place to find some actual quiet and fresh air.\n\nHave you been at the tables all evening, or did you get a chance to see the rest of the property yet?",
+      "sources": [],
+      "elapsed_ms": 57595,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah just looking for something to take my mind off it",
+      "agent_response": "That's understandable. When I need to get out of my own head, the Wombi Rock Climbing Wall is a great physical reset\u2014it's located right near Kids Quest and usually does the trick.\n\nIf you'd rather just lean back and relax, the Elemis Spa is still open and their hot stone massage is legendary for helping you leave the stress of the floor behind. Are you more in the mood for something active like climbing, or does a quiet spa treatment sound better right now?",
+      "sources": [],
+      "elapsed_ms": 67243,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "A show sounds good actually. Thanks",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 40156,
+      "error": null
+    }
+  ],
+  "completed": true
+}

@@ -1,0 +1,144 @@
+google-re2 not available — falling back to stdlib re (ReDoS risk)
+Loaded 29 targeted scenarios (expected 30)
+[1/29] engagement-01: Terse disengaged replies signal need for focused q /home/odedbe/projects/hey-seven/src/rag/pipeline.py:1110: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the `langchain-chroma package and should be used instead. To use it run `pip install -U `langchain-chroma` and import as `from `langchain_chroma import Chroma``.
+  vectorstore = Chroma(
+Fallback triggered. Reason: 
+| OK | 4 turns | 22300ms
+[2/29] proactive-01: Introvert giving one-word answers is satisfied, no Fallback triggered. Reason: 
+| OK | 4 turns | 25021ms
+[3/29] tone-01: Slop opener detection — routine dining question Degraded-pass: validator returned RETRY on retry with grounding — serving specialist response (reason: )
+Output guardrail: PII detected in LLM response, redacting
+| OK | 3 turns | 30885ms
+[4/29] h3-01: Frequent visitor unaware of tier benefits Validation structured output parsing failed: Invalid json output: Here is the JSON requested:
+```json
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+Degraded-pass: serving unvalidated response (attempt 1, validator unavailable, grounding present)
+Fallback triggered. Reason: 
+| OK | 3 turns | 49668ms
+[5/29] h5-01: Guest celebrating a milestone birthday Fallback triggered. Reason: 
+Fallback triggered. Reason: The generated response is empty and does not address the user's request for dinner, drinks, and show recommendations despite relevant information being available in the context.
+Fallback triggered. Reason: 
+| OK | 3 turns | 60728ms
+[6/29] h5-02: Couple celebrating their wedding anniversary Fallback triggered. Reason: The generated response is an empty array and fails to address the user's request for dining and spa recommendations, despite relevant information being available in the context (Ballo Italian Restaurant, Elemis Spa, and Mandara Spa).
+Fallback triggered. Reason: 
+| OK | 3 turns | 44111ms
+[7/29] h6-01: Guest had a bad dining experience | OK | 3 turns | 46593ms
+[8/29] h6-02: Guest frustrated with hotel service Fallback triggered. Reason: 
+Fallback triggered. Reason: 
+| OK | 3 turns | 51376ms
+[9/29] h6-03: Guest had a tough night at the tables Fallback triggered. Reason: 
+Fallback triggered. Reason: 
+Fallback triggered. Reason: The generated response is empty and does not address the user's interest in a show or provide any information based on the retrieved context.
+| OK | 3 turns | 54998ms
+[10/29] h7-01: Dining guest open to entertainment Fallback triggered. Reason: The response is empty and fails to address the user's question despite the retrieved context containing relevant information about entertainment venues and nightly shows at the Wolf Den.
+| OK | 3 turns | 33982ms
+[11/29] h8-01: Comp-eligible guest receiving offer Fallback triggered. Reason: The generated response is empty and fails to address the user's question about Leap tier dining perks, despite information being available in the retrieved context regarding Momentum tier benefits and dining rewards.
+Fallback triggered. Reason: 
+| OK | 3 turns | 40249ms
+[12/29] h9-01: Guest open to suggestions for a special evening Fallback triggered. Reason: The generated response is empty and does not address the user's question, even though relevant context was provided to answer it.
+R106: Unknown tool requested: search_restaurants
+Fallback triggered. Reason: The generated response is empty and fails to provide any information or recommendations based on the retrieved context.
+| OK | 3 turns | 52366ms
+[13/29] h9-02: Guest on a budget needing value guidance Fallback triggered. Reason: 
+Fallback triggered. Reason: The generated response is empty and fails to address the user's question about the Wolf Den being free, despite clear supporting information in the retrieved context.
+| OK | 3 turns | 47575ms
+[14/29] h10-01: Guest asking agent to arrange something R106: Unknown tool requested: list_restaurants
+R106: Unknown tool requested: search_restaurants
+R106: Unknown tool requested: search_restaurants
+R106: Unknown tool requested: search_restaurants
+Fallback triggered. Reason: 
+Fallback triggered. Reason: The
+| OK | 3 turns | 54247ms
+[15/29] h10-02: Guest needs help with a complex multi-part request Fallback triggered. Reason: The response includes specific numerical facts regarding a $25 dining credit and $5 bonus tier points that are not present in the retrieved context, constituting a hallucination.
+Fallback triggered. Reason: 
+| OK | 3 turns | 48455ms
+[16/29] p4-01: Party of 4 assumption about kids — correct Fallback triggered. Reason: 
+| OK | 3 turns | 43124ms
+[17/29] p5-01: 5-turn golden path — foundation to relationship Fallback triggered. Reason: 
+| OK | 5 turns | 37920ms
+[18/29] p6-01: Birthday incentive offered at natural moment Fallback triggered. Reason: 
+Fallback triggered. Reason: The
+Fallback triggered. Reason: The response hallucinates specific
+| OK | 3 turns | 55459ms
+[19/29] p6-02: Profile completeness incentive framing Fallback triggered. Reason: The response is empty and fails to provide any information about the promotions mentioned in the retrieved context, such as hotel packages, dining rewards, or the Momentum program.
+Fallback triggered. Reason: The generated response is empty and fails to acknowledge the user's input or provide any information about the property's gaming options, which were available in the context.
+Validation structured output parsing failed: Failed to parse ValidationResult from completion {"status": "RE"}. Got: 1 validation error for ValidationResult
+status
+  Input should be 'PASS', 'FAIL' or 'RETRY' [type=literal_error, input_value='RE', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/literal_error
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+Degraded-pass: serving unvalidated response (attempt 0, validator unavailable, grounding present)
+| OK | 3 turns | 48433ms
+[20/29] p6-03: Incentive without conditioning service quality Fallback triggered. Reason: 
+| OK | 3 turns | 43329ms
+[21/29] p7-01: Guest asks why the agent needs personal informatio Degraded-pass: validator returned RETRY on retry with grounding — serving specialist response (reason: )
+| OK | 3 turns | 40569ms
+[22/29] p7-02: Sensitive question with reason framing Degraded-pass: validator returned RETRY on retry with grounding — serving specialist response (reason: )
+| OK | 3 turns | 58728ms
+[23/29] p8-01: 3-turn conversation achieving 60% Phase 1 completi | OK | 3 turns | 37753ms
+[24/29] p8-02: Profile progress tracking across turns Augmented retrieval failed
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/odedbe/projects/hey-seven/src/agent/tools.py", line 128, in _safe_await
+    return await coro
+           ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 519, in wait_for
+    async with timeouts.timeout(timeout):
+  File "/usr/lib/python3.12/asyncio/timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+Fallback triggered. Reason: The generated response is empty and fails to address the user's statement or provide any information about suitable venues for a retirement party from the retrieved context, such as novelle.
+Fallback triggered. Reason: 
+| OK | 4 turns | 43453ms
+[25/29] p9-01: Host handoff summary with structured profile Fallback triggered. Reason: 
+R106: Unknown tool requested: search_restaurants
+Fallback triggered. Reason: 
+| OK | 3 turns | 40655ms
+[26/29] p9-02: Handoff includes confidence levels for extracted d Fallback triggered. Reason: The generated response is empty and fails to provide any of the entertainment options available in the retrieved context to answer the user's request.
+| OK | 3 turns | 65978ms
+[27/29] p9-03: Handoff actionable for human host Augmented retrieval failed
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/odedbe/projects/hey-seven/src/agent/tools.py", line 128, in _safe_await
+    return await coro
+           ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 519, in wait_for
+    async with timeouts.timeout(timeout):
+  File "/usr/lib/python3.12/asyncio/timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+Fallback triggered. Reason: The
+Fallback triggered. Reason: 
+| OK | 3 turns | 55812ms
+[28/29] p10-01: Agent remembers name from turn 1 in turn 4 Fallback triggered. Reason: The response is empty and fails to address the user question or provide any of the entertainment information available in the retrieved context.
+Fallback triggered. Reason: 
+| OK | 4 turns | 41601ms
+[29/29] p10-02: Agent uses dining preference from earlier turn R106: Unknown tool requested: search_restaurants
+Fallback triggered. Reason: The generated response is empty and fails to provide any information from the retrieved context about available shows or entertainment venues like the Wolf Den, which offers nightly performances.
+R106: Unknown tool requested: get_restaurant_by_cuisine
+R106: Unknown tool requested: get_restaurant_by_meal_period
+| OK | 3 turns | 46979ms
+
+============================================================
+R111 EVAL COMPLETE
+  Scenarios: 29
+  Turns: 93
+  Errors: 0
+  Avg turn latency: 44895ms
+  Results: /home/odedbe/projects/hey-seven/tests/evaluation/r111-responses.json
+  Streaming dir: tests/evaluation/r111-results
+============================================================

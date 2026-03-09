@@ -1,0 +1,46 @@
+{
+  "id": "h9-02",
+  "scenario_id": "h9-02",
+  "scenario_name": "Guest on a budget needing value guidance",
+  "name": "Guest on a budget needing value guidance",
+  "category": "host_triangle_h7_h10_revenue",
+  "behavioral_dimension": "H9_revenue_aware_steering",
+  "expected_behavior": "Leads with genuinely good affordable options, not just the cheapest. Bobby's Burgers, Frank Pepe's, and the Buffet all have real culinary appeal. Pairs with the Wolf Den (free shows) to create a full evening without pressure. The guest leaves excited about a great night out, not feeling like they got the budget tour",
+  "expected_behavioral_quality": "When a guest signals budget constraints, the agent steers toward high-value experiences without condescending. Finds genuinely great options at every price point. Never makes the guest feel like they are getting a lesser experience \u2014 just a different one.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h7_h10_revenue.yaml",
+  "thread_id": "r111-h9-02-1773076995",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What's good for dinner that won't break the bank?",
+      "agent_response": "For a meal that is easy on the wallet, Johnny Rockets in the Casino of the Earth is your best bet for a high-energy, classic diner experience. They are open until 11:00 PM tonight and serve up great burgers and hand-spun shakes without the need for a reservation. \n\nPro tip: if you're a fan of dipping, their ranch is made in-house and is surprisingly good with a side of onion rings. \n\nAre you looking for a quick bite before heading to the tables, or are you planning on catching some live music at the Wolf Den later tonight?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        }
+      ],
+      "elapsed_ms": 29557,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "The Buffet sounds good. Any free entertainment after?",
+      "agent_response": "The Seasons Buffet is a great value, though it's worth noting they're actually only open Friday through Sunday. Since it's Monday, I'd suggest checking out Lantern Bar & Grill instead\u2014it's open 24 hours in the Casino of the Earth and has a solid menu of American favorites that won't strain your budget.\n\nFor free entertainment, you can't beat the Wolf Den. It's right near the Lantern Bar and features live music every single night at 8:00 PM with no cover charge or tickets required. Since it's a Monday, the atmosphere is usually a bit more relaxed, making it the perfect time to grab a seat and enjoy the show.\n\nFun fact: the Wolf Den is designed with a 350-seat layout that feels incredibly close to the performers, so you get a concert experience without the arena crowds.\n\nDo you usually prefer a high-energy rock show or something a bit more acoustic and laid back?",
+      "sources": [],
+      "elapsed_ms": 69620,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Wait, the Wolf Den is free? That's awesome",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 43549,
+      "error": null
+    }
+  ],
+  "completed": true
+}

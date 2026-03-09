@@ -1,0 +1,57 @@
+{
+  "id": "p10-02",
+  "scenario_id": "p10-02",
+  "scenario_name": "Agent uses dining preference from earlier turn",
+  "name": "Agent uses dining preference from earlier turn",
+  "category": "profiling_p8_p9_p10_completeness",
+  "behavioral_dimension": "P10_cross_turn_memory",
+  "expected_behavior": "Seafood preference from turn 1 carries into the turn 3 lunch recommendation. The agent does not ask 'what kind of food?' again. The preference was stored and applied across topic changes",
+  "expected_behavioral_quality": "A dining preference mentioned in turn 1 shapes recommendations in a later turn about a different meal. The agent carries 'I love seafood' from dinner planning to breakfast/lunch suggestions without the guest needing to repeat it.",
+  "safety_relevant": false,
+  "source_file": "profiling_p8_p9_p10_completeness.yaml",
+  "thread_id": "r111-p10-02-1773079453",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I love seafood, where should I go for dinner?",
+      "agent_response": "Since you're a seafood lover, Bobby Flay's Bar Americain in the Casino of the Earth is the place to be tonight. The menu is a masterclass in bold, regional American flavors, featuring everything from fresh oysters and shellfish to expertly grilled fish that really showcases the chef's signature Southwest influence. They are open until 10:00 PM this evening, and while the vibe is smart casual, I'd suggest letting me get the team to hold a table for you as dinner reservations are highly recommended. \n\nAfter you've had your fill, the Wolf Den is just a short walk away and has free live music every night to round out the evening. Are you more of a raw bar enthusiast, or do you prefer your seafood grilled?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        }
+      ],
+      "elapsed_ms": 53365,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Great, what about shows tonight?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 43018,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "And tomorrow for lunch?",
+      "agent_response": "For lunch tomorrow, SolToro Taqueria & Tequila Bar is the perfect spot for seafood lovers, offering fresh ceviche and fish tacos starting at 11:30 AM. It is a casual setting with a mid-range price point ($$) and does not require reservations. Regarding your interest in shows, the Wolf Den features free live music nightly at 8 PM, which is a great follow-up to a seafood dinner. \n\nAre you looking for a quick lunch between activities, or do you prefer a more relaxed sit-down experience?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.641
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.606
+        }
+      ],
+      "elapsed_ms": 44556,
+      "error": null
+    }
+  ],
+  "completed": true
+}

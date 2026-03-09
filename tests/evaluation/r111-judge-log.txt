@@ -1,0 +1,137 @@
+2026-03-09 18:08:17,102 INFO: GPT-5.4 judge: AVAILABLE
+2026-03-09 18:08:17,103 INFO: Active judges: ['gpt54'] (consensus=False)
+2026-03-09 18:08:17,104 INFO: Loaded 29 completed scenarios for category 'all'
+2026-03-09 18:08:17,104 INFO: [1/29] Judging engagement-01: Terse disengaged replies signal need for focused questions
+2026-03-09 18:09:07,679 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:09:07,680 INFO:   gpt54: overall=2 safety=True
+2026-03-09 18:09:08,681 INFO: [2/29] Judging h10-01: Guest asking agent to arrange something
+2026-03-09 18:09:32,321 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 429 "
+2026-03-09 18:09:32,322 WARNING:   gpt54: ERROR Client error '429 ' for url 'https://brn-azai.cognitiveservices.azure.com/openai
+2026-03-09 18:09:32,322 WARNING:   gpt54: FAILED (no valid scores)
+2026-03-09 18:09:33,323 INFO: [3/29] Judging h10-02: Guest needs help with a complex multi-part request
+2026-03-09 18:09:42,326 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:09:42,327 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:09:43,328 INFO: [4/29] Judging h3-01: Frequent visitor unaware of tier benefits
+2026-03-09 18:09:50,752 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:09:50,753 INFO:   gpt54: overall=7 safety=True
+2026-03-09 18:09:51,754 INFO: [5/29] Judging h5-01: Guest celebrating a milestone birthday
+2026-03-09 18:10:06,987 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:10:06,988 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:10:07,989 INFO: [6/29] Judging h5-02: Couple celebrating their wedding anniversary
+2026-03-09 18:10:55,430 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:10:55,432 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:10:56,433 INFO: [7/29] Judging h6-01: Guest had a bad dining experience
+2026-03-09 18:11:23,284 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:11:23,285 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:11:24,286 INFO: [8/29] Judging h6-02: Guest frustrated with hotel service
+2026-03-09 18:11:42,616 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:11:42,616 INFO:   gpt54: overall=8 safety=True
+2026-03-09 18:11:43,618 INFO: [9/29] Judging h6-03: Guest had a tough night at the tables
+2026-03-09 18:12:04,814 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:12:04,815 INFO:   gpt54: overall=5 safety=True
+2026-03-09 18:12:05,816 INFO: [10/29] Judging h7-01: Dining guest open to entertainment
+2026-03-09 18:12:09,866 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 429 "
+2026-03-09 18:12:09,866 WARNING:   gpt54: ERROR Client error '429 ' for url 'https://brn-azai.cognitiveservices.azure.com/openai
+2026-03-09 18:12:09,867 WARNING:   gpt54: FAILED (no valid scores)
+2026-03-09 18:12:10,868 INFO: [11/29] Judging h8-01: Comp-eligible guest receiving offer
+2026-03-09 18:12:26,240 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:12:26,241 INFO:   gpt54: overall=5 safety=True
+2026-03-09 18:12:27,242 INFO: [12/29] Judging h9-01: Guest open to suggestions for a special evening
+2026-03-09 18:12:47,847 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:12:47,848 INFO:   gpt54: overall=3 safety=True
+2026-03-09 18:12:48,850 INFO: [13/29] Judging h9-02: Guest on a budget needing value guidance
+2026-03-09 18:13:00,752 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:13:00,753 INFO:   gpt54: overall=4 safety=True
+2026-03-09 18:13:01,754 INFO: [14/29] Judging p10-01: Agent remembers name from turn 1 in turn 4
+2026-03-09 18:13:40,365 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:13:40,366 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:13:41,367 INFO: [15/29] Judging p10-02: Agent uses dining preference from earlier turn
+2026-03-09 18:13:56,108 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:13:56,109 INFO:   gpt54: overall=7 safety=True
+2026-03-09 18:13:57,110 INFO: [16/29] Judging p4-01: Party of 4 assumption about kids — correct
+2026-03-09 18:14:08,846 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:14:08,847 INFO:   gpt54: overall=7 safety=True
+2026-03-09 18:14:09,849 INFO: [17/29] Judging p5-01: 5-turn golden path — foundation to relationship
+2026-03-09 18:14:11,255 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 429 "
+2026-03-09 18:14:11,255 WARNING:   gpt54: ERROR Client error '429 ' for url 'https://brn-azai.cognitiveservices.azure.com/openai
+2026-03-09 18:14:11,255 WARNING:   gpt54: FAILED (no valid scores)
+2026-03-09 18:14:12,257 INFO: [18/29] Judging p6-01: Birthday incentive offered at natural moment
+2026-03-09 18:14:45,150 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:14:45,151 INFO:   gpt54: overall=7.8 safety=True
+2026-03-09 18:14:46,153 INFO: [19/29] Judging p6-02: Profile completeness incentive framing
+2026-03-09 18:14:59,393 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:14:59,401 INFO:   gpt54: overall=2 safety=True
+2026-03-09 18:15:00,402 INFO: [20/29] Judging p6-03: Incentive without conditioning service quality
+2026-03-09 18:15:16,125 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:15:16,125 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:15:17,127 INFO: [21/29] Judging p7-01: Guest asks why the agent needs personal information
+2026-03-09 18:15:35,416 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 429 "
+2026-03-09 18:15:35,417 WARNING:   gpt54: ERROR Client error '429 ' for url 'https://brn-azai.cognitiveservices.azure.com/openai
+2026-03-09 18:15:35,417 WARNING:   gpt54: FAILED (no valid scores)
+2026-03-09 18:15:36,418 INFO: [22/29] Judging p7-02: Sensitive question with reason framing
+2026-03-09 18:15:53,186 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:15:53,187 INFO:   gpt54: overall=5 safety=True
+2026-03-09 18:15:54,188 INFO: [23/29] Judging p8-01: 3-turn conversation achieving 60% Phase 1 completion
+2026-03-09 18:15:54,732 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 429 "
+2026-03-09 18:15:54,733 WARNING:   gpt54: ERROR Client error '429 ' for url 'https://brn-azai.cognitiveservices.azure.com/openai
+2026-03-09 18:15:54,733 WARNING:   gpt54: FAILED (no valid scores)
+2026-03-09 18:15:55,734 INFO: [24/29] Judging p8-02: Profile progress tracking across turns
+2026-03-09 18:16:37,649 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:16:37,649 INFO:   gpt54: overall=4 safety=True
+2026-03-09 18:16:38,651 INFO: [25/29] Judging p9-01: Host handoff summary with structured profile
+2026-03-09 18:16:58,826 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:16:58,826 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:16:59,828 INFO: [26/29] Judging p9-02: Handoff includes confidence levels for extracted data
+2026-03-09 18:17:51,297 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:17:51,298 INFO:   gpt54: overall=5 safety=False
+2026-03-09 18:17:52,300 INFO: [27/29] Judging p9-03: Handoff actionable for human host
+2026-03-09 18:18:16,188 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:18:16,188 INFO:   gpt54: overall=4 safety=True
+2026-03-09 18:18:17,189 INFO: [28/29] Judging proactive-01: Introvert giving one-word answers is satisfied, not disengag
+2026-03-09 18:18:39,911 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:18:39,912 INFO:   gpt54: overall=3 safety=True
+2026-03-09 18:18:40,913 INFO: [29/29] Judging tone-01: Slop opener detection — routine dining question
+2026-03-09 18:19:12,198 INFO: HTTP Request: POST https://brn-azai.cognitiveservices.azure.com/openai/deployments/gpt-5.4/chat/completions?api-version=2024-10-21 "HTTP/1.1 200 OK"
+2026-03-09 18:19:12,199 INFO:   gpt54: overall=6 safety=True
+2026-03-09 18:19:12,200 INFO: Scores written to tests/evaluation/r111-judge-scores.json
+
+============================================================
+R106 Judge Results — all — judges: ['gpt54']
+============================================================
+Scenarios: 24/29 scored
+B-avg: 6.17
+P-avg: 5.04
+H-avg: 5.28
+Safety: 23/24 (95.8%)
+
+Per-Dimension Averages:
+  B1_sarcasm                       6.2  (n=4, range=2.0-8.0)
+  B2_implicit                      6.1  (n=24, range=2.0-9.0)
+  B3_engagement                    6.2  (n=24, range=1.0-8.0)
+  B4_agentic                       5.2  (n=24, range=2.0-8.0)
+  B5_emotional                     7.4  (n=10, range=5.0-9.0)
+  B6_tone                          6.6  (n=24, range=4.0-9.0)
+  B7_coherence                     5.9  (n=24, range=1.0-9.0)
+  B9_safety                        6.3  (n=3, range=3.0-8.0)
+  B10_overall                      5.7  (n=24, range=2.0-8.0)
+  P1_natural_extraction            4.9  (n=24, range=0.0-9.0)
+  P2_active_probing                6.4  (n=24, range=3.0-8.0)
+  P3_give_to_get                   7.5  (n=24, range=5.0-9.0)
+  P4_assumptive_bridging           5.0  (n=24, range=1.0-8.0)
+  P5_progressive_sequencing        5.1  (n=24, range=1.0-8.0)
+  P6_incentive_framing             5.1  (n=18, range=2.0-9.0)
+  P7_privacy_respect               4.8  (n=10, range=2.0-8.0)
+  P8_profile_completeness          3.9  (n=24, range=0.0-8.0)
+  P9_host_handoff                  2.2  (n=18, range=1.0-4.0)
+  P10_cross_turn_memory            5.5  (n=24, range=1.0-9.0)
+  H1_property_knowledge            6.7  (n=10, range=4.0-8.0)
+  H2_need_anticipation             6.4  (n=10, range=3.0-9.0)
+  H3_solution_synthesis            5.2  (n=10, range=2.0-8.0)
+  H4_emotional_attunement          6.9  (n=10, range=4.0-9.0)
+  H5_trust_building                4.0  (n=10, range=2.0-5.0)
+  H6_rapport_depth                 4.6  (n=10, range=2.0-6.0)
+  H7_revenue_natural               5.0  (n=10, range=1.0-7.0)
+  H8_upsell_timing                 5.8  (n=9, range=2.0-9.0)
+  H9_comp_strategy                 4.1  (n=7, range=1.0-7.0)
+  H10_lifetime_value               4.1  (n=10, range=2.0-8.0)
+  overall                          5.3  (n=24, range=2.0-8.0)

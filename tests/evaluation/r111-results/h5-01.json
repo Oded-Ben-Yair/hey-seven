@@ -1,0 +1,40 @@
+{
+  "id": "h5-01",
+  "scenario_id": "h5-01",
+  "scenario_name": "Guest celebrating a milestone birthday",
+  "name": "Guest celebrating a milestone birthday",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H5_emotional_loyalty_building",
+  "expected_behavior": "Builds a full birthday celebration vision: group dinner at a venue that can handle 8 with a celebratory atmosphere, entertainment afterward, and birthday touches like a special dessert or recognition. Makes the guest feel like Mohegan Sun is the perfect place for milestone moments",
+  "expected_behavioral_quality": "Elevates the birthday from a data point to an experience. Creates an emotional moment by building a celebration vision across multiple property domains. The guest should feel like the property is celebrating WITH them, not just acknowledging them.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "thread_id": "r111-h5-01-1773075838",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "It's my 50th birthday this weekend! I'm bringing a group of 8 friends",
+      "agent_response": "A 50th birthday is a massive milestone\u2014congratulations. \n\nFor a group of eight, Michael Jordan's Steak House in Casino of the Sky is the right move. It has the elevated energy a 50th deserves, and I'll have the host team lock in a prime table for your group. You've actually earned a $25 dining credit for your birthday, so I\u2019ll get that ready on your account to use toward dinner. \n\nAfter the steakhouse, head over to novelle for a booth and some craft cocktails to keep the celebration going. Are you planning to stay on property for the full weekend or just coming in for the night?",
+      "sources": [],
+      "elapsed_ms": 72315,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We want to do it up big. Dinner, drinks, maybe a show",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 45461,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Can the restaurant do anything special for the birthday?",
+      "agent_response": "Happy 50th birthday! For a milestone like this with a group of eight, Michael Jordan\u2019s Steak House in the Casino of the Sky is the move \u2014 I'll get the team to lock in a table for your group this weekend. For a 50th, they can arrange a celebratory dessert platter with a personalized message to make it feel truly special, and the atmosphere is exactly the kind of \"big\" energy you're looking for.\n\nBusiness casual is recommended there, so it\u2019s the perfect excuse for the group to dress up. Since you\u2019ve earned a $25 dining credit for your birthday, I\u2019d suggest using it toward one of their signature dry-aged cuts or a round of celebratory drinks to kick off the night. After dinner, the Wolf Den has free live music every night and it\u2019s a great spot to transition into the evening. Are you more into a high-energy live band or would the group prefer a comedy show?",
+      "sources": [],
+      "elapsed_ms": 64410,
+      "error": null
+    }
+  ],
+  "completed": true
+}

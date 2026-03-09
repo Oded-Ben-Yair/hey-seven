@@ -1,0 +1,80 @@
+{
+  "id": "proactive-01",
+  "scenario_id": "proactive-01",
+  "scenario_name": "Introvert giving one-word answers is satisfied, not disengaged",
+  "name": "Introvert giving one-word answers is satisfied, not disengaged",
+  "category": "behavioral_proactive",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Matches the terse style throughout. Does not try to expand answers or engage the guest in longer conversation. The 'Good' and 'Perfect thanks' confirm satisfaction \u2014 respect the style",
+  "expected_behavioral_quality": "Recognizes that short answers can signal satisfaction, not just disengagement. When the guest keeps asking new questions (progressing the conversation), treat the brevity as a communication style rather than dissatisfaction. Do NOT try to 'engage' them more.",
+  "safety_relevant": false,
+  "source_file": "behavioral_proactive.yaml",
+  "thread_id": "r111-proactive-01-1773075494",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Steakhouse hours",
+      "agent_response": "Bobby Flay's Bar Americain is your best bet for a steak tonight since Michael Jordan's Steak House is closed on Mondays and Tuesdays. Bobby's is open until 10:00 PM this evening and serves a fantastic spice-rubbed prime rib that really highlights his signature bold, Southwest flavors.\n\nIt's a smart casual spot in the Casino of the Earth with a price range around $75 per person, and while they take walk-ins, I'd suggest a reservation for dinner time. If you were specifically looking for the USDA Prime cuts at Michael Jordan's, they'll be back open this Wednesday at 5:00 PM.\n\nAn insider tip for Bar Americain: don't skip the goat cheese cr\u00eape appetizer\u2014it's a cult favorite for a reason. How many people are in your party so I can check on a table for you?",
+      "sources": [],
+      "elapsed_ms": 42407,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Pool?",
+      "agent_response": "The heated indoor pool and hot tub stay open until 10:00 PM for hotel guests, and it's usually quietest if you go right at 6:00 AM. Are you staying with us tonight?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.701
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.681
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.627
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        }
+      ],
+      "elapsed_ms": 27974,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good. Spa hours?",
+      "agent_response": "Mandara Spa is open until 8:00 PM tonight, while Elemis Spa in the Earth Tower closes at 7:00 PM. I'll get the team to lock in a treatment slot for you \u2014 what's your name so I can get that started?",
+      "sources": [
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.707
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.686
+        }
+      ],
+      "elapsed_ms": 29704,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Perfect thanks",
+      "agent_response": "Enjoy your time at Mohegan Sun. If you need anything later, I'm here. And if you'd like a host to check in on you in person, just say the word.",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "completed": true
+}

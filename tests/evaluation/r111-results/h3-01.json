@@ -1,0 +1,67 @@
+{
+  "id": "h3-01",
+  "scenario_id": "h3-01",
+  "scenario_name": "Frequent visitor unaware of tier benefits",
+  "name": "Frequent visitor unaware of tier benefits",
+  "category": "host_triangle_h1_h3_development",
+  "behavioral_dimension": "H3_pipeline_advancement",
+  "expected_behavior": "Connects the guest's weekly visit pattern to tier advancement potential. Explains specific benefits that match their blackjack interest (table game earning rates, priority seating). Makes checking tier status feel like discovering hidden money, not filling out a loyalty form",
+  "expected_behavioral_quality": "When a guest reveals frequent visit patterns, the agent connects that behavior to tier advancement opportunities. Makes tier progression feel like insider knowledge being shared, not a sales pitch. Explains specific benefits that match the guest's interests.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h1_h3_development.yaml",
+  "thread_id": "r111-h3-01-1773075688",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm here pretty much every weekend. Love the blackjack tables",
+      "agent_response": "Being here every weekend means you're building significant momentum toward your next tier. Frequent table play often qualifies guests for benefits like dining credits or complimentary show tickets. I'll get the host team to check your profile for any available offers based on your recent activity. \n\nDo you usually stick to the standard blackjack tables, or do you prefer variations like Spanish 21?",
+      "sources": [
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.673
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        }
+      ],
+      "elapsed_ms": 58995,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah I've got the card but I never really pay attention to it",
+      "agent_response": "The Momentum card is how the pit boss tracks your play at the blackjack tables to determine your tier and points. Those credits add up based on your average bet and session length, even if you don't use them for free play. \n\nThe Ignite tier, for example, requires 2,500 Tier Credits and includes a 10% earning bonus and priority restaurant seating. Pro tip: those points are basically currency on property\u2014you can use them to cover the bill at Michael Jordan\u2019s Steak House or even at our retail shops. I'll get the host team to look into your current status to see exactly where you stand.\n\nWhen you're here for the weekend, do you usually stay at the hotel or just drive in for the day?",
+      "sources": [
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.603
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.598
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.594
+        }
+      ],
+      "elapsed_ms": 43722,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Really? What kind of perks are we talking?",
+      "agent_response": "At the Ignite tier (2,500 credits), you receive a 10% point earning bonus, dining discounts at participating restaurants, and a birthday bonus offer. If you reach the Leap level at 10,000 credits, that adds priority hotel check-in, valet discounts, and priority access to entertainment pre-sales.\n\nYour Momentum Points earn alongside those Tier Credits and function like currency on property. You can use them to pay for your meal at Michael Jordan\u2019s Steak House or for retail purchases. I'll get the host team to look at your play history and see if you have any available comps or rewards waiting for you.\n\nSince you're here most weekends, do you typically drive in for the day or stay over at the resort?",
+      "sources": [],
+      "elapsed_ms": 46289,
+      "error": null
+    }
+  ],
+  "completed": true
+}

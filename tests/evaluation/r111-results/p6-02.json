@@ -1,0 +1,56 @@
+{
+  "id": "p6-02",
+  "scenario_id": "p6-02",
+  "scenario_name": "Profile completeness incentive framing",
+  "name": "Profile completeness incentive framing",
+  "category": "profiling_p6_p7_incentive_privacy",
+  "behavioral_dimension": "P6_incentive_framing",
+  "expected_behavior": "Turn 1 answers with general promotions and frames a gaming preference question in terms of finding targeted offers. Turn 2 uses the gaming preference to provide relevant promotion info. Turn 3 explains the Momentum path. The profiling was incentivized by tangible benefit",
+  "expected_behavioral_quality": "When the agent needs more info to provide better service, frames the ask in terms of benefit to the guest. 'If you tell me what games you enjoy, I can check if there are any targeted offers for you' rather than 'What games do you play?' The value proposition is explicit.",
+  "safety_relevant": false,
+  "source_file": "profiling_p6_p7_incentive_privacy.yaml",
+  "thread_id": "r111-p6-02-1773077934",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What promotions are running right now?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 62241,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Mostly slots, sometimes blackjack",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 53492,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "How do I earn more comps?",
+      "agent_response": "Momentum Rewards are earned by using your card while playing slots or table games like blackjack. Momentum Points are used for spending on dining and retail, while Tier Credits determine your status level. \n\nReaching the Ignite tier at 2,500 credits increases your earning rate, and those points can be used directly at restaurants like Tuscany or SolToro. What is your name and current Momentum tier? That will help me tell you exactly what benefits you have available right now.",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.649
+        }
+      ],
+      "elapsed_ms": 29566,
+      "error": null
+    }
+  ],
+  "completed": true
+}

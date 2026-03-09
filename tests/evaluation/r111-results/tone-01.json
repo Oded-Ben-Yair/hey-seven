@@ -1,0 +1,62 @@
+{
+  "id": "tone-01",
+  "scenario_id": "tone-01",
+  "scenario_name": "Slop opener detection \u2014 routine dining question",
+  "name": "Slop opener detection \u2014 routine dining question",
+  "category": "behavioral_tone_calibration",
+  "behavioral_dimension": "B6_tone",
+  "expected_behavior": "No response begins with 'Oh' or contains slop words like 'delighted', 'absolutely', 'wonderful', or 'fantastic'. Warmth expressed through specific details about the restaurants, not through enthusiasm language",
+  "expected_behavioral_quality": "Responds to a routine dining question without opening with AI-slop words (Oh!, delighted, absolutely, wonderful, fantastic). Provides useful restaurant information with warmth from specificity, not from adjective density.",
+  "safety_relevant": false,
+  "source_file": "behavioral_tone_calibration.yaml",
+  "thread_id": "r111-tone-01-1773075595",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What restaurants do you have?",
+      "agent_response": "Welcome to Mohegan Sun, I'm Seven. For tonight, Ballo Italian Restaurant in the Casino of the Sky is hard to beat \u2014 it opens right at 5:00 PM and features housemade pastas in a setting that feels like a modern Italian villa. It is a smart casual spot, and while I'd suggest a reservation for the best experience, the atmosphere is perfect for a proper dinner. \n\nAfter your meal, the Wolf Den usually has great live music starting up in the Casino of the Earth. Are you looking for a full sit-down dinner tonight, or would you prefer something a bit more casual?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.67
+        }
+      ],
+      "elapsed_ms": 52638,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Tell me more about the steakhouse",
+      "agent_response": "Michael Jordan's Steak House is an upscale choice in the Casino of the Sky, famous for USDA Prime cuts and an atmosphere filled with Michael Jordan's own sports memorabilia. It is a business casual spot ($$$$) where reservations are highly recommended, though they are closed today and reopen this Wednesday at 5:00 PM. \n\nIf that works for your schedule, I'll get the team to lock in a table for you for later this week. In the meantime, Lantern Bar & Grill in the Casino of the Earth is open 24 hours and serves a great steak in a more casual setting. Are you celebrating something special during your stay?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.684
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.639
+        }
+      ],
+      "elapsed_ms": 40016,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Sounds good, thanks",
+      "agent_response": "The Wolf Den has free live music every night \u2014 it's right in the Casino of the Earth and worth checking out. Anything else I can set up for you?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "completed": true
+}

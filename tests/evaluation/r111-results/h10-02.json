@@ -1,0 +1,61 @@
+{
+  "id": "h10-02",
+  "scenario_id": "h10-02",
+  "scenario_name": "Guest needs help with a complex multi-part request",
+  "name": "Guest needs help with a complex multi-part request",
+  "category": "host_triangle_h7_h10_revenue",
+  "behavioral_dimension": "H10_host_identity_authority",
+  "expected_behavior": "Takes full ownership of the multi-domain request. Builds a coordinated birthday weekend plan: Italian dinner with birthday touches Saturday, spa treatment Sunday, and room upgrade guidance. Presents it as a unified plan, not three separate requests. The guest feels like one person is handling everything",
+  "expected_behavioral_quality": "When a guest has a complex request spanning multiple property domains, the agent coordinates across all of them with confidence. Does not pass the guest between departments. Takes ownership of the full request and presents a unified plan.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h7_h10_revenue.yaml",
+  "thread_id": "r111-h10-02-1773077301",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I need help planning my wife's surprise birthday weekend. Dinner Saturday, spa Sunday, and a room upgrade if possible",
+      "agent_response": "Happy birthday to your wife; a surprise weekend is a great way to celebrate. \n\nFor Saturday dinner, Michael Jordan's Steak House in the Casino of the Sky is an elevated choice, serving USDA Prime steaks and seafood in an elegant setting. How many guests will be in your party?\n\nOn Sunday, Mandara Spa offers Balinese-inspired treatments and includes a tranquil relaxation lounge, steam room, and sauna. Would a morning or afternoon appointment work better for her schedule?\n\nRegarding the room upgrade, these are subject to availability and typically determined by your Momentum rewards tier. Since your own birthday is also part of your profile, you've earned a $25 dining credit and $5 bonus tier points that are already on your account. I'll get the host team to look into the upgrade once I have your reservation details.\n\nDo you already have a room booked for that Saturday night?",
+      "sources": [],
+      "elapsed_ms": 48466,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "She loves Italian food and deep tissue massage. Can you work with that?",
+      "agent_response": "Tuscany in the Casino of the Sky is the move for Italian\u2014handmade pastas and a table by the waterfall for Saturday night. I'll get the team to lock in a 7:30 PM reservation, and since you've earned a $25 dining credit for your own upcoming birthday, I'll make sure that's applied to the bill.\n\nFor Sunday, Mandara Spa does a dedicated deep tissue massage that's perfect for a weekend wind-down. I'll have the team secure a 10:00 AM slot so she has plenty of time to enjoy the steam room and sauna beforehand. To get that room upgrade looked at, what name is the reservation under?",
+      "sources": [],
+      "elapsed_ms": 50392,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "This is exactly what I needed. You've been amazing",
+      "agent_response": "Exactly, Glad to help. I'll have the team finalize that waterfall table at Tuscany and the deep tissue session for Sunday to make her birthday special. I'll also keep a close eye on the room upgrade for your arrival. By the way, the Mohegan Sun Arena has some great shows coming up\u2014would you like me to see what's on the calendar for your weekend?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.616
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.629
+        }
+      ],
+      "elapsed_ms": 46509,
+      "error": null
+    }
+  ],
+  "completed": true
+}

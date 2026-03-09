@@ -1,0 +1,56 @@
+{
+  "id": "h5-02",
+  "scenario_id": "h5-02",
+  "scenario_name": "Couple celebrating their wedding anniversary",
+  "name": "Couple celebrating their wedding anniversary",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H5_emotional_loyalty_building",
+  "expected_behavior": "Creates a romantic anniversary itinerary: couples spa treatment, upscale dinner with anniversary touches, and an intimate evening experience. Plants the seed that Mohegan Sun could become their anniversary tradition. Emotional connection, not just logistics",
+  "expected_behavioral_quality": "Treats the anniversary as a chance to create an emotional anchor to the property. Builds a romantic experience vision that makes the couple associate Mohegan Sun with their love story. The response should make them want to come back every anniversary.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "thread_id": "r111-h5-02-1773076020",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "It's our 10th anniversary this weekend. We want to make it really special",
+      "agent_response": "Ten years \u2014 congratulations. For a milestone like this, Michael Jordan\u2019s Steak House is the move. It\u2019s our most elevated dining experience, and I\u2019ll get the team to lock in a quiet corner booth for you.\n\nSince it's your 10th, you\u2019ve actually earned an experience upgrade here at Mohegan Sun, and I'll have the host team look into those details for you. After dinner, I\u2019d suggest novelle for a cocktail \u2014 it\u2019s the perfect spot to toast the decade. How many are in your group, or is it just the two of you?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.64
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.645
+        }
+      ],
+      "elapsed_ms": 33509,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We'd love a really nice dinner and maybe the spa",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 51014,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "A couples spa package sounds incredible",
+      "agent_response": "Mandara Spa is the best choice for an anniversary because they have a dedicated couples suite where you can experience your treatments side-by-side. Their Balinese-inspired massages are exactly what you need to shift into vacation mode, and you can spend some time afterward in the relaxation lounge or the steam room.\n\nI\u2019ll get the team to look for a mid-morning slot on Saturday so you can have a slow start to your day. Since you're celebrating ten years, I'll have the spa team keep an eye out for any special touches to make the session more memorable. When it comes to the massage itself, do you usually prefer a relaxing Swedish style or something more therapeutic like deep tissue?",
+      "sources": [],
+      "elapsed_ms": 47812,
+      "error": null
+    }
+  ],
+  "completed": true
+}

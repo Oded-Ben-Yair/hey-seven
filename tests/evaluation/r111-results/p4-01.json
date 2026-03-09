@@ -1,0 +1,82 @@
+{
+  "id": "p4-01",
+  "scenario_id": "p4-01",
+  "scenario_name": "Party of 4 assumption about kids \u2014 correct",
+  "name": "Party of 4 assumption about kids \u2014 correct",
+  "category": "profiling_p4_assumptive_bridge",
+  "behavioral_dimension": "P4_assumptive_bridging",
+  "expected_behavior": "Assumption about kids is offered softly and confirmed by the guest. Agent smoothly pivots to family-friendly recommendations. The assumption felt natural, not presumptuous",
+  "expected_behavioral_quality": "Makes a contextual inference that a party of 4 might include children and gently tests it with kid-friendly options. The assumption is offered as a soft suggestion ('If any of your group are younger, they might enjoy...') rather than a hard presumption ('Your kids will love...').",
+  "safety_relevant": false,
+  "source_file": "profiling_p4_assumptive_bridge.yaml",
+  "thread_id": "r111-p4-01-1773077447",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Need a restaurant for 4 tonight",
+      "agent_response": "Ballo Italian Restaurant in the Casino of the Sky is a great choice for a Monday evening. The space is inspired by a 12th-century Gothic abbey in Tuscany, and their housemade pastas\u2014especially the wild boar ragu\u2014are exactly what you want for a seated dinner with four people. They are open until 10:00 PM tonight, and I suggest smart casual attire.\n\nAfter dinner, the Wolf Den has free live music every night\u2014it's right in the Casino of the Earth and the energy is always good.\n\nIf Ballo sounds like the right fit, I'll get the team to lock in a table for your group of four; what time were you thinking of heading over?",
+      "sources": [],
+      "elapsed_ms": 56102,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Yeah actually the kids would love that",
+      "agent_response": "If you have the kids with you, Ballo Italian Restaurant will be a hit with the housemade pasta, but I should mention the Wolf Den is a 21-plus venue. For family entertainment tonight, Cyber Quest is our massive arcade and it is usually the highlight for the younger ones. If they are feeling adventurous, the Wombi Rock Climbing Wall is right nearby and provides all the equipment and instruction they will need.\n\nFor a more relaxed evening for the adults, Kids Quest offers supervised play for children ages 6 weeks up to 12 years while you enjoy the resort. I'll get the team to lock in that table at Ballo for the four of you; what time would you like to sit down? I'm also curious how old the kids are so I can make sure I'm pointing you toward the right games or activities.",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.643
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.625
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.634
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        }
+      ],
+      "elapsed_ms": 50248,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "How old do they need to be for the arcade?",
+      "agent_response": "Cyber Quest is designed for all ages, so your kids are welcome to jump into the games regardless of how old they are. It is a family-friendly arcade with everything from the latest video games to classic skill-based challenges.\n\nIf you're planning on that dinner at Ballo, the arcade is a great way for them to burn off some energy afterward. Since you mentioned the kids, are you interested in our indoor pool or maybe some of the seasonal outdoor activities we offer during your stay?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.709
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.702
+        },
+        {
+          "category": "amenities",
+          "source": "mohegan_sun.json",
+          "score": 0.631
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        }
+      ],
+      "elapsed_ms": 23023,
+      "error": null
+    }
+  ],
+  "completed": true
+}

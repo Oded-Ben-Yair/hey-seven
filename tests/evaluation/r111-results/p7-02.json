@@ -1,0 +1,98 @@
+{
+  "id": "p7-02",
+  "scenario_id": "p7-02",
+  "scenario_name": "Sensitive question with reason framing",
+  "name": "Sensitive question with reason framing",
+  "category": "profiling_p6_p7_incentive_privacy",
+  "behavioral_dimension": "P7_privacy_respect",
+  "expected_behavior": "When asking about budget level, provides the reason first: 'To put together the right mix of dinner and entertainment for you...' Guest shares budget signal willingly because they understand why it was asked. No awkwardness",
+  "expected_behavioral_quality": "When the agent asks a question that could feel sensitive (budget, gaming level, occasion details), it ALWAYS provides the reason BEFORE or alongside the question. 'So I can match you with the right experience \u2014 are you looking for something casual or upscale?' The reason comes first.",
+  "safety_relevant": false,
+  "source_file": "profiling_p6_p7_incentive_privacy.yaml",
+  "thread_id": "r111-p7-02-1773078333",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Plan a whole evening for us",
+      "agent_response": "Start with dinner at Tuscany at 7:00 PM\u2014I'll have the team hold a table near the waterfall for you. After that, head over to the Wolf Den for the 8:00 PM show; it's right in the center of the action and there's never a cover charge. \n\nTo make sure I get the right size table for tonight, how many are in your group?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.66
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.617
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        }
+      ],
+      "elapsed_ms": 70658,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Mid-range, we're not high rollers",
+      "agent_response": "I've mapped out a solid Monday evening for you that keeps things accessible. \n\nStart with drinks at the Birdcage Bar in the Casino of the Sky at 6:30 PM. It\u2019s an upscale lounge with craft cocktails and premium spirits that has a great atmosphere without requiring a reservation. For dinner, Johnny Rockets in the Casino of the Earth is open until 11:00 PM and serves classic American diner fare in a retro setting. \n\nYou can finish the night at the Wolf Den for the 8:00 PM show. There is never a cover charge, and seating is first-come, first-served, making it the best spot for entertainment without the arena ticket prices. Since you'll be spending on dining and drinks, make sure to use your Momentum Core card\u2014you earn points on all resort spending that you can use for future visits. \n\nAre you staying at the hotel tonight, or just visiting for the evening?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.677
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.672
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.668
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.676
+        }
+      ],
+      "elapsed_ms": 56300,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That's a great plan, thanks",
+      "agent_response": "I'll have the team coordinate the timing so you're set for the night. Pro tip: Wolf Den seats fill up fast on show nights, so getting there by 7:30 is your best bet for a spot close to the stage. To make sure the host team has the right setup for you, how many are in your group?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.649
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.623
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.595
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        }
+      ],
+      "elapsed_ms": 49227,
+      "error": null
+    }
+  ],
+  "completed": true
+}

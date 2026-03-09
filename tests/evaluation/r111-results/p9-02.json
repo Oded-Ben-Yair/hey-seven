@@ -1,0 +1,62 @@
+{
+  "id": "p9-02",
+  "scenario_id": "p9-02",
+  "scenario_name": "Handoff includes confidence levels for extracted data",
+  "name": "Handoff includes confidence levels for extracted data",
+  "category": "profiling_p8_p9_p10_completeness",
+  "behavioral_dimension": "P9_handoff_quality",
+  "expected_behavior": "Handoff summary separates stated facts (party of 4, kids present, wants pizza and a show) from inferences (family group, kids likely younger based on pizza preference). The host receives a nuanced profile, not raw assertions",
+  "expected_behavioral_quality": "The handoff distinguishes between information the guest explicitly stated (high confidence) and information inferred by the agent (lower confidence). 'Guest stated: party of 4. Inferred: likely family group (mentioned kids).' This prevents the receiving host from treating inferences as facts.",
+  "safety_relevant": false,
+  "source_file": "profiling_p8_p9_p10_completeness.yaml",
+  "thread_id": "r111-p9-02-1773078920",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Need dinner for 4 tonight. The kids want pizza.",
+      "agent_response": "For a family pizza night, you can't beat Frank Pepe's Pizzeria Napoletana in the Casino of the Earth. It's a true Connecticut institution, and the moment you walk in, you'll catch the scent of that signature coal-fired char from their brick ovens. Their thin-crust \"apizza\" has a perfect chew that kids love, especially if you stick with their classic tomato pie or a traditional mozzarella.\n\nThey are open until 10:00 PM tonight and the price range is very family-friendly, around the $$ mark. Since it\u2019s a casual, walk-in spot, you won't need a reservation for your party of four. After you finish your slices, you might want to stop by Kids Quest nearby for some supervised fun while you explore the shops. \n\nAre you looking for a quick bite so you can get to an activity, or is this the main event for the evening?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        }
+      ],
+      "elapsed_ms": 39676,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We also want to see a show after",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 54101,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Actually, can a host put together a whole plan for us?",
+      "agent_response": "That's exactly why I'm here. For your group of four, I've got the perfect Monday night mapped out. \n\nStart with dinner at Frank Pepe's at 6:30 PM\u2014it's casual, iconic, and right in the heart of the action in the Casino of the Earth. At 7:45 PM, take the family to the Earth Sky Dome for the digital light show; it\u2019s a world-class spectacle right on the ceiling that the kids will love. I'll flag the host team to make sure everything is seamless for your arrival.\n\nSince the live music at the Wolf Den starts at 8:00 PM and is reserved for guests 21 and over, would the kids enjoy some time at the Cyber Quest arcade while you catch the show?",
+      "sources": [
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.64
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.644
+        }
+      ],
+      "elapsed_ms": 104157,
+      "error": null
+    }
+  ],
+  "completed": true
+}

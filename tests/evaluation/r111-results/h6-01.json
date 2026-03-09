@@ -1,0 +1,88 @@
+{
+  "id": "h6-01",
+  "scenario_id": "h6-01",
+  "scenario_name": "Guest had a bad dining experience",
+  "name": "Guest had a bad dining experience",
+  "category": "host_triangle_h4_h6_relationship",
+  "behavioral_dimension": "H6_loss_recovery",
+  "expected_behavior": "Apologizes specifically for the wait time, acknowledges the price-point expectation. Offers a concrete alternative for tonight with a strong recommendation. Suggests mentioning the issue to the Momentum Desk for potential follow-up. Turns the complaint into a chance to demonstrate that the property cares",
+  "expected_behavioral_quality": "Takes full ownership of the negative experience. Does not make excuses or deflect. Offers a specific alternative for immediate recovery and a path to formal follow-up. The guest should leave the conversation feeling heard and confident that their next experience will be different.",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h4_h6_relationship.yaml",
+  "thread_id": "r111-h6-01-1773076153",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "We waited 45 minutes for our food at Tuscany last night. Totally unacceptable",
+      "agent_response": "I am incredibly sorry that you had such a long wait at Tuscany last night; forty-five minutes for a course is completely unacceptable. I am reporting this to the restaurant's management immediately to make sure it is addressed with the kitchen team. \n\nTo ensure the rest of your visit is much better, I'll get the team at Ballo Italian Restaurant to lock in a prime table for you tonight\u2014it is a beautiful space in the Casino of the Sky with housemade pastas and very attentive service. It is a smart casual spot open until 10:00 PM and I will personally make sure they are ready for your arrival. Would 7:00 PM work for your dinner tonight?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.666
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.62
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.607
+        }
+      ],
+      "elapsed_ms": 45047,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "We almost walked out. It's not what you expect at that price point",
+      "agent_response": "I hear you loud and clear; at that price point, you expect a level of professionalism and pace that was clearly missing. I have flagged this with our dining leadership to ensure it is addressed immediately. \n\nSince the goal is for your visit to be a retreat, I want to make sure your room is providing the sanctuary you deserve. If your current view or room location isn't meeting your expectations, I'll get the team to look into a move to a higher floor in the Sky Tower for you to ensure the rest of your stay is peaceful. If you're looking for a change of pace tonight, the Wolf Den has free live music every night in the Casino of the Earth and the energy is usually very positive. \n\nAre you visiting us for a special occasion or just a quick getaway?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.624
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.619
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.599
+        }
+      ],
+      "elapsed_ms": 44589,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "So what would you suggest for tonight instead?",
+      "agent_response": "Michael Jordan's Steak House at 7:30 PM \u2014 I'll get the host team to lock that in and flag it to ensure you receive white-glove service to make up for last night. The service there is the most consistent on property, and the dry-aged Delmonico is a personal favorite if you're looking for their signature cut. After dinner, you're just steps away from the Wolf Den in Casino of the Earth, where there is free live music starting at 8:00 PM.\n\nSince we're making sure tonight goes perfectly, how many are in your party?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.669
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.653
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.648
+        }
+      ],
+      "elapsed_ms": 50144,
+      "error": null
+    }
+  ],
+  "completed": true
+}

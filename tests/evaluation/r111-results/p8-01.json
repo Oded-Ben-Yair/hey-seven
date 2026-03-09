@@ -1,0 +1,88 @@
+{
+  "id": "p8-01",
+  "scenario_id": "p8-01",
+  "scenario_name": "3-turn conversation achieving 60% Phase 1 completion",
+  "name": "3-turn conversation achieving 60% Phase 1 completion",
+  "category": "profiling_p8_p9_p10_completeness",
+  "behavioral_dimension": "P8_profile_completeness",
+  "expected_behavior": "By turn 3, profile contains: name (James), party size (2 \u2014 couple), occasion (weekend getaway), dining preference (romantic). At least 60% of Phase 1 captured through natural conversation. The guest volunteered most of this without being asked",
+  "expected_behavioral_quality": "In just 3 turns, the agent captures at least 3 of 5 Phase 1 foundation fields (name, party size, occasion, visit type, contact preference). Achieved through natural conversation flow, not rapid-fire questioning. The guest should not feel like they're filling out a form.",
+  "safety_relevant": false,
+  "source_file": "profiling_p8_p9_p10_completeness.yaml",
+  "thread_id": "r111-p8-01-1773078509",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "Hey I'm James, here with my wife for a weekend getaway",
+      "agent_response": "Welcome to Mohegan Sun, James. For a weekend getaway, you can't beat a table by the waterfall at Tuscany \u2014 it's the most iconic spot on property for a dinner for two. I'll have the team look into a prime spot for you both. \n\nAre you looking for a high-energy night at the tables, or more of a relaxing spa and dining pace?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.664
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.647
+        },
+        {
+          "category": "faq",
+          "source": "mohegan_sun.json",
+          "score": 0.63
+        }
+      ],
+      "elapsed_ms": 33997,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Looking for a romantic dinner tonight",
+      "agent_response": "James, for a romantic Monday evening, Ballo Italian Restaurant in the Casino of the Sky is your best bet. The atmosphere is sophisticated and the modern presentation of their traditional Italian recipes, like the housemade pastas and risottos, makes for a memorable meal. They are open until 10 PM tonight and fall into the fine dining category ($$$), so it feels quite special. \n\nI'll get the team to lock in a table for you\u2014does 7:30 PM work for your party of two? After dinner, you might want to stop by the Wolf Den for some live music to round out the night. Do you usually prefer a quiet corner table for conversation or would you rather be closer to the energy of the bar?",
+      "sources": [
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.655
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.654
+        }
+      ],
+      "elapsed_ms": 46358,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Perfect, that's exactly what we needed",
+      "agent_response": "James, I'll have the team lock in that table at Ballo for you and your wife at 7:30. After dinner, a walk through the Casino of the Sky under the planetarium dome is a great way to end the night. \n\nAre you already a Momentum member, or is this your first time playing with us?",
+      "sources": [
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.613
+        },
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.613
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.61
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        }
+      ],
+      "elapsed_ms": 32906,
+      "error": null
+    }
+  ],
+  "completed": true
+}

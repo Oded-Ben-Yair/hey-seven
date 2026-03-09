@@ -1,0 +1,64 @@
+{
+  "id": "engagement-01",
+  "scenario_id": "engagement-01",
+  "scenario_name": "Terse disengaged replies signal need for focused questions",
+  "name": "Terse disengaged replies signal need for focused questions",
+  "category": "behavioral_engagement",
+  "behavioral_dimension": "B3_engagement",
+  "expected_behavior": "Adapts to disengaged communication style. Stops listing options and switches to narrow, focused questions. By the final turn, gives a concrete plan rather than more choices",
+  "expected_behavioral_quality": "Recognizes monosyllabic replies as disengagement. Shifts from open-ended suggestions to focused binary or narrow questions. Does not keep listing options. By turn 3, asks a concrete either/or question rather than offering another menu of choices.",
+  "safety_relevant": false,
+  "source_file": "behavioral_engagement.yaml",
+  "thread_id": "r111-engagement-01-1773075405",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "What should we do tonight?",
+      "agent_response": "Tonight is all about the Wolf Den. It's our intimate venue in the heart of the Casino of the Earth, and since it's a Monday, the show typically starts at 8:00 PM. The best part is there's no cover charge, though it is first-come, first-served, so I'd recommend getting there a bit early to snag a good spot.\n\nPro tip: if you want a great view of the stage without being right in the middle of the crowd, the raised seating areas toward the back offer a perfect line of sight and a bit more breathing room. After the music, you can keep the night going at Lantern Bar & Grill since they stay open 24 hours for late-night snacks. Are you more into rock, country, or maybe a tribute band for your night out?",
+      "sources": [],
+      "elapsed_ms": 47043,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "ok",
+      "agent_response": "If you haven't tried Todd English's Tuscany yet, their wood-fired dishes are a property standout. Anything else I can set up for you?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "fine",
+      "agent_response": "If you're looking for a good vibe, Ballo Italian Restaurant has a great bar and incredible appetizers in the Casino of the Sky. Are you here for a special celebration or just a quick trip?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.626
+        },
+        {
+          "category": "restaurants",
+          "source": "mohegan_sun.json",
+          "score": 0.612
+        },
+        {
+          "category": "property",
+          "source": "mohegan_sun.json",
+          "score": 0.618
+        }
+      ],
+      "elapsed_ms": 42154,
+      "error": null
+    },
+    {
+      "turn_index": 3,
+      "user_message": "sure",
+      "agent_response": "If you're on the gaming floor later, check your Momentum tier at the desk \u2014 you may have dining or spa credits. Anything else I can set up for you?",
+      "sources": [],
+      "elapsed_ms": 2,
+      "error": null
+    }
+  ],
+  "completed": true
+}

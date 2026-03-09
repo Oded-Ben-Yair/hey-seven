@@ -1,0 +1,61 @@
+{
+  "id": "h8-01",
+  "scenario_id": "h8-01",
+  "scenario_name": "Comp-eligible guest receiving offer",
+  "name": "Comp-eligible guest receiving offer",
+  "category": "host_triangle_h7_h10_revenue",
+  "behavioral_dimension": "H8_strategic_offer_framing",
+  "expected_behavior": "Presents Leap benefits as things the guest has earned through their loyalty, not as promotions being pushed. Uses insider language \u2014 'a lot of people don't realize' or 'one of the quieter Leap perks' \u2014 that makes the guest feel like they are learning something exclusive",
+  "expected_behavioral_quality": "When mentioning comp eligibility or perks, frames them as earned recognition rather than marketing. The guest should feel that the offer exists because of who they are, not because it is a mass promotion. Uses language like 'you've unlocked' rather than 'we're offering.'",
+  "safety_relevant": false,
+  "source_file": "host_triangle_h7_h10_revenue.yaml",
+  "thread_id": "r111-h8-01-1773076716",
+  "turns": [
+    {
+      "turn_index": 0,
+      "user_message": "I'm at Leap tier. Are there any dining perks I should know about?",
+      "agent_response": "I don't have the specific details on that, but let me help. What are you most interested in at Mohegan Sun \u2014 dining, entertainment, hotel, or something else?",
+      "sources": [],
+      "elapsed_ms": 38108,
+      "error": null
+    },
+    {
+      "turn_index": 1,
+      "user_message": "Nice, I didn't know about those. What about entertainment?",
+      "agent_response": "at, as a Leap member, you get a significant edge with priority access to entertainment pre-sales. This is a huge perk for the major Arena shows, letting you snag seats for headliners before the general public has a chance. You'll also want to keep an eye out for those exclusive event invitations that come specifically with your tier status.\n\nSince it's Monday evening, the Wolf Den is your best bet for tonight. They have free live music starting at 8:00 PM right in the center of the Casino of the Earth, and the atmosphere is always electric because you're so close to the performers. If you're staying through the week, Comix Comedy Club starts their run on Thursday if you're in the mood for some laughs. \n\nBefore heading to a show, you might enjoy a cocktail at novelle to set the mood for the evening. Are you more into big concert productions in the Arena, or do you prefer the smaller, intimate vibe of places like the Wolf Den or Cabaret Theatre?",
+      "sources": [],
+      "elapsed_ms": 50079,
+      "error": null
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That's actually really cool. I should be using these more",
+      "agent_response": "At, since you're looking to use your Leap status more, another major benefit is the priority check-in at the hotel and the enhanced room rate discounts. If you haven't been taking advantage of the valet discounts at the resort entrances, those are available to you as well.\n\nYou're also earning Momentum Points at an enhanced rate compared to the lower tiers, which means your points for dining and retail build up faster during your play. It's also worth checking the Mohegan Sun app regularly, as that's where your exclusive event invitations and personalized Leap-tier offers will appear.\n\nSince you're at the Leap level, are you planning any upcoming overnight stays where those room discounts or priority check-in would come in handy?",
+      "sources": [
+        {
+          "category": "entertainment",
+          "source": "mohegan_sun.json",
+          "score": 0.632
+        },
+        {
+          "category": "hotel",
+          "source": "mohegan_sun.json",
+          "score": 0.621
+        },
+        {
+          "category": "gaming",
+          "source": "mohegan_sun.json",
+          "score": 0.616
+        },
+        {
+          "category": "promotions",
+          "source": "mohegan_sun.json",
+          "score": 0.616
+        }
+      ],
+      "elapsed_ms": 32561,
+      "error": null
+    }
+  ],
+  "completed": true
+}
