@@ -55,11 +55,13 @@ class StateBackend(ABC):
     async def async_set(self, key: str, value: str, ttl: int = 300) -> None:
         """Async set — default delegates to sync set via to_thread."""
         import asyncio
+
         await asyncio.to_thread(self.set, key, value, ttl)
 
     async def async_get(self, key: str) -> str | None:
         """Async get — default delegates to sync get via to_thread."""
         import asyncio
+
         return await asyncio.to_thread(self.get, key)
 
     async def async_pipeline_set(self, items: list[tuple[str, str, int]]) -> None:
@@ -80,14 +82,21 @@ class StateBackend(ABC):
         return [await self.async_get(k) for k in keys]
 
     async def async_rate_limit(
-        self, key: str, window_seconds: int, max_tokens: int, member: str, now: float,
+        self,
+        key: str,
+        window_seconds: int,
+        max_tokens: int,
+        member: str,
+        now: float,
     ) -> bool:
         """Atomic rate limit check — default: not supported (returns None).
 
         RedisBackend overrides with Lua script for atomic check-then-act.
         Returns True if allowed, False if rate limited.
         """
-        raise NotImplementedError("Subclass must implement for distributed rate limiting")
+        raise NotImplementedError(
+            "Subclass must implement for distributed rate limiting"
+        )
 
 
 class InMemoryBackend(StateBackend):
@@ -359,7 +368,12 @@ return 0
             return await pipe.execute()
 
     async def async_rate_limit(
-        self, key: str, window_seconds: int, max_tokens: int, member: str, now: float,
+        self,
+        key: str,
+        window_seconds: int,
+        max_tokens: int,
+        member: str,
+        now: float,
     ) -> bool:
         """R47 fix C14: Atomic rate limit via Lua script (single round-trip).
 
@@ -402,7 +416,16 @@ def get_state_backend() -> StateBackend:
         if backend_type == "redis":
             redis_url = settings.REDIS_URL
             if not redis_url:
-                logger.warning("STATE_BACKEND=redis but REDIS_URL not set, falling back to memory")
+                # R107: Fail-hard in production — InMemory fallback means no
+                # distributed rate limiting or circuit breaker sync.
+                if settings.ENVIRONMENT == "production":
+                    raise RuntimeError(
+                        "STATE_BACKEND=redis but REDIS_URL not set in production. "
+                        "Set REDIS_URL or change STATE_BACKEND to 'memory'."
+                    )
+                logger.warning(
+                    "STATE_BACKEND=redis but REDIS_URL not set, falling back to memory"
+                )
                 backend = InMemoryBackend()
             else:
                 backend = RedisBackend(redis_url)

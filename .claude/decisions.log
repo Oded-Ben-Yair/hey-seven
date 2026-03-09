@@ -101,3 +101,8 @@
 [2026-03-05] DECISION: R96 — Phase 3: Collect 2K+ graded Pro conversations, fine-tune Flash on Vertex AI ($5-25 training cost), bandit routing to reduce Pro to ~20%
 [2026-03-05] DECISION: R96 — Key insight from debate: H9(1.9) and P9(2.1) are missing business logic, not model capability. Deterministic tools > better prompts
 [2026-03-05] DECISION: R96 — Fine-tuning Gemini 2.5 Flash is premature: only 250 examples, 2.5 is generation behind, no eval harness to validate. Wait for Phase 3
+[2026-03-09] DECISION: R107 — Tool-empowered CCD authority model (Checked-Confirmed-Dispatched). Industry 3-tier standard confirmed via Perplexity research. Replaces "ONLY provide information" with "CHECK real data, DECIDE, DISPATCH to host team." Gold traces rewritten. All 4 specialist agent prompts aligned. Validation criterion updated. Eval rubrics updated.
+[2026-03-09] DECISION: R107 — Per-casino async feature flags for runtime flags (tool_use, profiling, incentives). Static DEFAULT_FEATURES only for build-time graph topology. Prevents bypassing Firestore per-casino overrides.
+[2026-03-09] DECISION: R107 — Production fail-hard: RuntimeError at startup for empty API_KEY, missing Redis, missing Firestore in production. Silent degradation hid config errors for weeks in other projects.
+[2026-03-09] DECISION: R107 — Fine-tune quality threshold raised 7.0→8.0. Need 100+ examples (have 51). SFT+DPO confirmed available for Gemini 2.5 Flash. Deadline: June 17, 2026.
+[2026-03-09] DECISION: R107 — Unified profile completeness: whisper_planner delegates to profiling._calculate_profile_completeness_weighted(). Eliminated 3-way divergence (whisper=10 fields, profiling=16 weighted, models=19 nested).

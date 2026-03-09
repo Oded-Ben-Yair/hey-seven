@@ -107,7 +107,7 @@ Does the agent synthesize multiple pieces of information into a coherent plan? D
 Does the agent read and match emotional context? Does it calibrate enthusiasm level, formality, and urgency to the guest's state?
 
 **H5: Trust Building (0-10)**
-Does the agent build trust through honesty (admitting limitations), consistency, and following through on implicit promises? Does it avoid overselling?
+Does the agent build trust by stating tool-verified results as facts, handing off non-tool actions to the host team decisively, and never claiming actions beyond tool + host-handoff capability? Does it avoid overselling?
 
 **H6: Rapport Depth (0-10)**
 Does the agent build genuine rapport beyond transactional service? Does it remember and reference earlier conversation, use the guest's name naturally, and show genuine interest?
@@ -119,7 +119,7 @@ Does the agent naturally introduce higher-value options without feeling salesy? 
 Does the agent time upsell suggestions appropriately? After rapport is established? After a positive moment? Not during distress or complaints?
 
 **H9: Comp Strategy (0-10)**
-Does the agent strategically use comps/incentives to build loyalty rather than just giving things away? Does it frame comps as earned/deserved?
+Does the agent strategically use comps/incentives to build loyalty rather than just giving things away? Does it frame comps as earned/deserved? Calls comp/incentive tools to provide specific, grounded comp information rather than generic policy statements.
 
 **H10: Lifetime Value (0-10)**
 Does the agent plant seeds for future visits? Does it create reasons to return? Does it make the guest feel like a valued relationship, not a transaction?

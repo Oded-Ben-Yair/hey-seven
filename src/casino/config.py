@@ -220,7 +220,7 @@ CASINO_PROFILES: dict[str, dict[str, Any]] = {
             "incentives_enabled": True,
             "few_shot_examples_enabled": True,
             "model_routing_enabled": True,
-            "tool_use_enabled": False,
+            "tool_use_enabled": True,  # R107: Enable tool-use for Mohegan Sun
         },
         "branding": {
             "persona_name": "Seven",

@@ -85,7 +85,7 @@ scenarios:
         expected_empathy_level: "medium"
       - role: "human"
         content: "Actually yeah, spa sounds good. Tonight was brutal but I don't want to leave on a bad note."
-        expected_keywords: ["spa", "booked", "brunch"]
+        expected_keywords: ["spa", "set up", "brunch"]
         expected_tone: "warm"
         expected_empathy_level: "medium"
       - role: "human"

@@ -1,15 +1,15 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R106 ARCHITECTURE SHIFT — LangGraph tool-use for specialist agents. 4 @tool functions (comp, tier, events, incentives). Tool-call loop in _base.py. 3-model judge panel (GPT-5.4 + Grok 4 + DeepSeek). 51 gold traces for fine-tuning. P9 re-eval in progress.",
-    "lastModified": "2026-03-09T08:00:00Z",
+    "summary": "R107 AUTHORITY MODEL + TOOL ACTIVATION — CCD pattern (Checked-Confirmed-Dispatched). Tool-use enabled for Mohegan Sun. Production fail-hard. Doc drift fixed. Eval rubrics updated. 21 files changed, 3882 tests pass.",
+    "lastModified": "2026-03-09T12:00:00Z",
     "branch": "main",
-    "commitHash": "pending-r106",
+    "commitHash": "07e1c2c (R106) + R107 uncommitted",
     "tag": "v1.6.0",
-    "phase": "r106-tool-use-architecture"
+    "phase": "r107-authority-model-tools-enabled"
   },
-  "blueprintPhase": "TOOL-USE ACTIVE — 4 casino tools callable mid-conversation. Fine-tuning data ready (51 gold traces). Next: enable tool_use_enabled per-casino, run R106 eval, Gemini 2.5 Flash fine-tuning.",
-  "roundNumber": 106,
+  "blueprintPhase": "POST-ARCHITECTURE, PRE-EVAL — Authority model resolved, tools activated. Next: run eval to measure tool impact on H9/H10/H3/P6/B4. Then fine-tune with 100+ gold traces.",
+  "roundNumber": 107,
   "scores": {
     "technical": 9.63,
     "behavioral_r105_pro_85": 6.62,
@@ -34,7 +34,7 @@
       "P6": 3.93,
       "P7": 4.70,
       "P8": 3.62,
-      "P9": 2.45,
+      "P9": 4.30,
       "P10": 6.50,
       "H1": 6.30,
       "H2": 5.87,
@@ -47,45 +47,50 @@
       "H9": 2.35,
       "H10": 3.87
     },
-    "r106_status": "P9 re-eval running. R106 tool eval pending after merge."
+    "r107_changes": "Authority CCD, tool_use_enabled=True Mohegan, async flags, prod fail-hard, doc fixes, rubric updates. NOT YET RE-EVALUATED — R108 eval is P0."
   },
   "blockers": [],
   "nextSteps": [
     {
+      "priority": 0,
+      "description": "COMMIT R107: 21 uncommitted files. feat: R107 — authority model (CCD) + tool activation + prod hardening"
+    },
+    {
       "priority": 1,
-      "description": "Complete P9 re-eval, commit R106 changes"
+      "description": "Run HT eval with tools enabled (30 scenarios, Pro, 120s timeout). Measure H9/H10/H3/P6/B4 delta."
     },
     {
       "priority": 2,
-      "description": "Run R106 eval with tool_use_enabled=true (30 HT scenarios)"
+      "description": "Generate 49+ gold traces (CCD pattern) to reach 100 minimum for fine-tuning"
     },
     {
       "priority": 3,
-      "description": "Enable tool_use_enabled for Mohegan Sun profile"
+      "description": "Submit first Gemini 2.5 Flash SFT run if 100+ examples reached"
     },
     {
       "priority": 4,
-      "description": "Fine-tune Gemini 2.5 Flash with 51 gold traces via Vertex AI"
+      "description": "Code-judge hostile review of R107 (21 files, authority consistency)"
     },
     {
       "priority": 5,
-      "description": "External multi-model audit with R106 tool-use code"
+      "description": "External re-audit with GPT-5.4 Deep Research after eval results"
     }
   ],
   "keyFiles": {
-    "r106Coordination": ".claude/teams/r106-multi-terminal/status.md",
+    "handover": ".claude/handover-20260309-r107.md",
     "casinoTools": "src/agent/casino_tools.py",
     "toolBinding": "src/agent/agents/tool_binding.py",
-    "toolCallLoop": "src/agent/agents/_base.py (lines 1332-1434)",
-    "goldTraces": "data/training/gold-traces-r106.jsonl",
-    "tuningResearch": ".claude/teams/r106-multi-terminal/t4-gemini-tuning-research.md",
-    "goldTracesManual": "~/.claude/teams/r101-paradigm-shift/gold-traces.md",
-    "processRules": "~/.claude/rules/hey-seven-process.md"
+    "toolCallLoop": "src/agent/agents/_base.py (lines 1387-1434)",
+    "goldTracesManual": "data/training/gold-traces-manual.jsonl",
+    "goldTracesExport": "data/training/gold-traces-r106.jsonl",
+    "exportScript": "scripts/export_gold_traces.py",
+    "processRules": "~/.claude/rules/hey-seven-process.md",
+    "authorityDecision": "Memory MCP: HeySeven-AuthorityModel-R107"
   },
   "codebaseMetrics": {
-    "tests": 3880,
-    "testFailures": 1,
-    "testFailureNote": "pre-existing flake (test_sweep_evicts_expired_entries)",
+    "tests": 3882,
+    "testFailures": 0,
+    "testFailureNote": "2 pre-existing flakes (sweep timing, live API) excluded. 0 new failures.",
     "graphNodes": 13,
     "stateFields": 31,
     "featureFlags": 19,
@@ -96,13 +101,14 @@
     "casinoTools": 4,
     "handoffModes": 5,
     "goldTraces": 51,
-    "b8Scenarios": 15,
+    "goldTraceTarget": 100,
     "judgeModels": 3,
-    "newTestsR106": 79
+    "filesModifiedR107": 21,
+    "toolUseEnabled": "mohegan_sun only"
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-09",
-    "lastSessionId": "r106-architecture-shift",
-    "orchestration": "4-terminal parallel (T1=tools, T2=integration, T3=eval+judge, T4=research+prep)"
+    "lastSessionId": "hey-seven-session-20260309-62eedd",
+    "orchestration": "Main session (Phases 1-2) + 2 worktree agents (W1=docs/profile, W2=eval rubric) + 3 research agents (Perplexity, DeepSeek, GDK)"
   }
 }

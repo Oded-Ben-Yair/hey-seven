@@ -962,9 +962,9 @@ async def execute_specialist(
         "website, or 'contact us' unless the guest explicitly asks for a number. "
         "Answer directly with what you know.\n\n"
         "CRITICAL: NEVER say 'I can't make reservations' or 'While I can't book'. "
-        "Say 'I've got you' and provide specific recommendations. After giving info, "
-        "offer to connect them with the host team to finalize. "
-        "You facilitate — you don't refuse.\n\n"
+        "For bookings, say 'I'll get the team to lock that in' with specific details "
+        "(venue, time, party size). For comp/tier data, state tool-verified results "
+        "as facts. You decide and dispatch — you don't refuse or hedge.\n\n"
         "## Reading the Room\n"
         "Adapt to implicit signals:\n"
         '- "drove 3 hours" / "long day" → exhausted, recommend restful options\n'
@@ -1097,9 +1097,10 @@ async def execute_specialist(
         logger.info("R82 1E: Crisis suppression activated for %s agent", agent_name)
 
     # Profiling Intelligence: inject guest profile summary and profiling guidance
-    from src.casino.feature_flags import DEFAULT_FEATURES as _DEFAULT_FEATURES
+    # R107 fix: Use async per-casino flag lookup instead of static DEFAULT_FEATURES.
+    from src.casino.feature_flags import is_feature_enabled as _is_flag_enabled
 
-    if _DEFAULT_FEATURES.get("profiling_enabled", True):
+    if await _is_flag_enabled(settings.CASINO_ID, "profiling_enabled"):
         from src.agent.extraction import get_guest_profile_summary
 
         profile_summary = get_guest_profile_summary(extracted)
@@ -1139,7 +1140,7 @@ async def execute_specialist(
     # Only injects when profile_completeness >= 50% and matching rules exist.
     # R87: Returns tuple (prompt_section, approval_request_or_none).
     _incentive_approval: dict | None = None
-    if _DEFAULT_FEATURES.get("incentives_enabled", True):
+    if await _is_flag_enabled(settings.CASINO_ID, "incentives_enabled"):
         from src.agent.incentives import get_incentive_prompt_section
 
         _completeness = state.get("profile_completeness_score", 0.0)
@@ -1161,7 +1162,7 @@ async def execute_specialist(
     # (prompt pollution). Full comp context stays comp-only.
     # R106: Skip comp prompt section when tool_use_enabled — the LLM will call
     # check_comp_eligibility/check_tier_status tools instead of reading prompt data.
-    _tool_use_flag = _DEFAULT_FEATURES.get("tool_use_enabled", False)
+    _tool_use_flag = await _is_flag_enabled(settings.CASINO_ID, "tool_use_enabled")
     if agent_name == "comp" and not _tool_use_flag:
         from src.agent.behavior_tools.comp_strategy import get_comp_prompt_section
 
@@ -1404,12 +1405,15 @@ async def execute_specialist(
                                 )
                             )
                         except Exception as tool_err:
-                            logger.warning(
-                                "R106: Tool %s failed: %s", tc["name"], tool_err
+                            logger.error(
+                                "R106: Tool %s failed: %s",
+                                tc["name"],
+                                tool_err,
+                                exc_info=True,
                             )
                             tool_results.append(
                                 ToolMessage(
-                                    content=f"Tool error: {tool_err}",
+                                    content="Tool temporarily unavailable. I'll help you directly instead.",
                                     tool_call_id=tc["id"],
                                 )
                             )

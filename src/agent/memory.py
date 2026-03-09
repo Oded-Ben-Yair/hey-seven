@@ -70,7 +70,9 @@ class BoundedMemorySaver:
         self._inner = MemorySaver()
         self._max_threads = max_threads
         # Track thread access order for LRU eviction
-        self._thread_order: collections.OrderedDict[str, bool] = collections.OrderedDict()
+        self._thread_order: collections.OrderedDict[str, bool] = (
+            collections.OrderedDict()
+        )
 
     def _track_thread(self, config: dict) -> None:
         """Track thread_id access for LRU eviction."""
@@ -88,18 +90,24 @@ class BoundedMemorySaver:
             # Remove from inner MemorySaver storage if accessible
             if hasattr(self._inner, "storage"):
                 keys_to_remove = [
-                    k for k in self._inner.storage if isinstance(k, tuple) and len(k) > 0 and k[0] == evicted_id
+                    k
+                    for k in self._inner.storage
+                    if isinstance(k, tuple) and len(k) > 0 and k[0] == evicted_id
                 ]
                 for k in keys_to_remove:
                     del self._inner.storage[k]
-            logger.debug("Evicted thread %s (LRU, capacity=%d)", evicted_id, self._max_threads)
+            logger.debug(
+                "Evicted thread %s (LRU, capacity=%d)", evicted_id, self._max_threads
+            )
 
     # Delegate all checkpointer protocol methods to inner MemorySaver
     async def aget(self, config: dict) -> Any:
         self._track_thread(config)
         return await self._inner.aget(config)
 
-    async def aput(self, config: dict, checkpoint: Any, metadata: Any, new_versions: Any) -> Any:
+    async def aput(
+        self, config: dict, checkpoint: Any, metadata: Any, new_versions: Any
+    ) -> Any:
         self._track_thread(config)
         return await self._inner.aput(config, checkpoint, metadata, new_versions)
 
@@ -114,7 +122,9 @@ class BoundedMemorySaver:
         self._track_thread(config)
         return self._inner.get(config)
 
-    def put(self, config: dict, checkpoint: Any, metadata: Any, new_versions: Any) -> Any:
+    def put(
+        self, config: dict, checkpoint: Any, metadata: Any, new_versions: Any
+    ) -> Any:
         self._track_thread(config)
         return self._inner.put(config, checkpoint, metadata, new_versions)
 
@@ -166,16 +176,29 @@ async def get_checkpointer() -> Any:
                 from langgraph.checkpoint.firestore import FirestoreSaver
 
                 checkpointer = FirestoreSaver(project=settings.FIRESTORE_PROJECT)
-                logger.info("Using FirestoreSaver checkpointer (project=%s)", settings.FIRESTORE_PROJECT)
+                logger.info(
+                    "Using FirestoreSaver checkpointer (project=%s)",
+                    settings.FIRESTORE_PROJECT,
+                )
                 _checkpointer_cache["cp"] = checkpointer
                 return checkpointer
             except ImportError:
+                # R107: Fail-hard in production — MemorySaver loses state on restart.
+                if settings.ENVIRONMENT == "production":
+                    raise RuntimeError(
+                        "VECTOR_DB=firestore but langgraph-checkpoint-firestore not installed. "
+                        "Install it or change VECTOR_DB for production."
+                    )
                 logger.warning(
                     "langgraph-checkpoint-firestore not installed. "
                     "Falling back to BoundedMemorySaver."
                 )
             except Exception:
-                logger.exception("Failed to create FirestoreSaver. Falling back to BoundedMemorySaver.")
+                if settings.ENVIRONMENT == "production":
+                    raise
+                logger.exception(
+                    "Failed to create FirestoreSaver. Falling back to BoundedMemorySaver."
+                )
 
         if settings.ENVIRONMENT == "production":
             logger.warning(

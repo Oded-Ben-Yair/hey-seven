@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from src.agent.prompts import WHISPER_PLANNER_PROMPT
 from src.agent.nodes import _normalize_content
+from src.agent.profiling import _calculate_profile_completeness_weighted
 from src.agent.state import PropertyQAState
 from src.casino.feature_flags import DEFAULT_FEATURES
 from src.config import get_settings
@@ -113,26 +114,6 @@ class _WhisperTelemetry:
 
 
 _telemetry = _WhisperTelemetry()
-
-# ---------------------------------------------------------------------------
-# Profile fields for completeness calculation
-# ---------------------------------------------------------------------------
-# R103 fix P8: Aligned with profiling.py:_PROFILE_WEIGHTS stored field names.
-# Previous names were stale: "dining" → "preferences", "occasions" → "occasion",
-# "companions" → "party_composition", "visit_date" removed (not LLM-extracted).
-# Added: "visit_purpose", "spa", "visit_duration" (extracted but never checked).
-_PROFILE_FIELDS = (
-    "name",
-    "party_size",
-    "visit_purpose",
-    "preferences",
-    "entertainment",
-    "gaming",
-    "spa",
-    "occasion",
-    "party_composition",
-    "visit_duration",
-)
 
 
 class WhisperPlan(BaseModel):
@@ -334,11 +315,12 @@ def format_whisper_plan(plan: dict[str, Any] | None) -> str:
 
 
 def _calculate_completeness(profile: dict[str, Any] | None) -> float:
-    """Calculate guest profile completeness as a fraction of filled fields.
+    """Calculate guest profile completeness using the weighted calculation.
 
-    This is a placeholder that counts non-empty fields against the known
-    profile field set.  Will be replaced with weighted calculation when
-    the data-modeler's ProfileFields module is integrated.
+    Delegates to profiling._calculate_profile_completeness_weighted()
+    for a single source of truth. R107 fix P8: eliminates 3-way
+    completeness divergence (whisper=10 fields simple fraction,
+    profiling=16 fields weighted, models=19 fields nested).
 
     Args:
         profile: Extracted guest fields dict, or ``None``.
@@ -348,9 +330,7 @@ def _calculate_completeness(profile: dict[str, Any] | None) -> float:
     """
     if not profile:
         return 0.0
-
-    filled = sum(1 for field in _PROFILE_FIELDS if profile.get(field))
-    return filled / len(_PROFILE_FIELDS)
+    return _calculate_profile_completeness_weighted(profile)
 
 
 # ---------------------------------------------------------------------------

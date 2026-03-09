@@ -83,6 +83,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     enforce_re2_in_production()
 
+    # R107: Fail-closed auth in production — empty API_KEY means all
+    # endpoints are unprotected. Catch this at startup, not at first request.
+    if settings.ENVIRONMENT == "production" and not settings.API_KEY:
+        raise RuntimeError(
+            "ENVIRONMENT=production but API_KEY is empty. "
+            "Set API_KEY to protect /chat and other endpoints."
+        )
+
     try:
         from src.agent.graph import build_graph
         from src.agent.memory import get_checkpointer

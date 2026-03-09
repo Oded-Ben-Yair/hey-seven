@@ -315,8 +315,8 @@ def main():
     parser.add_argument(
         "--min-score",
         type=float,
-        default=7.0,
-        help="Minimum judge overall/avg score to include (default: 7.0)",
+        default=8.0,
+        help="Minimum judge overall/avg score to include (default: 8.0, raised R107)",
     )
     parser.add_argument(
         "--output",

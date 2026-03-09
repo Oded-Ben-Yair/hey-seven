@@ -357,7 +357,9 @@ class TestCalculateCompleteness:
         assert isinstance(_calculate_completeness({"name": "Jane"}), float)
 
     def test_corrected_field_names_recognized(self):
-        """R103 fix P8: corrected field names all count toward completeness."""
+        """R107: completeness delegates to profiling weighted calculation."""
+        from src.agent.profiling import _calculate_profile_completeness_weighted
+
         profile = {
             "name": "Sarah",
             "party_size": 4,
@@ -366,32 +368,34 @@ class TestCalculateCompleteness:
             "occasion": "anniversary",
         }
         result = _calculate_completeness(profile)
-        assert result == 5 / 10  # 5 of 10 fields filled
+        # Must match the weighted calculation from profiling.py (single source of truth)
+        expected = _calculate_profile_completeness_weighted(profile)
+        assert result == expected
 
-    def test_stale_field_names_not_counted(self):
-        """R103 fix P8: old stale field names (dining, occasions, companions) are NOT counted."""
+    def test_stale_field_names_produce_zero(self):
+        """R103 fix P8: old stale field names (dining, occasions, companions) produce low/zero score."""
         profile = {
-            "dining": "Italian",  # old name
+            "dining": "Italian",  # old name — not in _PROFILE_WEIGHTS
             "occasions": "birthday",  # old name
             "companions": "2 adults",  # old name
         }
         result = _calculate_completeness(profile)
-        assert result == 0.0  # None of the stale names match _PROFILE_FIELDS
+        # These old field names are not in _PROFILE_WEIGHTS, so weighted completeness is 0.0
+        assert result == 0.0
 
 
 class TestWhisperFieldParity:
-    """R103 fix P8: Verify whisper _PROFILE_FIELDS align with profiling._PROFILE_WEIGHTS."""
+    """R107: Verify whisper _calculate_completeness delegates to profiling."""
 
-    def test_whisper_fields_subset_of_profiling_weights(self):
-        """_PROFILE_FIELDS must be a subset of _PROFILE_WEIGHTS keys."""
-        from src.agent.whisper_planner import _PROFILE_FIELDS
-        from src.agent.profiling import _PROFILE_WEIGHTS
+    def test_whisper_delegates_to_profiling(self):
+        """_calculate_completeness uses profiling._calculate_profile_completeness_weighted."""
+        from src.agent.profiling import _calculate_profile_completeness_weighted
 
-        whisper_set = set(_PROFILE_FIELDS)
-        profiling_set = set(_PROFILE_WEIGHTS.keys())
-        missing = whisper_set - profiling_set
-        assert not missing, (
-            f"Whisper _PROFILE_FIELDS contains names not in profiling._PROFILE_WEIGHTS: {missing}"
+        profile = {"name": "Mike", "party_size": 2, "gaming": "slots"}
+        whisper_result = _calculate_completeness(profile)
+        profiling_result = _calculate_profile_completeness_weighted(profile)
+        assert whisper_result == profiling_result, (
+            f"Whisper completeness ({whisper_result}) != profiling completeness ({profiling_result})"
         )
 
 

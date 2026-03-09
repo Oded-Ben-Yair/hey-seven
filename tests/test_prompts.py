@@ -72,13 +72,15 @@ class TestPromptTemplates:
     def test_validation_prompt_includes_criteria_groups(self):
         """R82: Validation prompt includes intent-aware criteria groups."""
         result = VALIDATION_PROMPT.safe_substitute(
-            user_question="x", query_type="property_qa",
-            retrieved_context="y", generated_response="z",
+            user_question="x",
+            query_type="property_qa",
+            retrieved_context="y",
+            generated_response="z",
         )
         assert "Grounded" in result
         assert "On-topic" in result
         assert "No gambling advice" in result
-        assert "Read-only" in result
+        assert "Authority-appropriate" in result
         assert "Accurate" in result
         assert "Light Criteria" in result
         assert "Safety Criteria" in result

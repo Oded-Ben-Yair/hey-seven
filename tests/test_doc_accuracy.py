@@ -961,3 +961,41 @@ class TestGraphTopology:
             f"Mismatch: in graph but not constants: {real_nodes - _KNOWN_NODES}, "
             f"in constants but not graph: {_KNOWN_NODES - real_nodes}"
         )
+
+
+class TestDocNodeCount:
+    """Verify README and ARCHITECTURE use correct node count."""
+
+    def test_readme_node_count(self):
+        """README must reference 13-node graph, not 12 or 11."""
+        readme = (ROOT / "README.md").read_text()
+        assert "13-node" in readme, "README.md missing '13-node'"
+        assert "12-node" not in readme, "README.md still says '12-node' — update to 13"
+        assert "11-node" not in readme, "README.md still says '11-node' — update to 13"
+
+    def test_architecture_node_count(self):
+        """ARCHITECTURE.md must reference 13-node graph, not 12 or 11."""
+        arch = (ROOT / "ARCHITECTURE.md").read_text()
+        assert "13-node" in arch, "ARCHITECTURE.md missing '13-node'"
+        assert "12-node" not in arch, (
+            "ARCHITECTURE.md still says '12-node' — update to 13"
+        )
+        assert "11-node" not in arch, (
+            "ARCHITECTURE.md still says '11-node' — update to 13"
+        )
+
+    def test_readme_pattern_count(self):
+        """README must reference 214 guardrail patterns, not 204."""
+        readme = (ROOT / "README.md").read_text()
+        assert "214" in readme, "README.md missing '214' pattern count"
+        assert "204 patterns" not in readme, (
+            "README.md still says '204 patterns' — update to 214"
+        )
+
+    def test_architecture_pattern_count(self):
+        """ARCHITECTURE.md must reference 214 guardrail patterns, not 204."""
+        arch = (ROOT / "ARCHITECTURE.md").read_text()
+        assert "214" in arch, "ARCHITECTURE.md missing '214' pattern count"
+        assert "204 patterns" not in arch, (
+            "ARCHITECTURE.md still says '204 patterns' — update to 214"
+        )

@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 12-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
+Hey Seven Property Q&A Agent is an AI concierge for Mohegan Sun casino resort. Guests ask natural-language questions about dining, entertainment, hotel rooms, amenities, gaming, and promotions. The agent uses a custom 13-node LangGraph StateGraph with RAG (Retrieval-Augmented Generation) to produce grounded, validated answers streamed token-by-token via Server-Sent Events.
 
 The system has three layers: a vanilla HTML/JS chat frontend, a FastAPI backend with pure ASGI middleware, and a LangGraph agent backed by Gemini 2.5 Flash and ChromaDB. v2 adds a compliance gate (pre-router deterministic guardrails), a Whisper Track Planner (silent background LLM for agent guidance), a persona envelope (SMS truncation layer), 5 specialist agents (host, dining, entertainment, comp, hotel), SMS/CMS webhooks, and LangFuse observability.
 
@@ -17,9 +17,9 @@ FastAPI (src/api/app.py)  <-  SecurityHeaders + HSTS + RateLimit + BodyLimit + A
     |
     | lifespan: build_graph() + ingest data
     v
-Custom 12-node StateGraph (src/agent/graph.py)
+Custom 13-node StateGraph (src/agent/graph.py)
     |
-    |-- compliance_gate (204 regex patterns, 11 languages) --> greeting / off_topic / router
+    |-- compliance_gate (214 regex patterns, 11 languages) --> greeting / off_topic / router
     |-- router (structured LLM output) -----> greeting / off_topic / retrieve
     |-- retrieve -----> ChromaDB
     |-- whisper_planner -----> Gemini 2.5 Flash (silent background plan)
@@ -581,7 +581,7 @@ Six pure ASGI middleware classes in `src/api/middleware.py` (no `BaseHTTPMiddlew
 | Layer | Scope | LLM | Command |
 |-------|-------|-----|---------|
 | Unit | Individual functions, state, config, guardrails, middleware, agents, SMS, CMS, observability | Mocked | `make test-ci` |
-| Integration | Full graph flow (v2 11-node), API endpoints, RAG pipeline, SMS/CMS webhooks | Mocked LLM, real ChromaDB | `make test-ci` |
+| Integration | Full graph flow (v2 13-node), API endpoints, RAG pipeline, SMS/CMS webhooks | Mocked LLM, real ChromaDB | `make test-ci` |
 | Deterministic Eval | Multi-turn conversations, answer quality, guardrails | VCR fixtures (`_FixtureReplayLLM`) — no API key needed | `make test-ci` |
 | Live Eval | Answer quality with real LLM, hallucination detection | Real Gemini (temp=0) | `make test-eval` |
 
@@ -835,11 +835,11 @@ The following features were consciously deferred from the initial architecture s
 
 | Module | Responsibility | Lines |
 |--------|---------------|-------|
-| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 47 patterns incl. 27 non-Latin, responsible gaming 60 patterns across 10 languages, age verification 13 patterns, BSA/AML 47 patterns across 8 languages, patron privacy 18 patterns — 204 total across 11 languages) | ~672 |
+| `guardrails.py` | Deterministic pre-LLM safety (prompt injection 47 patterns incl. 27 non-Latin, responsible gaming 60 patterns across 10 languages, age verification 13 patterns, BSA/AML 50 patterns across 8 languages, patron privacy 18 patterns — 214 total across 11 languages) | ~672 |
 | `compliance_gate.py` | Dedicated compliance node — runs all 5 guardrail layers as single pre-router node (zero LLM calls) | ~99 |
 | `circuit_breaker.py` | Async-safe `CircuitBreaker` class + lazy `_get_circuit_breaker()` singleton | ~179 |
 | `nodes.py` | 8 async graph nodes (router, retrieve, generate, validate, respond, fallback, greeting, off_topic) + routing functions + dual LLM singletons + dynamic greeting categories (`@lru_cache`) | ~686 |
-| `graph.py` | 11-node StateGraph compilation + node name constants + 3 routing functions + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper, graph trace metadata extraction | ~428 |
+| `graph.py` | 13-node StateGraph compilation + node name constants + 3 routing functions + HITL interrupt support, `chat()`, `chat_stream()`, `_initial_state()` DRY helper, graph trace metadata extraction | ~428 |
 | `state.py` | TypedDict state schema (`PropertyQAState`, 13 fields, `RetrievedChunk`) + 3 Pydantic structured output models (`RouterOutput`, `ValidationResult`, `DispatchOutput`) + `WhisperPlan` | ~94 |
 | `prompts.py` | 4 prompt templates (concierge, router, validation, whisper planner) + helpline constant | ~193 |
 | `tools.py` | RAG retrieval with RRF reranking (hash-based dedup, multi-strategy fusion, no @tool decorators) | ~186 |
