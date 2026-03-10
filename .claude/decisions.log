@@ -127,3 +127,8 @@
 [2026-03-10] R111 DECISION: 29-scenario targeted eval (Flash + tools) — focused on 7 sub-5.0 dims. H9+1.79 biggest gain. P9 regressed -2.08.
 [2026-03-10] R111 DECISION: GPT-5.4 review prompt upgraded with R111 data, R108 delta comparison, known limitations. Ready at docs/r111-external-review-prompt.md.
 [2026-03-10] R111 DECISION: P9 regression investigation deferred to R112 — need to read transcripts before code changes.
+[2026-03-10] R112 DECISION: 4-model MCP hostile audit (Grok 4 + Codex 5.3 + GPT-5.2-chat2 + DeepSeek timed out). 3-model consensus: 5.7/10 HOLD.
+[2026-03-10] R112 DECISION: P0 for R113 = eliminate fallback canned response ("I don't have the specific details" in 48% of transcripts). One fix → 7+ dims improve. Unanimous across all 3 models.
+[2026-03-10] R112 DECISION: GPT-5 Pro reasoning mode unusable for long reviews (reasoning tokens consume output budget). Use GPT-5.2-chat2 or GPT-5.3-codex instead.
+[2026-03-10] R112 DECISION: Pilot readiness threshold = 7.0+ overall, zero regressions >-0.5 on any dimension.
+[2026-03-10] R112 DECISION: 13-fix roadmap in reviews/r112/consensus-scorecard.md — P0: fallback elimination, P1: handoff template, P2: coverage gate + SRP.

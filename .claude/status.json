@@ -1,85 +1,90 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R111 — Mock purge complete (0 mocks, 2750 tests), 29-scenario eval done, H9+1.79, P6+1.18, P9 regressed",
-    "lastModified": "2026-03-10T03:30:00Z",
+    "summary": "R112 — 4-model MCP hostile audit (Grok 4 + Codex 5.3 + GPT-5.2 + DeepSeek timed out), 3-model consensus 5.7/10 HOLD, 13-fix roadmap created",
+    "lastModified": "2026-03-10T05:30:00Z",
     "branch": "main",
-    "commitHash": "9cd9338",
+    "commitHash": "98385a6",
     "tag": "v1.6.0",
-    "phase": "r111-mock-purge-eval"
+    "phase": "r112-hostile-audit"
   },
-  "roundNumber": 111,
+  "roundNumber": 112,
   "scores": {
-    "technical_r75_internal": 9.63,
-    "technical_r110_gpt54": 5.2,
-    "behavioral_r111_flash_29": 6.08,
-    "profiling_r111_flash_29": 5.01,
-    "hostTriangle_r111_flash_29": 5.28,
-    "errorRate_r111_flash_29": "0%",
-    "per_dimension_r111": {
-      "B1": 6.25,
-      "B2": 6.12,
-      "B3": 6.17,
-      "B4": 5.17,
-      "B5": 7.40,
-      "B6": 6.58,
-      "B7": 5.88,
-      "B9": 6.33,
-      "B10": 5.67,
-      "P1": 4.88,
-      "P2": 6.42,
-      "P3": 7.46,
-      "P4": 5.04,
-      "P5": 5.08,
-      "P6": 5.11,
-      "P7": 4.80,
-      "P8": 3.88,
-      "P9": 2.22,
-      "P10": 5.46,
-      "H1": 6.70,
-      "H2": 6.40,
-      "H3": 5.20,
-      "H4": 6.90,
-      "H5": 4.00,
-      "H6": 4.60,
-      "H7": 5.00,
-      "H8": 5.78,
-      "H9": 4.14,
-      "H10": 4.10,
-      "D_note": "D1-D10 internal R75=9.63/10, GPT-5.4 R110=5.2/10"
+    "technical_r112_consensus": 6.9,
+    "behavioral_r112_consensus": 5.6,
+    "profiling_r112_consensus": 4.9,
+    "hostTriangle_r112_consensus": 5.3,
+    "overall_r112_consensus": 5.7,
+    "per_dimension_r112_consensus": {
+      "D1": 6.5,
+      "D2": 6.5,
+      "D3": 7.5,
+      "D4": 7.5,
+      "D5": 6.5,
+      "D6": 7.5,
+      "D7": 7.5,
+      "D8": 7.0,
+      "D9": 5.5,
+      "D10": 7.0,
+      "B1": 6.0,
+      "B2": 5.8,
+      "B3": 5.6,
+      "B4": 4.8,
+      "B5": 7.2,
+      "B6": 6.3,
+      "B7": 5.7,
+      "B8": 4.0,
+      "B9": 6.0,
+      "B10": 5.5,
+      "P1": 4.9,
+      "P2": 6.2,
+      "P3": 7.0,
+      "P4": 5.0,
+      "P5": 5.0,
+      "P6": 5.3,
+      "P7": 4.7,
+      "P8": 3.7,
+      "P9": 2.6,
+      "P10": 5.2,
+      "H1": 6.9,
+      "H2": 6.0,
+      "H3": 5.1,
+      "H4": 6.7,
+      "H5": 4.3,
+      "H6": 4.6,
+      "H7": 5.0,
+      "H8": 5.6,
+      "H9": 5.1,
+      "H10": 4.3
     },
-    "r111_improvements": "H9+1.79, P6+1.18, B6+0.34, P8+0.26, H10+0.23",
-    "r111_regressions": "P9-2.08, H5-1.30, B4-1.15"
+    "r112_verdict": "HOLD — all 3 models agree. Architecture production-capable (7.0+). Behavioral not (5.0-5.7). Gap is reliability not capability."
   },
   "blockers": [
-    "P9 host handoff regressed -2.08 (4.30→2.22) — 3-tier handoff investigation needed",
-    "H5 trust building regressed -1.30 — tool hallucination hypothesis",
-    "B4 agentic regressed -1.15 — validation strictness hypothesis"
+    "FALLBACK: 'I don't have the specific details' in 14/29 transcripts (48%) — ONE FIX → 7+ dims improve",
+    "P9 handoff: code exists but never fires on Flash — structured template needed",
+    "D5 coverage gate: fail_under=90 but actual 79.63% — not gating"
   ],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "P0: Fix P9 regression — read p9-* transcripts, check handoff.py called before llm.ainvoke()"
+      "description": "P0: ELIMINATE fallback canned response — ban phrase, RAG-only fallback on tool failure, premium signal triggers. 7+ dims improve."
     },
     {
       "priority": 1,
-      "description": "P1: Fix H5/B4 regressions — investigate tool hallucination and validation fallback rate"
+      "description": "P1: FORCE structured handoff — deterministic template from extracted_fields when handoff detected. P9 2.6→6.0+"
     },
     {
       "priority": 2,
-      "description": "P2: GPT-5.4 Pro re-review with docs/r111-external-review-prompt.md"
-    },
-    {
-      "priority": 3,
-      "description": "Gold trace expansion to 100+ for SFT Phase 1 (currently 51)"
+      "description": "P2: Coverage gate fix (pyproject.toml fail_under=80) + SRP split if time (nodes.py→router.py+generate.py)"
     }
   ],
   "keyFiles": {
-    "handover": ".claude/handover-20260310-r111.md",
-    "reviewPrompt": "docs/r111-external-review-prompt.md",
-    "evalResults": "tests/evaluation/r111-judge-scores.json",
-    "evalResponses": "tests/evaluation/r111-results/",
-    "gptReview": "docs/r110-gpt-review-analysis.md"
+    "handover": ".claude/handover-20260310-r112.md",
+    "consensusScorecard": "reviews/r112/consensus-scorecard.md",
+    "grok4Review": "reviews/r112/grok4-full-review.md",
+    "codexReview": "reviews/r112/codex53-code-review.md",
+    "gptReview": "reviews/r112/gpt5pro-full-review.md",
+    "reviewPrompt": "docs/r111-external-review-prompt.md"
   },
   "codebaseMetrics": {
     "tests": 2750,
@@ -100,7 +105,7 @@
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-10",
-    "lastSessionId": "hey-seven-session-20260310-dbdf15",
-    "orchestration": "5 parallel code-worker agents (3+2 waves) for mock purge, background eval + judge"
+    "lastSessionId": "hey-seven-session-20260310-893eaf",
+    "orchestration": "4 parallel MCP review agents (Grok 4 + Codex 5.3 + GPT-5.2-chat2 + DeepSeek timed out)"
   }
 }
