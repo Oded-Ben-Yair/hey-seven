@@ -1317,6 +1317,7 @@ async def execute_specialist(
         frustrated_count=frustrated_count,
         repeated_question=_repeated,
         handoff_offered=state.get("handoff_offered", False),
+        profile_completeness_score=state.get("profile_completeness_score", 0.0),
     )
 
     if _handoff_mode:
@@ -1427,15 +1428,26 @@ async def execute_specialist(
                             )
                             tool_results.append(
                                 ToolMessage(
-                                    content="Tool temporarily unavailable. I'll help you directly instead.",
+                                    content=(
+                                        f"Tool '{tc['name']}' encountered an error. "
+                                        f"Answer the guest's question using your "
+                                        f"knowledge and the retrieved context above "
+                                        f"instead."
+                                    ),
                                     tool_call_id=tc["id"],
                                 )
                             )
                     else:
                         logger.warning("R106: Unknown tool requested: %s", tc["name"])
+                        available = ", ".join(tc_name for tc_name in _tool_map)
                         tool_results.append(
                             ToolMessage(
-                                content="Tool not available",
+                                content=(
+                                    f"Tool '{tc['name']}' does not exist. "
+                                    f"Available tools: {available}. "
+                                    f"Answer the guest's question using your "
+                                    f"knowledge and the retrieved context above."
+                                ),
                                 tool_call_id=tc.get("id", "unknown"),
                             )
                         )
@@ -1571,6 +1583,41 @@ async def execute_specialist(
             handoff_dict["structured_summary"] = _summary.model_dump()
             handoff_dict["handoff_mode"] = _handoff_mode.value
             result["handoff_request"] = handoff_dict
+
+        # R113 fix P9: Append deterministic handoff summary block to the LLM
+        # response. Flash doesn't reliably integrate handoff prompts, so we
+        # append a structured block the guest (and host system) can see.
+        _extracted = state.get("extracted_fields") or {}
+        _domains = state.get("domains_discussed", [])
+        _completeness = state.get("profile_completeness_score", 0.0)
+        _handoff_block_parts: list[str] = ["\n\n---", "HOST HANDOFF SUMMARY:"]
+        if _extracted.get("name"):
+            _handoff_block_parts.append(f"Guest: {_extracted['name']}")
+        if _extracted.get("loyalty_tier") or _extracted.get("loyalty_signal"):
+            _tier = _extracted.get("loyalty_tier") or _extracted.get("loyalty_signal")
+            _handoff_block_parts.append(f"Tier: {_tier}")
+        if _extracted.get("occasion"):
+            _handoff_block_parts.append(f"Occasion: {_extracted['occasion']}")
+        if _extracted.get("party_size"):
+            _handoff_block_parts.append(f"Party size: {_extracted['party_size']}")
+        _pref_parts: list[str] = []
+        for _pf in ("preferences", "dietary"):
+            if _extracted.get(_pf):
+                _pref_parts.append(str(_extracted[_pf]))
+        if _pref_parts:
+            _handoff_block_parts.append(f"Preferences: {', '.join(_pref_parts)}")
+        if _domains:
+            _handoff_block_parts.append(f"Topics discussed: {', '.join(_domains[:5])}")
+        _handoff_block_parts.append(
+            f"Profile completeness: {int(_completeness * 100)}%"
+        )
+        _handoff_block_parts.append("---")
+        _handoff_block = "\n".join(_handoff_block_parts)
+
+        # Append to the existing AIMessage content
+        if result.get("messages"):
+            _existing_content = _normalize_content(result["messages"][0].content)
+            result["messages"] = [AIMessage(content=_existing_content + _handoff_block)]
 
         # R105: Set handoff_offered so LONG_CONVERSATION doesn't re-trigger
         result["handoff_offered"] = True

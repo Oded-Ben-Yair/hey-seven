@@ -141,6 +141,7 @@ def detect_handoff_trigger(
     frustrated_count: int = 0,
     repeated_question: bool = False,
     handoff_offered: bool = False,
+    profile_completeness_score: float = 0.0,
 ) -> tuple[HandoffMode | None, str]:
     """Detect if a handoff should be triggered and why.
 
@@ -181,11 +182,23 @@ def detect_handoff_trigger(
         return None, ""
 
     # Priority 3: Transition moment (guest wants action)
-    if any(signal in msg_lower for signal in _TRANSITION_SIGNALS):
-        return (
-            HandoffMode.TRANSITION,
-            "Guest ready to take action — connect with host for execution",
-        )
+    # R113 fix P9: Simplified trigger — keyword detection with word-boundary
+    # matching instead of exact phrase match. Fires at turn >= 2.
+    _TRANSITION_KEYWORDS = frozenset({"book", "reserve", "arrange", "host", "someone"})
+    if turn_count >= 2:
+        msg_words = set(msg_lower.split())
+        # Check single-word keywords via set intersection
+        if msg_words & _TRANSITION_KEYWORDS:
+            return (
+                HandoffMode.TRANSITION,
+                "Guest ready to take action — connect with host for execution",
+            )
+        # Check multi-word signals via substring
+        if any(signal in msg_lower for signal in _TRANSITION_SIGNALS):
+            return (
+                HandoffMode.TRANSITION,
+                "Guest ready to take action — connect with host for execution",
+            )
 
     # Priority 4: Farewell (offer soft handoff)
     # R105 fix MAJOR: Add word-count guard + follow-up word check to prevent
@@ -205,6 +218,14 @@ def detect_handoff_trigger(
         return (
             HandoffMode.LONG_CONVERSATION,
             "Extended conversation — natural transition point to offer host",
+        )
+
+    # R113 fix P9: Proactive handoff at turn 5+ when profile is sufficiently
+    # complete. Offers host connection as a VIP benefit.
+    if turn_count >= 5 and profile_completeness_score >= 0.4:
+        return (
+            HandoffMode.LONG_CONVERSATION,
+            "Profile sufficiently complete — proactive host offer as VIP benefit",
         )
 
     return None, ""

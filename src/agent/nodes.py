@@ -652,9 +652,11 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
     # Second pass after persona_envelope_node -- catches patterns that slipped
     # through or differ slightly from persona.py's _strip_performative_openers().
     cleaned_message = None
+    current_content = ""
     for msg in reversed(state.get("messages", [])):
         if isinstance(msg, AIMessage):
             content = _normalize_content(msg.content)
+            current_content = content
             cleaned = _enforce_tone(content)
             if cleaned != content:
                 logger.info(
@@ -663,7 +665,25 @@ async def respond_node(state: PropertyQAState) -> dict[str, Any]:
                 )
                 # Preserve message ID for add_messages reducer to REPLACE, not append
                 cleaned_message = AIMessage(content=cleaned, id=msg.id)
+                current_content = cleaned
             break
+
+    # R113: Duplicate-response blocking.
+    # If the current response prefix matches the previous AI response prefix,
+    # the guest gets a repetitive experience (B7 regression in R112).
+    if current_content:
+        _prev_ai_content = ""
+        _ai_count = 0
+        for msg in reversed(state.get("messages", [])):
+            if isinstance(msg, AIMessage):
+                _ai_count += 1
+                if _ai_count == 2:
+                    _prev_ai_content = _normalize_content(msg.content)
+                    break
+        if _prev_ai_content and current_content[:60] == _prev_ai_content[:60]:
+            logger.info("R113: Duplicate response detected, adding differentiator")
+            current_content = "Let me try a different approach — " + current_content
+            cleaned_message = AIMessage(content=current_content)
 
     result: dict[str, Any] = {
         "sources_used": sources,
@@ -784,6 +804,15 @@ _SLOP_PATTERNS: list[tuple[re.Pattern, str]] = [
         ),
         "",
     ),
+    # R113: "I don't have the specific details" — canned fallback leaked into
+    # specialist responses. Replace with lightweight re-engagement.
+    (
+        re.compile(
+            r"I don't have the specific details on that[^.]*\.\s*",
+            re.IGNORECASE,
+        ),
+        "Let me look into that for you — what specifically are you interested in? ",
+    ),
 ]
 
 
@@ -863,34 +892,45 @@ async def fallback_node(state: PropertyQAState) -> dict[str, Any]:
         }
     )
     if query_type not in _SAFETY_TYPES:
+        # R113: Try to recover a usable AIMessage from recent history.
+        # Check the most recent AND second-to-last AIMessages — the specialist's
+        # pre-tool-call response may be valid even if the tool-call response isn't.
+        _ai_candidates: list[str] = []
         for msg in reversed(state.get("messages", [])):
             if isinstance(msg, AIMessage):
                 content = _normalize_content(msg.content)
-                # Only recover if it's a real response (not a fallback message)
-                if (
-                    content
-                    and len(content) > 40
-                    and "trouble" not in content[:50].lower()
-                    and "I don't have" not in content[:30]
-                ):
-                    logger.info(
-                        "R89: Recovering specialist response (%d chars) instead of canned fallback",
-                        len(content),
-                    )
-                    return {
-                        "messages": [AIMessage(content=content)],
-                        "sources_used": [],
-                        "retry_feedback": None,
-                        "retrieved_context": [],
-                    }
-                break
+                if content:
+                    _ai_candidates.append(content)
+                    if len(_ai_candidates) >= 2:
+                        break
 
-    # R86 fix: Domain-aware re-engagement (last resort).
+        for content in _ai_candidates:
+            # R113: Lowered from 40 to 20 chars — short but valid responses
+            # exist (e.g., "The spa opens at 10am").
+            if (
+                len(content) > 20
+                and "trouble" not in content[:50].lower()
+                and "I don't have" not in content[:30]
+                and "tool not available" not in content.lower()[:50]
+            ):
+                logger.info(
+                    "R113: Recovering specialist response (%d chars) instead of canned fallback",
+                    len(content),
+                )
+                return {
+                    "messages": [AIMessage(content=content)],
+                    "sources_used": [],
+                    "retry_feedback": None,
+                    "retrieved_context": [],
+                }
+
+    # R113 fix: Domain-aware re-engagement without the canned deflection phrase.
+    # "I don't have the specific details" was in 48% of R112 transcripts.
     return {
         "messages": [
             AIMessage(
                 content=(
-                    f"I don't have the specific details on that, but let me help. "
+                    f"Let me help you with that. "
                     f"What are you most interested in at {settings.PROPERTY_NAME} — "
                     f"dining, entertainment, hotel, or something else?"
                 )
