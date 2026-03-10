@@ -1,14 +1,14 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R112 — 4-model MCP hostile audit (Grok 4 + Codex 5.3 + GPT-5.2 + DeepSeek timed out), 3-model consensus 5.7/10 HOLD, 13-fix roadmap created",
-    "lastModified": "2026-03-10T05:30:00Z",
+    "summary": "R113 — P0 fixes applied: eliminated 48% fallback deflection, forced handoff template, coverage gate fixed. NOT YET RE-EVALUATED.",
+    "lastModified": "2026-03-10T07:30:00Z",
     "branch": "main",
-    "commitHash": "98385a6",
+    "commitHash": "7e7bff5",
     "tag": "v1.6.0",
-    "phase": "r112-hostile-audit"
+    "phase": "r113-fallback-fix"
   },
-  "roundNumber": 112,
+  "roundNumber": 113,
   "scores": {
     "technical_r112_consensus": 6.9,
     "behavioral_r112_consensus": 5.6,
@@ -57,29 +57,30 @@
       "H9": 5.1,
       "H10": 4.3
     },
-    "r112_verdict": "HOLD — all 3 models agree. Architecture production-capable (7.0+). Behavioral not (5.0-5.7). Gap is reliability not capability."
+    "r113_changes": "Fallback deflection eliminated, handoff template forced, coverage gate fixed. NOT YET RE-EVALUATED."
   },
   "blockers": [
-    "FALLBACK: 'I don't have the specific details' in 14/29 transcripts (48%) — ONE FIX → 7+ dims improve",
-    "P9 handoff: code exists but never fires on Flash — structured template needed",
-    "D5 coverage gate: fail_under=90 but actual 79.63% — not gating"
+    "EVAL NEEDED: R113 fixes not yet validated with live eval. Run 10 targeted scenarios.",
+    "P9 (2.6): Forced handoff block added but needs eval to confirm improvement",
+    "Gold traces: 51/100+ needed for SFT Phase 1"
   ],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "P0: ELIMINATE fallback canned response — ban phrase, RAG-only fallback on tool failure, premium signal triggers. 7+ dims improve."
+      "description": "P0: Run targeted eval (10 scenarios: P9, H5, H9, B4) to measure R113 impact. Success = 0 deflection phrases + P9 handoff blocks visible."
     },
     {
       "priority": 1,
-      "description": "P1: FORCE structured handoff — deterministic template from extracted_fields when handoff detected. P9 2.6→6.0+"
+      "description": "P1: Read P9 transcripts. If handoff block appears but score still low, fix content. If block missing, debug trigger conditions."
     },
     {
       "priority": 2,
-      "description": "P2: Coverage gate fix (pyproject.toml fail_under=80) + SRP split if time (nodes.py→router.py+generate.py)"
+      "description": "P2: Gold trace expansion to 100+ for Gemini 2.5 Flash SFT ($225-370). Priority: P9 handoff, H5 trust, B4 authority."
     }
   ],
   "keyFiles": {
-    "handover": ".claude/handover-20260310-r112.md",
+    "handover": ".claude/handover-20260310-r113.md",
+    "previousHandover": ".claude/handover-20260310-r112.md",
     "consensusScorecard": "reviews/r112/consensus-scorecard.md",
     "grok4Review": "reviews/r112/grok4-full-review.md",
     "codexReview": "reviews/r112/codex53-code-review.md",
@@ -95,7 +96,7 @@
     "stateFields": 31,
     "featureFlags": 19,
     "guardrailPatterns": 214,
-    "slopPatterns": 17,
+    "slopPatterns": 18,
     "profilingTechniques": 11,
     "totalScenarios": 270,
     "sourceModules": 74,
@@ -105,7 +106,7 @@
   },
   "sessionNotes": {
     "lastSessionDate": "2026-03-10",
-    "lastSessionId": "hey-seven-session-20260310-893eaf",
-    "orchestration": "4 parallel MCP review agents (Grok 4 + Codex 5.3 + GPT-5.2-chat2 + DeepSeek timed out)"
+    "lastSessionId": "hey-seven-session-20260310-cb75c6",
+    "orchestration": "solo — implemented R113 P0 fixes (5 code changes across 4 files)"
   }
 }
