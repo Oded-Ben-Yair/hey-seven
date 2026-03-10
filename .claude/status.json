@@ -1,72 +1,73 @@
 {
   "project": "hey-seven",
   "currentState": {
-    "summary": "R110 — GPT-5.4 review integrated (5.2/10), 10 behavioral+doc improvements, mock purge pending",
-    "lastModified": "2026-03-09T18:00:00Z",
+    "summary": "R111 — Mock purge complete (0 mocks, 2750 tests), 29-scenario eval done, H9+1.79, P6+1.18, P9 regressed",
+    "lastModified": "2026-03-10T03:30:00Z",
     "branch": "main",
-    "commitHash": "06d1aa6",
+    "commitHash": "9cd9338",
     "tag": "v1.6.0",
-    "phase": "r110-gpt-review-integration"
+    "phase": "r111-mock-purge-eval"
   },
-  "roundNumber": 110,
+  "roundNumber": 111,
   "scores": {
     "technical_r75_internal": 9.63,
     "technical_r110_gpt54": 5.2,
-    "behavioral_r105_pro_85": 6.62,
-    "profiling_r105_pro_85": 5.18,
-    "hostTriangle_r105_pro_85": 5.09,
-    "errorRate_r108_flash_5": "0%",
-    "toolExecutionRate_r108": "54%",
-    "per_dimension_r105": {
-      "B1": 7.45,
-      "B2": 5.93,
-      "B3": 6.64,
-      "B4": 6.32,
-      "B5": 6.82,
-      "B6": 6.24,
-      "B7": 6.88,
-      "B9": 6.72,
-      "B10": 6.32,
-      "P1": 5.05,
-      "P2": 6.54,
-      "P3": 7.29,
-      "P4": 5.34,
-      "P5": 5.53,
-      "P6": 3.93,
-      "P7": 4.70,
-      "P8": 3.62,
-      "P9": 4.30,
-      "P10": 6.50,
-      "H1": 6.30,
-      "H2": 5.87,
-      "H3": 5.17,
-      "H4": 6.07,
-      "H5": 5.30,
-      "H6": 4.50,
-      "H7": 5.37,
-      "H8": 6.10,
-      "H9": 2.35,
-      "H10": 3.87,
-      "D_note": "D1-D10 internal R75=9.63/10, GPT-5.4 R110=5.2/10 (different axes: code quality vs production-readiness)"
+    "behavioral_r111_flash_29": 6.08,
+    "profiling_r111_flash_29": 5.01,
+    "hostTriangle_r111_flash_29": 5.28,
+    "errorRate_r111_flash_29": "0%",
+    "per_dimension_r111": {
+      "B1": 6.25,
+      "B2": 6.12,
+      "B3": 6.17,
+      "B4": 5.17,
+      "B5": 7.40,
+      "B6": 6.58,
+      "B7": 5.88,
+      "B9": 6.33,
+      "B10": 5.67,
+      "P1": 4.88,
+      "P2": 6.42,
+      "P3": 7.46,
+      "P4": 5.04,
+      "P5": 5.08,
+      "P6": 5.11,
+      "P7": 4.80,
+      "P8": 3.88,
+      "P9": 2.22,
+      "P10": 5.46,
+      "H1": 6.70,
+      "H2": 6.40,
+      "H3": 5.20,
+      "H4": 6.90,
+      "H5": 4.00,
+      "H6": 4.60,
+      "H7": 5.00,
+      "H8": 5.78,
+      "H9": 4.14,
+      "H10": 4.10,
+      "D_note": "D1-D10 internal R75=9.63/10, GPT-5.4 R110=5.2/10"
     },
-    "r110_changes": "4 profiling techniques, endowment framing, embedded few-shots, profile-reference, intensity curve, inference rules, 3-tier handoff, comp $100/$250, doc parity fix. NOT YET RE-EVALUATED."
+    "r111_improvements": "H9+1.79, P6+1.18, B6+0.34, P8+0.26, H10+0.23",
+    "r111_regressions": "P9-2.08, H5-1.30, B4-1.15"
   },
   "blockers": [
-    "~350 legacy mock tests skipped — P0 next session: full purge",
-    "No eval since R105 — P1 next session: 30-scenario eval"
+    "P9 host handoff regressed -2.08 (4.30→2.22) — 3-tier handoff investigation needed",
+    "H5 trust building regressed -1.30 — tool hallucination hypothesis",
+    "B4 agentic regressed -1.15 — validation strictness hypothesis"
   ],
   "nextSteps": [
     {
       "priority": 0,
-      "description": "P0: Full mock purge — zero MagicMock/AsyncMock in test suite. Delete all mock-based tests entirely."
+      "description": "P0: Fix P9 regression — read p9-* transcripts, check handoff.py called before llm.ainvoke()"
     },
     {
       "priority": 1,
-      "description": "P1: 30-scenario eval (Flash+tools, 3-model judge) measuring R110 impact on 7 sub-5.0 dims vs R105 baselines"
+      "description": "P1: Fix H5/B4 regressions — investigate tool hallucination and validation fallback rate"
     },
     {
       "priority": 2,
-      "description": "P2: GPT-5.4 Pro re-review with tool transcripts + R111 eval data. Target 6.0+ (up from 5.2)"
+      "description": "P2: GPT-5.4 Pro re-review with docs/r111-external-review-prompt.md"
     },
     {
       "priority": 3,
@@ -74,19 +75,22 @@
     }
   ],
   "keyFiles": {
-    "handover": ".claude/handover-20260309-r110.md",
-    "gptReview": "docs/r110-gpt-review-analysis.md",
-    "synthesis": "research/r109-research-synthesis.md",
-    "reviewPrompt": "docs/r108-external-review-prompt.md"
+    "handover": ".claude/handover-20260310-r111.md",
+    "reviewPrompt": "docs/r111-external-review-prompt.md",
+    "evalResults": "tests/evaluation/r111-judge-scores.json",
+    "evalResponses": "tests/evaluation/r111-results/",
+    "gptReview": "docs/r110-gpt-review-analysis.md"
   },
   "codebaseMetrics": {
-    "tests": 3536,
-    "testSkipped": 350,
+    "tests": 2750,
+    "testSkipped": 2,
     "testFailures": 0,
+    "mockImports": 0,
     "graphNodes": 13,
     "stateFields": 31,
     "featureFlags": 19,
     "guardrailPatterns": 214,
+    "slopPatterns": 17,
     "profilingTechniques": 11,
     "totalScenarios": 270,
     "sourceModules": 74,
@@ -95,8 +99,8 @@
     "toolUseEnabled": "mohegan_sun"
   },
   "sessionNotes": {
-    "lastSessionDate": "2026-03-09",
-    "lastSessionId": "hey-seven-session-20260309-605fb3",
-    "orchestration": "3 parallel code-worker agents + sequential mock skip iterations"
+    "lastSessionDate": "2026-03-10",
+    "lastSessionId": "hey-seven-session-20260310-dbdf15",
+    "orchestration": "5 parallel code-worker agents (3+2 waves) for mock purge, background eval + judge"
   }
 }

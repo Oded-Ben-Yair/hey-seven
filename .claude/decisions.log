@@ -123,3 +123,7 @@
 [2026-03-09] R110 DECISION: ~350 mock tests skipped (not fixed) per ground rule. Full purge scheduled P0 next session — zero MagicMock/AsyncMock in test suite.
 [2026-03-09] R110 DECISION: GPT-5.4 infrastructure findings (typed failure states, SRP refactor, staging env) deferred to R112+. Behavioral quality for Mohegan pilot is the immediate priority.
 [2026-03-09] R110 DECISION: Doc parity fix addresses GPT's worst single score (D9=3/10). ARCHITECTURE.md corrected: 12→13 nodes, 204→214 patterns.
+[2026-03-10] R111 DECISION: Full mock purge — deleted all 19 pure-mock test files, cleaned 37 mixed files. Zero MagicMock/AsyncMock remains. Coverage dropped to 79.63% (honest).
+[2026-03-10] R111 DECISION: 29-scenario targeted eval (Flash + tools) — focused on 7 sub-5.0 dims. H9+1.79 biggest gain. P9 regressed -2.08.
+[2026-03-10] R111 DECISION: GPT-5.4 review prompt upgraded with R111 data, R108 delta comparison, known limitations. Ready at docs/r111-external-review-prompt.md.
+[2026-03-10] R111 DECISION: P9 regression investigation deferred to R112 — need to read transcripts before code changes.
